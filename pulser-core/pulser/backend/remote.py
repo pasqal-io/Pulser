@@ -188,7 +188,7 @@ class RemoteConnection(ABC):
         Unlike `_fetch_result`, this method does not raise an error if some
         jobs in the batch do not have results.
 
-        It returns a dictionnary mapping the job ID to its status and results.
+        It returns a dictionary mapping the job ID to its status and results.
         """
         pass
 
@@ -220,6 +220,75 @@ class RemoteConnection(ABC):
     def supports_open_batch(self) -> bool:
         """Flag to confirm this class can support creating an open batch."""
         pass
+
+    @staticmethod
+    def _add_measurement_to_sequence(sequence: Sequence) -> Sequence:
+        """Adds a measurement operation to a Sequence if needed and possible.
+
+        Adding a measurement operation to the Sequence is possible if only
+        one basis is addressed by the Sequence. It also converts all tensors
+        in the Sequence to arrays.
+
+        Args:
+            sequence: The Sequence to add the measurement operation to.
+
+        Returns:
+            The sequence with a measurement operation.
+        """
+        if sequence.is_measured():
+            return sequence
+        bases = sequence.get_addressed_bases()
+        if len(bases) != 1:
+            raise ValueError(
+                "The measurement basis can't be implicitly determined "
+                "for a sequence not addressing a single basis."
+            )
+        # This is equivalent to performing a deepcopy
+        # All tensors are converted to arrays but that's ok, it would
+        # have happened anyway later on
+        sequence = Sequence.from_abstract_repr(
+            sequence.to_abstract_repr(skip_validation=True)
+        )
+        sequence.measure(bases[0])
+        return sequence
+
+    def update_sequence_device(self, sequence: Sequence) -> Sequence:
+        """Match the Sequence's device with an available one, update it.
+
+        Args:
+            sequence: The Sequence to check.
+
+        Returns:
+            The Sequence, with the latest version for the targeted Device.
+        """
+        available_devices = self.fetch_available_devices()
+        available_device_names = {
+            dev.name: key for key, dev in available_devices.items()
+        }
+        err_suffix = (
+            " Please fetch the latest devices with "
+            f"`{type(self).__name__}.fetch_available_devices()` and rebuild "
+            "the sequence with one of the options."
+        )
+        if (name := sequence.device.name) not in available_device_names:
+            raise ValueError(
+                "The device used in the sequence does not match any "
+                "of the devices currently available through the remote "
+                "connection." + err_suffix
+            )
+        if sequence.device != (
+            new_device := available_devices[available_device_names[name]]
+        ):
+            try:
+                sequence = sequence.switch_device(new_device, strict=True)
+            except Exception as e:
+                raise ValueError(
+                    "The sequence is not compatible with the latest "
+                    "device specs." + err_suffix
+                ) from e
+            # Validate the sequence with the new device
+            RemoteBackend.validate_sequence(sequence, mimic_qpu=True)
+        return sequence
 
 
 class RemoteBackend(Backend):
