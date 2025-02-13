@@ -139,6 +139,7 @@ class RegisterLayout(Traps, RegDrawer):
         projection: bool = True,
         fig_name: str | None = None,
         kwargs_savefig: dict = {},
+        show: bool = True,
     ) -> None:
         """Draws the entire register layout.
 
@@ -158,6 +159,9 @@ class RegisterLayout(Traps, RegDrawer):
             kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
+            show: Whether or not to call `plt.show()` before returning. When
+                combining this plot with other ones in a single figure, one may
+                need to set this flag to False.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -201,7 +205,9 @@ class RegisterLayout(Traps, RegDrawer):
             )
         if fig_name is not None:
             plt.savefig(fig_name, **kwargs_savefig)
-        plt.show()
+
+        if show:
+            plt.show()
 
     def make_mappable_register(
         self, n_qubits: int, prefix: str = "q"
