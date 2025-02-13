@@ -19,11 +19,11 @@ import typing
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from types import TracebackType
-from typing import Any, Mapping, Type, TypedDict, cast
+from typing import Any, Mapping, Type, TypedDict
 
 from pulser.backend.abc import Backend
+from pulser.backend.results import Results, ResultsSequence
 from pulser.devices import Device
-from pulser.result import Result, Results
 from pulser.sequence import Sequence
 
 
@@ -63,7 +63,7 @@ class RemoteResultsError(Exception):
     pass
 
 
-class RemoteResults(Results):
+class RemoteResults(ResultsSequence):
     """A collection of results obtained through a remote connection.
 
     Args:
@@ -95,9 +95,9 @@ class RemoteResults(Results):
         self._job_ids = job_ids
 
     @property
-    def results(self) -> tuple[Result, ...]:
+    def results(self) -> tuple[Results, ...]:
         """The actual results, obtained after execution is done."""
-        return self._results
+        return self._results_seq
 
     @property
     def batch_id(self) -> str:
@@ -115,14 +115,14 @@ class RemoteResults(Results):
         """Gets the status of the batch linked to these results."""
         return self._connection._get_batch_status(self._batch_id)
 
-    def get_available_results(self) -> dict[str, Result]:
+    def get_available_results(self) -> dict[str, Results]:
         """Returns the available results.
 
         Unlike the `results` property, this method does not raise an error if
         some of the jobs do not have results.
 
         Returns:
-            dict[str, Result]: A dictionary mapping the job ID to its results.
+            dict[str, Results]: A dictionary mapping the job ID to its results.
             Jobs with no result are omitted.
         """
         results = {
@@ -138,14 +138,14 @@ class RemoteResults(Results):
         return results
 
     def __getattr__(self, name: str) -> Any:
-        if name == "_results":
+        if name == "_results_seq":
             try:
-                self._results = tuple(
+                self._results_seq = tuple(
                     self._connection._fetch_result(
                         self.batch_id, self._job_ids
                     )
                 )
-                return self._results
+                return self._results_seq
             except RemoteResultsError as e:
                 raise RemoteResultsError(
                     "Results are not available for all jobs. Use the "
@@ -168,21 +168,21 @@ class RemoteConnection(ABC):
         open: bool = True,
         batch_id: str | None = None,
         **kwargs: Any,
-    ) -> RemoteResults | tuple[RemoteResults, ...]:
+    ) -> RemoteResults:
         """Submit a job for execution."""
         pass
 
     @abstractmethod
     def _fetch_result(
         self, batch_id: str, job_ids: list[str] | None
-    ) -> typing.Sequence[Result]:
+    ) -> typing.Sequence[Results]:
         """Fetches the results of a completed batch."""
         pass
 
     @abstractmethod
     def _query_job_progress(
         self, batch_id: str
-    ) -> Mapping[str, tuple[JobStatus, Result | None]]:
+    ) -> Mapping[str, tuple[JobStatus, Results | None]]:
         """Fetches the status and results of all the jobs in a batch.
 
         Unlike `_fetch_result`, this method does not raise an error if some
@@ -320,7 +320,7 @@ class RemoteBackend(Backend):
 
     def run(
         self, job_params: list[JobParams] | None = None, wait: bool = False
-    ) -> RemoteResults | tuple[RemoteResults, ...]:
+    ) -> RemoteResults:
         """Runs the sequence on the remote backend and returns the result.
 
         Args:
@@ -377,13 +377,10 @@ class _OpenBatchContextManager:
         self.backend = backend
 
     def __enter__(self) -> _OpenBatchContextManager:
-        batch = cast(
-            RemoteResults,
-            self.backend._connection.submit(
-                self.backend._sequence,
-                open=True,
-                **self.backend._submit_kwargs(),
-            ),
+        batch = self.backend._connection.submit(
+            self.backend._sequence,
+            open=True,
+            **self.backend._submit_kwargs(),
         )
         self.backend._batch_id = batch.batch_id
         return self

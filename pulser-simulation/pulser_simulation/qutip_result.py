@@ -25,7 +25,6 @@ from pulser.channels.base_channel import (
     States,
     get_states_from_bases,
 )
-from pulser.register import QubitId
 from pulser.result import Result
 
 
@@ -43,10 +42,9 @@ class QutipResult(Result):
             same as the state's basis.
     """
 
-    atom_order: tuple[QubitId, ...]
-    meas_basis: str
     state: qutip.Qobj
     matching_meas_basis: bool
+    evaluation_time: float = 1.0
 
     @property
     def sampling_errors(self) -> dict[str, float]:

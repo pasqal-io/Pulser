@@ -355,10 +355,7 @@ class Register(BaseRegister, RegDrawer):
             raise TypeError(
                 f"'device' must be of type Device, not {type(device)}."
             )
-        if (
-            self._coords_arr.is_tensor
-            and self._coords_arr.as_tensor().requires_grad
-        ):
+        if self._coords_arr.requires_grad:
             raise NotImplementedError(
                 "'Register.with_automatic_layout()' does not support "
                 "registers with differentiable coordinates."

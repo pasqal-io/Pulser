@@ -600,8 +600,9 @@ class QutipEmulator:
                     self._meas_basis,
                     state,
                     self._meas_basis in self.basis_name,
+                    evaluation_time=t / self._tot_duration * 1e3,
                 )
-                for state in result.states
+                for state, t in zip(result.states, self._eval_times_array)
             ]
             return CoherentResults(
                 results,
@@ -654,8 +655,7 @@ class QutipEmulator:
             update_ham = True
 
         # Will return NoisyResults
-        time_indices = range(len(self._eval_times_array))
-        total_count = np.array([Counter() for _ in time_indices])
+        total_count = np.array([Counter() for _ in self._eval_times_array])
         # We run the system multiple times
         for i in range(loop_runs):
             if not update_ham:
@@ -687,9 +687,10 @@ class QutipEmulator:
             SampledResult(
                 tuple(self._hamiltonian._qdict),
                 self._meas_basis,
-                total_count[t],
+                total_count[ind],
+                evaluation_time=t / self._tot_duration * 1e3,
             )
-            for t in time_indices
+            for ind, t in enumerate(self._eval_times_array)
         ]
         return NoisyResults(
             results,

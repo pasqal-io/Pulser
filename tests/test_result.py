@@ -20,6 +20,8 @@ import numpy as np
 import pytest
 import qutip
 
+import pulser.result
+from pulser.backend.results import ResultsSequence, ResultsType
 from pulser.result import SampledResult
 from pulser_simulation.qutip_result import QutipResult
 
@@ -234,3 +236,16 @@ def test_qutip_result_density_matrices():
         "10": 0.25,
         "11": 0.25,
     }
+
+
+@pytest.mark.parametrize(
+    "old_name, obj",
+    [("Results", ResultsSequence), ("ResultType", ResultsType)],
+)
+def test_legacy_imports(old_name, obj):
+    with pytest.warns(
+        DeprecationWarning,
+        match=f"'pulser.result.{old_name}' class has been renamed "
+        f"to '{obj.__name__}'",
+    ):
+        assert getattr(pulser.result, old_name) == obj
