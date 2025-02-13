@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import dataclasses
 import re
 import typing
 import uuid
@@ -182,8 +183,11 @@ def test_qpu_backend(sequence):
         seq = sequence.switch_device(AnalogDevice)
     with pytest.raises(ValueError, match="defined from a `RegisterLayout`"):
         QPUBackend(seq, connection)
-    seq = seq.switch_register(SquareLatticeLayout(5, 5, 5).square_register(2))
 
+    seq = seq.switch_register(SquareLatticeLayout(5, 5, 5).square_register(2))
+    seq = seq.switch_device(
+        dataclasses.replace(seq.device, accepts_new_layouts=False)
+    )
     with pytest.raises(
         ValueError, match="does not accept new register layouts"
     ):
