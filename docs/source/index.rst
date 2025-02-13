@@ -57,16 +57,17 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    :caption: Fundamentals
 
    conventions
-   register
    hardware
+   register
    pulses
    sequence
    tutorials/backends
 
 .. toctree::
    :maxdepth: 1
-   :caption: Advanced Features
+   :caption: Extended Usage
 
+   extended_usage_intro
    tutorials/reg_layouts
    tutorials/output_mod_eom
    tutorials/virtual_devices
