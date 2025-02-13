@@ -60,41 +60,41 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    hardware
    register
    pulses
+   sequence
    tutorials/backends
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Classical Simulation
-
-   tutorials/noisy_sim
-   tutorials/spam
-   tutorials/laser_noise
-   tutorials/effective_noise
 
 .. toctree::
    :maxdepth: 1
    :caption: Extended Usage
 
    extended_usage_intro
-   tutorials/phase_shifts_vz_gates
-   tutorials/composite_wfs
-   tutorials/paramseqs
    tutorials/reg_layouts
+   tutorials/output_mod_eom
+   tutorials/virtual_devices
+   tutorials/paramseqs
+   tutorials/composite_wfs
    tutorials/interpolated_wfs
    tutorials/serialization
    tutorials/dmm
    tutorials/slm_mask
-   tutorials/output_mod_eom
-   tutorials/virtual_devices
+   tutorials/xy_spin_chain
+   tutorials/phase_shifts_vz_gates
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Emulation
+
+   tutorials/noisy_sim
+   tutorials/spam
+   tutorials/laser_noise
+   tutorials/effective_noise
 
 
 .. toctree::
    :maxdepth: 1
-   :caption: Quantum Simulation & Applications
+   :caption: Applications
 
-   tutorials/afm_prep
    tutorials/optimization
-   tutorials/xy_spin_chain
    tutorials/qubo
 
 .. toctree::
