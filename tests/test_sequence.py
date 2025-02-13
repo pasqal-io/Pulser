@@ -1797,7 +1797,7 @@ def test_estimate_added_delay(eom, custom_phase_jump_time):
         match="The sequence's duration exceeded the maximum duration",
     ):
         seq.estimate_added_delay(
-            pulser.Pulse.ConstantPulse(4000, 1, 0, np.pi), "ising"
+            pulser.Pulse.ConstantPulse(6000, 1, 0, np.pi), "ising"
         )
     var = seq.declare_variable("var", dtype=int)
     with pytest.raises(
