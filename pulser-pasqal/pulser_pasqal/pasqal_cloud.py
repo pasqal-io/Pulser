@@ -15,12 +15,10 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import fields
 from typing import Any, Mapping, Type, cast
 
 import backoff
-import numpy as np
 import pasqal_cloud
 from pasqal_cloud.device.configuration import (
     BaseConfig,
@@ -41,6 +39,7 @@ from pulser.backend.remote import (
 )
 from pulser.devices import Device
 from pulser.json.abstract_repr.deserializer import deserialize_device
+from pulser.json.utils import make_json_compatible
 from pulser.result import Result, SampledResult
 
 EMU_TYPE_TO_CONFIG: dict[pasqal_cloud.EmulatorType, Type[BaseConfig]] = {
@@ -53,23 +52,6 @@ MAX_CLOUD_ATTEMPTS = 5
 backoff_decorator = backoff.on_exception(
     backoff.fibo, Exception, max_tries=MAX_CLOUD_ATTEMPTS, max_value=60
 )
-
-
-def _make_json_compatible(obj: Any) -> Any:
-    """Makes an object compatible with JSON serialization.
-
-    For now, simply converts Numpy arrays to lists, but more can be added
-    as needed.
-    """
-
-    class NumpyEncoder(json.JSONEncoder):
-        def default(self, o: Any) -> Any:
-            if isinstance(o, np.ndarray):
-                return o.tolist()
-            return json.JSONEncoder.default(self, o)
-
-    # Serializes with the custom encoder and then deserializes back
-    return json.loads(json.dumps(obj, cls=NumpyEncoder))
 
 
 class PasqalCloud(RemoteConnection):
@@ -109,56 +91,18 @@ class PasqalCloud(RemoteConnection):
         **kwargs: Any,
     ) -> RemoteResults:
         """Submits the sequence for execution on a remote Pasqal backend."""
-        if not sequence.is_measured():
-            bases = sequence.get_addressed_bases()
-            if len(bases) != 1:
-                raise ValueError(
-                    "The measurement basis can't be implicitly determined "
-                    "for a sequence not addressing a single basis."
-                )
-            # This is equivalent to performing a deepcopy
-            # All tensors are converted to arrays but that's ok, it would
-            # have happened anyway later on
-            sequence = Sequence.from_abstract_repr(
-                sequence.to_abstract_repr(skip_validation=True)
-            )
-            sequence.measure(bases[0])
-
+        sequence = self._add_measurement_to_sequence(sequence)
         emulator = kwargs.get("emulator", None)
-        job_params: list[JobParams] = _make_json_compatible(
+        job_params: list[JobParams] = make_json_compatible(
             kwargs.get("job_params", [])
         )
         mimic_qpu: bool = kwargs.get("mimic_qpu", False)
         if emulator is None or mimic_qpu:
-            available_devices = self.fetch_available_devices()
-            available_device_names = {
-                dev.name: key for key, dev in available_devices.items()
-            }
-            err_suffix = (
-                " Please fetch the latest devices with "
-                "`PasqalCloud.fetch_available_devices()` and rebuild "
-                "the sequence with one of the options."
+            sequence = self.update_sequence_device(sequence)
+            QPUBackend.validate_job_params(
+                job_params, sequence.device.max_runs
             )
-            if (name := sequence.device.name) not in available_device_names:
-                raise ValueError(
-                    "The device used in the sequence does not match any "
-                    "of the devices currently available through the remote "
-                    "connection." + err_suffix
-                )
-            if sequence.device != (
-                new_device := available_devices[available_device_names[name]]
-            ):
-                try:
-                    sequence = sequence.switch_device(new_device, strict=True)
-                except Exception as e:
-                    raise ValueError(
-                        "The sequence is not compatible with the latest "
-                        "device specs." + err_suffix
-                    ) from e
-                # Validate the sequence with the new device
-                QPUBackend.validate_sequence(sequence, mimic_qpu=True)
 
-            QPUBackend.validate_job_params(job_params, new_device.max_runs)
         if sequence.is_parametrized() or sequence.is_register_mappable():
             for params in job_params:
                 vars = params.get("variables", {})
