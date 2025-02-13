@@ -1419,14 +1419,22 @@ def draw_sequence(
         if interp_pts:
             data[ch].interp_pts = dict(interp_pts)
 
-    for ch, axes in ch_axes.items():
-        ch_data = data[ch]
-
-        if draw_interp_pts:
+    if draw_interp_pts:
+        for ch, axes in ch_axes.items():
+            ch_data = data[ch]
+            # Construct map between quantity and indices
+            ind_map = {}
+            ax_ind = 0
+            for color_ind, qty in enumerate(CURVES_ORDER):
+                if ch_data.curves_on[qty]:
+                    ind_map[qty] = (ax_ind, color_ind)
+                    ax_ind += 1
             for qty in ("amplitude", "detuning"):
                 if qty in ch_data.interp_pts and ch_data.curves_on[qty]:
-                    ind = CURVES_ORDER.index(qty)
+                    ax_ind, color_ind = ind_map[qty]
                     pts = np.array(ch_data.interp_pts[qty])
-                    axes[ind].scatter(pts[:, 0], pts[:, 1], color=COLORS[ind])
+                    axes[ax_ind].scatter(
+                        pts[:, 0], pts[:, 1], color=COLORS[color_ind]
+                    )
 
     return (fig_reg, fig, fig_qubit, fig_legend)
