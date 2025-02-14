@@ -793,9 +793,11 @@ class InterpolatedWaveform(Waveform):
 
     Args:
         duration: The waveform duration (in ns).
-        values: Values of the interpolation points.
+        values: Values of the interpolation points. Must be a list of castable
+            to float or a parametrized object.
         times: Fractions of the total duration (between 0
-            and 1), indicating where to place each value on the time axis. If
+            and 1), indicating where to place each value on the time axis. Must
+            be a list of castable to float or a parametrized object. If
             not given, the values are spread evenly throughout the full
             duration of the waveform.
         interpolator: The SciPy interpolation class
@@ -803,6 +805,18 @@ class InterpolatedWaveform(Waveform):
         **interpolator_kwargs: Extra parameters to give to the chosen
             interpolator class.
     """
+
+    def __new__(cls, *args, **kwargs):  # type: ignore
+        """Creates InterpolatedWaveform or ParamObj depending on the input."""
+        cls._check_values_times(
+            args[1] if len(args) >= 2 else kwargs["values"],
+            args[2] if len(args) >= 3 else kwargs.get("times", None),
+        )
+        for x in itertools.chain(args, kwargs.values()):
+            if isinstance(x, Parametrized):
+                return ParamObj(cls, *args, **kwargs)
+        else:
+            return object.__new__(cls)
 
     def __init__(
         self,
@@ -818,25 +832,6 @@ class InterpolatedWaveform(Waveform):
         if times is not None:
             times = cast(ArrayLike, times)
             times_ = np.array(times, dtype=float)
-            if len(times_) != len(self._values):
-                raise ValueError(
-                    "When specified, the number of time coordinates in `times`"
-                    f" ({len(times_)}) must match the number of `values` "
-                    f"({len(self._values)})."
-                )
-            if np.any(times_ < 0):
-                raise ValueError(
-                    "All values in `times` must be greater than or equal to 0."
-                )
-            if np.any(times_ > 1):
-                raise ValueError(
-                    "All values in `times` must be less than or equal to 1."
-                )
-            unique_times = np.unique(times)  # Sorted array of unique values
-            if len(times_) != len(unique_times):
-                raise ValueError(
-                    "`times` must be an array of non-repeating values."
-                )
             self._times = times_
         else:
             self._times = np.linspace(0, 1, num=len(self._values))
@@ -864,6 +859,51 @@ class InterpolatedWaveform(Waveform):
             "interpolator": interpolator,
             **interpolator_kwargs,
         }
+
+    @staticmethod
+    def _check_values_times(
+        values: Union[ArrayLike, Parametrized],
+        times: Optional[Union[ArrayLike, Parametrized]] = None,
+    ) -> None:
+        """Check whether the types of values and times are valid."""
+
+        def _err_message(argument_name: str) -> str:
+            return (
+                f"`{argument_name}` must be a parametrized object or a "
+                "sequence of elements castable to float. To make a sequence"
+                " of parametrized object, instantiate a variable with a size."
+            )
+
+        if not isinstance(values, Parametrized):
+            try:
+                _values = np.array(values, dtype=float)
+            except TypeError as e:
+                raise TypeError(_err_message("values")) from e
+        if times is not None and not isinstance(times, Parametrized):
+            try:
+                times = cast(ArrayLike, times)
+                times_ = np.array(times, dtype=float)
+            except TypeError as e:
+                raise TypeError(_err_message("times")) from e
+            if len(times_) != len(_values):
+                raise ValueError(
+                    "When specified, the number of time coordinates in `times`"
+                    f" ({len(times_)}) must match the number of `values` "
+                    f"({len(_values)})."
+                )
+            if np.any(times_ < 0):
+                raise ValueError(
+                    "All values in `times` must be greater than or equal to 0."
+                )
+            if np.any(times_ > 1):
+                raise ValueError(
+                    "All values in `times` must be less than or equal to 1."
+                )
+            unique_times = np.unique(times)  # Sorted array of unique values
+            if len(times_) != len(unique_times):
+                raise ValueError(
+                    "`times` must be an array of non-repeating values."
+                )
 
     @property
     def duration(self) -> int:
