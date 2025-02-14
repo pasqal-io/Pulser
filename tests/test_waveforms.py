@@ -272,9 +272,9 @@ def test_interpolated():
         pulser.Register.square(2, 5), device=pulser.DigitalAnalogDevice
     )
 
-    values = seq.declare_variable("values", size=5)  # a VariableItem
-    duration, *other_values = values  # a list of VariableItems
-    # Init an InterpolatedWaveform with a list of VariableItems fails
+    values = seq.declare_variable("values", size=5)  # a Variable
+    duration, *other_values = values  # a list of Variables
+    # Init an InterpolatedWaveform with a list of Variable fails
     with pytest.raises(
         TypeError,
         match=(
