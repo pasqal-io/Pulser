@@ -108,7 +108,7 @@ class QutipState(State[SupportsComplex, complex]):
             overlap = np.abs(overlap) ** 2
         return float(overlap.real)
 
-    def probabilities(self, *, cutoff: float = 1e-10) -> dict[str, float]:
+    def probabilities(self, *, cutoff: float = 1e-12) -> dict[str, float]:
         """Extracts the probabilties of measuring each basis state combination.
 
         The probabilities are normalized to sum to 1.
@@ -132,7 +132,7 @@ class QutipState(State[SupportsComplex, complex]):
         return dict(zip(map(self.get_basis_state_from_index, non_zero), probs))
 
     def bitstring_probabilities(
-        self, *, one_state: Eigenstate | None = None, cutoff: float = 1e-10
+        self, *, one_state: Eigenstate | None = None, cutoff: float = 1e-12
     ) -> Mapping[str, float]:
         """Extracts the probabilties of measuring each bitstring.
 
