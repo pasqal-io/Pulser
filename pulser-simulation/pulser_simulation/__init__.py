@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Classes for classical emulation of a Sequence."""
+"""Classes for classical emulation of a Pulser Sequence."""
 
 from pulser import EmulatorConfig, NoiseModel
 
@@ -22,6 +22,8 @@ from pulser_simulation.qutip_backend import QutipBackend
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simulation import QutipEmulator
 
+# NOTE: If any of these change, remember to MANUALLY replicate them in the
+# API reference doc (ie they are not updated automatically).
 __all__ = [
     "EmulatorConfig",
     "NoiseModel",

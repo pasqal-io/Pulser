@@ -268,7 +268,7 @@ class EmulatorConfig(BackendConfig):
         This class will be deprecated in favor of EmulationConfig once all
         backends migrate to it.
 
-    Attributes:
+    Args:
         backend_options: A dictionary of backend-specific options.
         sampling_rate: The fraction of samples to extract from the pulse
             sequence for emulation.
