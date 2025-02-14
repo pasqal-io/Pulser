@@ -64,9 +64,30 @@ PARAMS_WITH_ABSTR_REPR = ("channel_objects", "channel_ids", "dmm_objects")
 class BaseDevice(ABC):
     r"""Base class of a neutral-atom device.
 
-    Attributes:
+    Args:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
+        max_atom_num: Maximum number of atoms supported in an array.
+        max_radial_distance: The furthest away an atom can be from the center
+            of the array (in μm).
+        min_atom_distance: The closest together two atoms can be (in μm).
+        requires_layout: Whether the register used in the sequence must be
+            created from a register layout. Only enforced in QPU execution.
+        min_layout_traps: The minimum number of traps a layout can have.
+        max_layout_traps: An optional value for the maximum number of traps a
+            layout can have.
+        max_layout_filling: The largest fraction of a layout that can be filled
+            with atoms.
+        optimal_layout_filling: An optional value for the fraction of a layout
+            that should be filled with atoms.
+        rydberg_level: The value of the principal quantum number :math:`n`
+            when the Rydberg level used is of the form
+            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
+        interaction_coeff_xy: :math:`C_3/\hbar`
+            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
+            which sets the van der Waals interaction strength between atoms in
+            different Rydberg states. Needed only if there is a Microwave
+            channel in the device. If unsure, 3700.0 is a good default value.
         channel_objects: The Channel subclass instances specifying each
             channel in the device.
         channel_ids: Custom IDs for each channel object. When defined,
@@ -75,26 +96,7 @@ class BaseDevice(ABC):
         dmm_objects: The DMM subclass instances specifying each channel in the
             device. They are referenced by their order in the list, with the ID
             "dmm_[index in dmm_objects]".
-        rydberg_level: The value of the principal quantum number :math:`n`
-            when the Rydberg level used is of the form
-            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
-        max_atom_num: Maximum number of atoms supported in an array.
-        max_radial_distance: The furthest away an atom can be from the center
-            of the array (in μm).
-        min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff_xy: :math:`C_3/\hbar`
-            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
-            which sets the van der Waals interaction strength between atoms in
-            different Rydberg states. Needed only if there is a Microwave
-            channel in the device. If unsure, 3700.0 is a good default value.
         supports_slm_mask: Whether the device supports the SLM mask feature.
-        max_layout_filling: The largest fraction of a layout that can be filled
-            with atoms.
-        optimal_layout_filling: An optional value for the fraction of a layout
-            that should be filled with atoms.
-        min_layout_traps: The minimum number of traps a layout can have.
-        max_layout_traps: An optional value for the maximum number of traps a
-            layout can have.
         max_sequence_duration: The maximum allowed duration for a sequence
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
@@ -102,8 +104,6 @@ class BaseDevice(ABC):
         default_noise_model: An optional noise model characterizing the default
             noise of the device. Can be used by emulator backends that support
             noise.
-        requires_layout: Whether the register used in the sequence must be
-            created from a register layout. Only enforced in QPU execution.
     """
 
     name: str
@@ -126,6 +126,7 @@ class BaseDevice(ABC):
     channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
     dmm_objects: tuple[DMM, ...] = field(default_factory=tuple)
     default_noise_model: NoiseModel | None = None
+    short_description: str = field(default="", repr=False, compare=False)
 
     def __post_init__(self) -> None:
         def type_check(
@@ -292,6 +293,8 @@ class BaseDevice(ABC):
         if self.default_noise_model is not None:
             type_check("default_noise_model", NoiseModel)
 
+        type_check("short_description", str)
+
         def to_tuple(obj: tuple | list) -> tuple:
             if isinstance(obj, (tuple, list)):
                 obj = tuple(to_tuple(el) for el in obj)
@@ -301,6 +304,9 @@ class BaseDevice(ABC):
         for param in self._params():
             if "channel" in param or param == "dmm_objects":
                 object.__setattr__(self, param, to_tuple(getattr(self, param)))
+
+        # Hack to override the docstring of an instance
+        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
 
     @property
     @abstractmethod
@@ -524,7 +530,7 @@ class BaseDevice(ABC):
         return {
             f.name: getattr(self, f.name)
             for f in fields(self)
-            if not init_only or f.init
+            if (not init_only or f.init) and f.name != "short_description"
         }
 
     def _validate_coords(
@@ -615,7 +621,6 @@ class BaseDevice(ABC):
         register_lines = [
             "\nRegister parameters:",
             f" - Dimensions: {self.dimensions}D",
-            f" - Rydberg level: {self.rydberg_level}",
             self._param_check_none(self.max_atom_num)(
                 " - Maximum number of atoms: {}"
             ),
@@ -624,7 +629,6 @@ class BaseDevice(ABC):
             ),
             " - Minimum distance between neighbouring atoms: "
             + f"{self.min_atom_distance} μm",
-            f" - SLM Mask: {self._param_yes_no(self.supports_slm_mask)}",
         ]
 
         return [line for line in register_lines if line != ""]
@@ -647,21 +651,23 @@ class BaseDevice(ABC):
 
         device_lines = [
             "\nDevice parameters:",
-            self._param_check_none(self.max_runs)(
-                " - Maximum number of runs: {}"
-            ),
-            self._param_check_none(self.max_sequence_duration)(
-                " - Maximum sequence duration: {} ns",
-            ),
-            " - Channels can be reused: "
-            + self._param_yes_no(self.reusable_channels),
-            f" - Supported bases: {', '.join(self.supported_bases)}",
-            f" - Supported states: {', '.join(self.supported_states)}",
+            f" - Rydberg level: {self.rydberg_level}",
             self._param_check_none(self.interaction_coeff)(
                 " - Ising interaction coefficient: {}",
             ),
             self._param_check_none(self.interaction_coeff_xy)(
                 " - XY interaction coefficient: {}",
+            ),
+            " - Channels can be reused: "
+            + self._param_yes_no(self.reusable_channels),
+            f" - Supported bases: {', '.join(self.supported_bases)}",
+            f" - Supported states: {', '.join(self.supported_states)}",
+            f" - SLM Mask: {self._param_yes_no(self.supports_slm_mask)}",
+            self._param_check_none(self.max_sequence_duration)(
+                " - Maximum sequence duration: {} ns",
+            ),
+            self._param_check_none(self.max_runs)(
+                " - Maximum number of runs: {}"
             ),
             self._param_check_none(self.default_noise_model)(
                 " - Default noise model: {}",
@@ -728,7 +734,8 @@ class BaseDevice(ABC):
     def _specs(self, for_docs: bool = False) -> str:
 
         return "\n".join(
-            self._register_lines()
+            ([self.short_description] if self.short_description else [])
+            + self._register_lines()
             + self._layout_lines()
             + self._device_lines()
             + self._channel_lines(for_docs=for_docs)
@@ -739,13 +746,44 @@ class BaseDevice(ABC):
 class Device(BaseDevice):
     r"""Specifications of a neutral-atom device.
 
-    A Device instance is immutable and must have all of its parameters defined.
-    For usage in emulations, it can be converted to a VirtualDevice through the
-    `Device.to_virtual()` method.
+    Each ``Device`` instance holds the characteristics of a physical device,
+    which when associated with a :class:`pulser.Sequence` condition its
+    development.
 
-    Attributes:
+    Note:
+        A Device instance is immutable and must have all of its parameters
+        defined. For more unconstrained usage in emulations, it can be
+        converted to a VirtualDevice through the `Device.to_virtual()` method.`
+
+    Args:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
+        max_atom_num: Maximum number of atoms supported in an array.
+        max_radial_distance: The furthest away an atom can be from the center
+            of the array (in μm).
+        min_atom_distance: The closest together two atoms can be (in μm).
+        requires_layout: Whether the register used in the sequence must be
+            created from a register layout. Only enforced in QPU execution.
+        accepts_new_layouts: Whether registers built from register layouts
+            that are not already calibrated are accepted. Only enforced in
+            QPU execution.
+        max_layout_filling: The largest fraction of a layout that can be filled
+            with atoms.
+        optimal_layout_filling: An optional value for the fraction of a layout
+            that should be filled with atoms.
+        min_layout_traps: The minimum number of traps a layout can have.
+        max_layout_traps: An optional value for the maximum number of traps a
+            layout can have.
+        pre_calibrated_layouts: RegisterLayout instances that are already
+            available on the Device.
+        rydberg_level: The value of the principal quantum number :math:`n`
+            when the Rydberg level used is of the form
+            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
+        interaction_coeff_xy: :math:`C_3/\hbar`
+            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
+            which sets the van der Waals interaction strength between atoms in
+            different Rydberg states. Needed only if there is a Microwave
+            channel in the device. If unsure, 3700.0 is a good default value.
         channel_objects: The Channel subclass instances specifying each
             channel in the device.
         channel_ids: Custom IDs for each channel object. When defined,
@@ -754,26 +792,7 @@ class Device(BaseDevice):
         dmm_objects: The DMM subclass instances specifying each channel in the
             device. They are referenced by their order in the list, with the ID
             "dmm_[index in dmm_objects]".
-        rydberg_level: The value of the principal quantum number :math:`n`
-            when the Rydberg level used is of the form
-            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
-        max_atom_num: Maximum number of atoms supported in an array.
-        max_radial_distance: The furthest away an atom can be from the center
-            of the array (in μm).
-        min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff_xy: :math:`C_3/\hbar`
-            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
-            which sets the van der Waals interaction strength between atoms in
-            different Rydberg states. Needed only if there is a Microwave
-            channel in the device. If unsure, 3700.0 is a good default value.
         supports_slm_mask: Whether the device supports the SLM mask feature.
-        max_layout_filling: The largest fraction of a layout that can be filled
-            with atoms.
-        optimal_layout_filling: An optional value for the fraction of a layout
-            that should be filled with atoms.
-        min_layout_traps: The minimum number of traps a layout can have.
-        max_layout_traps: An optional value for the maximum number of traps a
-            layout can have.
         max_sequence_duration: The maximum allowed duration for a sequence
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
@@ -781,13 +800,6 @@ class Device(BaseDevice):
         default_noise_model: An optional noise model characterizing the default
             noise of the device. Can be used by emulator backends that support
             noise.
-        requires_layout: Whether the register used in the sequence must be
-            created from a register layout. Only enforced in QPU execution.
-        pre_calibrated_layouts: RegisterLayout instances that are already
-            available on the Device.
-        accepts_new_layouts: Whether registers built from register layouts
-            that are not already calibrated are accepted. Only enforced in
-            QPU execution.
     """
 
     max_atom_num: int
@@ -810,8 +822,6 @@ class Device(BaseDevice):
                 )
         for layout in self.pre_calibrated_layouts:
             self.validate_layout(layout)
-        # Hack to override the docstring of an instance
-        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:
@@ -930,9 +940,32 @@ class VirtualDevice(BaseDevice):
     to be declared multiple times in the same Sequence (when
     `reusable_channels=True`) and allows the Rydberg level to be changed.
 
-    Attributes:
+    Args:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
+        max_atom_num: Maximum number of atoms supported in an array.
+        max_radial_distance: The furthest away an atom can be from the center
+            of the array (in μm).
+        min_atom_distance: The closest together two atoms can be (in μm).
+        requires_layout: Whether the register used in the sequence must be
+            created from a register layout. Only enforced in QPU execution.
+        max_layout_filling: The largest fraction of a layout that can be filled
+            with atoms.
+        optimal_layout_filling: An optional value for the fraction of a layout
+            that should be filled with atoms.
+        min_layout_traps: The minimum number of traps a layout can have.
+        max_layout_traps: An optional value for the maximum number of traps a
+            layout can have.
+        rydberg_level: The value of the principal quantum number :math:`n`
+            when the Rydberg level used is of the form
+            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
+        interaction_coeff_xy: :math:`C_3/\hbar`
+            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
+            which sets the van der Waals interaction strength between atoms in
+            different Rydberg states. Needed only if there is a Microwave
+            channel in the device. If unsure, 3700.0 is a good default value.
+        reusable_channels: Whether each channel can be declared multiple times
+            on the same pulse sequence.
         channel_objects: The Channel subclass instances specifying each
             channel in the device.
         channel_ids: Custom IDs for each channel object. When defined,
@@ -941,26 +974,7 @@ class VirtualDevice(BaseDevice):
         dmm_objects: The DMM subclass instances specifying each channel in the
             device. They are referenced by their order in the list, with the ID
             "dmm_[index in dmm_objects]".
-        rydberg_level: The value of the principal quantum number :math:`n`
-            when the Rydberg level used is of the form
-            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
-        max_atom_num: Maximum number of atoms supported in an array.
-        max_radial_distance: The furthest away an atom can be from the center
-            of the array (in μm).
-        min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff_xy: :math:`C_3/\hbar`
-            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
-            which sets the van der Waals interaction strength between atoms in
-            different Rydberg states. Needed only if there is a Microwave
-            channel in the device. If unsure, 3700.0 is a good default value.
         supports_slm_mask: Whether the device supports the SLM mask feature.
-        max_layout_filling: The largest fraction of a layout that can be filled
-            with atoms.
-        optimal_layout_filling: An optional value for the fraction of a layout
-            that should be filled with atoms.
-        min_layout_traps: The minimum number of traps a layout can have.
-        max_layout_traps: An optional value for the maximum number of traps a
-            layout can have.
         max_sequence_duration: The maximum allowed duration for a sequence
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
@@ -968,10 +982,6 @@ class VirtualDevice(BaseDevice):
         default_noise_model: An optional noise model characterizing the default
             noise of the device. Can be used by emulator backends that support
             noise.
-        requires_layout: Whether the register used in the sequence must be
-            created from a register layout. Only enforced in QPU execution.
-        reusable_channels: Whether each channel can be declared multiple times
-            on the same pulse sequence.
     """
 
     min_atom_distance: float = 0
@@ -981,6 +991,9 @@ class VirtualDevice(BaseDevice):
     # Needed to support SLM mask by default
     dmm_objects: tuple[DMM, ...] = (DMM(),)
     reusable_channels: bool = True
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:

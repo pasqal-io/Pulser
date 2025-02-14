@@ -1,155 +1,68 @@
-************************
-Core Features
-************************
+﻿``pulser``
+=================
 
-Sequence
-----------------------
+.. automodule:: pulser
 
-.. automodule:: pulser.sequence.sequence
-   :members:
+Classes
+-----------------
 
-Register
-----------------------
-
-Register classes
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The register classes allow for the creation of arbitrary registers.
-
-.. autoclass:: pulser.register.base_register.BaseRegister
-  :members:
-
-.. autoclass:: pulser.register.register.Register
-  :members:
-  :show-inheritance:
-
-.. autoclass:: pulser.register.register3d.Register3D
-  :members:
-  :show-inheritance:
-
-
-Register layout
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-A ``RegisterLayout`` is used to define a register from a set of traps. It is
-intended to be given to the user by the hardware provider as a way of showing
-which layouts are already available on a given device. In turn, the user
-can create a ``Register`` by selecting the traps on which to place atoms, or
-even a ``MappableRegister``, which allows for the creation of sequences whose
-register can be defined at build time.
-
-.. autoclass:: pulser.register.register_layout.RegisterLayout
-  :members:
-  :inherited-members:
-
-.. autoclass:: pulser.register.mappable_reg.MappableRegister
-  :members:
+These are classes that can be imported directly from ``pulser``. They should cover the fundamental
+needs for sequence creation.
 
 
 
-Special cases
-""""""""""""""""""
+.. autosummary::
+   :toctree: _autosummary
 
-.. automodule:: pulser.register.special_layouts
-  :members:
-  :show-inheritance:
-
-DetuningMap
--------------------
-
-A ``DetuningMap`` is associated to a ``DMM`` in a ``Sequence``. It links a set
-of weights to a set of trap coordinates. It is intended to be defined by the user
-from a ``RegisterLayout``, a ``Register`` or a ``MappableRegister`` using
-``define_detuning_map``.
-
-.. autoclass:: pulser.register.weight_maps.DetuningMap
-  :members:
-  :inherited-members:
-
-Pulse
--------------------
-
-.. automodule:: pulser.pulse
-   :members:
+   ~pulser.waveforms.CompositeWaveform
+   ~pulser.waveforms.CustomWaveform
+   ~pulser.waveforms.ConstantWaveform
+   ~pulser.waveforms.RampWaveform
+   ~pulser.waveforms.BlackmanWaveform
+   ~pulser.waveforms.InterpolatedWaveform
+   ~pulser.waveforms.KaiserWaveform
+   ~pulser.pulse.Pulse
+   ~pulser.register.Register
+   ~pulser.register.Register3D
+   ~pulser.sequence.Sequence
+   ~pulser.noise_model.NoiseModel
+   ~pulser.backend.EmulatorConfig
+   ~pulser.backend.QPUBackend
 
 
-Waveforms
-----------------------
+Device Examples
+-----------------
 
-.. automodule:: pulser.waveforms
-  :members:
-  :show-inheritance:
+These are built-in :py:class:`~pulser.devices.Device` and :py:class:`~pulser.devices.VirtualDevice` instances that can be
+imported directly from ``pulser``. 
 
-Devices
----------------------
+.. important::
 
-Structure of a Device
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The :class:`Device` class sets the structure of a physical device, 
-while :class:`VirtualDevice` is a more permissive device type which can
-only be used in emulators, as it does not necessarily represent the
-constraints of a physical device. 
-
-Illustrative instances of :class:`Device` (see `Physical Devices`_) and :class:`VirtualDevice` 
-(the `MockDevice`) come included in the `pulser.devices` module.
-
-.. autoclass:: pulser.devices._device_datacls.Device
-  :members:
-  :inherited-members:
-
-.. autoclass:: pulser.devices._device_datacls.VirtualDevice
-  :members:
-  :inherited-members:
-
-.. _Physical Devices:
-
-Physical Devices
-^^^^^^^^^^^^^^^^^^^
-Each `Device`` instance holds the characteristics of a physical device,
-which when associated with a :class:`pulser.Sequence` condition its development.
-
-.. autodata:: pulser.devices.AnalogDevice
-
-.. autodata:: pulser.devices.DigitalAnalogDevice
-
-Noise Model
---------------
-.. automodule:: pulser.noise_model
-  :members:
-
-Channels
----------------------
-
-Base Channel
-^^^^^^^^^^^^^^^
-.. automodule:: pulser.channels.base_channel
-   :members:
+   These instances are **not** descriptions of actual devices. They are just examples that
+   can be used to enforce different sets of constraints during :py:class:`~pulser.Sequence` creation.
 
 
-Available Channels
-^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pulser.channels.channels
-   :members:
-   :show-inheritance:
+.. autosummary::
+   :toctree: _autosummary
 
-.. autoclass:: pulser.channels.dmm.DMM
-   :members:
-   :show-inheritance:
+   AnalogDevice
+   DigitalAnalogDevice
+   MockDevice
 
-EOM Mode Configuration
-^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pulser.channels.eom
-   :members:
-   :show-inheritance:
 
-Sampler
-------------------
-.. automodule:: pulser.sampler.sampler
-   :members:
+Modules
+----------
 
-.. automodule:: pulser.sampler.samples
-   :members:
+.. autosummary::
+   :toctree: _autosummary
 
-Result
-------------------
-.. automodule:: pulser.result
-   :members:
-   :show-inheritance:
+   pulser.abstract_repr
+   pulser.backend
+   pulser.backends
+   pulser.channels
+   pulser.devices
+   pulser.parametrized
+   pulser.register
+   pulser.result
+   pulser.sampler
+   pulser.waveforms
