@@ -14,8 +14,6 @@
 """Defines the backend class for QPU execution."""
 from __future__ import annotations
 
-from typing import cast
-
 from pulser import Sequence
 from pulser.backend.remote import (
     JobParams,
@@ -65,7 +63,7 @@ class QPUBackend(RemoteBackend):
         self.validate_job_params(
             job_params or [], self._sequence.device.max_runs
         )
-        return cast(RemoteResults, super().run(job_params, wait))
+        return super().run(job_params, wait)
 
     @staticmethod
     def validate_job_params(

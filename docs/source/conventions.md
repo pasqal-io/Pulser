@@ -122,6 +122,11 @@ sample
 
 ## Hamiltonians
 
+:::{tip}
+This section uses formulas that rely on the [Indexed Operator](#indexed-operator)
+notation.
+:::
+
 Independently of the mode of operation, the Hamiltonian describing the system
 can be written as
 
@@ -258,3 +263,21 @@ $$
 :::{note}
 The definitions given for both interaction Hamiltonians are independent of the chosen state vector convention.
 :::
+
+## Notation
+
+### Indexed Operator
+
+Whenever an arbitrary operator is written with an index (typically $i$ or $j$), e.g. $\hat{O}_i$, it is implicit that $\hat{O}$ is applied *only* to qudit $i$ while the rest of the qudits are applied the identity operator, $\hat{I}$. Put another way,
+
+$$ \hat{O}_i = \underset{(1)}{\hat{I}} \otimes \underset{(2)}{\hat{I}} \otimes ... \otimes\ \underset{(i)}{\hat{O}}\ \otimes ... \otimes \underset{(N)}{\hat{I}},$$
+
+where $1 \leq i \leq N$.
+
+This notation is extendable to multiple indices. Take for instance the case with two indices, $\hat{O}_{ij}$ – here, $\hat{O}$ is a two-qudit operator. A good example is the [interaction Hamiltonian](#interaction-hamiltonian) in the `ground-rydberg` basis, which we write as
+
+$$H^\text{int}_{ij} = \frac{C_6}{R_{ij}^6} \hat{n}_i \hat{n}_j = \frac{C_6}{R_{ij}^6} \left( \underset{(1)}{\hat{I}} \otimes ... \otimes \ \underset{(j)}{\hat{n}}\ \otimes ... \otimes \ \underset{(i)}{\hat{n}} \ \otimes ... \otimes \underset{(N)}{\hat{I}}\right),$$
+
+where $1 \leq j < i \leq N$.
+
+Note that, generally, we cannot write $\hat{O}_{ij}$ in the form used above because $\hat{O}$ might not be separable in a tensor product of two single-qudit operators, but the operator is valid nonetheless.

@@ -663,6 +663,7 @@ class Channel(ABC):
             config += f", Maximum pulse duration: {self.max_duration} ns"
         if self.mod_bandwidth:
             config += f", Modulation Bandwidth: {self.mod_bandwidth} MHz"
+        config += f", Supports EOM: {self.supports_eom()}"
         config += f", Basis: '{self.basis}')"
         return self.name + config
 

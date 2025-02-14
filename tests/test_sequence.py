@@ -1797,7 +1797,7 @@ def test_estimate_added_delay(eom, custom_phase_jump_time):
         match="The sequence's duration exceeded the maximum duration",
     ):
         seq.estimate_added_delay(
-            pulser.Pulse.ConstantPulse(4000, 1, 0, np.pi), "ising"
+            pulser.Pulse.ConstantPulse(6000, 1, 0, np.pi), "ising"
         )
     var = seq.declare_variable("var", dtype=int)
     with pytest.raises(
@@ -2039,7 +2039,7 @@ def test_draw_slm_mask_in_ising(
         mask_time, 0, -100, 0
     )
     # Possible to modulate dmm_0_1 after slm declaration
-    seq1.add_dmm_detuning(RampWaveform(300, 0, -10), "dmm_0_1")
+    seq1.add_dmm_detuning(InterpolatedWaveform(300, (-10, 0)), "dmm_0_1")
     assert seq1._slm_mask_time == [0, mask_time]
     # Possible to add pulses afterwards,
     seq1.declare_channel("ryd_loc", "rydberg_local", ["q0", "q1"])
@@ -2050,7 +2050,7 @@ def test_draw_slm_mask_in_ising(
             mode,
             draw_qubit_det=draw_qubit_det,
             draw_qubit_amp=draw_qubit_amp,
-            draw_interp_pts=False,
+            draw_interp_pts=True,
             draw_register=draw_register,
             fig_name="local_quantities",
         )

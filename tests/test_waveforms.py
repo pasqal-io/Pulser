@@ -19,6 +19,7 @@ import numpy as np
 import pytest
 from scipy.interpolate import PchipInterpolator, interp1d
 
+import pulser
 from pulser.channels import Rydberg
 from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.parametrized import ParamObj, Variable
@@ -265,6 +266,41 @@ def test_interpolated():
         1000, times=[0.0, 0.5, 1.0], values=[0, 2.6e7, 0]
     )
     assert np.all((wf.samples >= 0).as_array())
+
+    # Init an InterpolatedWaveform that always fails at build fails
+    seq = pulser.Sequence(
+        pulser.Register.square(2, 5), device=pulser.DigitalAnalogDevice
+    )
+
+    values = seq.declare_variable("values", size=5)  # a Variable
+    duration, *other_values = values  # a list of Variables
+    # Init an InterpolatedWaveform with a list of Variable fails
+    with pytest.raises(
+        TypeError,
+        match=(
+            "`values` must be a parametrized object or a sequence of "
+            "elements castable to float."
+        ),
+    ):
+        InterpolatedWaveform(1000, values=other_values)
+    # So this will always fail at build
+    with pytest.raises(
+        TypeError,
+        match=(
+            "`values` must be a parametrized object or a sequence of "
+            "elements castable to float."
+        ),
+    ):
+        InterpolatedWaveform(duration, values=other_values)
+    # this as well
+    with pytest.raises(
+        TypeError,
+        match=(
+            "`times` must be a parametrized object or a sequence of "
+            "elements castable to float."
+        ),
+    ):
+        InterpolatedWaveform(duration, [0, 0.1, 0.2, 0.3], other_values)
 
 
 def test_kaiser():

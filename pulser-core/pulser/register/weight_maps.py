@@ -180,8 +180,10 @@ class WeightMap(Traps, RegDrawer):
 class DetuningMap(WeightMap):
     """Defines a DetuningMap.
 
-    A DetuningMap associates a detuning weight (a value between 0 and 1)
-    to the coordinates of a trap.
+    A ``DetuningMap`` is associated to a ``DMM`` in a ``Sequence``. It links a
+    set of weights to a set of trap coordinates. It is intended to be defined
+    by the user from a ``RegisterLayout``, a ``Register`` or a
+    ``MappableRegister`` using ``define_detuning_map``.
 
     Args:
         trap_coordinates: An array containing the coordinates of the traps.
