@@ -110,9 +110,9 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             must be an NxN symmetric matrix where entry (i, j) dictates
             the interaction coefficient between qudits i and j, ie it replaces
             the C_n/r_{ij}^n term.
-        prefer_device_noise_model: If the sequence's device has a default noise
-            model, this option signals the backend to prefer it over the noise
-            model given with this configuration.
+        prefer_device_noise_model: If True, uses the noise model of the
+            sequence's device (if the sequence's device has one), regardless
+            of the noise model given with this configuration.
         noise_model: An optional noise model to emulate the sequence with.
             Ignored if the sequence's device has default noise model and
             `prefer_device_noise_model=True`.
