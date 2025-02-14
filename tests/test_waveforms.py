@@ -278,7 +278,7 @@ def test_interpolated():
     with pytest.raises(
         TypeError,
         match=(
-            "`values` must be a parametrized object or a sequence of"
+            "`values` must be a parametrized object or a sequence of "
             "elements castable to float."
         ),
     ):
@@ -287,7 +287,7 @@ def test_interpolated():
     with pytest.raises(
         TypeError,
         match=(
-            "`values` must be a parametrized object or a sequence of"
+            "`values` must be a parametrized object or a sequence of "
             " elements castable to float."
         ),
     ):
@@ -296,7 +296,7 @@ def test_interpolated():
     with pytest.raises(
         TypeError,
         match=(
-            "`values` must be a parametrized object or a sequence of"
+            "`values` must be a parametrized object or a sequence of "
             " expected_exception= elements castable to float."
         ),
     ):
