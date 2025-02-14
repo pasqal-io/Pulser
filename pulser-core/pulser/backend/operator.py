@@ -106,28 +106,30 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
     ) -> OperatorType:
         """Create an operator from the operator representation.
 
-        The full operator representation (FullOp is a weigthed sum of tensor
-        operators (TensorOp), written as a sequence of coefficient and tensor
-        operator pairs, ie
+        The full operator representation (``FullOp``) is a weigthed sum of
+        tensor operators (``TensorOp``), written as a sequence of coefficient
+        and tensor operator pairs, ie
 
-        `FullOp = Sequence[tuple[ScalarType, TensorOp]]`
+        ``FullOp = Sequence[tuple[ScalarType, TensorOp]]``
 
-        Each TensorOp is itself a sequence of qudit operators (QuditOp) applied
-        to mutually exclusive sets of qudits (represented by their indices), ie
+        Each ``TensorOp`` is itself a sequence of qudit operators (``QuditOp``)
+        applied to mutually exclusive sets of qudits (represented by their
+        indices), ie
 
-        `TensorOp = Sequence[tuple[QuditOp, Collection[int]]]`
+        ``TensorOp = Sequence[tuple[QuditOp, Collection[int]]]``
 
-        Qudits without an associated QuditOp are applied the identity operator.
+        Qudits without an associated ``QuditOp`` are applied the identity
+        operator.
 
-        Finally, each QuditOp is represented as weighted sum of pre-defined
+        Finally, each ``QuditOp`` is represented as weighted sum of pre-defined
         single-qudit operators. It is given as a mapping between a string
         representation of the single-qudit operator and its respective
         coefficient, ie
 
-        `QuditOp = Mapping[str, ScalarType]`
+        ``QuditOp = Mapping[str, ScalarType]``
 
-        By default it identifies strings 'ij' as single-qudit operators, where
-        i and j are eigenstates that denote |i><j|.
+        By default it identifies strings ``"ij"`` as single-qudit operators,
+        where ``i`` and ``j`` are eigenstates that denote ``|i><j|``.
 
         Args:
             eigenstates: The eigenstates to use.

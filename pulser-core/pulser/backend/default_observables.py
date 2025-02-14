@@ -32,8 +32,8 @@ class StateResult(Observable):
 
     Args:
         evaluation_times: The relative times at which to store the state.
-            If left as `None`, uses the `default_evaluation_times` of the
-            backend's `EmulationConfig`.
+            If left as `None`, uses the ``default_evaluation_times`` of the
+            backend's ``EmulationConfig``.
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
@@ -57,8 +57,8 @@ class BitStrings(Observable):
 
     Args:
         evaluation_times: The relative times at which to sample bitstrings.
-            If left as `None`, uses the `default_evaluation_times` of the
-            backend's `EmulationConfig`.
+            If left as `None`, uses the ``default_evaluation_times`` of the
+            backend's ``EmulationConfig``.
         num_shots: How many bitstrings to sample each time this observable
             is computed.
         one_state: The eigenstate that measures to 1. Can be left undefined
@@ -114,15 +114,15 @@ class Fidelity(Observable):
 
     The fidelity uses the overlap between the given state and the state of
     the system at each evaluation time. For pure states, this corresponds
-    to $|<ψ|φ(t)>|^2$ for the given state $|ψ>$ and the state $|φ(t)>$
+    to ``|<ψ|φ(t)>|^2`` for the given state ``|ψ>`` and the state ``|φ(t)>``
     obtained by time evolution.
 
     Args:
-        state: The state |ψ>. Note that this must be of an appropriate type
+        state: The state ``|ψ>``. Note that this must be of an appropriate type
             for the backend.
         evaluation_times: The relative times at which to compute the fidelity.
-            If left as `None`, uses the `default_evaluation_times` of the
-            backend's `EmulationConfig`.
+            If left as `None`, uses the ``default_evaluation_times`` of the
+            backend's ``EmulationConfig``.
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
@@ -160,7 +160,7 @@ class Expectation(Observable):
     Args:
         evaluation_times: The relative times at which to compute the
             expectation value. If left as `None`, uses the
-            `default_evaluation_times` of the backend's `EmulationConfig`.
+            ``default_evaluation_times`` of the backend's ``EmulationConfig``.
         operator: The operator to measure. Must be of the appropriate type
             for the backend.
         tag_suffix: An optional suffix to append to the tag. Needed if
@@ -199,13 +199,13 @@ class CorrelationMatrix(Observable):
     """Stores the correlation matrix for the current state.
 
     The correlation matrix is calculated as
-    [[<φ(t)|n_i n_j|φ(t)> for j in qubits] for i in qubits]
-    where n_k = |one_state><one_state|.
+    ``[[<φ(t)|n_i n_j|φ(t)> for j in qubits] for i in qubits]``
+    where ``n_k = |one_state><one_state|``.
 
     Args:
         evaluation_times: The relative times at which to compute the
             correlation matrix. If left as `None`, uses the
-            `default_evaluation_times` of the backend's `EmulationConfig`.
+            ``default_evaluation_times`` of the backend's ``EmulationConfig``.
         one_state: The eigenstate to measure the population of in the
             correlation matrix. Can be left undefined if the state's
             eigenstates form a known eigenbasis with a defined "one state".
@@ -274,13 +274,13 @@ class CorrelationMatrix(Observable):
 class Occupation(Observable):
     """Stores the occupation number of an eigenstate on each qudit.
 
-    For every qudit i, calculates <φ(t)|n_i|φ(t)>, where
-    n_i = |one_state><one_state|.
+    For every qudit i, calculates ``<φ(t)|n_i|φ(t)>``, where
+    ``n_i = |one_state><one_state|``.
 
     Args:
         evaluation_times: The relative times at which to compute the
-            correlation matrix. If left as `None`, uses the
-            `default_evaluation_times` of the backend's `EmulationConfig`.
+            correlation matrix. If left as ``None``, uses the
+            ``default_evaluation_times`` of the backend's ``EmulationConfig``.
         one_state: The eigenstate to measure the population of. Can be left
             undefined if the state's eigenstates form a known eigenbasis with
             a defined "one state".
@@ -325,13 +325,13 @@ class Occupation(Observable):
 class Energy(Observable):
     """Stores the energy of the system at the evaluation times.
 
-    The energy is calculated as the expectation value of the Hamilotinian,
-    i.e. <φ(t)|H(t)|φ(t)>.
+    The energy is calculated as the expectation value of the Hamiltonian,
+    i.e. ``<φ(t)|H(t)|φ(t)>``.
 
     Args:
         evaluation_times: The relative times at which to compute the energy.
-            If left as `None`, uses the `default_evaluation_times` of the
-            backend's `EmulationConfig`.
+            If left as `None`, uses the ``default_evaluation_times`` of the
+            backend's ``EmulationConfig``.
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
@@ -351,14 +351,14 @@ class Energy(Observable):
 class EnergyVariance(Observable):
     r"""Stores the varaiance of the Hamiltonian at the evaluation times.
 
-    The variance of the Hamiltonian at time t is calculated by
-    $\\langle φ(t)|H(t)^2|φ(t)\\rangle - \\langle φ(t)|H(t)|φ(t)\\rangle^2$
+    The variance of the Hamiltonian at time ``t`` is calculated by
+    ``<φ(t)|H(t)^2|φ(t)> - <φ(t)|H(t)|φ(t)>^2``
 
 
     Args:
         evaluation_times: The relative times at which to compute the variance.
-            If left as `None`, uses the `default_evaluation_times` of the
-            backend's `EmulationConfig`.
+            If left as `None`, uses the ``default_evaluation_times`` of the
+            backend's ``EmulationConfig``.
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
@@ -385,15 +385,15 @@ class EnergyVariance(Observable):
 
 
 class EnergySecondMoment(Observable):
-    """Stores the expectation value of $H(t)^2$ at the evaluation times.
+    """Stores the expectation value of ``H(t)^2`` at the evaluation times.
 
     Useful for computing the variance when averaging over many executions of
     the program.
 
     Args:
         evaluation_times: The relative times at which to compute the variance.
-            If left as `None`, uses the `default_evaluation_times` of the
-            backend's `EmulationConfig`.
+            If left as `None`, uses the ``default_evaluation_times`` of the
+            backend's ``EmulationConfig``.
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.

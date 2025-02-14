@@ -74,8 +74,8 @@ class Observable(Callback):
 
     Args:
         evaluation_times: The times at which to add a result to Results.
-            If left as `None`, uses the `default_evaluation_times` of the
-            backend's `EmulationConfig`.
+            If left as `None`, uses the ``default_evaluation_times`` of the
+            backend's ``EmulationConfig``.
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
