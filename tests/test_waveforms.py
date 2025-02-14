@@ -288,16 +288,16 @@ def test_interpolated():
         TypeError,
         match=(
             "`values` must be a parametrized object or a sequence of "
-            " elements castable to float."
+            "elements castable to float."
         ),
     ):
         InterpolatedWaveform(duration, values=other_values)
-    # So this will always fail at build
+    # this as well
     with pytest.raises(
         TypeError,
         match=(
-            "`values` must be a parametrized object or a sequence of "
-            " expected_exception= elements castable to float."
+            "`times` must be a parametrized object or a sequence of "
+            "elements castable to float."
         ),
     ):
         InterpolatedWaveform(duration, [0, 0.1, 0.2, 0.3], other_values)
