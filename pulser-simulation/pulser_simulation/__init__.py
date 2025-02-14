@@ -16,6 +16,8 @@
 from pulser import EmulatorConfig, NoiseModel
 
 from pulser_simulation._version import __version__ as __version__
+from pulser_simulation.qutip_state import QutipState
+from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_backend import QutipBackend
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simulation import QutipEmulator
@@ -25,6 +27,8 @@ from pulser_simulation.simulation import QutipEmulator
 __all__ = [
     "EmulatorConfig",
     "NoiseModel",
+    "QutipState",
+    "QutipOperator",
     "QutipBackend",
     "QutipEmulator",
     "SimConfig",
