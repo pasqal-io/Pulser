@@ -806,16 +806,12 @@ class InterpolatedWaveform(Waveform):
             interpolator class.
     """
 
-    def __new__(
-        cls,
-        duration: Union[int, Parametrized],
-        values: Union[ArrayLike, Parametrized],
-        times: Optional[Union[ArrayLike, Parametrized]] = None,
-        *args,
-        **kwargs,
-    ):  # type: ignore
+    def __new__(cls, *args, **kwargs):  # type: ignore
         """Creates InterpolatedWaveform or ParamObj depending on the input."""
-        cls._check_values_times(values, times)
+        cls._check_values_times(
+            args[1] if len(args) >= 2 else kwargs["values"],
+            args[2] if len(args) >= 3 else kwargs.get("times", None)
+        )
         for x in itertools.chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
                 return ParamObj(cls, *args, **kwargs)
