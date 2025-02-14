@@ -15,7 +15,7 @@
 
 import pulser.noise_model as noise_model  # For backwards compat
 from pulser.backend.config import EmulatorConfig
-from pulser.noise_model import NoiseModel  # For backwards compat
+from pulser.noise_model import NoiseModel as NoiseModel  # For backwards compat
 from pulser.backend.qpu import QPUBackend
 
-__all__ = ["EmulatorConfig", "NoiseModel", "QPUBackend"]
+__all__ = ["EmulatorConfig", "QPUBackend"]

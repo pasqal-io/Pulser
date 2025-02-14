@@ -281,7 +281,6 @@ def test_device_specs(device):
         register_str = (
             "\nRegister parameters:\n"
             + f" - Dimensions: {dev.dimensions}D\n"
-            + f" - Rydberg level: {dev.rydberg_level}\n"
             + check_none_fn(dev, "max_atom_num", "Maximum number of atoms: {}")
             + check_none_fn(
                 dev,
@@ -290,7 +289,6 @@ def test_device_specs(device):
             )
             + " - Minimum distance between neighbouring atoms: "
             + f"{dev.min_atom_distance} μm\n"
-            + yes_no_fn(dev, "supports_slm_mask", "SLM Mask")
         )
 
         layout_str = (
@@ -312,19 +310,21 @@ def test_device_specs(device):
 
         device_str = (
             "\nDevice parameters:\n"
-            + check_none_fn(dev, "max_runs", "Maximum number of runs: {}")
+            + f" - Rydberg level: {dev.rydberg_level}\n"
+            + f" - Ising interaction coefficient: {dev.interaction_coeff}\n"
+            + check_none_fn(
+                dev, "interaction_coeff_xy", "XY interaction coefficient: {}"
+            )
+            + yes_no_fn(dev, "reusable_channels", "Channels can be reused")
+            + f" - Supported bases: {', '.join(dev.supported_bases)}\n"
+            + f" - Supported states: {', '.join(dev.supported_states)}\n"
+            + yes_no_fn(dev, "supports_slm_mask", "SLM Mask")
             + check_none_fn(
                 dev,
                 "max_sequence_duration",
                 "Maximum sequence duration: {} ns",
             )
-            + yes_no_fn(dev, "reusable_channels", "Channels can be reused")
-            + f" - Supported bases: {', '.join(dev.supported_bases)}\n"
-            + f" - Supported states: {', '.join(dev.supported_states)}\n"
-            + f" - Ising interaction coefficient: {dev.interaction_coeff}\n"
-            + check_none_fn(
-                dev, "interaction_coeff_xy", "XY interaction coefficient: {}"
-            )
+            + check_none_fn(dev, "max_runs", "Maximum number of runs: {}")
         )
 
         channel_str = "\nChannels:\n" + "\n".join(
@@ -332,7 +332,14 @@ def test_device_specs(device):
             for name, ch in {**dev.channels, **dev.dmm_channels}.items()
         )
 
-        return register_str + layout_str + device_str + channel_str
+        first_line = (
+            (device.short_description + "\n")
+            if device.short_description
+            else ""
+        )
+        return (
+            first_line + register_str + layout_str + device_str + channel_str
+        )
 
     assert device.specs == specs(device)
 

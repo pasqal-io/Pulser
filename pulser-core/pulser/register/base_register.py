@@ -243,7 +243,7 @@ class BaseRegister(ABC, CoordsCollection):
 
         Returns:
             A DetuningMap associating detuning weights to the trap coordinates
-                of the targeted qubits.
+            of the targeted qubits.
         """
         if not set(detuning_weights.keys()) <= set(self.qubit_ids):
             raise ValueError(

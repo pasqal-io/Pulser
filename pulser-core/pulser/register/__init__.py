@@ -13,7 +13,7 @@
 # limitations under the License.
 """Classes for qubit register definition."""
 
-from pulser.register.base_register import QubitId
+from pulser.register.base_register import QubitId as QubitId
 from pulser.register.register import Register
 from pulser.register.register3d import Register3D
 from pulser.register.register_layout import RegisterLayout
@@ -22,13 +22,14 @@ from pulser.register.special_layouts import (
     TriangularLatticeLayout,
     RectangularLatticeLayout,
 )
+from pulser.register.weight_maps import DetuningMap
 
 __all__ = [
-    "QubitId",
     "Register",
     "Register3D",
     "RegisterLayout",
     "SquareLatticeLayout",
     "TriangularLatticeLayout",
     "RectangularLatticeLayout",
+    "DetuningMap",
 ]

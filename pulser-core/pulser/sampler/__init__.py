@@ -17,4 +17,12 @@
 The samples of a sequence are organized in channels and are used for
 plotting and simulation.
 """
-from pulser.sampler.sampler import sample as sample
+from pulser.sampler.sampler import sample
+from pulser.sampler.samples import ChannelSamples, DMMSamples, SequenceSamples
+
+__all__ = [
+    "sample",
+    "ChannelSamples",
+    "DMMSamples",
+    "SequenceSamples",
+]
