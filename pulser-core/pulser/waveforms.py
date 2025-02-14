@@ -810,7 +810,7 @@ class InterpolatedWaveform(Waveform):
         """Creates InterpolatedWaveform or ParamObj depending on the input."""
         cls._check_values_times(
             args[1] if len(args) >= 2 else kwargs["values"],
-            args[2] if len(args) >= 3 else kwargs.get("times", None)
+            args[2] if len(args) >= 3 else kwargs.get("times", None),
         )
         for x in itertools.chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
