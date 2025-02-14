@@ -143,6 +143,14 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     ) -> None:
         """Initializes the EmulationConfig."""
         obs_tags = []
+        if not observables:
+            warnings.warn(
+                f"{self.__class__.__name__!r} was initialized without any "
+                "observables. The corresponding emulation results will be"
+                " empty.",
+                stacklevel=2,
+            )
+
         for obs in observables:
             if not isinstance(obs, Observable):
                 raise TypeError(
@@ -192,6 +200,13 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             if not np.allclose(matrix_arr, matrix_arr.transpose()):
                 raise ValueError(
                     "The received interaction matrix is not symmetric."
+                )
+            if np.any(np.diag(matrix_arr) != 0):
+                warnings.warn(
+                    "The received interaction matrix has non-zero values in "
+                    "its diagonal; keep in mind that these values are "
+                    "ignored.",
+                    stacklevel=2,
                 )
 
         if not isinstance(noise_model, NoiseModel):

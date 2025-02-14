@@ -269,7 +269,9 @@ def test_emulator_backend(sequence):
 
     class ConcreteEmulator(EmulatorBackend):
 
-        default_config = EmulationConfig(with_modulation=True)
+        default_config = EmulationConfig(
+            observables=(BitStrings(),), with_modulation=True
+        )
 
         def run(self):
             pass
@@ -280,7 +282,10 @@ def test_emulator_backend(sequence):
         ConcreteEmulator(sequence, config=EmulatorConfig)
 
     emu = ConcreteEmulator(
-        sequence, config=EmulationConfig(default_evaluation_times="Full")
+        sequence,
+        config=EmulationConfig(
+            observables=(BitStrings(),), default_evaluation_times="Full"
+        ),
     )
     assert emu._config.default_evaluation_times == "Full"
     assert not emu._config.with_modulation
@@ -311,6 +316,12 @@ def test_backend_config():
 
 
 def test_emulation_config():
+    with pytest.warns(
+        UserWarning,
+        match="'EmulationConfig' was initialized without any observables",
+    ):
+        EmulationConfig()
+
     with pytest.raises(
         TypeError,
         match="All entries in 'observables' must be instances of Observable",
@@ -326,17 +337,26 @@ def test_emulation_config():
     with pytest.raises(
         ValueError, match="All evaluation times must be between 0. and 1."
     ):
-        EmulationConfig(default_evaluation_times=[-1e15, 0.0, 0.5, 1.0])
+        EmulationConfig(
+            observables=(BitStrings(),),
+            default_evaluation_times=[-1e15, 0.0, 0.5, 1.0],
+        )
     with pytest.raises(ValueError, match="Evaluation times must be unique"):
-        EmulationConfig(default_evaluation_times=[0.0, 0.5, 0.5, 1.0])
+        EmulationConfig(
+            observables=(BitStrings(),),
+            default_evaluation_times=[0.0, 0.5, 0.5, 1.0],
+        )
     with pytest.raises(
         ValueError, match="Evaluation times must be in ascending order"
     ):
-        EmulationConfig(default_evaluation_times=[0.0, 1.0, 0.5])
+        EmulationConfig(
+            observables=(BitStrings(),),
+            default_evaluation_times=[0.0, 1.0, 0.5],
+        )
     with pytest.raises(
         TypeError, match="'initial_state' must be an instance of State"
     ):
-        EmulationConfig(initial_state=[[1], [0]])
+        EmulationConfig(observables=(BitStrings(),), initial_state=[[1], [0]])
     with pytest.raises(
         ValueError,
         match=re.escape(
@@ -344,7 +364,10 @@ def test_emulation_config():
             " of shape (4, 3) was given"
         ),
     ):
-        EmulationConfig(interaction_matrix=np.arange(12).reshape((4, 3)))
+        EmulationConfig(
+            observables=(BitStrings(),),
+            interaction_matrix=np.arange(12).reshape((4, 3)),
+        )
     with pytest.raises(
         ValueError,
         match=re.escape(
@@ -353,6 +376,7 @@ def test_emulation_config():
         ),
     ):
         EmulationConfig(
+            observables=(BitStrings(),),
             interaction_matrix=np.eye(2),
             initial_state=QutipState.from_state_amplitudes(
                 eigenstates=("r", "g"), amplitudes={"rrr": 1.0}
@@ -365,10 +389,18 @@ def test_emulation_config():
         matrix_ = np.ones((4, 4))
         matrix_[0, 3] += 1e-4
         EmulationConfig(
+            observables=(BitStrings(),),
             interaction_matrix=matrix_,
         )
+    with pytest.warns(UserWarning, match="non-zero values in its diagonal"):
+        EmulationConfig(
+            observables=(BitStrings(),),
+            interaction_matrix=np.ones((4, 4)),
+        )
     with pytest.raises(TypeError, match="must be a NoiseModel"):
-        EmulationConfig(noise_model={"p_false_pos": 0.1})
+        EmulationConfig(
+            observables=(BitStrings(),), noise_model={"p_false_pos": 0.1}
+        )
 
 
 def test_results():
@@ -394,7 +426,7 @@ def test_results():
         assert res.get_result(obs, 1.0)
 
     obs(
-        config=EmulationConfig(),
+        config=EmulationConfig(observables=(BitStrings(),)),
         t=1.0,
         state=QutipState.from_state_amplitudes(
             eigenstates=("r", "g"), amplitudes={"rrr": 1.0}
@@ -440,7 +472,7 @@ class TestObservables:
 
     @pytest.fixture
     def config(self):
-        return EmulationConfig()
+        return EmulationConfig(observables=(BitStrings(),))
 
     @pytest.fixture
     def results(self):
