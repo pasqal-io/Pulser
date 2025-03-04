@@ -200,6 +200,11 @@ class QutipEmulator:
         """The current configuration, as a SimConfig instance."""
         return SimConfig.from_noise_model(self._hamiltonian.config)
 
+    @property
+    def total_duration_ns(self) -> int:
+        """The total duration of the sequence, in ns."""
+        return self._tot_duration
+
     def set_config(self, cfg: SimConfig) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
