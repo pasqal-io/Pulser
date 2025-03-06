@@ -23,6 +23,7 @@ import numpy as np
 import qutip
 
 from pulser.backend.state import Eigenstate, State
+from pulser.math.multinomial import multinomial
 
 QutipStateType = TypeVar("QutipStateType", bound="QutipState")
 
@@ -183,26 +184,22 @@ class QutipState(State[SupportsComplex, complex]):
         )
         bitstrings = np.array(list(bitstring_probs))
         probs = np.array(list(map(float, bitstring_probs.values())))
-        dist = np.random.multinomial(num_shots, probs)
-        # Filter out bitstrings without counts
-        non_zero_counts = dist > 0
-        bitstrings = bitstrings[non_zero_counts]
-        dist = dist[non_zero_counts]
+        indices = multinomial(num_shots, probs)
         if p_false_pos == 0.0 and p_false_neg == 0.0:
-            return Counter(dict(zip(bitstrings, dist)))
+            return Counter(bitstrings[indices])
 
         # Convert bitstrings to a 2D array
-        bitstr_arr = np.array([list(bs) for bs in bitstrings], dtype=int)
+        bitstr_arr = np.array(
+            [list(bs) for bs in bitstrings[indices]], dtype=int
+        )
         # If 1 is measured, flip_prob=p_false_neg else flip_prob=p_false_pos
         flip_probs = np.where(bitstr_arr == 1, p_false_neg, p_false_pos)
-        # Repeat flip_probs of a bitstring as many times as it was measured
-        flip_probs_repeated = np.repeat(flip_probs, dist, axis=0)
         # Generate random matrix of same shape
-        random_matrix = np.random.uniform(size=flip_probs_repeated.shape)
+        random_matrix = np.random.uniform(size=flip_probs.shape)
         # Compare random matrix with flip probabilities to get the flips
-        flips = random_matrix < flip_probs_repeated
+        flips = random_matrix < flip_probs
         # Apply the flips with an XOR between original array and flips
-        new_bitstrings = bitstr_arr.repeat(dist, axis=0) ^ flips
+        new_bitstrings = bitstr_arr ^ flips
 
         # Count all the new_bitstrings
         # Not converting to str right away because tuple indexing is faster

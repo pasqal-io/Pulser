@@ -26,6 +26,7 @@ import numpy as np
 
 import pulser.backend.results as backend_results
 from pulser.backend.default_observables import BitStrings
+from pulser.math.multinomial import multinomial
 
 
 def __getattr__(name: str) -> Any:
@@ -95,12 +96,9 @@ class Result(ABC, backend_results.Results):
         Returns:
             Samples of bitstrings corresponding to measured quantum states.
         """
-        dist = np.random.multinomial(n_samples, self._weights())
         return Counter(
-            {
-                np.binary_repr(i, self._size): dist[i]
-                for i in np.nonzero(dist)[0]
-            }
+            np.binary_repr(i, self._size)
+            for i in multinomial(n_samples, self._weights())
         )
 
     def get_state(self) -> Any:
