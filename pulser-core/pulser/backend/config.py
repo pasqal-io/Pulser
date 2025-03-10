@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import warnings
 from collections import Counter
 from dataclasses import dataclass, field
@@ -35,6 +36,7 @@ from numpy.typing import ArrayLike
 import pulser.math as pm
 from pulser.backend.observable import Observable
 from pulser.backend.state import State
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.noise_model import NoiseModel
 
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
@@ -255,6 +257,17 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         return 0.0 <= t <= 1.0 and bool(
             np.any(np.abs(np.array(evaluation_times, dtype=float) - t) <= tol)
         )
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        keys = self._expected_kwargs()
+        res: dict[str, Any] = {k: self.__getattr__(k) for k in keys}
+        return res
+
+    def to_abstract_repr(self) -> str:
+        """Serializes the noise model into an abstract JSON object."""
+        obj_str = json.dumps(self, cls=AbstractReprEncoder)
+        # validate_abstract_repr(abstr_str, "config")
+        return obj_str
 
 
 # Legacy class

@@ -99,6 +99,16 @@ class Observable(Callback):
     def _base_tag(self) -> str:
         pass
 
+    def _expected_kwargs(self) -> set[str]:
+        return {"evaluation_times", "_tag_suffix"}
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        obs_kwargs = {
+            key: self.__dict__[key] for key in self._expected_kwargs()
+        }
+        obs_tag = self._base_tag
+        return {obs_tag: obs_kwargs}
+
     @property
     def tag(self) -> str:
         """Label for the observable, used to index the Results object.

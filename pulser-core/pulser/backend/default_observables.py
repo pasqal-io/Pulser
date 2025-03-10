@@ -93,6 +93,12 @@ class BitStrings(Observable):
     def _base_tag(self) -> str:
         return "bitstrings"
 
+    def _expected_kwargs(self) -> set[str]:
+        return super()._expected_kwargs() | {
+            "num_shots",
+            "one_state",
+        }
+
     def apply(
         self,
         *,
@@ -149,6 +155,9 @@ class Fidelity(Observable):
     def _base_tag(self) -> str:
         return "fidelity"
 
+    def _expected_kwargs(self) -> set[str]:
+        return super()._expected_kwargs() | {"state"}
+
     def apply(self, *, state: State, **kwargs: Any) -> Any:
         """Calculates the observable to store in the Results."""
         return self.state.overlap(state)
@@ -190,6 +199,9 @@ class Expectation(Observable):
     def _base_tag(self) -> str:
         return "expectation"
 
+    def _expected_kwargs(self) -> set[str]:
+        return super()._expected_kwargs() | {"operator"}
+
     def apply(self, *, state: State, **kwargs: Any) -> Any:
         """Calculates the observable to store in the Results."""
         return self.operator.expect(state)
@@ -230,6 +242,9 @@ class CorrelationMatrix(Observable):
     @property
     def _base_tag(self) -> str:
         return "correlation_matrix"
+
+    def _expected_kwargs(self) -> set[str]:
+        return super()._expected_kwargs() | {"one_state"}
 
     @staticmethod
     @functools.cache
@@ -306,6 +321,9 @@ class Occupation(Observable):
     def _base_tag(self) -> str:
         return "occupation"
 
+    def _expected_kwargs(self) -> set[str]:
+        return super()._expected_kwargs() | {"one_state"}
+
     def apply(
         self, *, state: State, hamiltonian: Operator, **kwargs: Any
     ) -> list:
@@ -349,7 +367,7 @@ class Energy(Observable):
 
 
 class EnergyVariance(Observable):
-    r"""Stores the varaiance of the Hamiltonian at the evaluation times.
+    r"""Stores the variance of the Hamiltonian at the evaluation times.
 
     The variance of the Hamiltonian at time ``t`` is calculated by
     ``<φ(t)|H(t)^2|φ(t)> - <φ(t)|H(t)|φ(t)>^2``
