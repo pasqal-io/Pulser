@@ -140,3 +140,32 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             The constructed operator.
         """
         pass
+
+
+class OperatorFromString(Operator):
+    """
+    Special Operator class to store the arguments of
+        ``Operator.from_operator_repr()``
+    and serialize them for the remote backends.
+    """
+
+    tag: str = "operator_from_repr"
+
+    def __init__(
+        self,
+        eigenstates: Sequence[Eigenstate],
+        n_qudits: int,
+        operations: FullOp,
+    ):
+        self.eigenstates = eigenstates
+        self.n_qudits = n_qudits
+        self.operations = operations
+
+    def _to_abstract_repr(self):
+        return {
+            self.tag: {
+                "eigenstates": self.eigenstates,
+                "n_qudits": self.n_qudits,
+                "operations": self.operations,
+            }
+        }

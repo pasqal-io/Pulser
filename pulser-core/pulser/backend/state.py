@@ -172,3 +172,29 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
             )
         if len(eigenstates) != len(set(eigenstates)):
             raise ValueError("'eigenstates' can't contain repeated entries.")
+
+
+class StateFromString(State):
+    """
+    Special State class to store the arguments of
+        ``State.from_state_amplitudes()``
+    and serialize them for the remote backends.
+    """
+
+    tag: str = "state_from_string"
+
+    def __init__(
+        self,
+        eigenstates: Sequence[Eigenstate],
+        amplitudes: dict[str, ArgScalarType],
+    ):
+        self.eigenstates = eigenstates
+        self.amplitudes = amplitudes
+
+    def _to_abstract_repr(self):
+        return {
+            self.tag: {
+                "eigenstates": self.eigenstates,
+                "amplitudes": self.amplitudes,
+            }
+        }
