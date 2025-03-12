@@ -143,11 +143,7 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
 
 
 class OperatorFromString(Operator):
-    """
-    Special Operator class to store the arguments of
-        ``Operator.from_operator_repr()``
-    and serialize them for the remote backends.
-    """
+    """Operator subclass that supports serialization for remote backends."""
 
     tag: str = "operator_from_repr"
 
@@ -157,6 +153,7 @@ class OperatorFromString(Operator):
         n_qudits: int,
         operations: FullOp,
     ):
+        """Stores the arguments to make an operator from its representation."""
         self.eigenstates = eigenstates
         self.n_qudits = n_qudits
         self.operations = operations

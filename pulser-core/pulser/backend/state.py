@@ -175,11 +175,7 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
 
 
 class StateFromString(State):
-    """
-    Special State class to store the arguments of
-        ``State.from_state_amplitudes()``
-    and serialize them for the remote backends.
-    """
+    """State subclass that supports serialization for remote backends."""
 
     tag: str = "state_from_string"
 
@@ -188,6 +184,7 @@ class StateFromString(State):
         eigenstates: Sequence[Eigenstate],
         amplitudes: dict[str, ArgScalarType],
     ):
+        """Stores the arguments to make a state from its representation."""
         self.eigenstates = eigenstates
         self.amplitudes = amplitudes
 
