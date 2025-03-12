@@ -181,11 +181,12 @@ class StateFromString(State):
 
     def __init__(
         self,
+        eigenstates: Sequence[Eigenstate],
         amplitudes: dict[str, ArgScalarType],
     ):
         """Stores the arguments to make a state from its representation."""
+        self._eigenstates = eigenstates
         self.amplitudes = amplitudes
-        # self.eigenstate is read-only
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         return {
