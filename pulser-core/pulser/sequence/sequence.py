@@ -1939,7 +1939,7 @@ class Sequence(Generic[DeviceType]):
             if fig_qubit is not None:
                 fig_qubit.savefig(name + "_per_qubit" + ext, **kwargs_savefig)
                 if fig_legend is not None:
-                    fig_qubit.savefig(
+                    fig_legend.savefig(
                         name + "_per_qubit_legend" + ext, **kwargs_savefig
                     )
 
