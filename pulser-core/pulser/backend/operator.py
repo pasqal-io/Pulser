@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Sequence
-from typing import Generic, Type, TypeVar
+from typing import Any, Generic, Type, TypeVar
 
 from pulser.backend.state import Eigenstate, State
 
@@ -158,7 +158,7 @@ class OperatorFromString(Operator):
         self.n_qudits = n_qudits
         self.operations = operations
 
-    def _to_abstract_repr(self):
+    def _to_abstract_repr(self) -> dict[str, Any]:
         return {
             self.tag: {
                 "eigenstates": self.eigenstates,

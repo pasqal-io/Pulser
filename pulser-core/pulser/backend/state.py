@@ -17,7 +17,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Sequence
-from typing import Generic, Literal, Type, TypeVar, Union
+from typing import Any, Generic, Literal, Type, TypeVar, Union
 
 import numpy as np
 
@@ -181,14 +181,13 @@ class StateFromString(State):
 
     def __init__(
         self,
-        eigenstates: Sequence[Eigenstate],
         amplitudes: dict[str, ArgScalarType],
     ):
         """Stores the arguments to make a state from its representation."""
-        self.eigenstates = eigenstates
         self.amplitudes = amplitudes
+        # self.eigenstate is read-only
 
-    def _to_abstract_repr(self):
+    def _to_abstract_repr(self) -> dict[str, Any]:
         return {
             self.tag: {
                 "eigenstates": self.eigenstates,
