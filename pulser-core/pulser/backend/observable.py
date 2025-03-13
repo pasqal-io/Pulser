@@ -102,8 +102,10 @@ class Observable(Callback):
     def _to_abstract_repr(self) -> dict[str, Any]:
         return {
             self.tag: {
-                "evaluation_times": self.evaluation_times,
-                "tag_suffix": self._tag_suffix,
+                self._base_tag: {
+                    "evaluation_times": self.evaluation_times,
+                    "tag_suffix": self._tag_suffix,
+                }
             }
         }
 

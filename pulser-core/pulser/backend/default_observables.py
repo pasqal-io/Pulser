@@ -95,7 +95,9 @@ class BitStrings(Observable):
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         repr = super()._to_abstract_repr()
-        repr[self._base_tag]["one_state"] = self.one_state
+        kwargs_repr = repr[self.tag][self._base_tag]
+        kwargs_repr["num_shots"] = self.num_shots
+        kwargs_repr["one_state"] = self.one_state
         return repr
 
     def apply(
