@@ -93,11 +93,10 @@ class BitStrings(Observable):
     def _base_tag(self) -> str:
         return "bitstrings"
 
-    def _expected_kwargs(self) -> set[str]:
-        return super()._expected_kwargs() | {
-            "num_shots",
-            "one_state",
-        }
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        repr = super()._to_abstract_repr()
+        repr[self._base_tag]["one_state"] = self.one_state
+        return repr
 
     def apply(
         self,
@@ -155,8 +154,10 @@ class Fidelity(Observable):
     def _base_tag(self) -> str:
         return "fidelity"
 
-    def _expected_kwargs(self) -> set[str]:
-        return super()._expected_kwargs() | {"state"}
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        repr = super()._to_abstract_repr()
+        repr[self._base_tag]["state"] = self.state
+        return repr
 
     def apply(self, *, state: State, **kwargs: Any) -> Any:
         """Calculates the observable to store in the Results."""
@@ -199,8 +200,10 @@ class Expectation(Observable):
     def _base_tag(self) -> str:
         return "expectation"
 
-    def _expected_kwargs(self) -> set[str]:
-        return super()._expected_kwargs() | {"operator"}
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        repr = super()._to_abstract_repr()
+        repr[self._base_tag]["operator"] = self.operator
+        return repr
 
     def apply(self, *, state: State, **kwargs: Any) -> Any:
         """Calculates the observable to store in the Results."""
@@ -243,8 +246,10 @@ class CorrelationMatrix(Observable):
     def _base_tag(self) -> str:
         return "correlation_matrix"
 
-    def _expected_kwargs(self) -> set[str]:
-        return super()._expected_kwargs() | {"one_state"}
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        repr = super()._to_abstract_repr()
+        repr[self._base_tag]["one_state"] = self.one_state
+        return repr
 
     @staticmethod
     @functools.cache
@@ -321,8 +326,10 @@ class Occupation(Observable):
     def _base_tag(self) -> str:
         return "occupation"
 
-    def _expected_kwargs(self) -> set[str]:
-        return super()._expected_kwargs() | {"one_state"}
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        repr = super()._to_abstract_repr()
+        repr[self._base_tag]["one_state"] = self.one_state
+        return repr
 
     def apply(
         self, *, state: State, hamiltonian: Operator, **kwargs: Any

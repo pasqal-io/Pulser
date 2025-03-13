@@ -36,8 +36,8 @@ from numpy.typing import ArrayLike
 import pulser.math as pm
 from pulser.backend.observable import Observable
 from pulser.backend.state import State
-from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.noise_model import NoiseModel
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 
@@ -259,12 +259,10 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         )
 
     def _to_abstract_repr(self) -> dict[str, Any]:
-        keys = self._expected_kwargs()
-        res: dict[str, Any] = {k: self.__getattr__(k) for k in keys}
-        return res
+        return self._backend_options
 
     def to_abstract_repr(self) -> str:
-        """Serializes the noise model into an abstract JSON object."""
+        """Serialize `EmulationConfig` to a JSON formatted str."""
         obj_str = json.dumps(self, cls=AbstractReprEncoder)
         # validate_abstract_repr(abstr_str, "config")
         return obj_str
