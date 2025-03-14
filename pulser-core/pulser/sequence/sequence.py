@@ -1527,7 +1527,10 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             phi: The intended phase shift (in rad).
-            targets: The ids of the qubits to apply the phase shift to.
+            specific_targets: The ids of the qubits to apply the phase shift
+                to. If no specific targets are given, the phase shift will be
+                applied to all qubits in the ``Register`` or
+                ``MappableRegister``.
             basis: The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
@@ -1549,10 +1552,12 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             phi: The intended phase shift (in rad).
-            targets: The indices of the qubits to apply the phase shift to.
-                A qubit index is a number between 0 and the number of qubits.
-                It is then converted to a Qubit ID using the order in which
-                they were declared when instantiating the ``Register``
+            specific_targets: The indices of the qubits to apply the phase
+                shift to. A qubit index is a number between 0 and the number
+                of qubits. It is then converted to a Qubit ID using the order
+                in which they were declared when instantiating the ``Register``
+                or ``MappableRegister``. If no specific targets are given, the
+                phase shift will be applied to all qubits in the ``Register``
                 or ``MappableRegister``.
             basis: The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
