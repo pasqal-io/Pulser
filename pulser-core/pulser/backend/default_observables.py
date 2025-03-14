@@ -24,7 +24,7 @@ import pulser.math as pm
 from pulser.backend.config import EmulationConfig
 from pulser.backend.observable import Observable
 from pulser.backend.operator import Operator, OperatorType
-from pulser.backend.state import Eigenstate, State, StateType
+from pulser.backend.state import Eigenstate, State, StateRepr, StateType
 
 
 class StateResult(Observable):
@@ -158,7 +158,13 @@ class Fidelity(Observable):
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         repr = super()._to_abstract_repr()
-        repr[self._base_tag]["state"] = self.state
+        kwargs_repr = repr[self.tag][self._base_tag]
+        if not isinstance(self.state, StateRepr):
+            raise TypeError(
+                """'state' must be a ``StateRepr``
+                  to be serialized a remote backend."""
+            )
+        kwargs_repr["state"] = self.state
         return repr
 
     def apply(self, *, state: State, **kwargs: Any) -> Any:
@@ -250,7 +256,8 @@ class CorrelationMatrix(Observable):
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         repr = super()._to_abstract_repr()
-        repr[self._base_tag]["one_state"] = self.one_state
+        kwargs_repr = repr[self.tag][self._base_tag]
+        kwargs_repr["one_state"] = self.one_state
         return repr
 
     @staticmethod
@@ -330,7 +337,8 @@ class Occupation(Observable):
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         repr = super()._to_abstract_repr()
-        repr[self._base_tag]["one_state"] = self.one_state
+        kwargs_repr = repr[self.tag][self._base_tag]
+        kwargs_repr["one_state"] = self.one_state
         return repr
 
     def apply(

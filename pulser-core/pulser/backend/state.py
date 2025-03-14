@@ -174,10 +174,10 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
             raise ValueError("'eigenstates' can't contain repeated entries.")
 
 
-class StateFromString(State):
+class StateRepr:
     """State subclass that supports serialization for remote backends."""
 
-    tag: str = "state_from_string"
+    tag: str = "state_repr"
 
     def __init__(
         self,
@@ -191,7 +191,7 @@ class StateFromString(State):
     def _to_abstract_repr(self) -> dict[str, Any]:
         return {
             self.tag: {
-                "eigenstates": self.eigenstates,
+                "eigenstates": self._eigenstates,
                 "amplitudes": self.amplitudes,
             }
         }
