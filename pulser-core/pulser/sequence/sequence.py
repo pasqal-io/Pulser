@@ -1516,7 +1516,7 @@ class Sequence(Generic[DeviceType]):
     def phase_shift(
         self,
         phi: float | Parametrized,
-        *targets: QubitId,
+        *specific_targets: QubitId,
         basis: str = "digital",
     ) -> None:
         r"""Shifts the phase of a qubit's reference by 'phi', on a given basis.
@@ -1532,13 +1532,13 @@ class Sequence(Generic[DeviceType]):
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
         """
-        self._phase_shift(phi, *targets, basis=basis)
+        self._phase_shift(phi, *specific_targets, basis=basis)
 
     @seq_decorators.store
     def phase_shift_index(
         self,
         phi: float | Parametrized,
-        *targets: int | Parametrized,
+        *specific_targets: int | Parametrized,
         basis: str = "digital",
     ) -> None:
         r"""Shifts the phase of a qubit's reference by 'phi', on a given basis.
@@ -1562,7 +1562,7 @@ class Sequence(Generic[DeviceType]):
             Cannot be used on non-parametrized sequences using a mappable
             register.
         """
-        self._phase_shift(phi, *targets, basis=basis, _index=True)
+        self._phase_shift(phi, *specific_targets, basis=basis, _index=True)
 
     @seq_decorators.store
     @seq_decorators.block_if_measured
@@ -2157,7 +2157,7 @@ class Sequence(Generic[DeviceType]):
     def _phase_shift(
         self,
         phi: float | Parametrized,
-        *targets: QubitId | int | Parametrized,
+        *specific_targets: QubitId | int | Parametrized,
         basis: str,
         _index: bool = False,
     ) -> None:
@@ -2165,7 +2165,14 @@ class Sequence(Generic[DeviceType]):
             raise ValueError(
                 f"No declared channel targets the given 'basis' ('{basis}')."
             )
-        target_ids = self._check_qubits_give_ids(*targets, _index=_index)
+
+        if not specific_targets:
+            specific_targets = self._register.qubit_ids
+            _index = False
+
+        target_ids = self._check_qubits_give_ids(
+            *specific_targets, _index=_index
+        )
 
         if not self.is_parametrized():
             phi = float(cast(float, phi))

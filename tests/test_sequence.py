@@ -1456,11 +1456,12 @@ def test_phase(reg, device, det_map):
     with pytest.raises(ValueError, match="ids have to be qubit ids"):
         seq.phase_shift(np.pi, "q1", "q4", "q100")
 
+    # Test global phase shift
     seq.declare_channel("ch1", "rydberg_global")
-    seq.phase_shift(1, *seq._qids, basis="ground-rydberg")
+    seq.phase_shift(1, basis="ground-rydberg")
     for q in seq.qubit_info:
         assert seq.current_phase_ref(q, "ground-rydberg") == 1
-    seq.phase_shift(1, *seq._qids)
+    seq.phase_shift(1)
     assert seq.current_phase_ref("q1", "digital") == 0
     assert seq.current_phase_ref("q10", "digital") == 1
 
