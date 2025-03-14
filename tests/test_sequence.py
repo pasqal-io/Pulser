@@ -573,6 +573,7 @@ def test_switch_register(
         seq.switch_register(Register(dict(q1=(0, 0), qN=(10, 10))))
 
     seq.declare_channel("ryd", "rydberg_global")
+    seq.phase_shift(3)
     seq.add(pulse, "ryd", protocol="no-delay")
 
     if mappable_reg:
@@ -595,6 +596,11 @@ def test_switch_register(
     assert new_seq.is_register_mappable() == mappable_reg
     assert new_seq._calls[1:] == seq._calls[1:]  # Excludes __init__
     assert new_seq._to_build_calls == seq._to_build_calls
+
+    if not parametrized and not mappable_reg:
+        assert new_seq.current_phase_ref("foo") == 3
+        assert new_seq.current_phase_ref("q0") == 3
+        assert seq.current_phase_ref("q1") == 3
 
     build_kwargs = {}
     if parametrized:
