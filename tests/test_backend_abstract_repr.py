@@ -143,11 +143,16 @@ class TestStateRepr:
             StateRepr(basis, amplitudes)
 
     def test_state_repr_not_implemented(self):
+        basis = {"r", "g"}
+        amplitudes = {"rgr": 1.0, "grg": 1.0}
+        state = StateRepr(eigenstates=basis, amplitudes=amplitudes)
         with pytest.raises(NotImplementedError):
-            StateRepr.from_state_amplitudes()
+            state.from_state_amplitudes(
+                eigenstates=basis, amplitudes=amplitudes
+            )
         with pytest.raises(NotImplementedError):
-            StateRepr.n_qudits()
+            state.n_qudits
         with pytest.raises(NotImplementedError):
-            StateRepr.overlap()
+            state.overlap(state)
         with pytest.raises(NotImplementedError):
-            StateRepr.sample()
+            state.sample(num_shots=10)

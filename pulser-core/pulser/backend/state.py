@@ -195,7 +195,7 @@ class StateRepr(State):
 
     @classmethod
     def from_state_amplitudes(
-        self,
+        cls,
         *,
         eigenstates: Sequence[Eigenstate],
         amplitudes: dict[str, ArgScalarType],
