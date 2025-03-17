@@ -2178,7 +2178,8 @@ class Sequence(Generic[DeviceType]):
                 "specifying targets. In previous versions calling without "
                 "targets wouldn't add a phase shift to any qubit, whereas in "
                 "versions v1.4.0 and up a phase shift will be added to all "
-                "qubits in the register if no specific targets are given."
+                "qubits in the register if no specific targets are given.",
+                stacklevel=3,
             )
             specific_targets = self._register.qubit_ids
             _index = False
