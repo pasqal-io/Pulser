@@ -642,7 +642,7 @@ class TestSerialization:
 
         seq.align("digital", "rydberg")
         seq.add(pi_pulse, "rydberg")
-        seq.phase_shift(1.0, "control", "target", basis="ground-rydberg")
+        seq.phase_shift(1.0, basis="ground-rydberg")
         seq.target({"target"}, "rydberg")
         seq.add(two_pi_pulse, "rydberg")
 
@@ -1758,6 +1758,12 @@ class TestDeserialization:
                 "basis": "digital",
             },
             {
+                "op": "phase_shift",
+                "phi": 2,
+                "targets": [],
+                "basis": "digital",
+            },
+            {
                 "op": "pulse",
                 "channel": "global",
                 "phase": 1,
@@ -1978,6 +1984,12 @@ class TestDeserialization:
                 "basis": "ground-rydberg",
             },
             {
+                "op": "phase_shift",
+                "phi": var1,
+                "targets": [],
+                "basis": "ground-rydberg",
+            },
+            {
                 "op": "pulse",
                 "channel": "global",
                 "phase": var1,
@@ -2049,10 +2061,13 @@ class TestDeserialization:
             assert c.name == "phase_shift_index"
             # phi is variable
             assert isinstance(c.args[0], VariableItem)
-            # qubit 1 is fixed
-            assert c.args[1] == 2
-            # qubit 2 is variable
-            assert isinstance(c.args[2], VariableItem)
+            if op["targets"]:
+                # qubit 1 is fixed
+                assert c.args[1] == 2
+                # qubit 2 is variable
+                assert isinstance(c.args[2], VariableItem)
+            else:
+                assert len(c.args) == 1
             # basis is fixed
             assert c.kwargs["basis"] == "ground-rydberg"
         elif "pulse" in op["op"]:

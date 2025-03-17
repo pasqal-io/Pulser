@@ -169,11 +169,13 @@ def serialize_abstract_sequence(
 
     def unfold_targets(
         target_ids: QubitId | Collection[QubitId],
-    ) -> QubitId | list[QubitId]:
+    ) -> QubitId | list[QubitId] | None:
         if isinstance(target_ids, (int, str)):
             return target_ids
 
         targets = list(cast(Collection, target_ids))
+        if len(targets) == 0:
+            return []
         return targets if len(targets) > 1 else targets[0]
 
     def convert_targets(
