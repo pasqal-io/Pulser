@@ -95,9 +95,8 @@ class BitStrings(Observable):
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         repr = super()._to_abstract_repr()
-        kwargs_repr = repr[self.tag][self._base_tag]
-        kwargs_repr["num_shots"] = self.num_shots
-        kwargs_repr["one_state"] = self.one_state
+        repr["num_shots"] = self.num_shots
+        repr["one_state"] = self.one_state
         return repr
 
     def apply(
@@ -158,8 +157,7 @@ class Fidelity(Observable):
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         repr = super()._to_abstract_repr()
-        kwargs_repr = repr[self.tag][self._base_tag]
-        kwargs_repr["state"] = self.state
+        repr["state"] = self.state
         return repr
 
     def apply(self, *, state: State, **kwargs: Any) -> Any:
@@ -205,7 +203,7 @@ class Expectation(Observable):
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         repr = super()._to_abstract_repr()
-        repr[self._base_tag]["operator"] = self.operator
+        repr["operator"] = self.operator
         return repr
 
     def apply(self, *, state: State, **kwargs: Any) -> Any:
@@ -251,8 +249,7 @@ class CorrelationMatrix(Observable):
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         repr = super()._to_abstract_repr()
-        kwargs_repr = repr[self.tag][self._base_tag]
-        kwargs_repr["one_state"] = self.one_state
+        repr["one_state"] = self.one_state
         return repr
 
     @staticmethod
@@ -332,8 +329,7 @@ class Occupation(Observable):
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         repr = super()._to_abstract_repr()
-        kwargs_repr = repr[self.tag][self._base_tag]
-        kwargs_repr["one_state"] = self.one_state
+        repr["one_state"] = self.one_state
         return repr
 
     def apply(

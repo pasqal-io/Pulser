@@ -21,18 +21,16 @@ from pulser.backend.state import StateRepr
 
 
 @mark.parametrize(
-    "observable, base_tag, kwargs",
+    "observable, expected_kwargs",
     [
         (
             StateResult,
-            "state",
             {
                 "evaluation_times": [0.1, 0.3, 1.0],
             },
         ),
         (
             BitStrings,
-            "bitstrings",
             {
                 "evaluation_times": [i * 0.05 for i in range(10)],
                 "num_shots": 211,
@@ -42,48 +40,41 @@ from pulser.backend.state import StateRepr
         ),
         (
             CorrelationMatrix,
-            "correlation_matrix",
             {"one_state": "r"},
         ),
         (
             Occupation,
-            "occupation",
             {"one_state": "g"},
         ),
         (
             Energy,
-            "energy",
             {"evaluation_times": [i * 0.05 for i in range(10)]},
         ),
         (
             EnergyVariance,
-            "energy_variance",
             {"evaluation_times": np.linspace(0, 1, 13)},
         ),
         (
             EnergySecondMoment,
-            "energy_second_moment",
             {"evaluation_times": [i * 0.1 for i in range(5)]},
         ),
     ],
 )
-def test_observable_repr(observable, base_tag, kwargs):
-    obs = observable(**kwargs)
-
-    # test repr as dict
+def test_observable_repr(observable, expected_kwargs):
+    obs = observable(**expected_kwargs)
     obs_repr = obs._to_abstract_repr()
     assert isinstance(obs_repr, dict)
-    assert obs_repr.keys() == {obs.tag}
-    assert obs_repr[obs.tag].keys() == {obs._base_tag}
 
-    obs_repr_kwargs = obs_repr[obs.tag][base_tag]
-    for key, expected_value in kwargs.items():
-        assert obs_repr_kwargs[key] is expected_value
     # test default values
-    if "evaluation_times" not in kwargs.keys():
-        assert obs_repr_kwargs["evaluation_times"] is None
-    if "tag_suffix" not in kwargs.keys():
-        assert obs_repr_kwargs["tag_suffix"] is None
+    assert obs_repr["observable"] == obs._base_tag
+    if "evaluation_times" not in expected_kwargs.keys():
+        assert obs_repr["evaluation_times"] is None
+    if "tag_suffix" not in expected_kwargs.keys():
+        assert obs_repr["tag_suffix"] is None
+
+    # test kwargs
+    for key, expected_value in expected_kwargs.items():
+        assert obs_repr[key] is expected_value
 
 
 def test_fidelity_repr():
@@ -97,7 +88,7 @@ def test_fidelity_repr():
 
     fidelity_repr = fidelity._to_abstract_repr()
 
-    state_repr = fidelity_repr["fidelity"]["fidelity"]["state"]
+    state_repr = fidelity_repr["state"]
     assert state_repr is state
 
 
@@ -127,7 +118,7 @@ def test_config_repr():
 class TestStateRepr:
     def test_state_repr(self):
         basis = {"r", "g"}
-        amplitudes = {"rgr": 1.0, "grg": 1.0}
+        amplitudes = {"rgr": 1.0j + 0.2, "grg": 1.0}
         expected_repr = {"eigenstates": basis, "amplitudes": amplitudes}
         state = StateRepr(basis, amplitudes)
         state_repr = state._to_abstract_repr()
