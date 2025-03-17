@@ -174,7 +174,7 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
             raise ValueError("'eigenstates' can't contain repeated entries.")
 
 
-class StateRepr:
+class StateRepr(State):
     """State subclass that supports serialization for remote backends."""
 
     tag: str = "state_repr"
@@ -185,13 +185,28 @@ class StateRepr:
         amplitudes: dict[str, ArgScalarType],
     ):
         """Stores the arguments to make a state from its representation."""
+        self._validate_eigenstates(eigenstates)
         self._eigenstates = eigenstates
         self.amplitudes = amplitudes
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         return {
-            self.tag: {
-                "eigenstates": self._eigenstates,
-                "amplitudes": self.amplitudes,
-            }
+            "eigenstates": self._eigenstates,
+            "amplitudes": self.amplitudes,
         }
+
+    def from_state_amplitudes():
+        """``from_state_amplitudes`` not implemented in ``StateRepr``."""
+        raise NotImplementedError
+
+    def n_qudits():
+        """``n_qudits`` not implemented in ``StateRepr``."""
+        raise NotImplementedError
+
+    def overlap():
+        """``overlap`` not implemented in ``StateRepr``."""
+        raise NotImplementedError
+
+    def sample():
+        """``sample`` not implemented in ``StateRepr``."""
+        raise NotImplementedError

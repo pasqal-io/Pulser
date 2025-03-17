@@ -1,18 +1,21 @@
 import json
 
 import numpy as np
+import pytest
 from pytest import mark
 
 from pulser.backend import (
+    StateResult,
     BitStrings,
+    Fidelity,
     CorrelationMatrix,
     EmulationConfig,
     Energy,
     EnergySecondMoment,
     EnergyVariance,
     Occupation,
-    StateResult,
 )
+from pulser.backend.state import StateRepr
 
 # TODO: decide where to put these tests
 
@@ -83,6 +86,21 @@ def test_observable_repr(observable, base_tag, kwargs):
         assert obs_repr_kwargs["tag_suffix"] is None
 
 
+def test_fidelity_repr():
+    evaluation_times = [0.1, 0.3, 0.9]
+    kwargs = {"evaluation_times": evaluation_times}
+
+    basis = {"r", "g"}
+    amplitudes = {"rgr": 1.0, "grg": 1.0}
+    state = StateRepr(basis, amplitudes)
+    fidelity = Fidelity(state, **kwargs)
+
+    fidelity_repr = fidelity._to_abstract_repr()
+
+    state_repr = fidelity_repr["fidelity"]["fidelity"]["state"]
+    assert state_repr is state
+
+
 def test_config_repr():
     evaluation_times = [0.1, 0.3, 0.9]
     bitstrings = BitStrings(evaluation_times=evaluation_times)
@@ -104,3 +122,32 @@ def test_config_repr():
     config_load_dump_str = json.dumps(json.loads(config_str))
 
     assert config_str == config_load_dump_str
+
+
+class TestStateRepr:
+    def test_state_repr(self):
+        basis = {"r", "g"}
+        amplitudes = {"rgr": 1.0, "grg": 1.0}
+        expected_repr = {"eigenstates": basis, "amplitudes": amplitudes}
+        state = StateRepr(basis, amplitudes)
+        state_repr = state._to_abstract_repr()
+        assert state_repr == expected_repr
+
+    def test_state_repr_invalid_eigenstates(self):
+        basis = {"av", "b", "c"}
+        amplitudes = {"rgr": 1.0, "grg": 1.0}
+        with pytest.raises(
+            ValueError,
+            match="All eigenstates must be represented by single characters.",
+        ):
+            StateRepr(basis, amplitudes)
+
+    def test_state_repr_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            StateRepr.from_state_amplitudes()
+        with pytest.raises(NotImplementedError):
+            StateRepr.n_qudits()
+        with pytest.raises(NotImplementedError):
+            StateRepr.overlap()
+        with pytest.raises(NotImplementedError):
+            StateRepr.sample()
