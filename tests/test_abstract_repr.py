@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import re
+import warnings
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import replace
@@ -642,7 +643,12 @@ class TestSerialization:
 
         seq.align("digital", "rydberg")
         seq.add(pi_pulse, "rydberg")
-        seq.phase_shift(1.0, basis="ground-rydberg")
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                "In version v1.4.0 the behavior of `Sequence.phase_shift`",
+            )
+            seq.phase_shift(1.0, basis="ground-rydberg")
         seq.target({"target"}, "rydberg")
         seq.add(two_pi_pulse, "rydberg")
 
@@ -653,13 +659,17 @@ class TestSerialization:
 
     @pytest.fixture
     def abstract(self, sequence):
-        return json.loads(
-            sequence.to_abstract_repr(
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                "In version v1.4.0 the behavior of `Sequence.phase_shift`",
+            )
+            abstract_repr = sequence.to_abstract_repr(
                 target_atom=1,
                 amps=[np.pi, 2 * np.pi],
                 duration=200,
             )
-        )
+        return json.loads(abstract_repr)
 
     def test_schema(self, abstract):
         validate_schema(abstract)
@@ -1788,8 +1798,14 @@ class TestDeserialization:
         s = _get_serialized_seq(
             operations=[op], device=json.loads(MockDevice.to_abstract_repr())
         )
-        _check_roundtrip(s)
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with warnings.catch_warnings():
+            if op["op"] == "phase_shift":
+                warnings.filterwarnings(
+                    "ignore",
+                    "In version v1.4.0 the behavior of `Sequence.phase_shift`",
+                )
+            _check_roundtrip(s)
+            seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # init + declare channels + 1 operation
         offset = 1 + len(s["channels"])
@@ -2035,8 +2051,14 @@ class TestDeserialization:
                 "var2": {"type": "int", "value": [44]},
             },
         )
-        _check_roundtrip(s)
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with warnings.catch_warnings():
+            if op["op"] == "phase_shift" and not op["targets"]:
+                warnings.filterwarnings(
+                    "ignore",
+                    "In version v1.4.0 the behavior of `Sequence.phase_shift`",
+                )
+            _check_roundtrip(s)
+            seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # init + declare channels + 1 operation
         offset = 1 + len(s["channels"])

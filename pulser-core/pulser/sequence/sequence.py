@@ -2172,6 +2172,14 @@ class Sequence(Generic[DeviceType]):
             )
 
         if not specific_targets:
+            warnings.warn(
+                "In version v1.4.0 the behavior of `Sequence.phase_shift` and "
+                "`Sequence.phase_shift_index` changed when called without "
+                "specifying targets. In previous versions calling without "
+                "targets wouldn't add a phase shift to any qubit, whereas in "
+                "versions v1.4.0 and up a phase shift will be added to all "
+                "qubits in the register if no specific targets are given."
+            )
             specific_targets = self._register.qubit_ids
             _index = False
 

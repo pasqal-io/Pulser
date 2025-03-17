@@ -18,6 +18,7 @@ import dataclasses
 import itertools
 import json
 import re
+import warnings
 from typing import Any, cast
 from unittest.mock import patch
 
@@ -573,7 +574,11 @@ def test_switch_register(
         seq.switch_register(Register(dict(q1=(0, 0), qN=(10, 10))))
 
     seq.declare_channel("ryd", "rydberg_global")
-    seq.phase_shift(3)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", "In version v1.4.0 the behavior of `Sequence.phase_shift"
+        )
+        seq.phase_shift(3)
     seq.add(pulse, "ryd", protocol="no-delay")
 
     if mappable_reg:
@@ -589,7 +594,12 @@ def test_switch_register(
         context_manager = contextlib.nullcontext()
 
     with context_manager:
-        new_seq = seq.switch_register(new_reg)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                "In version v1.4.0 the behavior of `Sequence.phase_shift`",
+            )
+            new_seq = seq.switch_register(new_reg)
     assert seq.declared_variables or not parametrized
     assert seq.declared_variables == new_seq.declared_variables
     assert new_seq.is_parametrized() == parametrized
@@ -608,7 +618,12 @@ def test_switch_register(
     if mappable_reg:
         build_kwargs["qubits"] = {"q0": 1, "q1": 4}
     if build_kwargs:
-        new_seq = new_seq.build(**build_kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                "In version v1.4.0 the behavior of `Sequence.phase_shift`",
+            )
+            new_seq = new_seq.build(**build_kwargs)
 
     assert isinstance(
         (raman_pulse_slot := new_seq._schedule["raman"][1]).type, Pulse
@@ -625,7 +640,13 @@ def test_switch_register(
     if config_det_map:
         if with_slm_mask:
             if parametrized:
-                seq = seq.build(**build_kwargs)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        "In version v1.4.0 the behavior of "
+                        "`Sequence.phase_shift`",
+                    )
+                    seq = seq.build(**build_kwargs)
             assert np.any(reg.qubits["q0"] != new_reg.qubits["q0"])
             assert "dmm_0" in seq.declared_channels
             prev_qubit_wmap = seq._schedule[
@@ -1464,10 +1485,20 @@ def test_phase(reg, device, det_map):
 
     # Test global phase shift
     seq.declare_channel("ch1", "rydberg_global")
-    seq.phase_shift(1, basis="ground-rydberg")
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            "In version v1.4.0 the behavior of `Sequence.phase_shift`",
+        )
+        seq.phase_shift(1, basis="ground-rydberg")
     for q in seq.qubit_info:
         assert seq.current_phase_ref(q, "ground-rydberg") == 1
-    seq.phase_shift(1)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            "In version v1.4.0 the behavior of `Sequence.phase_shift`",
+        )
+        seq.phase_shift(1)
     assert seq.current_phase_ref("q1", "digital") == 0
     assert seq.current_phase_ref("q10", "digital") == 1
 
