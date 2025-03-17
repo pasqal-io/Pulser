@@ -62,6 +62,7 @@ class BackendConfig:
                 f"arguments are expected: {self._expected_kwargs()}.",
                 stacklevel=2,
             )
+        # Store the abstract repr of the config in _backend_options
         # Prevents potential issues with mutable arguments
         self._backend_options = copy.deepcopy(backend_options)
         if "backend_options" in backend_options:
