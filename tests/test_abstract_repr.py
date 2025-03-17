@@ -643,11 +643,10 @@ class TestSerialization:
 
         seq.align("digital", "rydberg")
         seq.add(pi_pulse, "rydberg")
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                "In version v1.4.0 the behavior of `Sequence.phase_shift`",
-            )
+        with pytest.warns(
+            UserWarning,
+            match="In version v1.4.0 the behavior of `Sequence.phase_shift`",
+        ):
             seq.phase_shift(1.0, basis="ground-rydberg")
         seq.target({"target"}, "rydberg")
         seq.add(two_pi_pulse, "rydberg")
@@ -659,11 +658,10 @@ class TestSerialization:
 
     @pytest.fixture
     def abstract(self, sequence):
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                "In version v1.4.0 the behavior of `Sequence.phase_shift`",
-            )
+        with pytest.warns(
+            UserWarning,
+            match="In version v1.4.0 the behavior of `Sequence.phase_shift`",
+        ):
             abstract_repr = sequence.to_abstract_repr(
                 target_atom=1,
                 amps=[np.pi, 2 * np.pi],
