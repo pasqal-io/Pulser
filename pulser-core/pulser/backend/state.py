@@ -177,8 +177,6 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
 class StateRepr(State):
     """State subclass that supports serialization for remote backends."""
 
-    tag: str = "state_repr"
-
     def __init__(
         self,
         eigenstates: Sequence[Eigenstate],
@@ -195,18 +193,32 @@ class StateRepr(State):
             "amplitudes": self.amplitudes,
         }
 
-    def from_state_amplitudes():
+    @classmethod
+    def from_state_amplitudes(
+        self,
+        *,
+        eigenstates: Sequence[Eigenstate],
+        amplitudes: dict[str, ArgScalarType],
+    ) -> StateRepr:
         """``from_state_amplitudes`` not implemented in ``StateRepr``."""
         raise NotImplementedError
 
-    def n_qudits():
+    @property
+    def n_qudits(self) -> int:
         """``n_qudits`` not implemented in ``StateRepr``."""
         raise NotImplementedError
 
-    def overlap():
+    def overlap(self, other: StateRepr, /) -> None:
         """``overlap`` not implemented in ``StateRepr``."""
         raise NotImplementedError
 
-    def sample():
+    def sample(
+        self,
+        *,
+        num_shots: int,
+        one_state: Eigenstate | None = None,
+        p_false_pos: float = 0.0,
+        p_false_neg: float = 0.0,
+    ) -> Counter[str]:
         """``sample`` not implemented in ``StateRepr``."""
         raise NotImplementedError

@@ -5,15 +5,15 @@ import pytest
 from pytest import mark
 
 from pulser.backend import (
-    StateResult,
     BitStrings,
-    Fidelity,
     CorrelationMatrix,
     EmulationConfig,
     Energy,
     EnergySecondMoment,
     EnergyVariance,
+    Fidelity,
     Occupation,
+    StateResult,
 )
 from pulser.backend.state import StateRepr
 
