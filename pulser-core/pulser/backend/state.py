@@ -16,12 +16,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import Counter
-from collections.abc import Sequence
-from typing import Generic, Literal, Type, TypeVar, Union
+from collections.abc import Mapping, Sequence
+from typing import Any, Generic, Literal, Type, TypeVar, Union
 
 import numpy as np
 
 from pulser.channels.base_channel import States
+from pulser.json.exceptions import AbstractReprError
 
 Eigenstate = Union[States, Literal["0", "1"]]
 
@@ -37,6 +38,17 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     """
 
     _eigenstates: Sequence[Eigenstate]
+    _amplitudes: Mapping[str, ReturnScalarType] | None
+
+    def __init__(
+        self,
+        *,
+        eigenstates: Sequence[Eigenstate],
+        amplitudes: Mapping[str, ReturnScalarType] | None = None,
+    ):
+        """Initializes a State."""
+        self._eigenstates = eigenstates
+        self._amplitudes = amplitudes
 
     @property
     @abstractmethod
@@ -130,7 +142,7 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         cls: Type[StateType],
         *,
         eigenstates: Sequence[Eigenstate],
-        amplitudes: dict[str, ArgScalarType],
+        amplitudes: Mapping[str, ArgScalarType],
     ) -> StateType:
         """Construct the state from its basis states' amplitudes.
 
@@ -172,3 +184,37 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
             )
         if len(eigenstates) != len(set(eigenstates)):
             raise ValueError("'eigenstates' can't contain repeated entries.")
+
+    @staticmethod
+    def _validate_amplitudes(
+        amplitudes: Mapping[str, Any], eigenstates: Sequence[Eigenstate]
+    ) -> int:
+        """Validates the state amplitudes mapping.
+
+        Returns:
+            int: The number of qudits in the state.
+        """
+        basis_states = list(amplitudes)
+        n_qudits = len(basis_states[0])
+        if not all(
+            len(bs) == n_qudits and set(bs) <= set(eigenstates)
+            for bs in basis_states
+        ):
+            raise ValueError(
+                "All basis states must be combinations of eigenstates with the"
+                f" same length. Expected combinations of {eigenstates}, each "
+                f"with {n_qudits} elements."
+            )
+        return n_qudits
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        if not self._amplitudes:
+            cls_name = self.__class__.__name__
+            raise AbstractReprError(
+                f"Failed to serialize state of type {cls_name!r} because it "
+                f"was not created via '{cls_name}.from_state_amplitudes()'."
+            )
+        return {
+            "eigenstates": tuple(self._eigenstates),
+            "amplitudes": dict(self._amplitudes),
+        }

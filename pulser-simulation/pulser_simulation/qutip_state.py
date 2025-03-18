@@ -45,11 +45,15 @@ class QutipState(State[SupportsComplex, complex]):
     """
 
     def __init__(
-        self, state: qutip.Qobj, *, eigenstates: Sequence[Eigenstate]
+        self,
+        state: qutip.Qobj,
+        *,
+        eigenstates: Sequence[Eigenstate],
+        **kwargs: Any,
     ):
         """Initializes a QutipState."""
         self._validate_eigenstates(eigenstates)
-        self._eigenstates = tuple(eigenstates)
+        super().__init__(eigenstates=eigenstates, **kwargs)
         valid_types = ("ket", "bra", "oper")
         if not isinstance(state, qutip.Qobj) or state.type not in valid_types:
             raise TypeError(
@@ -216,7 +220,7 @@ class QutipState(State[SupportsComplex, complex]):
         cls: Type[QutipStateType],
         *,
         eigenstates: Sequence[Eigenstate],
-        amplitudes: dict[str, SupportsComplex],
+        amplitudes: Mapping[str, SupportsComplex],
     ) -> QutipStateType:
         """Construct the state from its basis states' amplitudes.
 
@@ -229,18 +233,7 @@ class QutipState(State[SupportsComplex, complex]):
             The state constructed from the amplitudes.
         """
         cls._validate_eigenstates(eigenstates)
-        basis_states = list(amplitudes)
-        n_qudits = len(basis_states[0])
-        if not all(
-            len(bs) == n_qudits and set(bs) <= set(eigenstates)
-            for bs in basis_states
-        ):
-            raise ValueError(
-                "All basis states must be combinations of eigenstates with the"
-                f" same length. Expected combinations of {eigenstates}, each "
-                f"with {n_qudits} elements."
-            )
-
+        n_qudits = cls._validate_amplitudes(amplitudes, eigenstates)
         qudit_dim = len(eigenstates)
 
         def make_qobj(basis_state: str) -> qutip.Qobj:
@@ -253,10 +246,11 @@ class QutipState(State[SupportsComplex, complex]):
 
         # Start with an empty Qobj with the right dimension
         state = make_qobj(eigenstates[0] * n_qudits) * 0
-        for basis_state, amp in amplitudes.items():
-            state += complex(amp) * make_qobj(basis_state)
+        amps = {k: complex(v) for k, v in amplitudes.items()}
+        for basis_state, amp in amps.items():
+            state += amp * make_qobj(basis_state)
 
-        return cls(state, eigenstates=eigenstates)
+        return cls(state, eigenstates=eigenstates, amplitudes=amps)
 
     def __repr__(self) -> str:
         return "\n".join(

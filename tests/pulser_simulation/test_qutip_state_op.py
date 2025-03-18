@@ -13,12 +13,15 @@
 # limitations under the License.
 from __future__ import annotations
 
+import json
 import re
 
 import numpy as np
 import pytest
 import qutip
 
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.exceptions import AbstractReprError
 from pulser_simulation import QutipOperator, QutipState
 
 
@@ -269,6 +272,23 @@ class TestQutipState:
             eigenstates=("r", "g"), amplitudes={"g": 1.0}
         )
         assert dm_g != qutip.basis(2, 1).proj()
+
+    def test_abstract_repr(self):
+        kwargs = dict(eigenstates=("r", "g"), amplitudes={"g": 1.0})
+        state = QutipState.from_state_amplitudes(**kwargs)
+        assert json.dumps(state, cls=AbstractReprEncoder) == json.dumps(kwargs)
+
+        with pytest.raises(
+            AbstractReprError,
+            match=re.escape(
+                "Failed to serialize state of type 'QutipState' because it"
+                " was not created via 'QutipState.from_state_amplitudes()'"
+            ),
+        ):
+            json.dumps(
+                QutipState(state.to_qobj(), eigenstates=state.eigenstates),
+                cls=AbstractReprEncoder,
+            )
 
 
 class TestQutipOperator:

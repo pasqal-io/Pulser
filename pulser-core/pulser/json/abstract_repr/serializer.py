@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 class AbstractReprEncoder(json.JSONEncoder):
     """The custom encoder for abstract representation of Pulser objects."""
 
-    def default(self, o: Any) -> dict[str, Any] | list | int:
+    def default(self, o: Any) -> dict[str, Any] | list | int | float:
         """Handles JSON encoding of objects not supported by default."""
         if hasattr(o, "_to_abstract_repr"):
             return cast(dict, o._to_abstract_repr())
@@ -49,6 +49,9 @@ class AbstractReprEncoder(json.JSONEncoder):
         elif isinstance(o, set):
             return list(o)
         elif isinstance(o, complex):
+            if not o.imag:
+                # Try to return a real number when possible
+                return o.real
             return dict(real=o.real, imag=o.imag)
         else:  # pragma: no cover
             return cast(dict, json.JSONEncoder.default(self, o))
