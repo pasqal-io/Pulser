@@ -201,11 +201,6 @@ class Expectation(Observable):
     def _base_tag(self) -> str:
         return "expectation"
 
-    def _to_abstract_repr(self) -> dict[str, Any]:
-        repr = super()._to_abstract_repr()
-        repr["operator"] = self.operator
-        return repr
-
     def apply(self, *, state: State, **kwargs: Any) -> Any:
         """Calculates the observable to store in the Results."""
         return self.operator.expect(state)

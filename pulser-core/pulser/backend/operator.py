@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Sequence
-from typing import Any, Generic, Type, TypeVar
+from typing import Generic, Type, TypeVar
 
 from pulser.backend.state import Eigenstate, State
 
@@ -140,29 +140,3 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             The constructed operator.
         """
         pass
-
-
-class OperatorFromString(Operator):
-    """Operator subclass that supports serialization for remote backends."""
-
-    tag: str = "operator_from_repr"
-
-    def __init__(
-        self,
-        eigenstates: Sequence[Eigenstate],
-        n_qudits: int,
-        operations: FullOp,
-    ):
-        """Stores the arguments to make an operator from its representation."""
-        self.eigenstates = eigenstates
-        self.n_qudits = n_qudits
-        self.operations = operations
-
-    def _to_abstract_repr(self) -> dict[str, Any]:
-        return {
-            self.tag: {
-                "eigenstates": self.eigenstates,
-                "n_qudits": self.n_qudits,
-                "operations": self.operations,
-            }
-        }
