@@ -107,7 +107,7 @@ def test_config_repr():
 
     config = EmulationConfig(**expected_kwargs)
     # dump with AbstrctReprEncoder
-    config_str = config.to_abstract_repr()
+    config_str = config.to_abstract_repr(validate=True)
     # load and redump but with default JSON encoder
     # equivalent to go key by key and check single str repr
     config_load_dump_str = json.dumps(json.loads(config_str))

@@ -40,7 +40,9 @@ REGISTRY: Registry = Registry(
 
 def validate_abstract_repr(
     obj_str: str,
-    name: Literal["sequence", "device", "layout", "register", "noise"],
+    name: Literal[
+        "sequence", "device", "layout", "register", "noise", "config"
+    ],
 ) -> None:
     """Validate the abstract representation of an object.
 

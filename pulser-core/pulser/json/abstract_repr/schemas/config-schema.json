@@ -1,0 +1,362 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "/config_schema",
+    "type": "object",    
+    "properties": {
+        "configuration": {
+            "$ref": "#/emulatorConfig"
+        }
+    },
+    "emulatorConfig":{
+        "description": "The config that will be passed to the emulator backend",
+        "type": "object",
+        "properties": {
+            "observables": {
+                "type": "array",
+                "description":"the outputs that the emulator should produce",
+                "items": {
+                    "anyOf":[
+                        {
+                            "$ref": "#/bitstrings"
+                        },
+                        {
+                            "$ref": "#/expectation"
+                        },
+                        {
+                            "$ref": "#/fidelity"
+                        },
+                        {
+                            "$ref": "#/occupation"
+                        },
+                        {
+                            "$ref": "#/correlation_matrix"
+                        },
+                        {
+                            "$ref": "#/energy"
+                        },
+                        {
+                            "$ref": "#/energy_second_moment"
+                        },
+                        {
+                            "$ref": "#/energy_variance"
+                        }
+                    ]
+                }
+            },
+            "default_evaluation_times": {
+                "description": "for if evaluation_times is not passed to an observable",
+                "oneOf": [
+                    {
+                        "enum": ["Full"]
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "number",
+                            "inclusiveMinimum": 0.0,
+                            "inclusiveMaximum": 1.0
+                        }
+                    }
+                ]
+            },
+            "initial_state": {
+                "description": "what initial state the emulator should use",
+                "$ref": "#/state"
+            },
+            "with_modulation": {
+                "description": "whether hardware modulation should be applied to the sequence",
+                "type": "boolean"
+            },
+            "interaction_matrix": {
+                "description":"overrides the interactions given by the register positions",
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                }
+            },
+            "prefer_device_noise_model": {
+                "description": "whether to prefer the noise model inferred from the sequence over the config one",
+                "type": "boolean"
+            },
+            "noise_model": {
+                "description": "the noise model to use",
+                "type": "object"
+            }
+        },
+        "required": [
+            "observables",
+            "default_evaluation_times",
+            "with_modulation",
+            "prefer_device_noise_model",
+            "noise_model"
+        ]
+    },
+    "expectation": {
+        "description": "causes the program to output the expectation value of the given operator",
+        "type": "object",
+        "properties": {
+            "_base_tag": {
+                "description": "to know what object to deserialize this into",
+                "enum": ["expectation"]
+            },
+            "evaluation_times":{
+                "description": "at what times to generate this output",
+                "type": "array",
+                "items": {
+                    "type": "number",
+                    "inclusiveMinimum": 0.0,
+                    "inclusiveMaximum": 1.0
+                }
+            },
+            "operator": {
+                "description": "the given operator",
+                "$ref": "#/operator"
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": "string"
+            }
+        },
+        "required": ["operator", "_base_tag"]
+    },
+    "state": {
+        "description": "a quantum state, stored as a dict from bitstrings to complex nrs",
+        "type": "object",
+        "properties": {
+        },
+        "additionalProperties": {
+            "description": "the amplitude for the bitstring in the key",
+            "type": "number"
+        }
+    },
+    "operator": {
+        "description": "an operator, stored in a serialized format",
+        "type": "array",
+        "items": {
+            "description": "this array represents the state as a weighted sum of tensor product operators",
+            "type": "array",
+            "prefixItems": [
+                {
+                    "type": "number",
+                    "description": "weight for the tensor product operator"
+                },
+                {
+                    "type": "array",
+                    "description": "tensor product operator, represented as a list of single qubit operators and the qubits upon which to apply it. Identity ops are implied",
+                    "items": {
+                        "type": "array",
+                        "description": "tuple of single qudit operator + support",
+                        "prefixItems":[
+                            {
+                                "type": "object",
+                                "description": "single qudit operator, the matrix elements are encoded using a string format",
+                                "additionalProperties": {
+                                    "type": "number",
+                                    "description": "value of the matrix element in the key"
+                                }
+                            },
+                            {
+                                "type": "array",
+                                "description": "support",
+                                "items": {
+                                    "type": "number"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    },
+    "bitstrings": {
+        "description": "cause the emulator to sample bitstrings from the emulated state",
+        "type": "object",
+        "properties": {
+            "_base_tag": {
+                "description": "to know what object to deserialize this into",
+                "enum": ["bitstrings"]
+            },
+            "evaluation_times":{
+                "description": "at what times to generate this output",
+                "type": "array",
+                "items": {
+                    "type": "number",
+                    "inclusiveMinimum": 0.0,
+                    "inclusiveMaximum": 1.0
+                }
+            },
+            "n_shots": {
+                "description": "how many bitstrings to generate",
+                "type": "integer"
+            },
+            "one_state": {
+                "description": "which basis state to measure as 1, the rest is 0.",
+                "type": "string"
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": "string"
+            }
+        },
+        "required": ["n_shots", "_base_tag"]
+    },
+    "fidelity": {
+        "description": "cause the emulator to compute the fidelity of the emulated state to the given state",
+        "type": "object",
+        "properties": {
+            "_base_tag": {
+                "description": "to know what object to deserialize this into",
+                "enum": ["fidelity"]
+            },
+            "evaluation_times":{
+                "description": "at what times to generate this output",
+                "type": "array",
+                "items": {
+                    "type": "number",
+                    "inclusiveMinimum": 0.0,
+                    "inclusiveMaximum": 1.0
+                }
+            },
+            "state": {
+                "description": "the given state",
+                "$ref": "#/state"
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": "string"
+            }
+        },
+        "required": ["state", "_base_tag"]
+    },
+    "correlation_matrix": {
+        "description": "cause the emulator to compute the correlation matrix for the emulated state",
+        "type": "object",
+        "properties": {
+            "_base_tag": {
+                "description": "to know what object to deserialize this into",
+                "enum": ["correlation_matrix"]
+            },
+            "evaluation_times":{
+                "description": "at what times to generate this output",
+                "type": "array",
+                "items": {
+                    "type": "number",
+                    "inclusiveMinimum": 0.0,
+                    "inclusiveMaximum": 1.0
+                }
+            },
+            "one_state": {
+                "description": "measure the correlations of the projector onto this state",
+                "type": "string"
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": "string"
+            }
+        },
+        "required": ["_base_tag"]
+    },
+    "occupation": {
+        "description": "cause the emulator to compute occupation probability of the one state for the emulated state",
+        "type": "object",
+        "properties": {
+            "_base_tag": {
+                "description": "to know what object to deserialize this into",
+                "enum": ["occupation"]
+            },
+            "evaluation_times":{
+                "description": "at what times to generate this output",
+                "type": "array",
+                "items": {
+                    "type": "number",
+                    "inclusiveMinimum": 0.0,
+                    "inclusiveMaximum": 1.0
+                }
+            },
+            "one_state": {
+                "description": "the one state",
+                "type": "string"
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": "string"
+            }
+        },
+        "required": ["_base_tag"]
+    },
+    "energy": {
+        "description": "cause the emulator to compute the expected energy",
+        "type": "object",
+        "properties": {
+            "_base_tag": {
+                "description": "to know what object to deserialize this into",
+                "enum": ["energy"]
+            },
+            "evaluation_times":{
+                "description": "at what times to generate this output",
+                "type": "array",
+                "items": {
+                    "type": "number",
+                    "inclusiveMinimum": 0.0,
+                    "inclusiveMaximum": 1.0
+                }
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": "string"
+            }
+        },
+        "required": ["_base_tag"]
+    },
+    "energy_variance": {
+        "description": "cause the emulator to compute the energy variance",
+        "type": "object",
+        "properties": {
+            "_base_tag": {
+                "description": "to know what object to deserialize this into",
+                "enum": ["energy_variance"]
+            },
+            "evaluation_times":{
+                "description": "at what times to generate this output",
+                "type": "array",
+                "items": {
+                    "type": "number",
+                    "inclusiveMinimum": 0.0,
+                    "inclusiveMaximum": 1.0
+                }
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": "string"
+            }
+        },
+        "required": ["_base_tag"]
+    },
+    "energy_second_moment": {
+        "description": "cause the emulator to compute the expectation of H^2.",
+        "type": "object",
+        "properties": {
+            "_base_tag": {
+                "description": "to know what object to deserialize this into",
+                "enum": ["energy_second_moment"]
+            },
+            "evaluation_times":{
+                "description": "at what times to generate this output",
+                "type": "array",
+                "items": {
+                    "type": "number",
+                    "inclusiveMinimum": 0.0,
+                    "inclusiveMaximum": 1.0
+                }
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": "string"
+            }
+        },
+        "required": ["_base_tag"]
+    }
+}
