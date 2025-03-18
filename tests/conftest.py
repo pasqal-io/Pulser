@@ -91,3 +91,11 @@ def patch_plt_show(monkeypatch):
     plt.close("all")
     # Closes a figure instead of showing it
     monkeypatch.setattr(plt, "show", plt.close)
+
+
+@pytest.fixture()
+def catch_phase_shift_warning():
+    return pytest.warns(
+        UserWarning,
+        match="In version v1.4.0 the behavior of `Sequence.phase_shift`",
+    )

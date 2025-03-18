@@ -13,9 +13,9 @@
 # limitations under the License.
 from __future__ import annotations
 
+import contextlib
 import json
 import re
-import warnings
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import replace
@@ -604,7 +604,7 @@ class TestSerialization:
         return TriangularLatticeLayout(50, 6)
 
     @pytest.fixture(params=[DigitalAnalogDevice, MockDevice])
-    def sequence(self, request):
+    def sequence(self, request, catch_phase_shift_warning):
         qubits = {"control": (-2, 0), "target": (2, 0)}
         reg = Register(qubits)
         device = request.param
@@ -643,10 +643,7 @@ class TestSerialization:
 
         seq.align("digital", "rydberg")
         seq.add(pi_pulse, "rydberg")
-        with pytest.warns(
-            UserWarning,
-            match="In version v1.4.0 the behavior of `Sequence.phase_shift`",
-        ):
+        with catch_phase_shift_warning:
             seq.phase_shift(1.0, basis="ground-rydberg")
         seq.target({"target"}, "rydberg")
         seq.add(two_pi_pulse, "rydberg")
@@ -657,11 +654,8 @@ class TestSerialization:
         return seq
 
     @pytest.fixture
-    def abstract(self, sequence):
-        with pytest.warns(
-            UserWarning,
-            match="In version v1.4.0 the behavior of `Sequence.phase_shift`",
-        ):
+    def abstract(self, sequence, catch_phase_shift_warning):
+        with catch_phase_shift_warning:
             abstract_repr = sequence.to_abstract_repr(
                 target_atom=1,
                 amps=[np.pi, 2 * np.pi],
@@ -1792,16 +1786,17 @@ class TestDeserialization:
         ],
         ids=_get_op,
     )
-    def test_deserialize_non_parametrized_op(self, op):
+    def test_deserialize_non_parametrized_op(
+        self, op, catch_phase_shift_warning
+    ):
         s = _get_serialized_seq(
             operations=[op], device=json.loads(MockDevice.to_abstract_repr())
         )
-        with warnings.catch_warnings():
-            if op["op"] == "phase_shift":
-                warnings.filterwarnings(
-                    "ignore",
-                    "In version v1.4.0 the behavior of `Sequence.phase_shift`",
-                )
+        with (
+            catch_phase_shift_warning
+            if (op["op"] == "phase_shift" and not op["targets"])
+            else contextlib.nullcontext()
+        ):
             _check_roundtrip(s)
             seq = Sequence.from_abstract_repr(json.dumps(s))
 
@@ -2041,7 +2036,7 @@ class TestDeserialization:
         ],
         ids=_get_op,
     )
-    def test_deserialize_parametrized_op(self, op):
+    def test_deserialize_parametrized_op(self, op, catch_phase_shift_warning):
         s = _get_serialized_seq(
             operations=[op],
             variables={
@@ -2049,12 +2044,11 @@ class TestDeserialization:
                 "var2": {"type": "int", "value": [44]},
             },
         )
-        with warnings.catch_warnings():
-            if op["op"] == "phase_shift" and not op["targets"]:
-                warnings.filterwarnings(
-                    "ignore",
-                    "In version v1.4.0 the behavior of `Sequence.phase_shift`",
-                )
+        with (
+            catch_phase_shift_warning
+            if (op["op"] == "phase_shift" and not op["targets"])
+            else contextlib.nullcontext()
+        ):
             _check_roundtrip(s)
             seq = Sequence.from_abstract_repr(json.dumps(s))
 
