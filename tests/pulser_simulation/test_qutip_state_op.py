@@ -554,3 +554,30 @@ class TestQutipOperator:
             qutip.basis(2, 1).proj(), eigenstates=pauli_i.eigenstates
         )
         assert g_proj != dm_g
+
+    def test_abstract_repr(self):
+        kwargs = dict(
+            eigenstates=("r", "g"),
+            n_qudits=3,
+            operations=[(0.5, [({"rr": 1.0, "gg": 1.0j}, {0})]), (0.5, [])],
+        )
+        op = QutipOperator.from_operator_repr(**kwargs)
+        ser_ops = [
+            (0.5, [({"rr": 1.0, "gg": {"real": 0.0, "imag": 1.0}}, [0])]),
+            (0.5, []),
+        ]
+        assert json.dumps(op, cls=AbstractReprEncoder) == json.dumps(
+            {**kwargs, "operations": ser_ops}
+        )
+
+        with pytest.raises(
+            AbstractReprError,
+            match=re.escape(
+                "Failed to serialize state of type 'QutipOperator' because it"
+                " was not created via 'QutipOperator.from_operator_repr()'"
+            ),
+        ):
+            json.dumps(
+                QutipOperator(op.to_qobj(), eigenstates=op.eigenstates),
+                cls=AbstractReprEncoder,
+            )

@@ -16,9 +16,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Sequence
-from typing import Generic, Type, TypeVar
+from typing import Any, Generic, Type, TypeVar
 
 from pulser.backend.state import Eigenstate, State
+from pulser.json.exceptions import AbstractReprError
 
 ArgScalarType = TypeVar("ArgScalarType")
 ReturnScalarType = TypeVar("ReturnScalarType")
@@ -34,6 +35,18 @@ FullOp = Sequence[tuple[ArgScalarType, TensorOp]]  # weighted sum of TensorOp
 
 class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
     """Base class for a quantum operator."""
+
+    def __init__(
+        self,
+        *,
+        eigenstates: Sequence[Eigenstate] | None = None,
+        n_qudits: int | None = None,
+        operations: FullOp | None = None,
+    ):
+        """Initializes an Operator."""
+        self._eigenstates = eigenstates
+        self._n_qudits = n_qudits
+        self._operations = operations
 
     @abstractmethod
     def apply_to(self, state: StateType, /) -> StateType:
@@ -140,3 +153,16 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             The constructed operator.
         """
         pass
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        if not self._eigenstates or not self._n_qudits or not self._operations:
+            cls_name = self.__class__.__name__
+            raise AbstractReprError(
+                f"Failed to serialize state of type {cls_name!r} because it "
+                f"was not created via '{cls_name}.from_operator_repr()'."
+            )
+        return {
+            "eigenstates": tuple(self._eigenstates),
+            "n_qudits": self._n_qudits,
+            "operations": self._operations,
+        }
