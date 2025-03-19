@@ -185,6 +185,7 @@ class StateRepr(State):
         """Stores the arguments to make a state from its representation."""
         self._validate_eigenstates(eigenstates)
         self._eigenstates = eigenstates
+        # self._validate_amplitudes(amplitudes)
         self.amplitudes = amplitudes
 
     def _to_abstract_repr(self) -> dict[str, Any]:

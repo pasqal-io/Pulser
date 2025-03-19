@@ -112,7 +112,16 @@
             "eigenstates": {
                 "type": "array",
                 "items": {
-                    "type": "string"
+                    "enum": [
+                        "u",
+                        "d",
+                        "r",
+                        "g",
+                        "h",
+                        "x",
+                        "0",
+                        "1"
+                    ]
                 }
             },
             "amplitudes": {
