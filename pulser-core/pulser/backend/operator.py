@@ -153,7 +153,11 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         pass
 
     def _to_abstract_repr(self) -> dict[str, Any]:
-        if not self._eigenstates or not self._n_qudits or not self._operations:
+        if (
+            self._eigenstates is None
+            or self._n_qudits is None
+            or self._operations is None
+        ):
             cls_name = self.__class__.__name__
             raise AbstractReprError(
                 f"Failed to serialize state of type {cls_name!r} because it "
