@@ -181,20 +181,18 @@ class DistanceError(InvalidSequenceError):
 
     Attributes:
         kind: The kind of objects we're checking out (e.g. atoms, traps).
-        min: The minimal distance, in µm.
         precision_exp: A value P such that precision is 1e-P µm.
         pairs: A list of offending pairs.
     """
 
     kind: str
-    min: float
     precision_exp: int
     invalid: list[tuple[QubitId, QubitId]]
 
     def __str__(self) -> str:
         return (
             f"The minimal distance between {self.kind} in this device "
-            f"({self.min} µm) is not respected "
+            f"({self.device.min_atom_distance} µm) is not respected "
             f"(up to a precision of 1e{-self.precision_exp} µm) "
             f"for the pairs: {self.invalid}"
         )
@@ -206,7 +204,6 @@ class RadiusError(InvalidSequenceError):
 
     Attributes:
         kind: The kind of objects we're checking out (e.g. atoms, traps).
-        max: The maximal distance, in µm.
         invalid: A list of offending atoms (or traps, etc.)
     """
 

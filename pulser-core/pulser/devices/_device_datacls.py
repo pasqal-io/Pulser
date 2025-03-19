@@ -515,7 +515,6 @@ class BaseDevice(ABC):
                 raise DistanceError(
                     device=self,
                     kind=kind,
-                    min=self.min_atom_distance,
                     precision_exp=COORD_PRECISION,
                     invalid=bad_qbt_pairs,
                 )
