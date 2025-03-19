@@ -49,7 +49,7 @@ class AbstractReprEncoder(json.JSONEncoder):
         elif isinstance(o, set):
             return list(o)
         elif isinstance(o, complex):
-            if not o.imag:
+            if o.imag == 0:
                 # Try to return a real number when possible
                 return o.real
             return dict(real=o.real, imag=o.imag)
