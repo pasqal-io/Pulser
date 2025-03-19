@@ -131,7 +131,6 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         pass
 
     @classmethod
-    @abstractmethod
     def from_state_amplitudes(
         cls: Type[StateType],
         *,
@@ -147,6 +146,28 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
 
         Returns:
             The state constructed from the amplitudes.
+        """
+        obj, _eigenstates, _amplitudes = cls._from_state_amplitudes(
+            eigenstates=eigenstates, amplitudes=amplitudes
+        )
+        obj._eigenstates = _eigenstates
+        obj._amplitudes = _amplitudes
+        return obj
+
+    @classmethod
+    @abstractmethod
+    def _from_state_amplitudes(
+        cls: Type[StateType],
+        *,
+        eigenstates: Sequence[Eigenstate],
+        amplitudes: Mapping[str, ArgScalarType],
+    ) -> tuple[
+        StateType, Sequence[Eigenstate], Mapping[str, ReturnScalarType]
+    ]:
+        """Implements the logic used in `from_state_amplitudes()`.
+
+        Expected to return the State instance alongside the eigenstates
+        and amplitudes used in serialization.
         """
         pass
 

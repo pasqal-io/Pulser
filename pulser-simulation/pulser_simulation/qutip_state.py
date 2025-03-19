@@ -213,12 +213,12 @@ class QutipState(State[SupportsComplex, complex]):
         )
 
     @classmethod
-    def from_state_amplitudes(
+    def _from_state_amplitudes(
         cls: Type[QutipStateType],
         *,
         eigenstates: Sequence[Eigenstate],
         amplitudes: Mapping[str, SupportsComplex],
-    ) -> QutipStateType:
+    ) -> tuple[QutipStateType, Sequence[Eigenstate], Mapping[str, complex]]:
         """Construct the state from its basis states' amplitudes.
 
         Args:
@@ -227,7 +227,8 @@ class QutipState(State[SupportsComplex, complex]):
                 complex amplitudes.
 
         Returns:
-            The state constructed from the amplitudes.
+            The state constructed from the amplitudes, the eigenstates and the
+            amplitudes that defined the state.
         """
         cls._validate_eigenstates(eigenstates)
         n_qudits = cls._validate_amplitudes(amplitudes, eigenstates)
@@ -249,7 +250,7 @@ class QutipState(State[SupportsComplex, complex]):
 
         obj = cls(state, eigenstates=eigenstates)
         obj._amplitudes = amps
-        return obj
+        return obj, eigenstates, amps
 
     def __repr__(self) -> str:
         return "\n".join(
