@@ -45,15 +45,12 @@ class QutipState(State[SupportsComplex, complex]):
     """
 
     def __init__(
-        self,
-        state: qutip.Qobj,
-        *,
-        eigenstates: Sequence[Eigenstate],
-        **kwargs: Any,
+        self, state: qutip.Qobj, *, eigenstates: Sequence[Eigenstate]
     ):
         """Initializes a QutipState."""
+        super().__init__()
         self._validate_eigenstates(eigenstates)
-        super().__init__(eigenstates=eigenstates, **kwargs)
+        self._eigenstates = eigenstates
         valid_types = ("ket", "bra", "oper")
         if not isinstance(state, qutip.Qobj) or state.type not in valid_types:
             raise TypeError(
@@ -250,7 +247,9 @@ class QutipState(State[SupportsComplex, complex]):
         for basis_state, amp in amps.items():
             state += amp * make_qobj(basis_state)
 
-        return cls(state, eigenstates=eigenstates, amplitudes=amps)
+        obj = cls(state, eigenstates=eigenstates)
+        obj._amplitudes = amps
+        return obj
 
     def __repr__(self) -> str:
         return "\n".join(

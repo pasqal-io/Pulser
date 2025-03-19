@@ -40,15 +40,9 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     _eigenstates: Sequence[Eigenstate]
     _amplitudes: Mapping[str, ReturnScalarType] | None
 
-    def __init__(
-        self,
-        *,
-        eigenstates: Sequence[Eigenstate],
-        amplitudes: Mapping[str, ReturnScalarType] | None = None,
-    ):
+    def __init__(self) -> None:
         """Initializes a State."""
-        self._eigenstates = eigenstates
-        self._amplitudes = amplitudes
+        self._amplitudes = None
 
     @property
     @abstractmethod

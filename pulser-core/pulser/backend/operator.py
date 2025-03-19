@@ -36,17 +36,15 @@ FullOp = Sequence[tuple[ArgScalarType, TensorOp]]  # weighted sum of TensorOp
 class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
     """Base class for a quantum operator."""
 
-    def __init__(
-        self,
-        *,
-        eigenstates: Sequence[Eigenstate] | None = None,
-        n_qudits: int | None = None,
-        operations: FullOp | None = None,
-    ):
+    _eigenstates: Sequence[Eigenstate] | None
+    _n_qudits: int | None
+    _operations: FullOp | None
+
+    def __init__(self) -> None:
         """Initializes an Operator."""
-        self._eigenstates = eigenstates
-        self._n_qudits = n_qudits
-        self._operations = operations
+        self._eigenstates = None
+        self._n_qudits = None
+        self._operations = None
 
     @abstractmethod
     def apply_to(self, state: StateType, /) -> StateType:

@@ -44,17 +44,15 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
 
     """
 
-    _eigenstates: tuple[Eigenstate]
+    _eigenstates: Sequence[Eigenstate]
 
     def __init__(
-        self,
-        operator: qutip.Qobj,
-        eigenstates: Sequence[Eigenstate],
-        **kwargs: Any,
+        self, operator: qutip.Qobj, eigenstates: Sequence[Eigenstate]
     ):
         """Initializes a QutipOperator."""
+        super().__init__()
         QutipState._validate_eigenstates(eigenstates)
-        super().__init__(eigenstates=tuple(eigenstates), **kwargs)
+        self._eigenstates = eigenstates
         if not isinstance(operator, qutip.Qobj) or not operator.isoper:
             raise TypeError(
                 "'operator' must be a qutip.Qobj with type 'oper', not "
@@ -233,12 +231,10 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
             tensor_ops.append(qutip.tensor(qudit_ops))
 
         full_op: qutip.Qobj = sum(c * t for c, t in zip(coeffs, tensor_ops))
-        return cls(
-            full_op,
-            eigenstates=eigenstates,
-            n_qudits=n_qudits,
-            operations=operations,
-        )
+        obj = cls(full_op, eigenstates=eigenstates)
+        obj._n_qudits = n_qudits
+        obj._operations = operations
+        return obj
 
     def __repr__(self) -> str:
         return "\n".join(
