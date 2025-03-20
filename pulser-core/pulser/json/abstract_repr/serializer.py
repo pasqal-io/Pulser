@@ -174,7 +174,7 @@ def serialize_abstract_sequence(
             return target_ids
 
         targets = list(cast(Collection, target_ids))
-        return targets if len(targets) > 1 else targets[0]
+        return targets if len(targets) != 1 else targets[0]
 
     def convert_targets(
         target_ids: Union[QubitId, Collection[QubitId]],
