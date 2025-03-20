@@ -26,11 +26,13 @@ ReturnScalarType = TypeVar("ReturnScalarType")
 StateType = TypeVar("StateType", bound=State)
 OperatorType = TypeVar("OperatorType", bound="Operator")
 
-QuditOp = Mapping[str, ArgScalarType]  # single qudit operator
+# Generic type aliases
+T = TypeVar("T")
+QuditOp = Mapping[str, T]  # single qudit operator
 TensorOp = Sequence[
-    tuple[QuditOp, Collection[int]]
+    tuple[QuditOp[T], Collection[int]]
 ]  # QuditOp applied to set of qudits
-FullOp = Sequence[tuple[ArgScalarType, TensorOp]]  # weighted sum of TensorOp
+FullOp = Sequence[tuple[T, TensorOp[T]]]  # weighted sum of TensorOp
 
 
 class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
@@ -38,7 +40,7 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
 
     _eigenstates: Sequence[Eigenstate] | None
     _n_qudits: int | None
-    _operations: FullOp | None
+    _operations: FullOp[ReturnScalarType] | None
 
     def __init__(self) -> None:
         """Initializes an Operator."""
@@ -107,13 +109,12 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         pass
 
     @classmethod
-    @abstractmethod
     def from_operator_repr(
         cls: Type[OperatorType],
         *,
         eigenstates: Sequence[Eigenstate],
         n_qudits: int,
-        operations: FullOp,
+        operations: FullOp[ArgScalarType],
     ) -> OperatorType:
         """Create an operator from the operator representation.
 
@@ -149,6 +150,28 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
 
         Returns:
             The constructed operator.
+        """
+        obj, _operations = cls._from_operator_repr(
+            eigenstates=eigenstates, n_qudits=n_qudits, operations=operations
+        )
+        obj._eigenstates = eigenstates
+        obj._n_qudits = n_qudits
+        obj._operations = _operations
+        return obj
+
+    @classmethod
+    @abstractmethod
+    def _from_operator_repr(
+        cls: Type[OperatorType],
+        *,
+        eigenstates: Sequence[Eigenstate],
+        n_qudits: int,
+        operations: FullOp[ArgScalarType],
+    ) -> tuple[OperatorType, FullOp[ReturnScalarType]]:
+        """Implements the conversion used in `from_operator_repr()`.
+
+        Expected to return the Operator instance alongside the 'operations' to
+        use in serialization.
         """
         pass
 

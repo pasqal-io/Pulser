@@ -40,8 +40,10 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     _eigenstates: Sequence[Eigenstate]
     _amplitudes: Mapping[str, ReturnScalarType] | None
 
-    def __init__(self) -> None:
+    def __init__(self, *, eigenstates: Sequence[Eigenstate]) -> None:
         """Initializes a State."""
+        self._validate_eigenstates(eigenstates)
+        self._eigenstates = eigenstates
         self._amplitudes = None
 
     @property
@@ -147,10 +149,9 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         Returns:
             The state constructed from the amplitudes.
         """
-        obj, _eigenstates, _amplitudes = cls._from_state_amplitudes(
+        obj, _amplitudes = cls._from_state_amplitudes(
             eigenstates=eigenstates, amplitudes=amplitudes
         )
-        obj._eigenstates = _eigenstates
         obj._amplitudes = _amplitudes
         return obj
 
@@ -161,13 +162,11 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         *,
         eigenstates: Sequence[Eigenstate],
         amplitudes: Mapping[str, ArgScalarType],
-    ) -> tuple[
-        StateType, Sequence[Eigenstate], Mapping[str, ReturnScalarType]
-    ]:
-        """Implements the logic used in `from_state_amplitudes()`.
+    ) -> tuple[StateType, Mapping[str, ReturnScalarType]]:
+        """Implements the conversion used in `from_state_amplitudes()`.
 
-        Expected to return the State instance alongside the eigenstates
-        and amplitudes used in serialization.
+        Expected to return the State instance alongside the amplitudes used
+        in serialization.
         """
         pass
 
@@ -223,7 +222,7 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         return n_qudits
 
     def _to_abstract_repr(self) -> dict[str, Any]:
-        if not self._amplitudes:
+        if self._amplitudes is None:
             cls_name = self.__class__.__name__
             raise AbstractReprError(
                 f"Failed to serialize state of type {cls_name!r} because it "

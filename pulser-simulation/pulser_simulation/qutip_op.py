@@ -14,21 +14,17 @@
 """Definition of QutipState and QutipOperator."""
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Sequence
 from typing import Any, SupportsComplex, Type, TypeVar, cast
 
 import qutip
 
-from pulser.backend.operator import Operator
+from pulser.backend.operator import FullOp, Operator, QuditOp
 from pulser.backend.state import Eigenstate
 from pulser_simulation.qutip_state import QutipState
 
 QutipStateType = TypeVar("QutipStateType", bound=QutipState)
 QutipOperatorType = TypeVar("QutipOperatorType", bound="QutipOperator")
-
-QuditOp = Mapping[str, SupportsComplex]
-TensorOp = Sequence[tuple[QuditOp, Collection[int]]]
-FullOp = Sequence[tuple[SupportsComplex, TensorOp]]
 
 
 class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
@@ -151,13 +147,13 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
         )
 
     @classmethod
-    def from_operator_repr(
+    def _from_operator_repr(
         cls: Type[QutipOperatorType],
         *,
         eigenstates: Sequence[Eigenstate],
         n_qudits: int,
-        operations: FullOp,
-    ) -> QutipOperatorType:
+        operations: FullOp[SupportsComplex],
+    ) -> tuple[QutipOperatorType, FullOp[complex]]:
         """Create an operator from the operator representation.
 
         The full operator representation (FullOp is a weigthed sum of tensor
@@ -194,7 +190,7 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
         QutipState._validate_eigenstates(eigenstates)
         qudit_dim = len(eigenstates)
 
-        def build_qudit_op(qudit_op: QuditOp) -> qutip.Qobj:
+        def build_qudit_op(qudit_op: QuditOp[SupportsComplex]) -> qutip.Qobj:
             op = qutip.identity(qudit_dim) * 0
             for proj_str, coeff in qudit_op.items():
                 if len(proj_str) != 2 or any(
@@ -213,10 +209,14 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
 
         coeffs: list[complex] = []
         tensor_ops: list[qutip.Qobj] = []
+        reconstructed_ops = []
         for tensor_op_num, (coeff, tensor_op) in enumerate(operations):
             coeffs.append(complex(coeff))
-            qudit_ops = [qutip.identity(qudit_dim) for _ in range(n_qudits)]
+            qobj_qudit_ops = [
+                qutip.identity(qudit_dim) for _ in range(n_qudits)
+            ]
             free_inds = set(range(n_qudits))
+            re_tensor_op = []
             for qudit_op, qudit_inds in tensor_op:
                 if bad_inds_ := (set(qudit_inds) - free_inds):
                     raise ValueError(
@@ -226,15 +226,15 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
                         "were still available."
                     )
                 for ind in qudit_inds:
-                    qudit_ops[ind] = build_qudit_op(qudit_op)
+                    qobj_qudit_ops[ind] = build_qudit_op(qudit_op)
                     free_inds.remove(ind)
-            tensor_ops.append(qutip.tensor(qudit_ops))
+                re_qudit_op = {k: complex(v) for k, v in qudit_op.items()}
+                re_tensor_op.append((re_qudit_op, set(qudit_inds)))
+            tensor_ops.append(qutip.tensor(qobj_qudit_ops))
+            reconstructed_ops.append((coeffs[-1], re_tensor_op))
 
         full_op: qutip.Qobj = sum(c * t for c, t in zip(coeffs, tensor_ops))
-        obj = cls(full_op, eigenstates=eigenstates)
-        obj._n_qudits = n_qudits
-        obj._operations = operations
-        return obj
+        return cls(full_op, eigenstates=eigenstates), reconstructed_ops
 
     def __repr__(self) -> str:
         return "\n".join(
