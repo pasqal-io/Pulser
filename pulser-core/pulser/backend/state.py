@@ -17,7 +17,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from typing import Any, Generic, Literal, Type, TypeVar, Union
+from typing import Any, Generic, Literal, SupportsFloat, Type, TypeVar, Union
 
 import numpy as np
 
@@ -27,7 +27,7 @@ from pulser.json.exceptions import AbstractReprError
 Eigenstate = Union[States, Literal["0", "1"]]
 
 ArgScalarType = TypeVar("ArgScalarType")
-ReturnScalarType = TypeVar("ReturnScalarType")
+ReturnScalarType = TypeVar("ReturnScalarType", bound=SupportsFloat)
 StateType = TypeVar("StateType", bound="State")
 
 
@@ -38,7 +38,7 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     """
 
     _eigenstates: Sequence[Eigenstate]
-    _amplitudes: Mapping[str, ReturnScalarType] | None
+    _amplitudes: Mapping[str, complex] | None
 
     def __init__(self, *, eigenstates: Sequence[Eigenstate]) -> None:
         """Initializes a State."""
@@ -162,7 +162,7 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         *,
         eigenstates: Sequence[Eigenstate],
         amplitudes: Mapping[str, ArgScalarType],
-    ) -> tuple[StateType, Mapping[str, ReturnScalarType]]:
+    ) -> tuple[StateType, Mapping[str, complex]]:
         """Implements the conversion used in `from_state_amplitudes()`.
 
         Expected to return the State instance alongside the amplitudes used
@@ -222,11 +222,21 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         return n_qudits
 
     def _to_abstract_repr(self) -> dict[str, Any]:
+        cls_name = self.__class__.__name__
         if self._amplitudes is None:
-            cls_name = self.__class__.__name__
             raise AbstractReprError(
                 f"Failed to serialize state of type {cls_name!r} because it "
                 f"was not created via '{cls_name}.from_state_amplitudes()'."
+            )
+        stashed_state = self.from_state_amplitudes(
+            eigenstates=self._eigenstates,
+            amplitudes=self._amplitudes,  # type: ignore[arg-type]
+        )
+
+        if abs(float(self.overlap(stashed_state)) - 1.0) > 1e-12:
+            raise AbstractReprError(
+                f"Failed to serialize state of type {cls_name!r} because it "
+                "was modified in place after its creation."
             )
         return {
             "eigenstates": tuple(self._eigenstates),

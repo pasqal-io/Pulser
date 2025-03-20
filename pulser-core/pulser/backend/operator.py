@@ -40,7 +40,7 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
 
     _eigenstates: Sequence[Eigenstate] | None
     _n_qudits: int | None
-    _operations: FullOp[ReturnScalarType] | None
+    _operations: FullOp[complex] | None
 
     def __init__(self) -> None:
         """Initializes an Operator."""
@@ -167,7 +167,7 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         eigenstates: Sequence[Eigenstate],
         n_qudits: int,
         operations: FullOp[ArgScalarType],
-    ) -> tuple[OperatorType, FullOp[ReturnScalarType]]:
+    ) -> tuple[OperatorType, FullOp[complex]]:
         """Implements the conversion used in `from_operator_repr()`.
 
         Expected to return the Operator instance alongside the 'operations' to

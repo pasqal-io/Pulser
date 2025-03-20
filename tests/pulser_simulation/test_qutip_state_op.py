@@ -273,7 +273,7 @@ class TestQutipState:
         )
         assert dm_g != qutip.basis(2, 1).proj()
 
-    def test_abstract_repr(self):
+    def test_abstract_repr(self, ket_r):
         kwargs = dict(eigenstates=("r", "g"), amplitudes={"g": 1.0})
         state = QutipState.from_state_amplitudes(**kwargs)
         assert json.dumps(state, cls=AbstractReprEncoder) == json.dumps(kwargs)
@@ -289,6 +289,13 @@ class TestQutipState:
                 QutipState(state.to_qobj(), eigenstates=state.eigenstates),
                 cls=AbstractReprEncoder,
             )
+
+        # State is modified in-place
+        state._state = ket_r._state
+        with pytest.raises(
+            AbstractReprError, match="modified in place after its creation"
+        ):
+            json.dumps(state, cls=AbstractReprEncoder)
 
 
 class TestQutipOperator:

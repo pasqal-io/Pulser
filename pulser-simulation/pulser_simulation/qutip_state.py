@@ -31,7 +31,7 @@ TensorOp = Sequence[tuple[QuditOp, Collection[int]]]
 FullOp = Sequence[tuple[SupportsComplex, TensorOp]]
 
 
-class QutipState(State[SupportsComplex, complex]):
+class QutipState(State[SupportsComplex, float]):
     """A quantum state stored as a qutip.Qobj.
 
     Args:
