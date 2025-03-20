@@ -263,10 +263,10 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     def _to_abstract_repr(self) -> dict[str, Any]:
         return self._backend_options
 
-    def to_abstract_repr(self, validate: bool = False) -> str:
+    def to_abstract_repr(self, skip_validation: bool = False) -> str:
         """Serialize `EmulationConfig` to a JSON formatted str."""
         obj_str = json.dumps(self, cls=AbstractReprEncoder)
-        if validate:
+        if not skip_validation:
             validate_abstract_repr(obj_str, "config")
         return obj_str
 

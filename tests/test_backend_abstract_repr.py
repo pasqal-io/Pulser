@@ -1,4 +1,5 @@
 import json
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -15,6 +16,7 @@ from pulser.backend import (
     Occupation,
     StateResult,
 )
+from pulser.backend.operator import OperatorRepr
 from pulser.backend.state import StateRepr
 
 # TODO: decide where to put these tests
@@ -107,7 +109,8 @@ def test_config_repr():
 
     config = EmulationConfig(**expected_kwargs)
     # dump with AbstrctReprEncoder
-    config_str = config.to_abstract_repr(validate=True)
+    # validation
+    config_str = config.to_abstract_repr()
     # load and redump but with default JSON encoder
     # equivalent to go key by key and check single str repr
     config_load_dump_str = json.dumps(json.loads(config_str))
@@ -117,7 +120,7 @@ def test_config_repr():
 
 class TestStateRepr:
     def test_state_repr(self):
-        basis = {"r", "g"}
+        basis = ("r", "g")
         amplitudes = {"rgr": 1.0j + 0.2, "grg": 1.0}
         expected_repr = {"eigenstates": basis, "amplitudes": amplitudes}
         state = StateRepr(basis, amplitudes)
@@ -125,7 +128,7 @@ class TestStateRepr:
         assert state_repr == expected_repr
 
     def test_state_repr_invalid_eigenstates(self):
-        basis = {"av", "b", "c"}
+        basis = ("av", "b", "c")
         amplitudes = {"rgr": 1.0, "grg": 1.0}
         with pytest.raises(
             ValueError,
@@ -134,7 +137,7 @@ class TestStateRepr:
             StateRepr(basis, amplitudes)
 
     def test_state_repr_not_implemented(self):
-        basis = {"r", "g"}
+        basis = ("r", "g")
         amplitudes = {"rgr": 1.0, "grg": 1.0}
         state = StateRepr(eigenstates=basis, amplitudes=amplitudes)
         with pytest.raises(NotImplementedError):
@@ -147,3 +150,49 @@ class TestStateRepr:
             state.overlap(state)
         with pytest.raises(NotImplementedError):
             state.sample(num_shots=10)
+
+
+class TestOperatorRepr:
+    def test_operator_repr(self):
+        basis = ("r", "g")
+        n_qudits = 5
+        # am I a valid operations
+        operations = [
+            (
+                1.0,
+                [
+                    ({"gr": 1.0, "rg": 1.0}, [0, 2]),
+                    ({"rr": 1.0, "gg": -1.0}, [1, 3]),
+                ],
+            )
+        ]
+        expected_op_repr = {
+            "eigenstates": basis,
+            "n_qudits": n_qudits,
+            "operations": operations,
+        }
+
+        op = OperatorRepr(
+            eigenstates=basis, n_qudits=n_qudits, operations=operations
+        )
+
+        op_repr = op._to_abstract_repr()
+
+        assert op_repr == expected_op_repr
+
+    def test_operator_repr_not_implemented(self):
+        op_repr = {"eigenstates": ("r", "g"), "n_qudits": 5, "operations": []}
+        op = OperatorRepr(**op_repr)
+        mock_state = MagicMock()
+        with pytest.raises(NotImplementedError):
+            op.from_operator_repr(**op_repr)
+        with pytest.raises(NotImplementedError):
+            op.apply_to(mock_state)
+        with pytest.raises(NotImplementedError):
+            op.expect(mock_state)
+        with pytest.raises(NotImplementedError):
+            op.__add__(op)
+        with pytest.raises(NotImplementedError):
+            op.__rmul__(3.0)
+        with pytest.raises(NotImplementedError):
+            op.__matmul__(op)

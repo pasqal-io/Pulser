@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Sequence
-from typing import Generic, Type, TypeVar
+from typing import Any, Generic, Type, TypeVar
 
 from pulser.backend.state import Eigenstate, State
 
@@ -140,3 +140,71 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             The constructed operator.
         """
         pass
+
+
+class OperatorRepr(Operator):
+    """Operator subclass that supports serialization for remote backends."""
+
+    def __init__(
+        self,
+        eigenstates: Sequence[Eigenstate],
+        n_qudits: int,
+        operations: FullOp,
+    ):
+        """Stores the arguments to make an operator from its representation."""
+        # self._validate_eigenstates(eigenstates)
+        self._eigenstates = eigenstates
+        # self._validate_n_qudits(n_qudits)
+        self._n_qudits = n_qudits
+        # self._validate_operations(operations)
+        self._operations = operations
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return {
+            "eigenstates": self._eigenstates,
+            "n_qudits": self._n_qudits,
+            "operations": self._operations,
+        }
+
+    def apply_to(self, state: StateType, /) -> StateType:
+        """``apply_to`` not implemented in ``OperatorRepr``."""
+        raise NotImplementedError(
+            "``apply_to`` not implemented in ``OperatorRepr``."
+        )
+
+    def expect(self, state: StateType, /) -> None:
+        """``expect`` not implemented in ``OperatorRepr``."""
+        raise NotImplementedError(
+            "``expect`` not implemented in ``OperatorRepr``."
+        )
+
+    def __add__(self: OperatorType, other: OperatorType, /) -> OperatorType:
+        """``__add__`` not implemented in ``OperatorRepr``."""
+        raise NotImplementedError(
+            "``__add__`` not implemented in ``OperatorRepr``."
+        )
+
+    def __rmul__(self: OperatorType, scalar: ArgScalarType) -> OperatorType:
+        """``__rmul__`` not implemented in ``OperatorRepr``."""
+        raise NotImplementedError(
+            "``__rmul__`` not implemented in ``OperatorRepr``."
+        )
+
+    def __matmul__(self: OperatorType, other: OperatorType) -> OperatorType:
+        """``__matmul__`` not implemented in ``OperatorRepr``."""
+        raise NotImplementedError(
+            "``__matmul__`` not implemented in ``OperatorRepr``."
+        )
+
+    @classmethod
+    def from_operator_repr(
+        cls: Type[OperatorType],
+        *,
+        eigenstates: Sequence[Eigenstate],
+        n_qudits: int,
+        operations: FullOp,
+    ) -> OperatorType:
+        """``from_operator_repr`` not implemented in ``OperatorRepr``."""
+        raise NotImplementedError(
+            "``from_operator_repr`` not implemented in ``OperatorRepr``."
+        )
