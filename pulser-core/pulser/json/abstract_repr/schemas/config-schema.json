@@ -1,8 +1,8 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "config-schema.json",
-    "$ref": "#/emulatorConfig",
-    "emulatorConfig": {
+    "$ref": "#/EmulationConfig",
+    "EmulationConfig": {
         "description": "The config that will be passed to the emulator backend",
         "type": "object",
         "properties": {
@@ -94,7 +94,7 @@
             },
             "noise_model": {
                 "description": "the noise model to use",
-                "type": "object"
+                "$ref": "noise-schema.json#/definitions/NoiseModel"
             }
         },
         "required": [
@@ -125,7 +125,17 @@
                 }
             },
             "amplitudes": {
-                "type": "object"
+                "type": "object",
+                "additionalProperties": {
+                    "oneOf": [
+                        {
+                            "type": "number"
+                        },
+                        {
+                            "$ref": "noise-schema.json#/definitions/ComplexNumber"
+                        }
+                    ]
+                }
             }
         },
         "required": [
@@ -197,7 +207,9 @@
         },
         "required": [
             "observable",
-            "operator"
+            "evaluation_times",
+            "operator",
+            "tag_suffix"
         ]
     },
     "bitstrings": {
@@ -232,7 +244,10 @@
         },
         "required": [
             "observable",
-            "num_shots"
+            "evaluation_times",
+            "num_shots",
+            "one_state",
+            "tag_suffix"
         ]
     },
     "fidelity": {
@@ -259,7 +274,9 @@
         },
         "required": [
             "observable",
-            "state"
+            "evaluation_times",
+            "state",
+            "tag_suffix"
         ]
     },
     "correlation_matrix": {
@@ -289,7 +306,10 @@
             }
         },
         "required": [
-            "observable"
+            "observable",
+            "evaluation_times",
+            "one_state",
+            "tag_suffix"
         ]
     },
     "occupation": {
@@ -319,7 +339,10 @@
             }
         },
         "required": [
-            "observable"
+            "observable",
+            "evaluation_times",
+            "one_state",
+            "tag_suffix"
         ]
     },
     "energy": {
@@ -342,7 +365,9 @@
             }
         },
         "required": [
-            "observable"
+            "observable",
+            "evaluation_times",
+            "tag_suffix"
         ]
     },
     "energy_variance": {
@@ -365,7 +390,9 @@
             }
         },
         "required": [
-            "observable"
+            "observable",
+            "evaluation_times",
+            "tag_suffix"
         ]
     },
     "energy_second_moment": {
@@ -388,7 +415,9 @@
             ]
         },
         "required": [
-            "observable"
+            "observable",
+            "evaluation_times",
+            "tag_suffix"
         ]
     },
     "evaluation_times": {
