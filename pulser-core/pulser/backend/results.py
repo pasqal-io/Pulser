@@ -13,12 +13,15 @@
 # limitations under the License.
 """Defines the base class for storing backend results."""
 from __future__ import annotations
+import json
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 
 import collections.abc
 import typing
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, TypeVar, overload
+from copy import deepcopy
 
 from pulser.backend.observable import Observable
 
@@ -134,7 +137,41 @@ class Results:
                 f"{observable!r} is not an Observable instance "
                 "nor a known observable tag in the results."
             )
+        
+    def _to_abstract_repr(self) -> dict:
+        d = deepcopy(self.__dict__)
+        for key, value in d["_tagmap"].items():
+            d["_tagmap"][key] = str(value)
+        tmp = {}
+        for key, value in d["_results"].items():
+            tmp[str(key)] = value
+        d["_results"] = tmp
+        tmp = {}
+        for key, value in d["_times"].items():
+            tmp[str(key)] = value
+        d["_times"] = tmp
+        return d
 
+    @classmethod
+    def _from_abstract_repr(cls, dict: dict) -> Results:
+        results = cls(
+            atom_order=tuple(dict["atom_order"]), total_duration=dict["total_duration"]
+        )
+        for key, value in dict["_tagmap"].items():
+            results._tagmap[key] = uuid.UUID(value)
+        for key, value in dict["_results"].items():
+            results._results[uuid.UUID(key)] = value
+        for key, value in dict["_times"].items():
+            results._times[uuid.UUID(key)] = value
+        return results
+
+    def to_abstract_repr(self) -> str:
+        return json.dumps(self._to_abstract_repr(), cls=AbstractReprEncoder)
+
+    @classmethod
+    def from_abstract_repr(cls, repr: str) -> Results:
+        d = json.loads(repr)
+        return cls._from_abstract_repr(d)
 
 ResultsType = TypeVar("ResultsType", bound=Results)
 

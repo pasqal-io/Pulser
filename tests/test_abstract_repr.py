@@ -88,6 +88,45 @@ phys_Chadoq2 = replace(
 )
 
 
+@pytest.mark.parametrize(        
+    "test_torch",
+    [
+        True,
+        False
+    ],
+)
+def test_abstract_repr_encoder(test_torch:bool):
+    encoder = AbstractReprEncoder()
+    
+    if not test_torch:
+        class Dummy:
+            def _to_abstract_repr(self):
+                return "_to_abstract_repr"
+
+        result = encoder.default(Dummy())
+        assert result == "_to_abstract_repr"
+
+        result = encoder.default(np.array([1,2,3,4]))
+        assert result == [1,2,3,4]
+
+        result = encoder.default(np.intp(5))
+        assert result == 5
+
+        result = encoder.default({1,2,3,4})
+        assert result == [1,2,3,4]
+
+        result = encoder.default(1. + 2.j)
+        assert result == dict(real=1., imag=2.)
+    else:
+        torch = pytest.importorskip("torch")
+        
+        result = encoder.default(torch.tensor(5.))
+        assert result == 5.
+
+        result = encoder.default(torch.tensor([1,2,3,4]))
+        assert result == [1,2,3,4]
+
+
 @pytest.mark.parametrize(
     "layout",
     [

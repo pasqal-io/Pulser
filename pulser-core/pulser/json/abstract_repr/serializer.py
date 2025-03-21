@@ -34,6 +34,13 @@ if TYPE_CHECKING:
     from pulser.sequence import Sequence
     from pulser.sequence._call import _Call
 
+has_torch: bool
+try:
+    import torch
+    has_torch = True
+except ImportError: # pragma: no cover
+    has_torch = False
+
 
 class AbstractReprEncoder(json.JSONEncoder):
     """The custom encoder for abstract representation of Pulser objects."""
@@ -50,6 +57,11 @@ class AbstractReprEncoder(json.JSONEncoder):
             return list(o)
         elif isinstance(o, complex):
             return dict(real=o.real, imag=o.imag)
+        elif has_torch and isinstance(o, torch.Tensor):
+            if len(o.shape) == 0:
+                return o.item()
+            else:
+                return cast(list, o.tolist())
         else:  # pragma: no cover
             return cast(dict, json.JSONEncoder.default(self, o))
 
