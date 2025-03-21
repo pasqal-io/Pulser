@@ -85,7 +85,9 @@ def test_fidelity_repr():
 
     basis = {"r", "g"}
     amplitudes = {"rgr": 1.0, "grg": 1.0}
-    state = StateRepr(basis, amplitudes)
+    state = StateRepr.from_state_amplitudes(
+        eigenstates=basis, amplitudes=amplitudes
+    )
     fidelity = Fidelity(state, **kwargs)
 
     fidelity_repr = fidelity._to_abstract_repr()
@@ -108,8 +110,7 @@ def test_config_repr():
     }
 
     config = EmulationConfig(**expected_kwargs)
-    # dump with AbstrctReprEncoder
-    # validation
+    # dump with AbstrctReprEncoder & validation
     config_str = config.to_abstract_repr()
     # load and redump but with default JSON encoder
     # equivalent to go key by key and check single str repr
@@ -123,27 +124,26 @@ class TestStateRepr:
         basis = ("r", "g")
         amplitudes = {"rgr": 1.0j + 0.2, "grg": 1.0}
         expected_repr = {"eigenstates": basis, "amplitudes": amplitudes}
-        state = StateRepr(basis, amplitudes)
+        state = StateRepr.from_state_amplitudes(
+            eigenstates=basis, amplitudes=amplitudes
+        )
         state_repr = state._to_abstract_repr()
         assert state_repr == expected_repr
 
     def test_state_repr_invalid_eigenstates(self):
         basis = ("av", "b", "c")
-        amplitudes = {"rgr": 1.0, "grg": 1.0}
         with pytest.raises(
             ValueError,
             match="All eigenstates must be represented by single characters.",
         ):
-            StateRepr(basis, amplitudes)
+            StateRepr(eigenstates=basis)
 
     def test_state_repr_not_implemented(self):
         basis = ("r", "g")
         amplitudes = {"rgr": 1.0, "grg": 1.0}
-        state = StateRepr(eigenstates=basis, amplitudes=amplitudes)
-        with pytest.raises(NotImplementedError):
-            state.from_state_amplitudes(
-                eigenstates=basis, amplitudes=amplitudes
-            )
+        state = StateRepr.from_state_amplitudes(
+            eigenstates=basis, amplitudes=amplitudes
+        )
         with pytest.raises(NotImplementedError):
             state.n_qudits
         with pytest.raises(NotImplementedError):
@@ -172,7 +172,7 @@ class TestOperatorRepr:
             "operations": operations,
         }
 
-        op = OperatorRepr(
+        op = OperatorRepr.from_operator_repr(
             eigenstates=basis, n_qudits=n_qudits, operations=operations
         )
 
@@ -182,10 +182,8 @@ class TestOperatorRepr:
 
     def test_operator_repr_not_implemented(self):
         op_repr = {"eigenstates": ("r", "g"), "n_qudits": 5, "operations": []}
-        op = OperatorRepr(**op_repr)
+        op = OperatorRepr.from_operator_repr(**op_repr)
         mock_state = MagicMock()
-        with pytest.raises(NotImplementedError):
-            op.from_operator_repr(**op_repr)
         with pytest.raises(NotImplementedError):
             op.apply_to(mock_state)
         with pytest.raises(NotImplementedError):
