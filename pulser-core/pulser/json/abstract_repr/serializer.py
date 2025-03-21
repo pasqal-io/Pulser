@@ -37,8 +37,9 @@ if TYPE_CHECKING:
 has_torch: bool
 try:
     import torch
+
     has_torch = True
-except ImportError: # pragma: no cover
+except ImportError:  # pragma: no cover
     has_torch = False
 
 
@@ -64,7 +65,7 @@ class AbstractReprEncoder(json.JSONEncoder):
             if len(o.shape) == 0:
                 return o.item()
             else:
-                return cast(list, o.tolist())
+                return o.tolist()
         else:  # pragma: no cover
             return cast(dict, json.JSONEncoder.default(self, o))
 
