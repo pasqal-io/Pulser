@@ -16,24 +16,37 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Sequence
-from typing import Generic, Type, TypeVar
+from typing import Any, Generic, Type, TypeVar
 
 from pulser.backend.state import Eigenstate, State
+from pulser.json.exceptions import AbstractReprError
 
 ArgScalarType = TypeVar("ArgScalarType")
 ReturnScalarType = TypeVar("ReturnScalarType")
 StateType = TypeVar("StateType", bound=State)
 OperatorType = TypeVar("OperatorType", bound="Operator")
 
-QuditOp = Mapping[str, ArgScalarType]  # single qudit operator
+# Generic type aliases
+T = TypeVar("T")
+QuditOp = Mapping[str, T]  # single qudit operator
 TensorOp = Sequence[
-    tuple[QuditOp, Collection[int]]
+    tuple[QuditOp[T], Collection[int]]
 ]  # QuditOp applied to set of qudits
-FullOp = Sequence[tuple[ArgScalarType, TensorOp]]  # weighted sum of TensorOp
+FullOp = Sequence[tuple[T, TensorOp[T]]]  # weighted sum of TensorOp
 
 
 class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
     """Base class for a quantum operator."""
+
+    _eigenstates: Sequence[Eigenstate] | None
+    _n_qudits: int | None
+    _operations: FullOp[complex] | None
+
+    def __init__(self) -> None:
+        """Initializes an Operator."""
+        self._eigenstates = None
+        self._n_qudits = None
+        self._operations = None
 
     @abstractmethod
     def apply_to(self, state: StateType, /) -> StateType:
@@ -96,13 +109,12 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         pass
 
     @classmethod
-    @abstractmethod
     def from_operator_repr(
         cls: Type[OperatorType],
         *,
         eigenstates: Sequence[Eigenstate],
         n_qudits: int,
-        operations: FullOp,
+        operations: FullOp[ArgScalarType],
     ) -> OperatorType:
         """Create an operator from the operator representation.
 
@@ -139,4 +151,43 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         Returns:
             The constructed operator.
         """
+        obj, _operations = cls._from_operator_repr(
+            eigenstates=eigenstates, n_qudits=n_qudits, operations=operations
+        )
+        obj._eigenstates = eigenstates
+        obj._n_qudits = n_qudits
+        obj._operations = _operations
+        return obj
+
+    @classmethod
+    @abstractmethod
+    def _from_operator_repr(
+        cls: Type[OperatorType],
+        *,
+        eigenstates: Sequence[Eigenstate],
+        n_qudits: int,
+        operations: FullOp[ArgScalarType],
+    ) -> tuple[OperatorType, FullOp[complex]]:
+        """Implements the conversion used in `from_operator_repr()`.
+
+        Expected to return the Operator instance alongside the 'operations' to
+        use in serialization.
+        """
         pass
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        if (
+            self._eigenstates is None
+            or self._n_qudits is None
+            or self._operations is None
+        ):
+            cls_name = self.__class__.__name__
+            raise AbstractReprError(
+                f"Failed to serialize state of type {cls_name!r} because it "
+                f"was not created via '{cls_name}.from_operator_repr()'."
+            )
+        return {
+            "eigenstates": tuple(self._eigenstates),
+            "n_qudits": self._n_qudits,
+            "operations": self._operations,
+        }

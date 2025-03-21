@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 from collections.abc import Callable
@@ -642,7 +643,7 @@ class TestSerialization:
         return TriangularLatticeLayout(50, 6)
 
     @pytest.fixture(params=[DigitalAnalogDevice, MockDevice])
-    def sequence(self, request):
+    def sequence(self, request, catch_phase_shift_warning):
         qubits = {"control": (-2, 0), "target": (2, 0)}
         reg = Register(qubits)
         device = request.param
@@ -681,7 +682,8 @@ class TestSerialization:
 
         seq.align("digital", "rydberg")
         seq.add(pi_pulse, "rydberg")
-        seq.phase_shift(1.0, "control", "target", basis="ground-rydberg")
+        with catch_phase_shift_warning:
+            seq.phase_shift(1.0, basis="ground-rydberg")
         seq.target({"target"}, "rydberg")
         seq.add(two_pi_pulse, "rydberg")
 
@@ -691,14 +693,14 @@ class TestSerialization:
         return seq
 
     @pytest.fixture
-    def abstract(self, sequence):
-        return json.loads(
-            sequence.to_abstract_repr(
+    def abstract(self, sequence, catch_phase_shift_warning):
+        with catch_phase_shift_warning:
+            abstract_repr = sequence.to_abstract_repr(
                 target_atom=1,
                 amps=[np.pi, 2 * np.pi],
                 duration=200,
             )
-        )
+        return json.loads(abstract_repr)
 
     def test_schema(self, abstract):
         validate_schema(abstract)
@@ -1797,6 +1799,12 @@ class TestDeserialization:
                 "basis": "digital",
             },
             {
+                "op": "phase_shift",
+                "phi": 2,
+                "targets": [],
+                "basis": "digital",
+            },
+            {
                 "op": "pulse",
                 "channel": "global",
                 "phase": 1,
@@ -1817,12 +1825,19 @@ class TestDeserialization:
         ],
         ids=_get_op,
     )
-    def test_deserialize_non_parametrized_op(self, op):
+    def test_deserialize_non_parametrized_op(
+        self, op, catch_phase_shift_warning
+    ):
         s = _get_serialized_seq(
             operations=[op], device=json.loads(MockDevice.to_abstract_repr())
         )
-        _check_roundtrip(s)
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with (
+            catch_phase_shift_warning
+            if (op["op"] == "phase_shift" and not op["targets"])
+            else contextlib.nullcontext()
+        ):
+            _check_roundtrip(s)
+            seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # init + declare channels + 1 operation
         offset = 1 + len(s["channels"])
@@ -2017,6 +2032,12 @@ class TestDeserialization:
                 "basis": "ground-rydberg",
             },
             {
+                "op": "phase_shift",
+                "phi": var1,
+                "targets": [],
+                "basis": "ground-rydberg",
+            },
+            {
                 "op": "pulse",
                 "channel": "global",
                 "phase": var1,
@@ -2054,7 +2075,7 @@ class TestDeserialization:
         ],
         ids=_get_op,
     )
-    def test_deserialize_parametrized_op(self, op):
+    def test_deserialize_parametrized_op(self, op, catch_phase_shift_warning):
         s = _get_serialized_seq(
             operations=[op],
             variables={
@@ -2062,8 +2083,13 @@ class TestDeserialization:
                 "var2": {"type": "int", "value": [44]},
             },
         )
-        _check_roundtrip(s)
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with (
+            catch_phase_shift_warning
+            if (op["op"] == "phase_shift" and not op["targets"])
+            else contextlib.nullcontext()
+        ):
+            _check_roundtrip(s)
+            seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # init + declare channels + 1 operation
         offset = 1 + len(s["channels"])
@@ -2088,10 +2114,13 @@ class TestDeserialization:
             assert c.name == "phase_shift_index"
             # phi is variable
             assert isinstance(c.args[0], VariableItem)
-            # qubit 1 is fixed
-            assert c.args[1] == 2
-            # qubit 2 is variable
-            assert isinstance(c.args[2], VariableItem)
+            if op["targets"]:
+                # qubit 1 is fixed
+                assert c.args[1] == 2
+                # qubit 2 is variable
+                assert isinstance(c.args[2], VariableItem)
+            else:
+                assert len(c.args) == 1
             # basis is fixed
             assert c.kwargs["basis"] == "ground-rydberg"
         elif "pulse" in op["op"]:

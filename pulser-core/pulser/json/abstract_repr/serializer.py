@@ -45,7 +45,7 @@ except ImportError: # pragma: no cover
 class AbstractReprEncoder(json.JSONEncoder):
     """The custom encoder for abstract representation of Pulser objects."""
 
-    def default(self, o: Any) -> dict[str, Any] | list | int:
+    def default(self, o: Any) -> dict[str, Any] | list | int | float:
         """Handles JSON encoding of objects not supported by default."""
         if hasattr(o, "_to_abstract_repr"):
             return cast(dict, o._to_abstract_repr())
@@ -56,6 +56,9 @@ class AbstractReprEncoder(json.JSONEncoder):
         elif isinstance(o, set):
             return list(o)
         elif isinstance(o, complex):
+            if o.imag == 0:
+                # Try to return a real number when possible
+                return o.real
             return dict(real=o.real, imag=o.imag)
         elif has_torch and isinstance(o, torch.Tensor):
             if len(o.shape) == 0:
@@ -186,7 +189,7 @@ def serialize_abstract_sequence(
             return target_ids
 
         targets = list(cast(Collection, target_ids))
-        return targets if len(targets) > 1 else targets[0]
+        return targets if len(targets) != 1 else targets[0]
 
     def convert_targets(
         target_ids: Union[QubitId, Collection[QubitId]],

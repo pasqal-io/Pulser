@@ -13,12 +13,15 @@
 # limitations under the License.
 from __future__ import annotations
 
+import json
 import re
 
 import numpy as np
 import pytest
 import qutip
 
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.exceptions import AbstractReprError
 from pulser_simulation import QutipOperator, QutipState
 
 
@@ -269,6 +272,30 @@ class TestQutipState:
             eigenstates=("r", "g"), amplitudes={"g": 1.0}
         )
         assert dm_g != qutip.basis(2, 1).proj()
+
+    def test_abstract_repr(self, ket_r):
+        kwargs = dict(eigenstates=("r", "g"), amplitudes={"g": 1.0})
+        state = QutipState.from_state_amplitudes(**kwargs)
+        assert json.dumps(state, cls=AbstractReprEncoder) == json.dumps(kwargs)
+
+        with pytest.raises(
+            AbstractReprError,
+            match=re.escape(
+                "Failed to serialize state of type 'QutipState' because it"
+                " was not created via 'QutipState.from_state_amplitudes()'"
+            ),
+        ):
+            json.dumps(
+                QutipState(state.to_qobj(), eigenstates=state.eigenstates),
+                cls=AbstractReprEncoder,
+            )
+
+        # State is modified in-place
+        state._state = ket_r._state
+        with pytest.raises(
+            AbstractReprError, match="modified in place after its creation"
+        ):
+            json.dumps(state, cls=AbstractReprEncoder)
 
 
 class TestQutipOperator:
@@ -534,3 +561,30 @@ class TestQutipOperator:
             qutip.basis(2, 1).proj(), eigenstates=pauli_i.eigenstates
         )
         assert g_proj != dm_g
+
+    def test_abstract_repr(self):
+        kwargs = dict(
+            eigenstates=("r", "g"),
+            n_qudits=3,
+            operations=[(0.5, [({"rr": 1.0, "gg": 1.0j}, {0})]), (0.5, [])],
+        )
+        op = QutipOperator.from_operator_repr(**kwargs)
+        ser_ops = [
+            (0.5, [({"rr": 1.0, "gg": {"real": 0.0, "imag": 1.0}}, [0])]),
+            (0.5, []),
+        ]
+        assert json.dumps(op, cls=AbstractReprEncoder) == json.dumps(
+            {**kwargs, "operations": ser_ops}
+        )
+
+        with pytest.raises(
+            AbstractReprError,
+            match=re.escape(
+                "Failed to serialize state of type 'QutipOperator' because it"
+                " was not created via 'QutipOperator.from_operator_repr()'"
+            ),
+        ):
+            json.dumps(
+                QutipOperator(op.to_qobj(), eigenstates=op.eigenstates),
+                cls=AbstractReprEncoder,
+            )
