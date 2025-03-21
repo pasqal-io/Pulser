@@ -18,6 +18,7 @@ from pulser.backend import (
 )
 from pulser.backend.operator import OperatorRepr
 from pulser.backend.state import StateRepr
+from pulser.json.exceptions import AbstractReprError
 
 # TODO: decide where to put these tests
 
@@ -138,11 +139,14 @@ class TestStateRepr:
         ):
             StateRepr(eigenstates=basis)
 
+    def test_not_from_amplitudes(self):
+        state = StateRepr(eigenstates=("r", "g"))
+        with pytest.raises(AbstractReprError):
+            state._to_abstract_repr()
+
     def test_state_repr_not_implemented(self):
-        basis = ("r", "g")
-        amplitudes = {"rgr": 1.0, "grg": 1.0}
         state = StateRepr.from_state_amplitudes(
-            eigenstates=basis, amplitudes=amplitudes
+            eigenstates=("r", "g"), amplitudes={"rgr": 1.0, "grg": 1.0}
         )
         with pytest.raises(NotImplementedError):
             state.n_qudits
