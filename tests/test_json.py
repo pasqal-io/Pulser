@@ -22,6 +22,7 @@ from pulser.devices import DigitalAnalogDevice, MockDevice
 from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.exceptions import SerializationError
 from pulser.json.supported import validate_serialization
+from pulser.json.utils import make_json_compatible
 from pulser.parametrized.decorators import parametrize
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
@@ -287,3 +288,13 @@ def test_deprecated_device_args():
     s = json.dumps(seq_dict)
     new_seq = Sequence._deserialize(s)
     assert new_seq.device == MockDevice
+
+
+def test_make_json_compatible():
+    assert make_json_compatible(np.arange(3, dtype=np.int8)) == [0, 1, 2]
+    assert make_json_compatible(
+        np.linspace(0, 1, num=3, dtype=np.float16)
+    ) == [0.0, 0.5, 1.0]
+    assert make_json_compatible("abc") == "abc"
+    with pytest.raises(TypeError, match="not JSON serializable"):
+        make_json_compatible(1j)

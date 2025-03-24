@@ -157,7 +157,35 @@ class _MockConnection(RemoteConnection):
         return bool(self._support_open_batch)
 
 
-def test_remote_connection():
+@pytest.mark.parametrize("job_ids", [None, ["jobID1"]])
+def test_remote_results(job_ids):
+
+    all_job_ids = ["jobID1", "abcd"]
+
+    def _get_job_ids(batch_id):
+        return all_job_ids
+
+    connection = _MockConnection()
+    connection._get_job_ids = _get_job_ids
+
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape("'batchID1' does not contain jobs ['bad_job']"),
+    ):
+        RemoteResults("batchID1", connection, job_ids=["jobID1", "bad_job"])
+
+    remote_results = RemoteResults(
+        batch_id="batchID1", connection=connection, job_ids=job_ids
+    )
+    assert remote_results.batch_id == "batchID1"
+    assert remote_results.job_ids == job_ids or all_job_ids
+    assert remote_results.get_batch_status() == BatchStatus.DONE
+    assert remote_results.get_available_results() == (
+        {"abcd": connection.result} if not job_ids else {}
+    )
+
+
+def test_remote_connection(sequence):
     connection = _MockConnection()
 
     with pytest.raises(NotImplementedError, match="Unable to find job IDs"):
@@ -167,6 +195,56 @@ def test_remote_connection():
         NotImplementedError, match="Unable to fetch the available devices"
     ):
         connection.fetch_available_devices()
+
+    assert not sequence.is_measured()
+    new_seq = connection._add_measurement_to_sequence(sequence)
+    assert not sequence.is_measured()  # Not modified in place
+    assert new_seq.is_measured()
+
+    # When already measured, the sequence is returned unchanged
+    assert new_seq is connection._add_measurement_to_sequence(new_seq)
+
+    sequence.declare_channel("raman", "raman_local")
+    with pytest.raises(
+        ValueError, match="measurement basis can't be implicitly determined"
+    ):
+        connection._add_measurement_to_sequence(sequence)
+
+
+def test_update_sequence_device(sequence):
+    connection = _MockConnection()
+    device = pulser.AnalogDevice
+
+    def fetch_available_devices():
+        return {device.name: device}
+
+    connection.fetch_available_devices = fetch_available_devices
+
+    assert sequence.device.name != device.name
+    with pytest.raises(
+        ValueError,
+        match="device used in the sequence does not match any of the devices",
+    ):
+        connection.update_sequence_device(sequence)
+
+    device = dataclasses.replace(sequence.device, max_atom_num=3)
+    assert list(connection.fetch_available_devices()) == [sequence.device.name]
+    with pytest.raises(
+        ValueError, match="not compatible with the latest device specs"
+    ):
+        connection.update_sequence_device(sequence)
+
+    # Use a Device instance to pass mimic_qpu=True validation
+    custom_device = dataclasses.replace(
+        pulser.AnalogDevice, requires_layout=False
+    )
+    with pytest.warns(UserWarning, match="different Rydberg level"):
+        sequence = sequence.switch_device(custom_device)
+    device = dataclasses.replace(
+        custom_device, max_atom_num=custom_device.max_atom_num + 1
+    )
+    assert device != sequence.device
+    assert connection.update_sequence_device(sequence).device == device
 
 
 def test_qpu_backend(sequence):
@@ -181,6 +259,7 @@ def test_qpu_backend(sequence):
         UserWarning, match="device with a different Rydberg level"
     ):
         seq = sequence.switch_device(AnalogDevice)
+
     with pytest.raises(ValueError, match="defined from a `RegisterLayout`"):
         QPUBackend(seq, connection)
 
@@ -195,6 +274,10 @@ def test_qpu_backend(sequence):
     seq = seq.switch_register(
         AnalogDevice.pre_calibrated_layouts[0].define_register(1, 2, 3)
     )
+
+    with pytest.raises(TypeError, match="must be a valid RemoteConnection"):
+        QPUBackend(seq, "fake_connection")
+
     qpu_backend = QPUBackend(seq, connection)
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         qpu_backend.run()

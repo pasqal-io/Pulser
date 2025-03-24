@@ -29,6 +29,7 @@ import pytest
 
 import pulser
 from pulser import Pulse, Register, Register3D, Sequence, devices
+from pulser.abstract_repr import deserialize_device
 from pulser.channels import Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import (
@@ -41,7 +42,6 @@ from pulser.devices import (
 from pulser.json.abstract_repr.deserializer import (
     VARIABLE_TYPE_MAP,
     deserialize_abstract_register,
-    deserialize_device,
 )
 from pulser.json.abstract_repr.serializer import (
     AbstractReprEncoder,
