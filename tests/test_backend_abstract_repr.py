@@ -71,7 +71,7 @@ def test_observable_repr(observable, expected_kwargs):
 
     # test default values
     assert obs_repr["observable"] == obs._base_tag
-    assert obs_repr["evaluation_times"] == expected_kwargs.get(
+    assert obs_repr["evaluation_times"] is expected_kwargs.get(
         "evaluation_times", None
     )
     assert obs_repr["tag_suffix"] == expected_kwargs.get("tag_suffix", None)
