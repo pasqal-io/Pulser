@@ -12,6 +12,7 @@ from pulser.backend import (
     Energy,
     EnergySecondMoment,
     EnergyVariance,
+    Expectation,
     Fidelity,
     Occupation,
     StateResult,
@@ -80,21 +81,67 @@ def test_observable_repr(observable, expected_kwargs):
         assert obs_repr[key] is expected_value
 
 
-def test_fidelity_repr():
-    evaluation_times = [0.1, 0.3, 0.9]
-    kwargs = {"evaluation_times": evaluation_times}
-
-    basis = {"r", "g"}
-    amplitudes = {"rgr": 1.0, "grg": 1.0}
-    state = StateRepr.from_state_amplitudes(
-        eigenstates=basis, amplitudes=amplitudes
-    )
-    fidelity = Fidelity(state, **kwargs)
-
+@mark.parametrize(
+    "state_kwargs",
+    [
+        {
+            "eigenstates": ("r", "g"),
+            "amplitudes": {"rgr": 1.0, "grg": 1.0},
+        },
+        {
+            "eigenstates": ("0", "1"),
+            "amplitudes": {"1000": 1.0 + 0.5j, "0001": 1.0 - 0.5j},
+        },
+    ],
+)
+def test_fidelity_repr(state_kwargs):
+    state = StateRepr.from_state_amplitudes(**state_kwargs)
+    fidelity = Fidelity(state)
     fidelity_repr = fidelity._to_abstract_repr()
+    state_in_repr = fidelity_repr["state"]
+    assert state_in_repr is state
+    assert state_in_repr._eigenstates == state_kwargs["eigenstates"]
+    assert state_in_repr._amplitudes == state_kwargs["amplitudes"]
 
-    state_repr = fidelity_repr["state"]
-    assert state_repr is state
+
+@mark.parametrize(
+    "op_kwargs",
+    [
+        {
+            "eigenstates": ("0", "1"),
+            "n_qudits": 3,
+            "operations": [],
+        },
+        {
+            "eigenstates": ("r", "g"),
+            "n_qudits": 5,
+            "operations": [
+                (
+                    1.0j,
+                    [
+                        ({"rg": 0.72j}, [0, 2]),
+                        ({"rr": 1.0, "gg": -1.0}, [1, 3]),
+                    ],
+                ),
+                (
+                    0.5j,
+                    [({"gr": 1.0j}, [4])],
+                ),
+            ],
+        },
+    ],
+)
+def test_expectation_repr(op_kwargs):
+    op = OperatorRepr.from_operator_repr(**op_kwargs)
+    expectation = Expectation(op)
+
+    expectation_repr = expectation._to_abstract_repr()
+
+    op_in_repr = expectation_repr["operator"]
+    assert op_in_repr is op
+    assert op_in_repr._eigenstates == op_kwargs["eigenstates"]
+    assert op_in_repr._n_qudits == op_kwargs["n_qudits"]
+    assert op_in_repr._operations == op_kwargs["operations"]
 
 
 def test_config_repr():

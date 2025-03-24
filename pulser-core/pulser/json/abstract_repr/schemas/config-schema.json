@@ -145,42 +145,84 @@
     },
     "operator": {
         "description": "an operator, stored in a serialized format",
-        "type": "array",
-        "items": {
-            "description": "this array represents the state as a weighted sum of tensor product operators",
-            "type": "array",
-            "prefixItems": [
-                {
-                    "type": "number",
-                    "description": "weight for the tensor product operator"
-                },
-                {
-                    "type": "array",
-                    "description": "tensor product operator, represented as a list of single qubit operators and the qubits upon which to apply it. Identity ops are implied",
-                    "items": {
-                        "type": "array",
-                        "description": "tuple of single qudit operator + support",
-                        "prefixItems": [
-                            {
-                                "type": "object",
-                                "description": "single qudit operator, the matrix elements are encoded using a string format",
-                                "additionalProperties": {
-                                    "type": "number",
-                                    "description": "value of the matrix element in the key"
-                                }
-                            },
-                            {
-                                "type": "array",
-                                "description": "support",
-                                "items": {
-                                    "type": "number"
-                                }
-                            }
-                        ]
-                    }
+        "type": "object",
+        "properties": {
+            "eigenstates": {
+                "type": "array",
+                "items": {
+                    "enum": [
+                        "u",
+                        "d",
+                        "r",
+                        "g",
+                        "h",
+                        "x",
+                        "0",
+                        "1"
+                    ]
                 }
-            ]
-        }
+            },
+            "n_qudits": {
+                "type": "integer"
+            },
+            "operations": {
+                "description": "array representing the operator as a weighted sum of tensor product operators",
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "prefixItems": [
+                        {
+                            "description": "weight for the tensor product operator",
+                            "oneOf": [
+                                {
+                                    "type": "number"
+                                },
+                                {
+                                    "$ref": "noise-schema.json#/definitions/ComplexNumber"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "array",
+                            "description": "tensor product operator, represented as a list of single qubit operators and the qubits upon which to apply it. Identity ops are implied",
+                            "items": {
+                                "type": "array",
+                                "description": "tuple of single qudit operator + support",
+                                "prefixItems": [
+                                    {
+                                        "type": "object",
+                                        "description": "single qudit operator, the matrix elements are encoded using a string format",
+                                        "additionalProperties": {
+                                            "description": "value of the matrix element in the key",
+                                            "oneOf": [
+                                                {
+                                                    "type": "number"
+                                                },
+                                                {
+                                                    "$ref": "noise-schema.json#/definitions/ComplexNumber"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "array",
+                                        "description": "set of qudits (represented by their indices), to which apply the defined operator",
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "required": [
+            "eigenstates",
+            "n_qudits",
+            "operations"
+        ]
     },
     "expectation": {
         "description": "causes the program to output the expectation value of the given operator",
