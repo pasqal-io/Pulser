@@ -125,16 +125,10 @@
                 }
             },
             "amplitudes": {
+                "description": "dictionary of weights for each state, {'101': 0.5j, ...}",
                 "type": "object",
                 "additionalProperties": {
-                    "oneOf": [
-                        {
-                            "type": "number"
-                        },
-                        {
-                            "$ref": "noise-schema.json#/definitions/ComplexNumber"
-                        }
-                    ]
+                    "$ref": "#/number_or_complex"
                 }
             }
         },
@@ -173,14 +167,7 @@
                     "prefixItems": [
                         {
                             "description": "weight for the tensor product operator",
-                            "oneOf": [
-                                {
-                                    "type": "number"
-                                },
-                                {
-                                    "$ref": "noise-schema.json#/definitions/ComplexNumber"
-                                }
-                            ]
+                            "$ref": "#/number_or_complex"
                         },
                         {
                             "type": "array",
@@ -194,14 +181,7 @@
                                         "description": "single qudit operator, the matrix elements are encoded using a string format",
                                         "additionalProperties": {
                                             "description": "value of the matrix element in the key",
-                                            "oneOf": [
-                                                {
-                                                    "type": "number"
-                                                },
-                                                {
-                                                    "$ref": "noise-schema.json#/definitions/ComplexNumber"
-                                                }
-                                            ]
+                                            "$ref": "#/number_or_complex"
                                         }
                                     },
                                     {
@@ -475,6 +455,17 @@
                     "inclusiveMinimum": 0.0,
                     "inclusiveMaximum": 1.0
                 }
+            }
+        ]
+    },
+    "number_or_complex": {
+        "description": "number or complex type serialization",
+        "oneOf": [
+            {
+                "type": "number"
+            },
+            {
+                "$ref": "noise-schema.json#/definitions/ComplexNumber"
             }
         ]
     }

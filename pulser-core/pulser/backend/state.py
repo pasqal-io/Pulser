@@ -250,7 +250,27 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
 
 
 class StateRepr(State):
-    """State subclass that supports serialization for remote backends."""
+    """Define a backend-independent quantum state representation.
+
+    Allows the user to define a quantum state with the usual dedicated method
+    `from_state_amplitudes`, which requires:
+    - eigenstates: single atom eigenstates/basis,
+        i.e ("r","g"), ("0","1"), ...
+    - amplitudes: dictionary of states, amplitudes,
+        i.e. {"rgr": 0.5, "grg": 0.5}
+
+    The created state, supports de/serialization methods for remote backend
+    execution.
+
+    Example:
+    ```python
+    eigenstates = ("r","g")
+    amplitudes = {"rgr"=0.5, "grg"=0.5}
+    state = StateRepr.from_state_amplitudes(
+        eigenstates=eigenstates, amplitudes=amplitudes
+    )
+    ```
+    """
 
     _n_qudits: int
 
