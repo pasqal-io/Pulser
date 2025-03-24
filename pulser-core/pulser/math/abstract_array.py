@@ -148,7 +148,7 @@ class AbstractArray:
             return AbstractArray(cast(torch.Tensor, self._array).detach())
         return self
 
-    def __array__(self, dtype: Any = None) -> np.ndarray:
+    def __array__(self, dtype: Any = None, copy: Any = None) -> np.ndarray:
         return self._array.__array__(dtype)
 
     def __repr__(self) -> str:
