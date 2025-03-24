@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+from types import TracebackType
+from typing import Optional
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -99,3 +103,80 @@ def catch_phase_shift_warning():
         UserWarning,
         match="In version v1.4.0 the behavior of `Sequence.phase_shift`",
     )
+
+
+class _RaisesAllContext:
+    """Utility: check exceptions raised by a block.
+
+    This is a variant of `pytest.raises` that checks that a block
+    raises an exception *and* that this exception is an instance
+    of all the classes listed.
+
+    The main use of this class is to check that a block raises an
+    exception that both maintains backwards compatibility (e.g.
+    a `ValueError` with a given message) *and* matches a new
+    exception style (e.g. a `DimensionsError`).
+    """
+
+    def __init__(
+        self, expected: list[type[Exception]], match: Optional[str] = None
+    ):
+        self.expected = expected
+        if match is None:
+            self.match = None
+        else:
+            self.match = re.compile(match)
+
+    def __enter__(self) -> None:
+        pass
+
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> bool:
+        if exc_type is None:
+            pytest.fail(f"DID NOT RAISE ANY OF {self.expected}")
+        for expected_type in self.expected:
+            if not issubclass(exc_type, expected_type):
+                pytest.fail(
+                    f"exception has type {exc_type},"
+                    f"expected a subclass of {expected_type}"
+                )
+        if self.match is not None:
+            assert exc_val is not None
+            message = str(exc_val)
+            if self.match.search(message) is None:
+                pytest.fail(
+                    reason=f"exception '{message}' did not match"
+                    f" '{self.match.pattern}'"
+                )
+        return True
+
+
+class Helpers:
+    """Testing helpers."""
+
+    @staticmethod
+    def raises_all(
+        expected: list[type[Exception]], match: str
+    ) -> _RaisesAllContext:
+        """Utility: check exceptions raised by a block.
+
+        This is a variant of `pytest.raises` that checks that a block
+        raises an exception *and* that this exception is an instance
+        of all the classes listed.
+
+        The main use of this class is to check that a block raises an
+        exception that both maintains backwards compatibility (e.g.
+        a `ValueError` with a given message) *and* matches a new
+        exception style (e.g. a `DimensionsError`).
+        """
+        return _RaisesAllContext(expected, match)
+
+
+@pytest.fixture
+def helpers() -> type[Helpers]:
+    """Testing helpers."""
+    return Helpers

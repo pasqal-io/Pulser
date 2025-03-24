@@ -61,6 +61,7 @@ Modules
    pulser.backends
    pulser.channels
    pulser.devices
+   pulser.exceptions
    pulser.parametrized
    pulser.register
    pulser.result
