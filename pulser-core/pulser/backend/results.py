@@ -70,7 +70,9 @@ class Results:
             time: The relative time at which the observable was taken.
             value: The value of the observable.
         """
-        self._store_raw(observable.uuid, observable.tag, time, value)
+        self._store_raw(
+            uuid=observable.uuid, tag=observable.tag, time=time, value=value
+        )
 
     def __getattr__(self, name: str) -> list[Any]:
         if name in self._tagmap:
