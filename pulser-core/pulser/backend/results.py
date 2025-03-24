@@ -43,6 +43,23 @@ class Results:
         self._times = {}
         self._tagmap = {}
 
+    def _store_raw(
+        self, *, uuid: uuid.UUID, tag: str, time: float, value: Any
+    ) -> None:
+        _times = self._times.setdefault(uuid, [])
+        if time in _times:
+            raise RuntimeError(
+                f"A value is already stored for observable '{tag}'"
+                f" at time {time}."
+            )
+        self._tagmap[tag] = uuid
+        assert (
+            _times == [] or _times[-1] < time
+        ), "Evaluation times are not sorted."
+        _times.append(time)
+        self._results.setdefault(uuid, []).append(value)
+        assert len(_times) == len(self._results[uuid])
+
     def _store(
         self, *, observable: Observable, time: float, value: Any
     ) -> None:
@@ -53,19 +70,9 @@ class Results:
             time: The relative time at which the observable was taken.
             value: The value of the observable.
         """
-        _times = self._times.setdefault(observable.uuid, [])
-        if time in _times:
-            raise RuntimeError(
-                f"A value is already stored for observable '{observable.tag}'"
-                f" at time {time}."
-            )
-        self._tagmap[observable.tag] = observable.uuid
-        assert (
-            _times == [] or _times[-1] < time
-        ), "Evaluation times are not sorted."
-        _times.append(time)
-        self._results.setdefault(observable.uuid, []).append(value)
-        assert len(_times) == len(self._results[observable.uuid])
+        self._store_raw(
+            uuid=observable.uuid, tag=observable.tag, time=time, value=value
+        )
 
     def __getattr__(self, name: str) -> list[Any]:
         if name in self._tagmap:
