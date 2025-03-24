@@ -172,6 +172,7 @@ class TestAbstractArray:
             assert val != 0
         else:
             val = values
+        val_np = val
         if use_tensor:
             torch = pytest.importorskip("torch")
             val = torch.tensor(val)
@@ -179,31 +180,31 @@ class TestAbstractArray:
         arr = pm.AbstractArray(val)
         # add
         np.testing.assert_array_equal(arr + 5.0, val + 5.0)
-        np.testing.assert_array_equal(arr + values, val + values)
+        np.testing.assert_array_equal(arr + values, val_np + values)
         np.testing.assert_array_equal(2.0 + arr, val + 2.0)
 
         # sub
         np.testing.assert_array_equal(arr - 5.0, val - 5.0)
-        np.testing.assert_array_equal(arr - values, val - values)
+        np.testing.assert_array_equal(arr - values, val_np - values)
         np.testing.assert_array_equal(2.0 - arr, 2.0 - val)
 
         # mul
         np.testing.assert_array_equal(arr * 5.0, val * 5.0)
-        np.testing.assert_array_equal(arr * values, val * values)
+        np.testing.assert_array_equal(arr * values, val_np * values)
         np.testing.assert_array_equal(2.0 * arr, val * 2.0)
 
         # truediv
         np.testing.assert_array_equal(arr / 5.0, val / 5.0)
         # Avoid zero division
         np.testing.assert_array_equal(
-            arr / (values + 2.0), val / (values + 2.0)
+            arr / (values + 2.0), val_np / (values + 2.0)
         )
         np.testing.assert_array_equal(2.0 / arr, 2.0 / val)
 
         # floordiv
         np.testing.assert_array_equal(arr // 5.0, val // 5.0)
         np.testing.assert_array_equal(
-            arr // (values + 2.0), val // (values + 2.0)
+            arr // (values + 2.0), val_np // (values + 2.0)
         )
         np.testing.assert_array_equal(2.0 // arr, 2.0 // val)
 
@@ -211,13 +212,13 @@ class TestAbstractArray:
         np.testing.assert_array_equal(arr**5.0, val**5.0)
 
         np.testing.assert_array_almost_equal(
-            abs(arr) ** values, abs(val) ** values
+            abs(arr) ** values, abs(val_np) ** values
         )  # rounding errors here
         np.testing.assert_array_equal(2.0**arr, 2.0**val)
 
         # mod
         np.testing.assert_array_equal(arr % 5.0, val % 5.0)
-        np.testing.assert_array_equal(arr % values, val % values)
+        np.testing.assert_array_equal(arr % values, val_np % values)
         np.testing.assert_array_equal(2.0 % arr, 2.0 % val)
 
         # matmul
