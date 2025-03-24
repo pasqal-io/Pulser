@@ -72,7 +72,7 @@
                 "type": "boolean"
             },
             "interaction_matrix": {
-                "description": "overrides the interactions given by the register positions",
+                "description": "matrix of real numbers that overrides the interactions given by the register positions",
                 "oneOf": [
                     {
                         "type": "null"
@@ -229,7 +229,7 @@
         "type": "object",
         "properties": {
             "observable": {
-                "description": "to know what object to deserialize this into",
+                "description": "tag to distinguish different instances of an observable",
                 "const": "expectation"
             },
             "evaluation_times": {
@@ -259,7 +259,7 @@
         "type": "object",
         "properties": {
             "observable": {
-                "description": "to know what object to deserialize this into",
+                "description": "tag to distinguish different instances of an observable",
                 "const": "bitstrings"
             },
             "evaluation_times": {
@@ -297,7 +297,7 @@
         "type": "object",
         "properties": {
             "observable": {
-                "description": "to know what object to deserialize this into",
+                "description": "tag to distinguish different instances of an observable",
                 "const": "fidelity"
             },
             "evaluation_times": {
@@ -326,7 +326,7 @@
         "type": "object",
         "properties": {
             "observable": {
-                "description": "to know what object to deserialize this into",
+                "description": "tag to distinguish different instances of an observable",
                 "const": "correlation_matrix"
             },
             "evaluation_times": {
@@ -359,7 +359,7 @@
         "type": "object",
         "properties": {
             "observable": {
-                "description": "to know what object to deserialize this into",
+                "description": "tag to distinguish different instances of an observable",
                 "const": "occupation"
             },
             "evaluation_times": {
@@ -392,7 +392,7 @@
         "type": "object",
         "properties": {
             "observable": {
-                "description": "to know what object to deserialize this into",
+                "description": "tag to distinguish different instances of an observable",
                 "const": "energy"
             },
             "evaluation_times": {
@@ -417,7 +417,7 @@
         "type": "object",
         "properties": {
             "observable": {
-                "description": "to know what object to deserialize this into",
+                "description": "tag to distinguish different instances of an observable",
                 "const": "energy_variance"
             },
             "evaluation_times": {
@@ -442,7 +442,7 @@
         "type": "object",
         "properties": {
             "observable": {
-                "description": "to know what object to deserialize this into",
+                "description": "tag to distinguish different instances of an observable",
                 "const": "energy_second_moment"
             },
             "evaluation_times": {
@@ -463,7 +463,7 @@
         ]
     },
     "evaluation_times": {
-        "description": "at what times to generate this output",
+        "description": "at what times to generate the output of an observable",
         "oneOf": [
             {
                 "type": "null"

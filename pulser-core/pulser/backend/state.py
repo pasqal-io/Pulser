@@ -192,6 +192,11 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
 
     @staticmethod
     def _validate_eigenstates(eigenstates: Sequence[Eigenstate]) -> None:
+        if not isinstance(eigenstates, Sequence):
+            raise TypeError(
+                "'eigenstates' must be a 'collections.Sequence' "
+                f"(list or tuple), not {type(eigenstates).__name__}."
+            )
         if any(not isinstance(s, str) or len(s) != 1 for s in eigenstates):
             raise ValueError(
                 "All eigenstates must be represented by single characters."
@@ -247,6 +252,8 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
 class StateRepr(State):
     """State subclass that supports serialization for remote backends."""
 
+    _n_qudits: int
+
     @classmethod
     def _from_state_amplitudes(
         cls,
@@ -256,9 +263,10 @@ class StateRepr(State):
     ) -> tuple[StateRepr, Mapping[str, complex]]:
         """Implements the conversion used in `from_state_amplitudes()`."""
         state = cls(eigenstates=eigenstates)
-        state._validate_amplitudes(
+        n_qudits = state._validate_amplitudes(
             eigenstates=eigenstates, amplitudes=amplitudes
         )
+        cls._n_qudits = n_qudits
         return state, amplitudes
 
     def _to_abstract_repr(self) -> dict[str, Any]:
@@ -275,8 +283,8 @@ class StateRepr(State):
 
     @property
     def n_qudits(self) -> int:
-        """``n_qudits`` not implemented in ``StateRepr``."""
-        raise NotImplementedError
+        """The number of qudits in the state."""
+        return self._n_qudits
 
     def overlap(self, other: StateRepr, /) -> None:
         """``overlap`` not implemented in ``StateRepr``."""

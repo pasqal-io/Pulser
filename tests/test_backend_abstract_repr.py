@@ -168,6 +168,14 @@ def test_config_repr():
 
 
 class TestStateRepr:
+    def test_n_qudits(self):
+        basis = ("0", "1")
+        amplitudes = {"00000": 1.0j}
+        state = StateRepr.from_state_amplitudes(
+            eigenstates=basis, amplitudes=amplitudes
+        )
+        assert state.n_qudits == 5
+
     def test_state_repr(self):
         basis = ("r", "g")
         amplitudes = {"rgr": 1.0j + 0.2, "grg": 1.0}
@@ -195,8 +203,6 @@ class TestStateRepr:
         state = StateRepr.from_state_amplitudes(
             eigenstates=("r", "g"), amplitudes={"rgr": 1.0, "grg": 1.0}
         )
-        with pytest.raises(NotImplementedError):
-            state.n_qudits
         with pytest.raises(NotImplementedError):
             state.overlap(state)
         with pytest.raises(NotImplementedError):
