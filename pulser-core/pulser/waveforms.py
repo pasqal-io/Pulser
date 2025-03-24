@@ -32,8 +32,8 @@ from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
 import pulser.math as pm
+from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr.serializer import abstract_repr
-from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize

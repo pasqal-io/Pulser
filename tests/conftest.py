@@ -160,7 +160,7 @@ class Helpers:
 
     @staticmethod
     def raises_all(
-        expected: list[type[Exception]], match: str
+        expected: list[type[Exception]], match: Optional[str] = None
     ) -> _RaisesAllContext:
         """Utility: check exceptions raised by a block.
 

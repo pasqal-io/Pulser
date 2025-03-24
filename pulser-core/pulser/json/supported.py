@@ -18,7 +18,11 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 import pulser.devices as devices
-from pulser.json.exceptions import SerializationError
+from pulser.exceptions.serialization import (
+    SerializationSupportAttributeMissing,
+    SerializationSupportClassMissing,
+    SerializationSupportModuleMissing,
+)
 
 SUPPORTED_BUILTINS = ("float", "int", "str", "set")
 
@@ -106,20 +110,17 @@ def validate_serialization(obj_dict: Mapping[str, Any]) -> None:
         raise TypeError("Invalid 'obj_dict'.")
 
     if module_str not in SUPPORTED_MODULES:
-        raise SerializationError(
-            f"No serialization support for module '{module_str}'."
-        )
+        raise SerializationSupportModuleMissing(module=module_str)
 
     if "__submodule__" in obj_dict:
         submodule_str = obj_dict["__submodule__"]
         if submodule_str not in SUPPORTS_SUBMODULE:
-            raise SerializationError(
-                "No serialization support for attributes of "
-                f"'{module_str}.{submodule_str}'."
+            raise SerializationSupportAttributeMissing(
+                module=module_str, submodule=submodule_str
             )
         obj_str = submodule_str
 
     if obj_str not in SUPPORTED_MODULES[module_str]:
-        raise SerializationError(
-            f"No serialization support for '{module_str}.{obj_str}'."
+        raise SerializationSupportClassMissing(
+            module=module_str, class_name=obj_str
         )

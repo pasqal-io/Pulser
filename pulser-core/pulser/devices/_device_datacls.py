@@ -30,7 +30,8 @@ import pulser.math as pm
 from pulser.channels.base_channel import Channel, States, get_states_from_bases
 from pulser.channels.dmm import DMM
 from pulser.devices.interaction_coefficients import c6_dict
-from pulser.exceptions import (
+from pulser.exceptions.base import PulserValueError
+from pulser.exceptions.sequence import (
     AtomsNumberError,
     DimensionChoiceError,
     DimensionPositionsTooHighError,
@@ -38,7 +39,6 @@ from pulser.exceptions import (
     DistanceError,
     MaxNumberOfTrapsError,
     OptimalLayoutFillingError,
-    PulserValueError,
     QubitsNumberError,
     RadiusError,
     RydbergLevelError,

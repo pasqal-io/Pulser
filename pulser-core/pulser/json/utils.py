@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any, Optional, Sequence
 import numpy as np
 
 import pulser
-from pulser.json.exceptions import AbstractReprError
+from pulser.exceptions.serialization import AbstractReprError
 
 if TYPE_CHECKING:  # pragma: no cover
     from pulser.register import QubitId
