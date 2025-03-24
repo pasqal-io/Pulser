@@ -141,10 +141,12 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     ) -> StateType:
         """Construct the state from its basis states' amplitudes.
 
+        Only states constructed with this method are allowed in remote backend.
+
         Args:
             eigenstates: The basis states (e.g., ('r', 'g')).
             amplitudes: A mapping between basis state combinations and
-                complex amplitudes.
+                complex amplitudes (e.g., {"rgr": 0.5, "grg": 0.5}).
 
         Returns:
             The state constructed from the amplitudes.
@@ -252,19 +254,18 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
 class StateRepr(State):
     """Define a backend-independent quantum state representation.
 
-    Allows the user to define a quantum state with the usual dedicated method
-    `from_state_amplitudes`, which requires:
-    - eigenstates: single atom eigenstates/basis,
-        i.e ("r","g"), ("0","1"), ...
-    - amplitudes: dictionary of states, amplitudes,
-        i.e. {"rgr": 0.5, "grg": 0.5}
+    Allows the user to define a quantum state with the usual dedicated class
+    method `from_state_amplitudes`, which requires:
+    - eigenstates: The basis states (e.g., ('r', 'g')).
+    - amplitudes: A mapping between basis state combinations and
+        complex amplitudes (e.g., {"rgr": 0.5, "grg": 0.5}).
 
     The created state, supports de/serialization methods for remote backend
     execution.
 
     Example:
     ```python
-    eigenstates = ("r","g")
+    eigenstates = ("r", "g")
     amplitudes = {"rgr"=0.5, "grg"=0.5}
     state = StateRepr.from_state_amplitudes(
         eigenstates=eigenstates, amplitudes=amplitudes
@@ -281,7 +282,11 @@ class StateRepr(State):
         eigenstates: Sequence[Eigenstate],
         amplitudes: Mapping[str, complex],
     ) -> tuple[StateRepr, Mapping[str, complex]]:
-        """Implements the conversion used in `from_state_amplitudes()`."""
+        """Implements the conversion used in `from_state_amplitudes()`.
+
+        Expected to return the State instance alongside the amplitudes used
+        in serialization.
+        """
         state = cls(eigenstates=eigenstates)
         n_qudits = state._validate_amplitudes(
             eigenstates=eigenstates, amplitudes=amplitudes
