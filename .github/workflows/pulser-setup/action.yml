@@ -14,7 +14,7 @@ inputs:
     required: false
     default: "with-torch"
   numpy:
-    decription: Which version of numpy to install
+    description: Which version of numpy to install
     required: false
     default: "numpy-v1"
 runs:
@@ -41,7 +41,7 @@ runs:
       if: ${{ inputs.numpy == 'numpy-v1'}}
       shell: bash
       run: |
-        pip install numpy~=1.22
+        pip install numpy==1.26
     - name: Install extra packages from the dev requirements
       if: "${{ inputs.extra-packages != '' }}"
       shell: bash
