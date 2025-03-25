@@ -19,6 +19,7 @@ from pulser.backend import (
 )
 from pulser.backend.operator import OperatorRepr
 from pulser.backend.state import StateRepr
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.exceptions import AbstractReprError
 
 # TODO: decide where to put these tests
@@ -41,6 +42,10 @@ from pulser.json.exceptions import AbstractReprError
                 "one_state": "r",
                 "tag_suffix": "7",
             },
+        ),
+        (
+            BitStrings,
+            {},
         ),
         (
             CorrelationMatrix,
@@ -66,19 +71,27 @@ from pulser.json.exceptions import AbstractReprError
 )
 def test_observable_repr(observable, expected_kwargs):
     obs = observable(**expected_kwargs)
-    obs_repr = obs._to_abstract_repr()
-    assert isinstance(obs_repr, dict)
+    obs_repr = json.loads(json.dumps(obs, cls=AbstractReprEncoder))
 
     # test default values
     assert obs_repr["observable"] == obs._base_tag
-    assert obs_repr["evaluation_times"] is expected_kwargs.get(
-        "evaluation_times", None
-    )
     assert obs_repr["tag_suffix"] == expected_kwargs.get("tag_suffix", None)
+    if obs_repr["evaluation_times"] is None:
+        assert "evaluation_times" not in expected_kwargs
+    else:
+        assert np.allclose(
+            obs_repr["evaluation_times"], expected_kwargs["evaluation_times"]
+        )
+        assert obs_repr["evaluation_times"] == json.loads(
+            json.dumps(
+                expected_kwargs["evaluation_times"], cls=AbstractReprEncoder
+            )
+        )
 
-    # test kwargs
-    for key, expected_value in expected_kwargs.items():
-        assert obs_repr[key] is expected_value
+    if "one_state" in obs_repr:
+        assert obs_repr["one_state"] == expected_kwargs.get("one_state", None)
+    if "num_shots" in obs_repr:
+        assert obs_repr["num_shots"] == expected_kwargs.get("num_shots", 1000)
 
 
 @mark.parametrize(
@@ -176,16 +189,6 @@ class TestStateRepr:
         )
         assert state.n_qudits == 5
 
-    def test_state_repr(self):
-        basis = ("r", "g")
-        amplitudes = {"rgr": 1.0j + 0.2, "grg": 1.0}
-        expected_repr = {"eigenstates": basis, "amplitudes": amplitudes}
-        state = StateRepr.from_state_amplitudes(
-            eigenstates=basis, amplitudes=amplitudes
-        )
-        state_repr = state._to_abstract_repr()
-        assert state_repr == expected_repr
-
     def test_state_repr_invalid_eigenstates(self):
         basis = ("av", "b", "c")
         with pytest.raises(
@@ -193,6 +196,17 @@ class TestStateRepr:
             match="All eigenstates must be represented by single characters.",
         ):
             StateRepr(eigenstates=basis)
+
+    def test_invalid_amplitudes(self):
+        basis = ("0", "1")
+        amplitudes = {"00000": 1.0j, "rrrrr": 1.0}
+        with pytest.raises(
+            ValueError,
+            match="must be combinations of eigenstates with the same length",
+        ):
+            StateRepr.from_state_amplitudes(
+                eigenstates=basis, amplitudes=amplitudes
+            )
 
     def test_not_from_amplitudes(self):
         state = StateRepr(eigenstates=("r", "g"))
@@ -208,34 +222,99 @@ class TestStateRepr:
         with pytest.raises(NotImplementedError):
             state.sample(num_shots=10)
 
+    @mark.parametrize(
+        "expected_repr",
+        [
+            {
+                "eigenstates": ("r", "g"),
+                "amplitudes": {"rgr": 1.0j + 0.2, "grg": 0.22j, "rrr": -2.0},
+            },
+            {
+                "eigenstates": ("0", "1"),
+                "amplitudes": {"10001": 0.5, "01010": 0.5},
+            },
+        ],
+    )
+    def test_state_repr(self, expected_repr):
+        state = StateRepr.from_state_amplitudes(**expected_repr)
+        state_repr = state._to_abstract_repr()
+        assert state_repr == expected_repr
+
+        # dump and reload repr
+        state_repr = json.loads(json.dumps(state, cls=AbstractReprEncoder))
+        assert state_repr["eigenstates"] == list(expected_repr["eigenstates"])
+        amplitudes = state_repr["amplitudes"]
+        expected_amplitudes = expected_repr["amplitudes"]
+        for k, expected_amp in expected_amplitudes.items():
+            amp = amplitudes[k]
+            if isinstance(expected_amp, complex):
+                amp = complex(amp["real"], amp["imag"])
+            assert amp == expected_amp
+
 
 class TestOperatorRepr:
-    def test_operator_repr(self):
-        basis = ("r", "g")
-        n_qudits = 5
-        # am I a valid operations
-        operations = [
-            (
-                1.0,
-                [
-                    ({"gr": 1.0, "rg": 1.0}, [0, 2]),
-                    ({"rr": 1.0, "gg": -1.0}, [1, 3]),
+    @mark.parametrize(
+        "expected_repr",
+        [
+            {
+                "eigenstates": ("r", "g"),
+                "n_qudits": 5,
+                "operations": [
+                    (
+                        1.0,
+                        [
+                            ({"gr": 1.0, "rg": 1.0}, [0, 2]),
+                            ({"rr": 1.0, "gg": -1.0}, [1, 3, 4]),
+                        ],
+                    )
                 ],
-            )
-        ]
-        expected_op_repr = {
-            "eigenstates": basis,
-            "n_qudits": n_qudits,
-            "operations": operations,
-        }
+            },
+            {
+                "eigenstates": ("0", "1"),
+                "n_qudits": 3,
+                "operations": [
+                    (
+                        0.1j,
+                        [
+                            ({"01": -1.0j, "10": 1.0j}, [0, 2]),
+                        ],
+                    ),
+                    (
+                        0.7j,
+                        [
+                            ({"11": -0.7j, "00": 2.3 + 0.22j}, [1, 2]),
+                        ],
+                    ),
+                ],
+            },
+        ],
+    )
+    def test_operator_repr(self, expected_repr):
+        operator = OperatorRepr.from_operator_repr(**expected_repr)
+        op_repr = operator._to_abstract_repr()
+        assert op_repr == expected_repr
 
-        op = OperatorRepr.from_operator_repr(
-            eigenstates=basis, n_qudits=n_qudits, operations=operations
-        )
-
-        op_repr = op._to_abstract_repr()
-
-        assert op_repr == expected_op_repr
+        # dump and reload repr
+        op_repr = json.loads(json.dumps(operator, cls=AbstractReprEncoder))
+        assert op_repr["eigenstates"] == list(expected_repr["eigenstates"])
+        assert op_repr["n_qudits"] == expected_repr["n_qudits"]
+        operations = op_repr["operations"]
+        for i, tensor_op in enumerate(operations):
+            if isinstance(tensor_op[0], dict):
+                tensor_op[0] = complex(
+                    tensor_op[0]["real"], tensor_op[0]["imag"]
+                )
+            for j, qudit_op in enumerate(tensor_op[1]):
+                assert len(qudit_op) == 2
+                assert isinstance(qudit_op[0], dict)
+                assert isinstance(qudit_op[1], list)
+                for k, v in qudit_op[0].items():
+                    if isinstance(v, dict):
+                        qudit_op[0][k] = complex(v["real"], v["imag"])
+                # repack as tuple
+                tensor_op[1][j] = tuple(qudit_op)
+            operations[i] = tuple(tensor_op)
+        assert operations == expected_repr["operations"]
 
     def test_operator_repr_not_implemented(self):
         op_repr = {"eigenstates": ("r", "g"), "n_qudits": 5, "operations": []}
