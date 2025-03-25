@@ -26,6 +26,7 @@ from typing import (
     Literal,
     Sequence,
     SupportsFloat,
+    Type,
     TypeVar,
     cast,
     get_args,
@@ -36,7 +37,9 @@ from numpy.typing import ArrayLike
 
 import pulser.math as pm
 from pulser.backend.observable import Observable
-from pulser.backend.state import State
+from pulser.backend.operator import Operator, OperatorRepr
+from pulser.backend.state import State, StateRepr
+from pulser.json.abstract_repr.backend import _deserialize_emulation_config
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.noise_model import NoiseModel
@@ -144,6 +147,9 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     noise_model: NoiseModel
     # Whether to warn if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = False
+
+    _state_type: ClassVar[Type[State]]
+    _operator_type: ClassVar[Type[Operator]]
 
     def __init__(
         self,
@@ -284,6 +290,30 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         if not skip_validation:
             validate_abstract_repr(obj_str, "config")
         return obj_str
+
+    @classmethod
+    def from_abstract_repr(cls, obj_str: str) -> EmulationConfig:
+        """Deserialize an EmulationConfig from an abstract JSON object.
+
+        Args:
+            obj_str (str): the JSON string representing the sequence encoded
+                in the abstract JSON format.
+
+        Returns:
+            EmulationConfig: The EmulationConfig instance.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized EmulationConfig must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+        validate_abstract_repr(obj_str, "config")
+        return _deserialize_emulation_config(
+            json.loads(obj_str),
+            cls,
+            getattr(cls, "_state_type", StateRepr),
+            getattr(cls, "_operator_type", OperatorRepr),
+        )
 
 
 # Legacy class
