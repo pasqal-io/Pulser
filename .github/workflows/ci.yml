@@ -40,7 +40,7 @@ jobs:
         with:
           extra-packages: ruff
       - name: Check numpy v2 compatibility with ruff
-        run: ruff
+        run: ruff check
   isort:
     runs-on: ubuntu-latest
     steps:
