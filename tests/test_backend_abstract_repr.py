@@ -25,159 +25,194 @@ from pulser.json.exceptions import AbstractReprError
 # TODO: decide where to put these tests
 
 
-@mark.parametrize(
-    "observable, expected_kwargs",
-    [
-        (
-            StateResult,
-            {
-                "evaluation_times": [0.1, 0.3, 1.0],
-            },
-        ),
-        (
-            BitStrings,
-            {
-                "evaluation_times": [i * 0.05 for i in range(10)],
-                "num_shots": 211,
-                "one_state": "r",
-                "tag_suffix": "7",
-            },
-        ),
-        (
-            BitStrings,
-            {},
-        ),
-        (
-            CorrelationMatrix,
-            {"one_state": "r"},
-        ),
-        (
-            Occupation,
-            {"one_state": "g"},
-        ),
-        (
-            Energy,
-            {"evaluation_times": [i * 0.05 for i in range(10)]},
-        ),
-        (
-            EnergyVariance,
-            {"evaluation_times": np.linspace(0, 1, 13)},
-        ),
-        (
-            EnergySecondMoment,
-            {"evaluation_times": [i * 0.1 for i in range(5)]},
-        ),
-    ],
-)
-def test_observable_repr(observable, expected_kwargs):
-    obs = observable(**expected_kwargs)
-    obs_repr = json.loads(json.dumps(obs, cls=AbstractReprEncoder))
+class TestObservableRepr:
+    example_state = StateRepr.from_state_amplitudes(
+        eigenstates=("0", "1"), amplitudes={"11": 0.1}
+    )
+    example_operator = OperatorRepr.from_operator_repr(
+        eigenstates=("r", "g"),
+        n_qudits=3,
+        operations=[(0.3, [({"rr": 0.2j}, [0, 2])])],
+    )
 
-    # test default values
-    assert obs_repr["observable"] == obs._base_tag
-    assert obs_repr["tag_suffix"] == expected_kwargs.get("tag_suffix", None)
-    if obs_repr["evaluation_times"] is None:
-        assert "evaluation_times" not in expected_kwargs
-    else:
-        assert np.allclose(
-            obs_repr["evaluation_times"], expected_kwargs["evaluation_times"]
+    @mark.parametrize(
+        "observable, arg, expected_kwargs",
+        [
+            (
+                StateResult,
+                (),
+                {
+                    "evaluation_times": [0.1, 0.3, 1.0],
+                },
+            ),
+            (
+                BitStrings,
+                (),
+                {
+                    "evaluation_times": [i * 0.05 for i in range(10)],
+                    "num_shots": 211,
+                    "one_state": "r",
+                    "tag_suffix": "7",
+                },
+            ),
+            (
+                BitStrings,
+                (),
+                {},
+            ),
+            (
+                CorrelationMatrix,
+                (),
+                {"one_state": "r"},
+            ),
+            (
+                Occupation,
+                (),
+                {"one_state": "g"},
+            ),
+            (
+                Energy,
+                (),
+                {"evaluation_times": [i * 0.05 for i in range(10)]},
+            ),
+            (
+                EnergyVariance,
+                (),
+                {"evaluation_times": np.linspace(0, 1, 13)},
+            ),
+            (
+                EnergySecondMoment,
+                (),
+                {"evaluation_times": [i * 0.1 for i in range(5)]},
+            ),
+            (
+                Fidelity,
+                (example_state,),
+                {"evaluation_times": [i / 7.2 for i in range(5)]},
+            ),
+            (
+                Expectation,
+                (example_operator,),
+                {"tag_suffix": "my_op"},
+            ),
+        ],
+    )
+    def test_observable_repr(self, observable, arg, expected_kwargs):
+        obs = observable(*arg, **expected_kwargs)
+        obs_repr = json.loads(json.dumps(obs, cls=AbstractReprEncoder))
+
+        # test default values
+        assert obs_repr["observable"] == obs._base_tag
+        assert obs_repr["tag_suffix"] == expected_kwargs.get(
+            "tag_suffix", None
         )
-        assert obs_repr["evaluation_times"] == json.loads(
-            json.dumps(
-                expected_kwargs["evaluation_times"], cls=AbstractReprEncoder
+        if obs_repr["evaluation_times"] is None:
+            assert "evaluation_times" not in expected_kwargs
+        else:
+            assert np.allclose(
+                obs_repr["evaluation_times"],
+                expected_kwargs["evaluation_times"],
             )
+            assert obs_repr["evaluation_times"] == json.loads(
+                json.dumps(
+                    expected_kwargs["evaluation_times"],
+                    cls=AbstractReprEncoder,
+                )
+            )
+        assert obs_repr.get("one_state", None) == expected_kwargs.get(
+            "one_state", None
+        )
+        assert obs_repr.get("num_shots", 1000) == expected_kwargs.get(
+            "num_shots", 1000
         )
 
-    if "one_state" in obs_repr:
-        assert obs_repr["one_state"] == expected_kwargs.get("one_state", None)
-    if "num_shots" in obs_repr:
-        assert obs_repr["num_shots"] == expected_kwargs.get("num_shots", 1000)
+    @mark.parametrize(
+        "state_kwargs",
+        [
+            {
+                "eigenstates": ("r", "g"),
+                "amplitudes": {"rgr": 1.0, "grg": 1.0},
+            },
+            {
+                "eigenstates": ("0", "1"),
+                "amplitudes": {"1000": 1.0 + 0.5j, "0001": 1.0 - 0.5j},
+            },
+        ],
+    )
+    def test_state_in_fidelity_repr(self, state_kwargs):
+        state = StateRepr.from_state_amplitudes(**state_kwargs)
+        fidelity = Fidelity(state)
+        fidelity_repr = fidelity._to_abstract_repr()
+        # test default values
+        assert fidelity_repr["observable"] == "fidelity"
+        assert fidelity_repr["tag_suffix"] is None
+        assert fidelity_repr["evaluation_times"] is None
+        # test state in repr
+        state_in_repr = fidelity_repr["state"]
+        assert state_in_repr is state
+        assert state_in_repr._eigenstates == state_kwargs["eigenstates"]
+        assert state_in_repr._amplitudes == state_kwargs["amplitudes"]
+
+    @mark.parametrize(
+        "op_kwargs",
+        [
+            {
+                "eigenstates": ("0", "1"),
+                "n_qudits": 3,
+                "operations": [],
+            },
+            {
+                "eigenstates": ("r", "g"),
+                "n_qudits": 5,
+                "operations": [
+                    (
+                        1.0j,
+                        [
+                            ({"rg": 0.72j}, [0, 2]),
+                            ({"rr": 1.0, "gg": -1.0}, [1, 3]),
+                        ],
+                    ),
+                    (
+                        0.5j,
+                        [({"gr": 1.0j}, [4])],
+                    ),
+                ],
+            },
+        ],
+    )
+    def test_operator_in_expectation_repr(self, op_kwargs):
+        op = OperatorRepr.from_operator_repr(**op_kwargs)
+        expectation = Expectation(op)
+        expectation_repr = expectation._to_abstract_repr()
+        op_in_repr = expectation_repr["operator"]
+        assert op_in_repr is op
+        assert op_in_repr._eigenstates == op_kwargs["eigenstates"]
+        assert op_in_repr._n_qudits == op_kwargs["n_qudits"]
+        assert op_in_repr._operations == op_kwargs["operations"]
 
 
-@mark.parametrize(
-    "state_kwargs",
-    [
-        {
-            "eigenstates": ("r", "g"),
-            "amplitudes": {"rgr": 1.0, "grg": 1.0},
-        },
-        {
-            "eigenstates": ("0", "1"),
-            "amplitudes": {"1000": 1.0 + 0.5j, "0001": 1.0 - 0.5j},
-        },
-    ],
-)
-def test_fidelity_repr(state_kwargs):
-    state = StateRepr.from_state_amplitudes(**state_kwargs)
-    fidelity = Fidelity(state)
-    fidelity_repr = fidelity._to_abstract_repr()
-    state_in_repr = fidelity_repr["state"]
-    assert state_in_repr is state
-    assert state_in_repr._eigenstates == state_kwargs["eigenstates"]
-    assert state_in_repr._amplitudes == state_kwargs["amplitudes"]
+class TestConfigRepr:
+    def test_config_repr(self):
+        evaluation_times = [0.1, 0.3, 0.9]
+        bitstrings = BitStrings(evaluation_times=evaluation_times)
+        correlation = CorrelationMatrix()
+        observables = (bitstrings, correlation)
+        with_modulation = True
+        default_evaluation_times = "Full"
+        expected_kwargs = {
+            "observables": observables,
+            "with_modulation": with_modulation,
+            "default_evaluation_times": default_evaluation_times,
+        }
 
+        config = EmulationConfig(**expected_kwargs)
+        # dump with AbstrctReprEncoder & validation
+        config_str = config.to_abstract_repr()
+        # load and redump but with default JSON encoder
+        # equivalent to go key by key and check single str repr
+        config_load_dump_str = json.dumps(json.loads(config_str))
 
-@mark.parametrize(
-    "op_kwargs",
-    [
-        {
-            "eigenstates": ("0", "1"),
-            "n_qudits": 3,
-            "operations": [],
-        },
-        {
-            "eigenstates": ("r", "g"),
-            "n_qudits": 5,
-            "operations": [
-                (
-                    1.0j,
-                    [
-                        ({"rg": 0.72j}, [0, 2]),
-                        ({"rr": 1.0, "gg": -1.0}, [1, 3]),
-                    ],
-                ),
-                (
-                    0.5j,
-                    [({"gr": 1.0j}, [4])],
-                ),
-            ],
-        },
-    ],
-)
-def test_expectation_repr(op_kwargs):
-    op = OperatorRepr.from_operator_repr(**op_kwargs)
-    expectation = Expectation(op)
-
-    expectation_repr = expectation._to_abstract_repr()
-
-    op_in_repr = expectation_repr["operator"]
-    assert op_in_repr is op
-    assert op_in_repr._eigenstates == op_kwargs["eigenstates"]
-    assert op_in_repr._n_qudits == op_kwargs["n_qudits"]
-    assert op_in_repr._operations == op_kwargs["operations"]
-
-
-def test_config_repr():
-    evaluation_times = [0.1, 0.3, 0.9]
-    bitstrings = BitStrings(evaluation_times=evaluation_times)
-    correlation = CorrelationMatrix()
-    observables = (bitstrings, correlation)
-    with_modulation = True
-    default_evaluation_times = "Full"
-    expected_kwargs = {
-        "observables": observables,
-        "with_modulation": with_modulation,
-        "default_evaluation_times": default_evaluation_times,
-    }
-
-    config = EmulationConfig(**expected_kwargs)
-    # dump with AbstrctReprEncoder & validation
-    config_str = config.to_abstract_repr()
-    # load and redump but with default JSON encoder
-    # equivalent to go key by key and check single str repr
-    config_load_dump_str = json.dumps(json.loads(config_str))
-
-    assert config_str == config_load_dump_str
+        assert config_str == config_load_dump_str
 
 
 class TestStateRepr:
