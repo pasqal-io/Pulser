@@ -153,17 +153,14 @@ class AbstractArray:
         dtype: None = None,
         copy: bool | None = None,
     ) -> np.ndarray:
-        if (
-            isinstance(self._array, torch.Tensor)
-            or np.lib.NumpyVersion(np.__version__) < "2.0.0"
-        ):
+        if self.is_tensor or np.lib.NumpyVersion(np.__version__) < "2.0.0":
             array: np.ndarray = self._array.__array__(dtype)
             if copy:
                 return np.copy(array)
             else:
                 return array
         else:
-            return self._array.__array__(dtype, copy=copy)
+            return self._array.__array__(dtype, copy=copy)  # type: ignore
 
     def __repr__(self) -> str:
         return str(self._array.__repr__())
