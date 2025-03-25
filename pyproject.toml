@@ -5,7 +5,7 @@ line-length = 79
 profile = "black"
 line_length = 79
 skip = ["__venv__", "__init__.py"]
-src_paths = ["pulser-core", "pulser-simulation", "pulser-pasqal"]
+src_paths = ["pulser-core", "pulser-simulation"]
 
 [tool.pytest.ini_options]
 filterwarnings = [

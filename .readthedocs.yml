@@ -22,4 +22,3 @@ python:
     - requirements: dev_requirements.txt
     - requirements: pulser-core/rtd_requirements.txt
     - requirements: pulser-simulation/rtd_requirements.txt
-    - requirements: pulser-pasqal/rtd_requirements.txt
