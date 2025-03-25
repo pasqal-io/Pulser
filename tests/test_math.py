@@ -333,3 +333,9 @@ class TestAbstractArray:
             deserialized = json.loads(legacy_ser, cls=PulserDecoder)
             assert isinstance(deserialized, pm.AbstractArray)
             np.testing.assert_array_equal(deserialized, val)
+
+    def test_copy(self):
+        arr = pm.AbstractArray(np.array([1, 2, 5, 1, 4.0, 234]))
+        arr_copy = arr.__array__(copy=True)
+        assert np.all(arr == arr_copy)
+        assert arr is not arr_copy
