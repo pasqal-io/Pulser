@@ -234,7 +234,8 @@
             "evaluation_times",
             "operator",
             "tag_suffix"
-        ]
+        ],
+        "additionalProperties": false
     },
     "bitstrings": {
         "description": "cause the emulator to sample bitstrings from the emulated state",
@@ -272,7 +273,8 @@
             "num_shots",
             "one_state",
             "tag_suffix"
-        ]
+        ],
+        "additionalProperties": false
     },
     "fidelity": {
         "description": "cause the emulator to compute the fidelity of the emulated state to the given state",
@@ -301,7 +303,8 @@
             "evaluation_times",
             "state",
             "tag_suffix"
-        ]
+        ],
+        "additionalProperties": false
     },
     "correlation_matrix": {
         "description": "cause the emulator to compute the correlation matrix for the emulated state",
@@ -334,7 +337,8 @@
             "evaluation_times",
             "one_state",
             "tag_suffix"
-        ]
+        ],
+        "additionalProperties": false
     },
     "occupation": {
         "description": "cause the emulator to compute occupation probability of the one state for the emulated state",
@@ -367,7 +371,8 @@
             "evaluation_times",
             "one_state",
             "tag_suffix"
-        ]
+        ],
+        "additionalProperties": false
     },
     "energy": {
         "description": "cause the emulator to compute the expected energy",
@@ -392,7 +397,8 @@
             "observable",
             "evaluation_times",
             "tag_suffix"
-        ]
+        ],
+        "additionalProperties": false
     },
     "energy_variance": {
         "description": "cause the emulator to compute the energy variance",
@@ -417,7 +423,8 @@
             "observable",
             "evaluation_times",
             "tag_suffix"
-        ]
+        ],
+        "additionalProperties": false
     },
     "energy_second_moment": {
         "description": "cause the emulator to compute the expectation of H^2.",
@@ -442,7 +449,8 @@
             "observable",
             "evaluation_times",
             "tag_suffix"
-        ]
+        ],
+        "additionalProperties": false
     },
     "evaluation_times": {
         "description": "at what times to generate the output of an observable",
