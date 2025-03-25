@@ -38,7 +38,7 @@ jobs:
       - name: pulser + ruff install
         uses: ./.github/workflows/pulser-setup
         with:
-          extra-packages: ruff==0.11.1
+          extra-packages: ruff
       - name: Check numpy v2 compatibility with ruff
         run: ruff
   isort:
