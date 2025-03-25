@@ -485,6 +485,21 @@ def test_emulation_config():
             observables=(BitStrings(),), noise_model={"p_false_pos": 0.1}
         )
 
+    # Does not complain about `dt`
+    EmulationConfig(observables=(BitStrings(),), dt=1)
+
+    try:
+        EmulationConfig._enforce_expected_kwargs = True
+        # Now it does
+        with pytest.warns(
+            UserWarning,
+            match="'EmulationConfig' received unexpected keyword arguments",
+        ):
+            EmulationConfig(observables=(BitStrings(),), dt=1)
+    finally:
+        # Just to ensure subsequent tests are not affected
+        EmulationConfig._enforce_expected_kwargs = False
+
 
 def test_results():
     res = Results(atom_order=(), total_duration=0)
