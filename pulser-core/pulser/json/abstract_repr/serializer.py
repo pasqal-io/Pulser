@@ -33,14 +33,7 @@ if TYPE_CHECKING:
     from pulser.register.base_register import QubitId
     from pulser.sequence import Sequence
     from pulser.sequence._call import _Call
-
-has_torch: bool
-try:
-    import torch
-
-    has_torch = True
-except ImportError:  # pragma: no cover
-    has_torch = False
+import pulser.math as pm
 
 
 class AbstractReprEncoder(json.JSONEncoder):
@@ -61,11 +54,8 @@ class AbstractReprEncoder(json.JSONEncoder):
                 # Try to return a real number when possible
                 return o.real
             return dict(real=o.real, imag=o.imag)
-        elif has_torch and isinstance(o, torch.Tensor):
-            if len(o.shape) == 0:
-                return o.item()
-            else:
-                return o.tolist()
+        elif pm.AbstractArray.has_torch() and isinstance(o, pm.torch.Tensor):
+            return o.tolist()
         else:  # pragma: no cover
             return cast(dict, json.JSONEncoder.default(self, o))
 

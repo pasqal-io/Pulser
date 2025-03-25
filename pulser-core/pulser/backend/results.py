@@ -140,16 +140,11 @@ class Results:
 
     def _to_abstract_repr(self) -> dict:
         d = deepcopy(self.__dict__)
-        for key, value in d["_tagmap"].items():
-            d["_tagmap"][key] = str(value)
-        tmp = {}
-        for key, value in d["_results"].items():
-            tmp[str(key)] = value
-        d["_results"] = tmp
-        tmp = {}
-        for key, value in d["_times"].items():
-            tmp[str(key)] = value
-        d["_times"] = tmp
+        d["_tagmap"] = {key: str(value) for key, value in d["_tagmap"].items()}
+        d["_results"] = {
+            str(key): value for key, value in d["_results"].items()
+        }
+        d["_times"] = {str(key): value for key, value in d["_times"].items()}
         return d
 
     @classmethod

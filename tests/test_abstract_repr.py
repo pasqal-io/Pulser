@@ -29,6 +29,13 @@ import pytest
 
 import pulser
 from pulser import Pulse, Register, Register3D, Sequence, devices
+from pulser.backend import (
+    BitStrings,
+    CorrelationMatrix,
+    Energy,
+    Occupation,
+    Results,
+)
 from pulser.channels import Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import (
@@ -118,7 +125,6 @@ def test_abstract_repr_encoder(test_torch: bool):
         assert result == dict(real=1.0, imag=2.0)
     else:
         torch = pytest.importorskip("torch")
-
         result = encoder.default(torch.tensor(5.0))
         assert result == 5.0
 
@@ -2770,3 +2776,76 @@ class TestDeserialization:
             ),
         ):
             Sequence.from_abstract_repr(s)
+
+
+@pytest.mark.parametrize(
+    "test_torch",
+    [True, False],
+)
+def test_result_serialization(test_torch: bool):
+    bitstrings = BitStrings()
+    corr = CorrelationMatrix()
+    energy = Energy()
+    occ = Occupation()
+    results = Results(atom_order=(), total_duration=100)
+    bitstring = "rgrgrg"
+    results._store(observable=bitstrings, time=0.1, value=bitstring)
+    if test_torch:
+        torch = pytest.importorskip("torch")
+        cor_mat = torch.randn(6, 6)
+    else:
+        cor_mat = np.random.randn(6, 6)
+    results._store(observable=corr, time=0.2, value=cor_mat)
+    energy_val = 5.0
+    results._store(observable=energy, time=0.3, value=energy_val)
+    if test_torch:
+        torch = pytest.importorskip("torch")
+        occ_vec = torch.randn(6)
+    else:
+        occ_vec = np.random.randn(6)
+    results._store(observable=occ, time=0.4, value=occ_vec)
+
+    dict = results._to_abstract_repr()
+    assert dict["_results"][str(bitstrings.uuid)] == [bitstring]
+
+    assert len(dict["_results"][str(corr.uuid)]) == 1
+    assert type(dict["_results"][str(corr.uuid)][0]) is type(cor_mat)
+    assert dict["_results"][str(corr.uuid)][0].tolist() == cor_mat.tolist()
+
+    assert dict["_results"][str(energy.uuid)] == [energy_val]
+
+    assert len(dict["_results"][str(occ.uuid)]) == 1
+    assert type(dict["_results"][str(occ.uuid)][0]) is type(occ_vec)
+    assert dict["_results"][str(occ.uuid)][0].tolist() == occ_vec.tolist()
+
+    assert dict["_tagmap"] == {
+        bitstrings.tag: str(bitstrings.uuid),
+        corr.tag: str(corr.uuid),
+        energy.tag: str(energy.uuid),
+        occ.tag: str(occ.uuid),
+    }
+
+    assert dict["_times"] == {
+        str(bitstrings.uuid): [0.1],
+        str(corr.uuid): [0.2],
+        str(energy.uuid): [0.3],
+        str(occ.uuid): [0.4],
+    }
+
+    abstract_repr = results.to_abstract_repr()
+
+    assert abstract_repr == json.dumps(dict, cls=AbstractReprEncoder)
+
+    deserialized = Results.from_abstract_repr(abstract_repr)
+
+    assert results.energy == deserialized.energy
+    assert results.bitstrings == deserialized.bitstrings
+    assert [x.tolist() for x in results.occupation] == deserialized.occupation
+    assert [
+        x.tolist() for x in results.correlation_matrix
+    ] == deserialized.correlation_matrix
+    for obs in [bitstrings, occ, corr, energy]:
+        assert results.get_result_times(obs) == deserialized.get_result_times(
+            obs
+        )
+    assert results.get_result_tags() == deserialized.get_result_tags()
