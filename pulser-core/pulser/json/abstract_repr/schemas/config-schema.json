@@ -102,7 +102,9 @@
             "default_evaluation_times",
             "with_modulation",
             "prefer_device_noise_model",
-            "noise_model"
+            "noise_model",
+            "interaction_matrix",
+            "initial_state"
         ]
     },
     "state": {
