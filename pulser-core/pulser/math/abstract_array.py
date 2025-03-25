@@ -151,7 +151,7 @@ class AbstractArray:
     def __array__(
         self,
         dtype: None = None,
-        copy: bool | None = None,
+        copy: np.bool_ | None = None,
     ) -> np.ndarray:
         if self.is_tensor or np.lib.NumpyVersion(np.__version__) < "2.0.0":
             array: np.ndarray = self._array.__array__(dtype)
