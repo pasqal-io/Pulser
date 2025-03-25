@@ -80,6 +80,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           extra-packages: pytest
           with-torch: ${{ matrix.with-torch }}
+          numpy: numpy-v1
       - name: Run the unit tests & generate coverage report
         if: ${{ matrix.with-torch == 'with-torch' }}
         run: pytest --cov --cov-fail-under=100
