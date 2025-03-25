@@ -13,6 +13,10 @@ inputs:
     description: Whether to include pytorch
     required: false
     default: "with-torch"
+  numpy:
+    decription: Which version of numpy to install
+    required: false
+    default: "numpy-v1"
 runs:
   using: "composite"
   steps:
