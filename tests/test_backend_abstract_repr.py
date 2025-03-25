@@ -38,13 +38,6 @@ class TestObservableRepr:
         "observable, arg, expected_kwargs",
         [
             (
-                StateResult,
-                (),
-                {
-                    "evaluation_times": [0.1, 0.3, 1.0],
-                },
-            ),
-            (
                 BitStrings,
                 (),
                 {
@@ -188,6 +181,10 @@ class TestObservableRepr:
         assert op_in_repr._eigenstates == op_kwargs["eigenstates"]
         assert op_in_repr._n_qudits == op_kwargs["n_qudits"]
         assert op_in_repr._operations == op_kwargs["operations"]
+
+    def test_state_result_not_supported(self):
+        with pytest.raises(TypeError, match="not supported"):
+            json.dumps(StateResult(), cls=AbstractReprEncoder)
 
 
 class TestConfigRepr:
