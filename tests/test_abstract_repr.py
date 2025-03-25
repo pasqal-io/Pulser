@@ -29,6 +29,7 @@ import pytest
 
 import pulser
 from pulser import Pulse, Register, Register3D, Sequence, devices
+from pulser.abstract_repr import deserialize_device
 from pulser.backend import (
     BitStrings,
     CorrelationMatrix,
@@ -48,7 +49,6 @@ from pulser.devices import (
 from pulser.json.abstract_repr.deserializer import (
     VARIABLE_TYPE_MAP,
     deserialize_abstract_register,
-    deserialize_device,
 )
 from pulser.json.abstract_repr.serializer import (
     AbstractReprEncoder,
