@@ -1,0 +1,482 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "config-schema.json",
+    "$ref": "#/EmulationConfig",
+    "EmulationConfig": {
+        "description": "The config that will be passed to the emulator backend",
+        "type": "object",
+        "properties": {
+            "observables": {
+                "type": "array",
+                "description": "the outputs that the emulator should produce",
+                "items": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/bitstrings"
+                        },
+                        {
+                            "$ref": "#/expectation"
+                        },
+                        {
+                            "$ref": "#/fidelity"
+                        },
+                        {
+                            "$ref": "#/occupation"
+                        },
+                        {
+                            "$ref": "#/correlation_matrix"
+                        },
+                        {
+                            "$ref": "#/energy"
+                        },
+                        {
+                            "$ref": "#/energy_second_moment"
+                        },
+                        {
+                            "$ref": "#/energy_variance"
+                        }
+                    ]
+                }
+            },
+            "default_evaluation_times": {
+                "description": "for if evaluation_times is not passed to an observable",
+                "oneOf": [
+                    {
+                        "enum": [
+                            "Full"
+                        ]
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "number",
+                            "inclusiveMinimum": 0.0,
+                            "inclusiveMaximum": 1.0
+                        }
+                    }
+                ]
+            },
+            "initial_state": {
+                "description": "what initial state the emulator should use",
+                "oneOf": [
+                    {
+                        "type": "null"
+                    },
+                    {
+                        "$ref": "#/state"
+                    }
+                ]
+            },
+            "with_modulation": {
+                "description": "whether hardware modulation should be applied to the sequence",
+                "type": "boolean"
+            },
+            "interaction_matrix": {
+                "description": "matrix of real numbers that overrides the interactions given by the register positions",
+                "oneOf": [
+                    {
+                        "type": "null"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "number"
+                            }
+                        }
+                    }
+                ]
+            },
+            "prefer_device_noise_model": {
+                "description": "whether to prefer the noise model inferred from the sequence over the config one",
+                "type": "boolean"
+            },
+            "noise_model": {
+                "description": "the noise model to use",
+                "$ref": "noise-schema.json#/definitions/NoiseModel"
+            }
+        },
+        "required": [
+            "observables",
+            "default_evaluation_times",
+            "with_modulation",
+            "prefer_device_noise_model",
+            "noise_model",
+            "interaction_matrix",
+            "initial_state"
+        ]
+    },
+    "state": {
+        "description": "a quantum state, stored as a dict from bitstrings to complex nrs",
+        "type": "object",
+        "properties": {
+            "eigenstates": {
+                "type": "array",
+                "items": {
+                    "enum": [
+                        "u",
+                        "d",
+                        "r",
+                        "g",
+                        "h",
+                        "x",
+                        "0",
+                        "1"
+                    ]
+                }
+            },
+            "amplitudes": {
+                "description": "dictionary of weights for each state, {'101': 0.5j, ...}",
+                "type": "object",
+                "additionalProperties": {
+                    "$ref": "#/number_or_complex"
+                }
+            }
+        },
+        "required": [
+            "eigenstates",
+            "amplitudes"
+        ]
+    },
+    "operator": {
+        "description": "an operator, stored in a serialized format",
+        "type": "object",
+        "properties": {
+            "eigenstates": {
+                "type": "array",
+                "items": {
+                    "enum": [
+                        "u",
+                        "d",
+                        "r",
+                        "g",
+                        "h",
+                        "x",
+                        "0",
+                        "1"
+                    ]
+                }
+            },
+            "n_qudits": {
+                "type": "integer"
+            },
+            "operations": {
+                "description": "array representing the operator as a weighted sum of tensor product operators",
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "prefixItems": [
+                        {
+                            "description": "weight for the tensor product operator",
+                            "$ref": "#/number_or_complex"
+                        },
+                        {
+                            "type": "array",
+                            "description": "tensor product operator, represented as a list of single qubit operators and the qubits upon which to apply it. Identity ops are implied",
+                            "items": {
+                                "type": "array",
+                                "description": "tuple of single qudit operator + support",
+                                "prefixItems": [
+                                    {
+                                        "type": "object",
+                                        "description": "single qudit operator, the matrix elements are encoded using a string format",
+                                        "additionalProperties": {
+                                            "description": "value of the matrix element in the key",
+                                            "$ref": "#/number_or_complex"
+                                        }
+                                    },
+                                    {
+                                        "type": "array",
+                                        "description": "set of qudits (represented by their indices), to which apply the defined operator",
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "required": [
+            "eigenstates",
+            "n_qudits",
+            "operations"
+        ]
+    },
+    "expectation": {
+        "description": "causes the program to output the expectation value of the given operator",
+        "type": "object",
+        "properties": {
+            "observable": {
+                "description": "tag to distinguish different instances of an observable",
+                "const": "expectation"
+            },
+            "evaluation_times": {
+                "$ref": "#/evaluation_times"
+            },
+            "operator": {
+                "description": "the given operator",
+                "$ref": "#/operator"
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": [
+                    "string",
+                    "null"
+                ]
+            }
+        },
+        "required": [
+            "observable",
+            "evaluation_times",
+            "operator",
+            "tag_suffix"
+        ],
+        "additionalProperties": false
+    },
+    "bitstrings": {
+        "description": "cause the emulator to sample bitstrings from the emulated state",
+        "type": "object",
+        "properties": {
+            "observable": {
+                "description": "tag to distinguish different instances of an observable",
+                "const": "bitstrings"
+            },
+            "evaluation_times": {
+                "$ref": "#/evaluation_times"
+            },
+            "num_shots": {
+                "description": "how many bitstrings to generate",
+                "type": "integer"
+            },
+            "one_state": {
+                "description": "which basis state to measure as 1, the rest is 0.",
+                "type": [
+                    "string",
+                    "null"
+                ]
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": [
+                    "string",
+                    "null"
+                ]
+            }
+        },
+        "required": [
+            "observable",
+            "evaluation_times",
+            "num_shots",
+            "one_state",
+            "tag_suffix"
+        ],
+        "additionalProperties": false
+    },
+    "fidelity": {
+        "description": "cause the emulator to compute the fidelity of the emulated state to the given state",
+        "type": "object",
+        "properties": {
+            "observable": {
+                "description": "tag to distinguish different instances of an observable",
+                "const": "fidelity"
+            },
+            "evaluation_times": {
+                "$ref": "#/evaluation_times"
+            },
+            "state": {
+                "$ref": "#/state"
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": [
+                    "string",
+                    "null"
+                ]
+            }
+        },
+        "required": [
+            "observable",
+            "evaluation_times",
+            "state",
+            "tag_suffix"
+        ],
+        "additionalProperties": false
+    },
+    "correlation_matrix": {
+        "description": "cause the emulator to compute the correlation matrix for the emulated state",
+        "type": "object",
+        "properties": {
+            "observable": {
+                "description": "tag to distinguish different instances of an observable",
+                "const": "correlation_matrix"
+            },
+            "evaluation_times": {
+                "$ref": "#/evaluation_times"
+            },
+            "one_state": {
+                "description": "measure the correlations of the projector onto this state",
+                "type": [
+                    "string",
+                    "null"
+                ]
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": [
+                    "string",
+                    "null"
+                ]
+            }
+        },
+        "required": [
+            "observable",
+            "evaluation_times",
+            "one_state",
+            "tag_suffix"
+        ],
+        "additionalProperties": false
+    },
+    "occupation": {
+        "description": "cause the emulator to compute occupation probability of the one state for the emulated state",
+        "type": "object",
+        "properties": {
+            "observable": {
+                "description": "tag to distinguish different instances of an observable",
+                "const": "occupation"
+            },
+            "evaluation_times": {
+                "$ref": "#/evaluation_times"
+            },
+            "one_state": {
+                "description": "the one state",
+                "type": [
+                    "string",
+                    "null"
+                ]
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": [
+                    "string",
+                    "null"
+                ]
+            }
+        },
+        "required": [
+            "observable",
+            "evaluation_times",
+            "one_state",
+            "tag_suffix"
+        ],
+        "additionalProperties": false
+    },
+    "energy": {
+        "description": "cause the emulator to compute the expected energy",
+        "type": "object",
+        "properties": {
+            "observable": {
+                "description": "tag to distinguish different instances of an observable",
+                "const": "energy"
+            },
+            "evaluation_times": {
+                "$ref": "#/evaluation_times"
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": [
+                    "string",
+                    "null"
+                ]
+            }
+        },
+        "required": [
+            "observable",
+            "evaluation_times",
+            "tag_suffix"
+        ],
+        "additionalProperties": false
+    },
+    "energy_variance": {
+        "description": "cause the emulator to compute the energy variance",
+        "type": "object",
+        "properties": {
+            "observable": {
+                "description": "tag to distinguish different instances of an observable",
+                "const": "energy_variance"
+            },
+            "evaluation_times": {
+                "$ref": "#/evaluation_times"
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": [
+                    "string",
+                    "null"
+                ]
+            }
+        },
+        "required": [
+            "observable",
+            "evaluation_times",
+            "tag_suffix"
+        ],
+        "additionalProperties": false
+    },
+    "energy_second_moment": {
+        "description": "cause the emulator to compute the expectation of H^2.",
+        "type": "object",
+        "properties": {
+            "observable": {
+                "description": "tag to distinguish different instances of an observable",
+                "const": "energy_second_moment"
+            },
+            "evaluation_times": {
+                "$ref": "#/evaluation_times"
+            }
+        },
+        "tag_suffix": {
+            "description": "added to base_tag to distinguish different instances",
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "required": [
+            "observable",
+            "evaluation_times",
+            "tag_suffix"
+        ],
+        "additionalProperties": false
+    },
+    "evaluation_times": {
+        "description": "at what times to generate the output of an observable",
+        "oneOf": [
+            {
+                "type": "null"
+            },
+            {
+                "type": "array",
+                "items": {
+                    "type": "number",
+                    "inclusiveMinimum": 0.0,
+                    "inclusiveMaximum": 1.0
+                }
+            }
+        ]
+    },
+    "number_or_complex": {
+        "description": "number or complex type serialization",
+        "oneOf": [
+            {
+                "type": "number"
+            },
+            {
+                "$ref": "noise-schema.json#/definitions/ComplexNumber"
+            }
+        ]
+    }
+}

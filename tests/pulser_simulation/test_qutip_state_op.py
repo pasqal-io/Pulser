@@ -55,6 +55,11 @@ class TestQutipState:
             QutipState(qutip.basis(2, 0), eigenstates=["ground", "rydberg"])
         with pytest.raises(ValueError, match="can't contain repeated entries"):
             QutipState(qutip.basis(2, 0), eigenstates=["r", "g", "r"])
+        with pytest.raises(
+            TypeError,
+            match="must be a 'collections.Sequence'",
+        ):
+            QutipState(qutip.basis(2, 0), eigenstates={"r", "g"})
         with pytest.raises(TypeError, match="must be a qutip.Qobj"):
             QutipState(np.arange(16), eigenstates=["r", "g"])
         with pytest.raises(

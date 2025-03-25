@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import warnings
 from collections import Counter
 from dataclasses import dataclass, field
@@ -36,6 +37,8 @@ from numpy.typing import ArrayLike
 import pulser.math as pm
 from pulser.backend.observable import Observable
 from pulser.backend.state import State
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.noise_model import NoiseModel
 
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
@@ -65,6 +68,7 @@ class BackendConfig:
                 f"arguments are expected: {self._expected_kwargs()}. ",
                 stacklevel=2,
             )
+        # Store the abstract repr of the config in _backend_options
         # Prevents potential issues with mutable arguments
         self._backend_options = copy.deepcopy(backend_options)
         if "backend_options" in backend_options:
@@ -270,6 +274,16 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         return 0.0 <= t <= 1.0 and bool(
             np.any(np.abs(np.array(evaluation_times, dtype=float) - t) <= tol)
         )
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return self._backend_options
+
+    def to_abstract_repr(self, skip_validation: bool = False) -> str:
+        """Serialize `EmulationConfig` to a JSON formatted str."""
+        obj_str = json.dumps(self, cls=AbstractReprEncoder)
+        if not skip_validation:
+            validate_abstract_repr(obj_str, "config")
+        return obj_str
 
 
 # Legacy class
