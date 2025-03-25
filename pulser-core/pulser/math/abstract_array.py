@@ -159,7 +159,7 @@ class AbstractArray:
                 return np.copy(array)
             else:
                 return array
-        else:
+        else:  # pragma: no cover
             return self._array.__array__(dtype, copy=copy)  # type: ignore
 
     def __repr__(self) -> str:
