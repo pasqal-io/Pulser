@@ -21,8 +21,7 @@ from pulser.backend.operator import OperatorRepr
 from pulser.backend.state import StateRepr
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.exceptions import AbstractReprError
-
-# TODO: decide where to put these tests
+from pulser.noise_model import NoiseModel
 
 
 class TestObservableRepr:
@@ -192,6 +191,7 @@ class TestObservableRepr:
 
 
 class TestConfigRepr:
+
     def test_config_repr(self):
         evaluation_times = [0.1, 0.3, 0.9]
         bitstrings = BitStrings(evaluation_times=evaluation_times)
@@ -208,11 +208,56 @@ class TestConfigRepr:
         config = EmulationConfig(**expected_kwargs)
         # dump with AbstrctReprEncoder & validation
         config_str = config.to_abstract_repr()
-        # load and redump but with default JSON encoder
-        # equivalent to go key by key and check single str repr
-        config_load_dump_str = json.dumps(json.loads(config_str))
+        config_repr = json.loads(config_str)
 
-        assert config_str == config_load_dump_str
+        # check observables
+        assert len(config_repr["observables"]) == len(
+            expected_kwargs["observables"]
+        )
+        for obs, expected_obs in zip(
+            config_repr["observables"], expected_kwargs["observables"]
+        ):
+            assert obs == json.loads(
+                json.dumps(expected_obs, cls=AbstractReprEncoder)
+            )
+
+        # check defaults args vs simple type or dump/reload as dict
+        assert config_repr["default_evaluation_times"] == expected_kwargs.get(
+            "default_evaluation_times", "Full"
+        )
+        if config_repr["initial_state"] is None:
+            assert "initial_state" not in expected_kwargs
+        else:
+            ini_state_repr = config_repr["initial_state"]
+            expected = json.loads(
+                json.dumps(
+                    expected_kwargs["initial_state"], cls=AbstractReprEncoder
+                )
+            )
+            assert ini_state_repr == expected
+        assert config_repr["with_modulation"] == expected_kwargs.get(
+            "with_modulation", False
+        )
+        if config_repr["interaction_matrix"] is None:
+            assert "interaction_matrix" not in expected_kwargs
+        else:
+            assert np.allclose(
+                config_repr["interaction_matrix"],
+                expected_kwargs["interaction_matrix"],
+            )
+            assert config_repr["interaction_matrix"] == json.loads(
+                json.dumps(
+                    expected_kwargs["interaction_matrix"],
+                    cls=AbstractReprEncoder,
+                )
+            )
+        assert config_repr["prefer_device_noise_model"] == expected_kwargs.get(
+            "prefer_device_noise_model", False
+        )
+        expected_noise_model = expected_kwargs.get("noise_model", NoiseModel())
+        assert config_repr["noise_model"] == json.loads(
+            json.dumps(expected_noise_model, cls=AbstractReprEncoder)
+        )
 
 
 class TestStateRepr:
