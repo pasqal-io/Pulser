@@ -25,6 +25,7 @@ from pulser.backend.config import EmulationConfig
 from pulser.backend.observable import Observable
 from pulser.backend.operator import Operator, OperatorType
 from pulser.backend.state import Eigenstate, State, StateType
+from pulser.json.exceptions import AbstractReprError
 
 
 class StateResult(Observable):
@@ -44,7 +45,7 @@ class StateResult(Observable):
         return "state"
 
     def _to_abstract_repr(self) -> dict[str, Any]:
-        raise TypeError(
+        raise AbstractReprError(
             """`StateResult` observable is not supported in any remote backend.
             If you are interested in the full quantum state at arbitrary times
             during the emulation, please, consider using the local version of

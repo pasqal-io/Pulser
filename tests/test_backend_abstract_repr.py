@@ -183,7 +183,9 @@ class TestObservableRepr:
         assert op_in_repr._operations == op_kwargs["operations"]
 
     def test_state_result_not_supported(self):
-        with pytest.raises(TypeError, match="not supported"):
+        with pytest.raises(
+            AbstractReprError, match="not supported in any remote backend"
+        ):
             json.dumps(StateResult(), cls=AbstractReprEncoder)
 
 
