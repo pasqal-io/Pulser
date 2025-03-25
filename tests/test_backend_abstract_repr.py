@@ -191,19 +191,38 @@ class TestObservableRepr:
 
 
 class TestConfigRepr:
+    example_state = StateRepr.from_state_amplitudes(
+        eigenstates=("0", "1"), amplitudes={"1111": 0.1}
+    )
 
-    def test_config_repr(self):
-        evaluation_times = [0.1, 0.3, 0.9]
-        bitstrings = BitStrings(evaluation_times=evaluation_times)
-        correlation = CorrelationMatrix()
-        observables = (bitstrings, correlation)
-        with_modulation = True
-        default_evaluation_times = "Full"
-        expected_kwargs = {
-            "observables": observables,
-            "with_modulation": with_modulation,
-            "default_evaluation_times": default_evaluation_times,
-        }
+    @mark.parametrize(
+        "observables",
+        [
+            (
+                BitStrings(evaluation_times=[i * 0.01 for i in range(10)]),
+                CorrelationMatrix(),
+            ),
+            (Energy(), Occupation(one_state="0")),
+        ],
+    )
+    @mark.parametrize(
+        "kwargs",
+        [
+            {"with_modulation": True, "initial_state": example_state},
+            {
+                "default_evaluation_times": [0.1, 0.2, 0.3],
+                "prefer_device_noise_model": True,
+            },
+            {
+                "default_evaluation_times": "Full",
+                "interaction_matrix": [[0.0, 0.5], [0.5, 0.0]],
+            },
+            {"noise_model": NoiseModel(p_false_pos=0.1, dephasing_rate=0.01)},
+        ],
+    )
+    def test_config_repr(self, observables, kwargs):
+        expected_kwargs = {"observables": observables}
+        expected_kwargs |= kwargs
 
         config = EmulationConfig(**expected_kwargs)
         # dump with AbstrctReprEncoder & validation
@@ -223,7 +242,7 @@ class TestConfigRepr:
 
         # check defaults args vs simple type or dump/reload as dict
         assert config_repr["default_evaluation_times"] == expected_kwargs.get(
-            "default_evaluation_times", "Full"
+            "default_evaluation_times", [1.0]
         )
         if config_repr["initial_state"] is None:
             assert "initial_state" not in expected_kwargs
