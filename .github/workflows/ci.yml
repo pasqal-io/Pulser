@@ -83,10 +83,10 @@ jobs:
           with-torch: ${{ matrix.with-torch }}
           numpy: ${{ matrix.numpy }}
       - name: Run the unit tests & generate coverage report
-        if: ${{ matrix.with-torch == 'with-torch' }} and ${{ matrix.numpy == 'numpy-v1'}}
+        if: ${{ matrix.with-torch == 'with-torch' &&  matrix.numpy == 'numpy-v1'}}
         run: pytest --cov --cov-fail-under=100
       - name: Run the unit tests without torch installed
-        if: ${{ matrix.with-torch != 'with-torch' }} or ${{ matrix.numpy != 'numpy-v1'}}
+        if: ${{ matrix.with-torch != 'with-torch' || matrix.numpy != 'numpy-v1'}}
         run: pytest --cov
       - name: Test validation with legacy jsonschema
         run: |
