@@ -5,7 +5,6 @@ on:
     branches:
       - master
       - develop
-      - hs/py-313
 
 jobs:
   full-tests:
