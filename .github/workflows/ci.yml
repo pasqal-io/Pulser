@@ -60,6 +60,14 @@ jobs:
       matrix:
         python-version: ["3.9", "3.13"]
         with-torch: ["with-torch", "no-torch"]
+        include:
+          - python-version: "3.12"
+            numpy: "numpy-v1"
+            with-torch: "with-torch"
+        exclude:
+          # Numpy v1 does not support Python 3.13
+          - python-version: "3.13"
+            numpy: "numpy-v1"
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v4
