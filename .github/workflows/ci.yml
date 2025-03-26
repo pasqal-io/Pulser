@@ -30,6 +30,17 @@ jobs:
           extra-packages: black
       - name: Check formatting with black
         run: black --check --diff .
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Pulser
+        uses: actions/checkout@v4
+      - name: pulser + ruff install
+        uses: ./.github/workflows/pulser-setup
+        with:
+          extra-packages: ruff
+      - name: Check numpy v2 compatibility with ruff
+        run: ruff check
   isort:
     runs-on: ubuntu-latest
     steps:
@@ -60,6 +71,7 @@ jobs:
       matrix:
         python-version: ["3.9", "3.13"]
         with-torch: ["with-torch", "no-torch"]
+        numpy: ["numpy-v1", "numpy-v2"]
         include:
           - python-version: "3.12"
             numpy: "numpy-v1"
@@ -68,6 +80,8 @@ jobs:
           # Numpy v1 does not support Python 3.13
           - python-version: "3.13"
             numpy: "numpy-v1"
+          - numpy: "numpy-v1"
+            with-torch: "no-torch"
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v4
@@ -77,11 +91,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
           extra-packages: pytest
           with-torch: ${{ matrix.with-torch }}
+          numpy: ${{ matrix.numpy }}
       - name: Run the unit tests & generate coverage report
-        if: ${{ matrix.with-torch == 'with-torch' }}
+        if: ${{ matrix.with-torch == 'with-torch' &&  matrix.numpy == 'numpy-v1'}}
         run: pytest --cov --cov-fail-under=100
       - name: Run the unit tests without torch installed
-        if: ${{ matrix.with-torch != 'with-torch' }}
+        if: ${{ matrix.with-torch != 'with-torch' || matrix.numpy != 'numpy-v1'}}
         run: pytest --cov
       - name: Test validation with legacy jsonschema
         run: |
