@@ -420,8 +420,10 @@ def _deserialize_register3d(
 
 def _convert_complex(obj: Any) -> Any:
     """Searches for serialized complex numbers and converts them."""
-    if isinstance(obj, (list, tuple)):
+    if isinstance(obj, list):
         return [_convert_complex(e) for e in obj]
+    if isinstance(obj, tuple):
+        return tuple(_convert_complex(e) for e in obj)
     if isinstance(obj, dict):
         if obj.keys() == {"real", "imag"}:
             return obj["real"] + 1j * obj["imag"]
@@ -430,7 +432,6 @@ def _convert_complex(obj: Any) -> Any:
 
 
 def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
-
     eff_noise_rates = []
     eff_noise_opers = []
     for rate, oper in noise_model_obj.pop("eff_noise"):
