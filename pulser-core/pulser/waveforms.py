@@ -877,34 +877,38 @@ class InterpolatedWaveform(Waveform):
 
         if not isinstance(values, Parametrized):
             try:
-                _values = np.array(values, dtype=float)
+                values_ = np.array(values, dtype=float)
             except TypeError as e:
                 raise TypeError(_err_message("values")) from e
-        if times is not None and not isinstance(times, Parametrized):
-            try:
-                times = cast(ArrayLike, times)
-                times_ = np.array(times, dtype=float)
-            except TypeError as e:
-                raise TypeError(_err_message("times")) from e
-            if len(times_) != len(_values):
-                raise ValueError(
-                    "When specified, the number of time coordinates in `times`"
-                    f" ({len(times_)}) must match the number of `values` "
-                    f"({len(_values)})."
-                )
-            if np.any(times_ < 0):
-                raise ValueError(
-                    "All values in `times` must be greater than or equal to 0."
-                )
-            if np.any(times_ > 1):
-                raise ValueError(
-                    "All values in `times` must be less than or equal to 1."
-                )
-            unique_times = np.unique(times)  # Sorted array of unique values
-            if len(times_) != len(unique_times):
-                raise ValueError(
-                    "`times` must be an array of non-repeating values."
-                )
+        if times is None or isinstance(times, Parametrized):
+            return
+        try:
+            times = cast(ArrayLike, times)
+            times_ = np.array(times, dtype=float)
+        except TypeError as e:
+            raise TypeError(_err_message("times")) from e
+        if np.any(times_ < 0):
+            raise ValueError(
+                "All values in `times` must be greater than or equal to 0."
+            )
+        if np.any(times_ > 1):
+            raise ValueError(
+                "All values in `times` must be less than or equal to 1."
+            )
+        unique_times = np.unique(times)  # Sorted array of unique values
+        if len(times_) != len(unique_times):
+            raise ValueError(
+                "`times` must be an array of non-repeating values."
+            )
+        if (
+            not isinstance(values, Parametrized)
+            and times_.size != values_.size
+        ):
+            raise ValueError(
+                "When specified, the number of time coordinates in `times`"
+                f" ({times_.size}) must match the number of `values` "
+                f"({values_.size})."
+            )
 
     @property
     def duration(self) -> int:
