@@ -171,19 +171,23 @@ class Results:
             results._times[uuid.UUID(key)] = value
         return results
 
-    def to_abstract_repr(self) -> str:
+    def to_abstract_repr(self, skip_validation: bool = False) -> str:
         """Serializes this object into a json string.
 
         Numpy arrays and torch Tensors are converted into lists,
         and their original class is lost forever.
 
+        Args:
+            skip_validation: Whether to skip validating the json against
+                the schema used for deserialization.
         Returns:
             The json string
         """
         abstr_str = json.dumps(
             self._to_abstract_repr(), cls=AbstractReprEncoder
         )
-        validate_abstract_repr(abstr_str, "results")
+        if not skip_validation:
+            validate_abstract_repr(abstr_str, "results")
         return abstr_str
 
     @classmethod
@@ -193,6 +197,7 @@ class Results:
         Returns:
             The deserialized Results object.
         """
+        validate_abstract_repr(repr, "results")
         d = json.loads(repr)
         return cls._from_abstract_repr(d)
 
