@@ -880,7 +880,7 @@ class InterpolatedWaveform(Waveform):
                 values_ = np.array(values, dtype=float)
             except TypeError as e:
                 raise TypeError(_err_message("values")) from e
-        else: 
+        else:
             values_ = values
         if times is None:
             return
