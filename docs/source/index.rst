@@ -96,6 +96,7 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
 
    tutorials/optimization
    tutorials/qubo
+   tutorials/mwis
 
 .. toctree::
    :maxdepth: 3
