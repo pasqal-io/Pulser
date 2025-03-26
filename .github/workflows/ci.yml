@@ -71,7 +71,13 @@ jobs:
       matrix:
         python-version: ["3.9", "3.12"]
         with-torch: ["with-torch", "no-torch"]
-        numpy: ["numpy-v1", "numpy-v2"]
+        include:
+          - with-torch: with-torch
+            numpy: numpy-v1
+          - with-torch: with-torch
+            numpy: numpy-v2
+          - with-torch: no-torch
+            numpy: numpy-v2
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v4

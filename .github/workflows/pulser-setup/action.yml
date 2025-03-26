@@ -16,7 +16,7 @@ inputs:
   numpy:
     description: Which version of numpy to install
     required: false
-    default: "numpy-v1"
+    default: "numpy-v2"
 runs:
   using: "composite"
   steps:
