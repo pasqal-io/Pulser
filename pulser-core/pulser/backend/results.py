@@ -23,6 +23,7 @@ from typing import Any, TypeVar, overload
 
 from pulser.backend.observable import Observable
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 
 
 @dataclass
@@ -171,10 +172,28 @@ class Results:
         return results
 
     def to_abstract_repr(self) -> str:
-        return json.dumps(self._to_abstract_repr(), cls=AbstractReprEncoder)
+        """
+        Serializes this object into a json string.
+        Numpy arrays and torch Tensors are converted into lists,
+        and their original class is lost forever.
+
+        Returns:
+            The json string
+        """
+        abstr_str = json.dumps(
+            self._to_abstract_repr(), cls=AbstractReprEncoder
+        )
+        validate_abstract_repr(abstr_str, "results")
+        return abstr_str
 
     @classmethod
     def from_abstract_repr(cls, repr: str) -> Results:
+        """
+        Deserializes a serialized Results object from json.
+
+        Returns:
+            The deserialized Results object.
+        """
         d = json.loads(repr)
         return cls._from_abstract_repr(d)
 
