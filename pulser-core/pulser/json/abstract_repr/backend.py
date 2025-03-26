@@ -18,6 +18,7 @@ from pulser.json.abstract_repr.deserializer import (
     _convert_complex,
     _deserialize_noise_model,
 )
+from pulser.json.exceptions import AbstractReprError
 
 if TYPE_CHECKING:
     from pulser.backend import EmulationConfig, Observable, Operator, State
@@ -97,7 +98,12 @@ def _deserialize_observable(
         return EnergySecondMoment(**obs)
     if obs_name == "energy_variance":
         return EnergyVariance(**obs)
-    raise RuntimeError  # TODO: Change to a better error
+    raise AbstractReprError(
+        f"Failed to deserialize the observable tagged `{obs_name}` "
+        "as unknown or not supported. This likely implies that the JSON "
+        "abstract representation of the emulation configuration has not "
+        "been validated or has been corrupted."
+    )
 
 
 def _deserialize_emulation_config(

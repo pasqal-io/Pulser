@@ -19,9 +19,12 @@ from pulser.backend import (
     StateResult,
 )
 from pulser.backend.operator import OperatorRepr
-from pulser.json.abstract_repr.backend import _deserialize_operator
 from pulser.backend.state import StateRepr
-from pulser.json.abstract_repr.backend import _deserialize_state
+from pulser.json.abstract_repr.backend import (
+    _deserialize_observable,
+    _deserialize_operator,
+    _deserialize_state,
+)
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.exceptions import AbstractReprError
 from pulser.noise_model import NoiseModel
@@ -94,32 +97,41 @@ class TestObservableRepr:
     )
     def test_observable_repr(self, observable, arg, expected_kwargs):
         obs = observable(*arg, **expected_kwargs)
+
+        # serialized repr
         obs_repr = json.loads(json.dumps(obs, cls=AbstractReprEncoder))
 
-        # test default values
-        assert obs_repr["observable"] == obs._base_tag
-        assert obs_repr["tag_suffix"] == expected_kwargs.get(
-            "tag_suffix", None
+        # deserialized repr
+        deserialized_obs = _deserialize_observable(
+            obs_repr, StateRepr, OperatorRepr
         )
-        if obs_repr["evaluation_times"] is None:
-            assert "evaluation_times" not in expected_kwargs
-        else:
-            assert np.allclose(
-                obs_repr["evaluation_times"],
-                expected_kwargs["evaluation_times"],
+        deserialized_obs_repr = deserialized_obs._to_abstract_repr()
+
+        for repr in [obs_repr, deserialized_obs_repr]:
+            # test default values
+            assert repr["observable"] == obs._base_tag
+            assert repr["tag_suffix"] == expected_kwargs.get(
+                "tag_suffix", None
             )
-            assert obs_repr["evaluation_times"] == json.loads(
-                json.dumps(
+            if repr["evaluation_times"] is None:
+                assert "evaluation_times" not in expected_kwargs
+            else:
+                assert np.allclose(
+                    repr["evaluation_times"],
                     expected_kwargs["evaluation_times"],
-                    cls=AbstractReprEncoder,
                 )
+                assert repr["evaluation_times"] == json.loads(
+                    json.dumps(
+                        expected_kwargs["evaluation_times"],
+                        cls=AbstractReprEncoder,
+                    )
+                )
+            assert repr.get("one_state", None) == expected_kwargs.get(
+                "one_state", None
             )
-        assert obs_repr.get("one_state", None) == expected_kwargs.get(
-            "one_state", None
-        )
-        assert obs_repr.get("num_shots", 1000) == expected_kwargs.get(
-            "num_shots", 1000
-        )
+            assert repr.get("num_shots", 1000) == expected_kwargs.get(
+                "num_shots", 1000
+            )
 
     @mark.parametrize(
         "state_kwargs",
@@ -132,21 +144,37 @@ class TestObservableRepr:
                 "eigenstates": ("0", "1"),
                 "amplitudes": {"1000": 1.0 + 0.5j, "0001": 1.0 - 0.5j},
             },
+            {
+                "eigenstates": ["u", "d", "x"],
+                "amplitudes": {"uuddx": 1 / 2},
+            },
         ],
     )
     def test_state_in_fidelity_repr(self, state_kwargs):
         state = StateRepr.from_state_amplitudes(**state_kwargs)
         fidelity = Fidelity(state)
+
+        # state repr as dict
         fidelity_repr = fidelity._to_abstract_repr()
-        # test default values
-        assert fidelity_repr["observable"] == "fidelity"
-        assert fidelity_repr["tag_suffix"] is None
-        assert fidelity_repr["evaluation_times"] is None
-        # test state in repr
-        state_in_repr = fidelity_repr["state"]
-        assert state_in_repr is state
-        assert state_in_repr._eigenstates == state_kwargs["eigenstates"]
-        assert state_in_repr._amplitudes == state_kwargs["amplitudes"]
+        state_repr = fidelity_repr["state"]
+        assert state_repr._eigenstates == state_kwargs["eigenstates"]
+        assert state_repr._amplitudes == state_kwargs["amplitudes"]
+
+        # deserialized state
+        dumped_fidelity_repr = json.loads(
+            json.dumps(fidelity, cls=AbstractReprEncoder)
+        )
+        deserialized_fidelity = _deserialize_observable(
+            dumped_fidelity_repr, StateRepr, OperatorRepr
+        )
+        deserialized_state = deserialized_fidelity.state
+        assert isinstance(deserialized_state, StateRepr)
+        assert deserialized_state._eigenstates == list(
+            state_kwargs["eigenstates"]
+        )
+        assert deserialized_state._amplitudes == dict(
+            state_kwargs["amplitudes"]
+        )
 
     @mark.parametrize(
         "op_kwargs",
@@ -179,17 +207,41 @@ class TestObservableRepr:
         op = OperatorRepr.from_operator_repr(**op_kwargs)
         expectation = Expectation(op)
         expectation_repr = expectation._to_abstract_repr()
-        op_in_repr = expectation_repr["operator"]
-        assert op_in_repr is op
-        assert op_in_repr._eigenstates == op_kwargs["eigenstates"]
-        assert op_in_repr._n_qudits == op_kwargs["n_qudits"]
-        assert op_in_repr._operations == op_kwargs["operations"]
+        op_repr = expectation_repr["operator"]
+        assert op_repr._eigenstates == op_kwargs["eigenstates"]
+        assert op_repr._n_qudits == op_kwargs["n_qudits"]
+        assert op_repr._operations == op_kwargs["operations"]
+
+        # deserialized operator
+        dumped_expectation_repr = json.loads(
+            json.dumps(expectation, cls=AbstractReprEncoder)
+        )
+        deserialized_expectation = _deserialize_observable(
+            dumped_expectation_repr, StateRepr, OperatorRepr
+        )
+        deserialized_op = deserialized_expectation.operator
+        assert isinstance(deserialized_op, OperatorRepr)
+        assert deserialized_op._eigenstates == list(op_kwargs["eigenstates"])
+        assert deserialized_op._n_qudits == op_kwargs["n_qudits"]
+        assert deserialized_op._operations == op_kwargs["operations"]
 
     def test_state_result_not_supported(self):
         with pytest.raises(
             AbstractReprError, match="not supported in any remote backend"
         ):
             json.dumps(StateResult(), cls=AbstractReprEncoder)
+
+    def test_not_supported_observable(self):
+        obs = BitStrings()
+
+        corrupted_obs_repr = json.loads(
+            json.dumps(obs, cls=AbstractReprEncoder)
+        )
+        corrupted_obs_repr["observable"] = "I'm not valid"
+        with pytest.raises(AbstractReprError, match="Failed to deserialize"):
+            _deserialize_observable(
+                corrupted_obs_repr, StateRepr, OperatorRepr
+            )
 
 
 class TestConfigRepr:
