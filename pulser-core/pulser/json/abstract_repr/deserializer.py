@@ -32,12 +32,15 @@ from pulser.channels.eom import (
 )
 from pulser.devices import Device, VirtualDevice
 from pulser.devices._device_datacls import PARAMS_WITH_ABSTR_REPR
+from pulser.exceptions.serialization import (
+    AbstractReprError,
+    DeserializeDeviceError,
+)
 from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
     UNARY_OPERATORS,
 )
 from pulser.json.abstract_repr.validation import validate_abstract_repr
-from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.json.utils import get_dataclass_defaults
 from pulser.parametrized import ParamObj, Variable
 from pulser.pulse import Pulse

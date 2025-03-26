@@ -23,9 +23,9 @@ from typing import TYPE_CHECKING, Any, Union, cast
 import numpy as np
 
 import pulser
+from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr.signatures import SIGNATURES
 from pulser.json.abstract_repr.validation import validate_abstract_repr
-from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import stringify_qubit_ids
 
 if TYPE_CHECKING:

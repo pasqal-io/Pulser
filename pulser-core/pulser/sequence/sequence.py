@@ -45,12 +45,12 @@ from pulser.channels.base_channel import Channel, States, get_states_from_bases
 from pulser.channels.dmm import DMM, _dmm_id_from_name, _get_dmm_name
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices._device_datacls import BaseDevice
+from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_sequence,
 )
 from pulser.json.abstract_repr.serializer import serialize_abstract_sequence
 from pulser.json.coders import PulserDecoder, PulserEncoder
-from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.parametrized.variable import VariableItem
