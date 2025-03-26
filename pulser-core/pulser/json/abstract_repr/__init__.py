@@ -23,6 +23,7 @@ for obj_type in (
     "register",
     "layout",
     "noise",
+    "results",
     "config",
 ):
     with open(

@@ -13,6 +13,10 @@ inputs:
     description: Whether to include pytorch
     required: false
     default: "with-torch"
+  numpy:
+    description: Which version of numpy to install
+    required: false
+    default: "numpy-v2"
 runs:
   using: "composite"
   steps:
@@ -33,6 +37,11 @@ runs:
       run: |
         python -m pip install --upgrade pip
         make dev-install-no-torch
+    - name: Install numpy v1
+      if: ${{ inputs.numpy == 'numpy-v1'}}
+      shell: bash
+      run: |
+        pip install numpy==1.26
     - name: Install extra packages from the dev requirements
       if: "${{ inputs.extra-packages != '' }}"
       shell: bash

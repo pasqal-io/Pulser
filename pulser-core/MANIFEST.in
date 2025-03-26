@@ -7,3 +7,4 @@ include pulser/json/abstract_repr/schemas/register-schema.json
 include pulser/json/abstract_repr/schemas/layout-schema.json
 include pulser/json/abstract_repr/schemas/noise-schema.json
 include pulser/json/abstract_repr/schemas/config-schema.json
+include pulser/json/abstract_repr/schemas/results-schema.json
