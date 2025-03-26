@@ -69,10 +69,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.12"]
+        python-version: ["3.9", "3.13"]
         with-torch: ["with-torch", "no-torch"]
         numpy: ["numpy-v1", "numpy-v2"]
+        include:
+          - python-version: "3.12"
+            numpy: "numpy-v1"
+            with-torch: "with-torch"
         exclude:
+          # Numpy v1 does not support Python 3.13
+          - python-version: "3.13"
+            numpy: "numpy-v1"
           - numpy: "numpy-v1"
             with-torch: "no-torch"
     steps:
