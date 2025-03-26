@@ -301,6 +301,15 @@ def test_interpolated():
         ),
     ):
         InterpolatedWaveform(duration, [0, 0.1, 0.2, 0.3], other_values)
+    times = seq.declare_variable("times", size=6)  # a Variable
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "When specified, the number of time coordinates in `times`"
+            " (6) must match the number of `values` (5)."
+        ),
+    ):
+        InterpolatedWaveform(1000, values, times)
 
 
 def test_kaiser():
