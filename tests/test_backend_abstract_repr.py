@@ -19,6 +19,7 @@ from pulser.backend import (
 )
 from pulser.backend.operator import OperatorRepr
 from pulser.backend.state import StateRepr
+from pulser.json.abstract_repr.backend import _deserialize_state
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.exceptions import AbstractReprError
 from pulser.noise_model import NoiseModel
@@ -335,19 +336,17 @@ class TestStateRepr:
     )
     def test_state_repr(self, expected_repr):
         state = StateRepr.from_state_amplitudes(**expected_repr)
+
+        # repr is preserved creating a state
         state_repr = state._to_abstract_repr()
         assert state_repr == expected_repr
 
-        # dump and reload repr
+        # repr is preserved serializing an deserializing a state
         state_repr = json.loads(json.dumps(state, cls=AbstractReprEncoder))
-        assert state_repr["eigenstates"] == list(expected_repr["eigenstates"])
-        amplitudes = state_repr["amplitudes"]
-        expected_amplitudes = expected_repr["amplitudes"]
-        for k, expected_amp in expected_amplitudes.items():
-            amp = amplitudes[k]
-            if isinstance(expected_amp, complex):
-                amp = complex(amp["real"], amp["imag"])
-            assert amp == expected_amp
+        deserialized_state = _deserialize_state(state_repr, StateRepr)
+        assert isinstance(deserialized_state, StateRepr)
+        deserialized_state_repr = deserialized_state._to_abstract_repr()
+        assert deserialized_state_repr == expected_repr
 
 
 class TestOperatorRepr:
