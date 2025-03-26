@@ -22,7 +22,7 @@ from typing import Any, Generic, Literal, SupportsFloat, Type, TypeVar, Union
 import numpy as np
 
 from pulser.channels.base_channel import States
-from pulser.json.exceptions import AbstractReprError
+from pulser.exceptions.serialization import AbstractReprError
 
 Eigenstate = Union[States, Literal["0", "1"]]
 

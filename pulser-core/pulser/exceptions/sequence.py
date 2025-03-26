@@ -1,10 +1,4 @@
-"""Errors raised by Pulser.
-
-Note: As of this writing, the specific error strings for these classes are
-maintained for backwards compatibility. However, they may change in a future
-version, so if you need to catch a specific error, you should rather rely
-upon its class and fields.
-"""
+"""Errors raised because a sequence is invalid."""
 
 # Avoid circular dependencies due to type hints, part 1.
 from __future__ import annotations
@@ -12,32 +6,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Sequence
 
+from pulser.exceptions.base import PulserValueError
+
 if TYPE_CHECKING:
     # Avoid circular dependencies due to type hints, part 2.
     from pulser.devices._device_datacls import BaseDevice
     from pulser.register.base_register import QubitId, RegisterLayout
-
-
-class PulserError(Exception):
-    """Any error raised by Pulser."""
-
-    pass
-
-
-class PulserValueError(ValueError, PulserError):
-    """A ValueError raised by Pulser.
-
-    Usage:
-        As of this writing, most of the errors raised by Pulser are subclasses
-        of PulserValueError, as we rely on them being catchable as ValueError
-        for the sake of backwards compatibility.
-
-        This is *only* for the sake of backwards compatibility. New errors
-        raised by Pulser are expected to be subclasses of `PulserError` and
-        will often *not* be subclasses of `PulserValueError`.
-    """
-
-    pass
 
 
 @dataclass

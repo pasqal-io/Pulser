@@ -26,13 +26,13 @@ import numpy as np
 
 import pulser.math as pm
 import pulser.parametrized
+from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
     SIGNATURES,
     UNARY_OPERATORS,
 )
-from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
 

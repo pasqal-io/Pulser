@@ -21,8 +21,8 @@ from packaging.version import InvalidVersion, Version
 from referencing import Registry, Resource
 
 import pulser
+from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr import SCHEMAS, SCHEMAS_PATH
-from pulser.json.exceptions import AbstractReprError
 
 LEGACY_JSONSCHEMA = (
     Version("4.18") > Version(version("jsonschema")) >= Version("4.17.3")

@@ -29,14 +29,14 @@ from pulser.devices import (
     MockDevice,
     VirtualDevice,
 )
-from pulser.exceptions import (
+from pulser.exceptions.base import PulserValueError
+from pulser.exceptions.sequence import (
     AtomsNumberError,
     DimensionError,
     DimensionPositionsTooHighError,
     DimensionTooHighError,
     DistanceError,
     InvalidSequenceError,
-    PulserValueError,
     QubitsNumberError,
     RadiusError,
     RydbergLevelError,

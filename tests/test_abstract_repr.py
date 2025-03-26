@@ -39,6 +39,10 @@ from pulser.devices import (
     MockDevice,
     VirtualDevice,
 )
+from pulser.exceptions.serialization import (
+    AbstractReprError,
+    DeserializeDeviceError,
+)
 from pulser.json.abstract_repr.deserializer import (
     VARIABLE_TYPE_MAP,
     deserialize_abstract_register,
@@ -48,7 +52,6 @@ from pulser.json.abstract_repr.serializer import (
     abstract_repr,
 )
 from pulser.json.abstract_repr.validation import validate_abstract_repr
-from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
