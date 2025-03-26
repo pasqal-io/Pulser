@@ -9,6 +9,13 @@ repos:
     hooks:
       - id: flake8
 
+  # Ruff only checks numpy v2 compatibility at this moment
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.1
+    hooks:
+      - id: ruff
+        args: [ --fix ]
+
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:

@@ -148,8 +148,19 @@ class AbstractArray:
             return AbstractArray(cast(torch.Tensor, self._array).detach())
         return self
 
-    def __array__(self, dtype: Any = None) -> np.ndarray:
-        return self._array.__array__(dtype)
+    def __array__(
+        self,
+        dtype: None = None,
+        copy: np.bool_ | None = None,
+    ) -> np.ndarray:
+        if self.is_tensor or np.lib.NumpyVersion(np.__version__) < "2.0.0":
+            array: np.ndarray = self._array.__array__(dtype)
+            if copy:
+                return np.copy(array)
+            else:
+                return array
+        else:  # pragma: no cover
+            return self._array.__array__(dtype, copy=copy)  # type: ignore
 
     def __repr__(self) -> str:
         return str(self._array.__repr__())
