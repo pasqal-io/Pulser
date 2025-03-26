@@ -70,7 +70,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.9", "3.12"]
-        with-torch: ["with-torch", "no-torch"]
         include:
           - numpy: "numpy-v1"
             with-torch: "with-torch"
