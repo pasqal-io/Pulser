@@ -99,6 +99,13 @@ class Observable(Callback):
     def _base_tag(self) -> str:
         pass
 
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return {
+            "observable": self._base_tag,
+            "evaluation_times": self.evaluation_times,
+            "tag_suffix": self._tag_suffix,
+        }
+
     @property
     def tag(self) -> str:
         """Label for the observable, used to index the Results object.

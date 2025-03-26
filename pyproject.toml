@@ -19,3 +19,6 @@ filterwarnings = [
 [build-system]
 requires = ["setuptools >= 64"]
 build-backend = "setuptools.build_meta"
+
+[tool.ruff.lint]
+select = ["NPY201"]

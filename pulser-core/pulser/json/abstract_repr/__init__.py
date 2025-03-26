@@ -24,6 +24,7 @@ for obj_type in (
     "layout",
     "noise",
     "results",
+    "config",
 ):
     with open(
         SCHEMAS_PATH / f"{obj_type}-schema.json", "r", encoding="utf-8"
