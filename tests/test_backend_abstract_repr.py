@@ -18,6 +18,7 @@ from pulser.backend import (
     StateResult,
 )
 from pulser.backend.operator import OperatorRepr
+from pulser.json.abstract_repr.backend import _deserialize_operator
 from pulser.backend.state import StateRepr
 from pulser.json.abstract_repr.backend import _deserialize_state
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
@@ -329,6 +330,10 @@ class TestStateRepr:
                 "amplitudes": {"rgr": 1.0j + 0.2, "grg": 0.22j, "rrr": -2.0},
             },
             {
+                "eigenstates": ["r", "g"],
+                "amplitudes": {"rgr": 1.0j + 0.2, "grg": 0.22j, "rrr": -2.0},
+            },
+            {
                 "eigenstates": ("0", "1"),
                 "amplitudes": {"10001": 0.5, "01010": 0.5},
             },
@@ -337,16 +342,18 @@ class TestStateRepr:
     def test_state_repr(self, expected_repr):
         state = StateRepr.from_state_amplitudes(**expected_repr)
 
-        # repr is preserved creating a state
         state_repr = state._to_abstract_repr()
-        assert state_repr == expected_repr
+        assert state_repr["eigenstates"] == tuple(expected_repr["eigenstates"])
+        assert state_repr["amplitudes"] == dict(expected_repr["amplitudes"])
 
         # repr is preserved serializing an deserializing a state
-        state_repr = json.loads(json.dumps(state, cls=AbstractReprEncoder))
-        deserialized_state = _deserialize_state(state_repr, StateRepr)
+        state_repr_from_str = json.loads(
+            json.dumps(state, cls=AbstractReprEncoder)
+        )
+        deserialized_state = _deserialize_state(state_repr_from_str, StateRepr)
         assert isinstance(deserialized_state, StateRepr)
         deserialized_state_repr = deserialized_state._to_abstract_repr()
-        assert deserialized_state_repr == expected_repr
+        assert deserialized_state_repr == state_repr
 
 
 class TestOperatorRepr:
@@ -384,34 +391,41 @@ class TestOperatorRepr:
                     ),
                 ],
             },
+            {
+                "eigenstates": ["r", "g", "l"],
+                "n_qudits": 2,
+                "operations": [
+                    (
+                        -1.0j,
+                        [
+                            ({"gr": 1.0, "rg": 1.0}, [0]),
+                            ({"ll": 1.0}, [1]),
+                        ],
+                    )
+                ],
+            },
         ],
     )
     def test_operator_repr(self, expected_repr):
         operator = OperatorRepr.from_operator_repr(**expected_repr)
-        op_repr = operator._to_abstract_repr()
-        assert op_repr == expected_repr
 
-        # dump and reload repr
-        op_repr = json.loads(json.dumps(operator, cls=AbstractReprEncoder))
-        assert op_repr["eigenstates"] == list(expected_repr["eigenstates"])
-        assert op_repr["n_qudits"] == expected_repr["n_qudits"]
-        operations = op_repr["operations"]
-        for i, tensor_op in enumerate(operations):
-            if isinstance(tensor_op[0], dict):
-                tensor_op[0] = complex(
-                    tensor_op[0]["real"], tensor_op[0]["imag"]
-                )
-            for j, qudit_op in enumerate(tensor_op[1]):
-                assert len(qudit_op) == 2
-                assert isinstance(qudit_op[0], dict)
-                assert isinstance(qudit_op[1], list)
-                for k, v in qudit_op[0].items():
-                    if isinstance(v, dict):
-                        qudit_op[0][k] = complex(v["real"], v["imag"])
-                # repack as tuple
-                tensor_op[1][j] = tuple(qudit_op)
-            operations[i] = tuple(tensor_op)
-        assert operations == expected_repr["operations"]
+        operator_repr = operator._to_abstract_repr()
+        assert operator_repr["eigenstates"] == tuple(
+            expected_repr["eigenstates"]
+        )
+        assert operator_repr["n_qudits"] == expected_repr["n_qudits"]
+        assert operator_repr["operations"] == expected_repr["operations"]
+
+        # repr is preserved serializing an deserializing an operator
+        operator_repr_from_str = json.loads(
+            json.dumps(operator, cls=AbstractReprEncoder)
+        )
+        deserialized_operator = _deserialize_operator(
+            operator_repr_from_str, OperatorRepr
+        )
+        assert isinstance(deserialized_operator, OperatorRepr)
+        deserialized_operator_repr = deserialized_operator._to_abstract_repr()
+        assert deserialized_operator_repr == operator_repr
 
     def test_operator_repr_not_implemented(self):
         op_repr = {"eigenstates": ("r", "g"), "n_qudits": 5, "operations": []}
