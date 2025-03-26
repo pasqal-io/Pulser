@@ -172,8 +172,8 @@ class Results:
         return results
 
     def to_abstract_repr(self) -> str:
-        """
-        Serializes this object into a json string.
+        """Serializes this object into a json string.
+
         Numpy arrays and torch Tensors are converted into lists,
         and their original class is lost forever.
 
@@ -188,8 +188,7 @@ class Results:
 
     @classmethod
     def from_abstract_repr(cls, repr: str) -> Results:
-        """
-        Deserializes a serialized Results object from json.
+        """Deserializes a Results object from json.
 
         Returns:
             The deserialized Results object.
