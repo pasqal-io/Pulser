@@ -96,40 +96,32 @@ phys_Chadoq2 = replace(
 )
 
 
-@pytest.mark.parametrize(
-    "test_torch",
-    [True, False],
-)
-def test_abstract_repr_encoder(test_torch: bool):
+def test_abstract_repr_encoder_non_torch():
     encoder = AbstractReprEncoder()
 
-    if not test_torch:
+    class Dummy:
+        def _to_abstract_repr(self):
+            return "_to_abstract_repr"
 
-        class Dummy:
-            def _to_abstract_repr(self):
-                return "_to_abstract_repr"
+    result = encoder.default(Dummy())
+    assert result == "_to_abstract_repr"
+    result = encoder.default(np.array([1, 2, 3, 4]))
+    assert result == [1, 2, 3, 4]
+    result = encoder.default(np.intp(5))
+    assert result == 5
+    result = encoder.default({1, 2, 3, 4})
+    assert result == [1, 2, 3, 4]
+    result = encoder.default(1.0 + 2.0j)
+    assert result == dict(real=1.0, imag=2.0)
 
-        result = encoder.default(Dummy())
-        assert result == "_to_abstract_repr"
 
-        result = encoder.default(np.array([1, 2, 3, 4]))
-        assert result == [1, 2, 3, 4]
-
-        result = encoder.default(np.intp(5))
-        assert result == 5
-
-        result = encoder.default({1, 2, 3, 4})
-        assert result == [1, 2, 3, 4]
-
-        result = encoder.default(1.0 + 2.0j)
-        assert result == dict(real=1.0, imag=2.0)
-    else:
-        torch = pytest.importorskip("torch")
-        result = encoder.default(torch.tensor(5.0))
-        assert result == 5.0
-
-        result = encoder.default(torch.tensor([1, 2, 3, 4]))
-        assert result == [1, 2, 3, 4]
+def test_abstract_repr_encoder_torch():
+    encoder = AbstractReprEncoder()
+    torch = pytest.importorskip("torch")
+    result = encoder.default(torch.tensor(5.0))
+    assert result == 5.0
+    result = encoder.default(torch.tensor([1, 2, 3, 4]))
+    assert result == [1, 2, 3, 4]
 
 
 @pytest.mark.parametrize(
@@ -2806,26 +2798,26 @@ def test_result_serialization(test_torch: bool):
     results._store(observable=occ, time=0.4, value=occ_vec)
 
     dict = results._to_abstract_repr()
-    assert dict["_results"][str(bitstrings.uuid)] == [bitstring]
+    assert dict["results"][str(bitstrings.uuid)] == [bitstring]
 
-    assert len(dict["_results"][str(corr.uuid)]) == 1
-    assert type(dict["_results"][str(corr.uuid)][0]) is type(cor_mat)
-    assert dict["_results"][str(corr.uuid)][0].tolist() == cor_mat.tolist()
+    assert len(dict["results"][str(corr.uuid)]) == 1
+    assert type(dict["results"][str(corr.uuid)][0]) is type(cor_mat)
+    assert dict["results"][str(corr.uuid)][0].tolist() == cor_mat.tolist()
 
-    assert dict["_results"][str(energy.uuid)] == [energy_val]
+    assert dict["results"][str(energy.uuid)] == [energy_val]
 
-    assert len(dict["_results"][str(occ.uuid)]) == 1
-    assert type(dict["_results"][str(occ.uuid)][0]) is type(occ_vec)
-    assert dict["_results"][str(occ.uuid)][0].tolist() == occ_vec.tolist()
+    assert len(dict["results"][str(occ.uuid)]) == 1
+    assert type(dict["results"][str(occ.uuid)][0]) is type(occ_vec)
+    assert dict["results"][str(occ.uuid)][0].tolist() == occ_vec.tolist()
 
-    assert dict["_tagmap"] == {
+    assert dict["tagmap"] == {
         bitstrings.tag: str(bitstrings.uuid),
         corr.tag: str(corr.uuid),
         energy.tag: str(energy.uuid),
         occ.tag: str(occ.uuid),
     }
 
-    assert dict["_times"] == {
+    assert dict["times"] == {
         str(bitstrings.uuid): [0.1],
         str(corr.uuid): [0.2],
         str(energy.uuid): [0.3],

@@ -18,7 +18,6 @@ import collections.abc
 import json
 import typing
 import uuid
-from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, TypeVar, overload
 
@@ -146,12 +145,15 @@ class Results:
             )
 
     def _to_abstract_repr(self) -> dict:
-        d = deepcopy(self.__dict__)
-        d["_tagmap"] = {key: str(value) for key, value in d["_tagmap"].items()}
-        d["_results"] = {
-            str(key): value for key, value in d["_results"].items()
+        d = {
+            "atom_order": self.atom_order,
+            "total_duration": self.total_duration,
         }
-        d["_times"] = {str(key): value for key, value in d["_times"].items()}
+        d["tagmap"] = {key: str(value) for key, value in self._tagmap.items()}
+        d["results"] = {
+            str(key): value for key, value in self._results.items()
+        }
+        d["times"] = {str(key): value for key, value in self._times.items()}
         return d
 
     @classmethod
@@ -160,11 +162,11 @@ class Results:
             atom_order=tuple(dict["atom_order"]),
             total_duration=dict["total_duration"],
         )
-        for key, value in dict["_tagmap"].items():
+        for key, value in dict["tagmap"].items():
             results._tagmap[key] = uuid.UUID(value)
-        for key, value in dict["_results"].items():
+        for key, value in dict["results"].items():
             results._results[uuid.UUID(key)] = value
-        for key, value in dict["_times"].items():
+        for key, value in dict["times"].items():
             results._times[uuid.UUID(key)] = value
         return results
 
