@@ -180,6 +180,7 @@ class Results:
         Args:
             skip_validation: Whether to skip validating the json against
                 the schema used for deserialization.
+
         Returns:
             The json string
         """
