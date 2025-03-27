@@ -21,6 +21,7 @@ from pulser.backend import (
 from pulser.backend.operator import OperatorRepr
 from pulser.backend.state import StateRepr
 from pulser.json.abstract_repr.backend import (
+    _deserialize_emulation_config,
     _deserialize_observable,
     _deserialize_operator,
     _deserialize_state,
@@ -318,12 +319,6 @@ class TestConfigRepr:
                 config_repr["interaction_matrix"],
                 expected_kwargs["interaction_matrix"],
             )
-            assert config_repr["interaction_matrix"] == json.loads(
-                json.dumps(
-                    expected_kwargs["interaction_matrix"],
-                    cls=AbstractReprEncoder,
-                )
-            )
         assert config_repr["prefer_device_noise_model"] == expected_kwargs.get(
             "prefer_device_noise_model", False
         )
@@ -331,6 +326,26 @@ class TestConfigRepr:
         assert config_repr["noise_model"] == json.loads(
             json.dumps(expected_noise_model, cls=AbstractReprEncoder)
         )
+
+        deserialized_config = _deserialize_emulation_config(
+            config_repr, EmulationConfig, StateRepr, OperatorRepr
+        )
+        assert deserialized_config.with_modulation == expected_kwargs.get(
+            "with_modulation", False
+        )
+        if deserialized_config.interaction_matrix is None:
+            assert "interaction_matrix" not in expected_kwargs
+        else:
+            assert np.allclose(
+                deserialized_config.interaction_matrix,
+                expected_kwargs["interaction_matrix"],
+            )
+        assert (
+            deserialized_config.prefer_device_noise_model
+            == expected_kwargs.get("prefer_device_noise_model", False)
+        )
+        expected_noise_model = expected_kwargs.get("noise_model", NoiseModel())
+        assert deserialized_config.noise_model == expected_noise_model
 
 
 class TestStateRepr:
