@@ -14,11 +14,11 @@ from pulser.backend.default_observables import (
     Fidelity,
     Occupation,
 )
+from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr.deserializer import (
     _convert_complex,
     _deserialize_noise_model,
 )
-from pulser.exceptions.serialization import AbstractReprError
 
 if TYPE_CHECKING:
     from pulser.backend import EmulationConfig, Observable, Operator, State
