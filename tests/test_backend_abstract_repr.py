@@ -279,6 +279,7 @@ class TestConfigRepr:
                 "interaction_matrix": [[0.0, 0.5], [0.5, 0.0]],
             },
             {"noise_model": NoiseModel(p_false_pos=0.1, dephasing_rate=0.01)},
+            {"max_bond_dim": 10, "precision": 1e-6, "gpu": True},
         ],
     )
     def test_config_repr(self, observables, kwargs):
@@ -333,6 +334,12 @@ class TestConfigRepr:
             == config.prefer_device_noise_model
         )
         assert deserialized_config.noise_model == config.noise_model
+
+        # check additional kwargs
+        additional_kwargs = expected_kwargs.keys() - config._expected_kwargs()
+        for key in additional_kwargs:
+            assert getattr(config, key) == expected_kwargs[key]
+            assert getattr(deserialized_config, key) == expected_kwargs[key]
 
 
 class TestStateRepr:
