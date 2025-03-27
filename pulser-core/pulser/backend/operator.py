@@ -19,7 +19,7 @@ from collections.abc import Collection, Mapping, Sequence
 from typing import Any, Generic, Type, TypeVar
 
 from pulser.backend.state import Eigenstate, State
-from pulser.json.exceptions import AbstractReprError
+from pulser.exceptions.serialization import AbstractReprError
 
 ArgScalarType = TypeVar("ArgScalarType")
 ReturnScalarType = TypeVar("ReturnScalarType")

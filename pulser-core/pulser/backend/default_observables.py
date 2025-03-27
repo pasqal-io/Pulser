@@ -24,7 +24,7 @@ import pulser.math as pm
 from pulser.backend.observable import Observable
 from pulser.backend.operator import Operator, OperatorType
 from pulser.backend.state import Eigenstate, State, StateType
-from pulser.json.exceptions import AbstractReprError
+from pulser.exceptions.serialization import AbstractReprError
 
 if TYPE_CHECKING:
     from pulser.backend.config import EmulationConfig

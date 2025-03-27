@@ -19,8 +19,13 @@ import pytest
 
 from pulser import Register, Register3D, Sequence
 from pulser.devices import DigitalAnalogDevice, MockDevice
+from pulser.exceptions.serialization import (
+    SerializationError,
+    SerializationSupportAttributeMissing,
+    SerializationSupportClassMissing,
+    SerializationSupportModuleMissing,
+)
 from pulser.json.coders import PulserDecoder, PulserEncoder
-from pulser.json.exceptions import SerializationError
 from pulser.json.supported import validate_serialization
 from pulser.json.utils import make_json_compatible
 from pulser.parametrized.decorators import parametrize
@@ -53,9 +58,14 @@ def test_encoder():
         encode(1j)
 
 
-def test_device(mod_device):
+def test_device(mod_device, helpers):
     assert encode_decode(DigitalAnalogDevice) == DigitalAnalogDevice
-    with pytest.raises(SerializationError):
+    with helpers.raises_all(
+        [
+            SerializationSupportClassMissing,
+            SerializationError,
+        ]
+    ):
         encode_decode(mod_device)
 
 
@@ -157,7 +167,7 @@ def test_mappable_register():
     assert not new_mapped_seq.is_register_mappable()
 
 
-def test_rare_cases(patch_plt_show):
+def test_rare_cases(patch_plt_show, helpers):
     reg = Register.square(4)
     seq = Sequence(reg, DigitalAnalogDevice)
     var = seq.declare_variable("var")
@@ -198,7 +208,7 @@ def test_rare_cases(patch_plt_show):
         encode(rotated_reg)
 
 
-def test_support():
+def test_support(helpers):
     seq = Sequence(Register.square(2), DigitalAnalogDevice)
     var = seq.declare_variable("var")
 
@@ -208,24 +218,27 @@ def test_support():
         validate_serialization(obj_dict)
 
     obj_dict["__module__"] = "pulser.fake"
-    with pytest.raises(
-        SerializationError,
+    with helpers.raises_all(
+        [SerializationSupportModuleMissing, SerializationError],
         match="No serialization support for module 'pulser.fake'.",
     ):
         validate_serialization(obj_dict)
 
     wf_obj_dict = obj_dict["__args__"][0]
     wf_obj_dict["__submodule__"] = "RampWaveform"
-    with pytest.raises(
-        SerializationError,
+    with helpers.raises_all(
+        [SerializationSupportAttributeMissing, SerializationError],
         match="No serialization support for attributes of "
         "'pulser.waveforms.RampWaveform'",
     ):
         validate_serialization(wf_obj_dict)
 
     del wf_obj_dict["__submodule__"]
-    with pytest.raises(
-        SerializationError,
+    with helpers.raises_all(
+        [
+            SerializationSupportClassMissing,
+            SerializationError,
+        ],
         match="No serialization support for 'pulser.waveforms.from_max_val'",
     ):
         validate_serialization(wf_obj_dict)

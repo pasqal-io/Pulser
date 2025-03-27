@@ -42,6 +42,11 @@ runs:
       shell: bash
       run: |
         pip install numpy==1.26
+    - name: Install numpy v2
+      if: ${{ inputs.numpy == 'numpy-v2'}}
+      shell: bash
+      run: |
+        pip install numpy>=2
     - name: Install extra packages from the dev requirements
       if: "${{ inputs.extra-packages != '' }}"
       shell: bash

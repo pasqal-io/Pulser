@@ -20,8 +20,8 @@ import numpy as np
 import pytest
 import qutip
 
+from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
-from pulser.json.exceptions import AbstractReprError
 from pulser_simulation import QutipOperator, QutipState
 
 

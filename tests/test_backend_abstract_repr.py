@@ -20,6 +20,7 @@ from pulser.backend import (
 )
 from pulser.backend.operator import OperatorRepr
 from pulser.backend.state import StateRepr
+from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr.backend import (
     _deserialize_emulation_config,
     _deserialize_observable,
@@ -27,7 +28,6 @@ from pulser.json.abstract_repr.backend import (
     _deserialize_state,
 )
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
-from pulser.json.exceptions import AbstractReprError
 from pulser.noise_model import NoiseModel
 
 
