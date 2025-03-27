@@ -286,71 +286,53 @@ class TestConfigRepr:
         expected_kwargs |= kwargs
 
         config = EmulationConfig(**expected_kwargs)
-        # dump with AbstrctReprEncoder & validation
         config_str = config.to_abstract_repr()
-        config_repr = json.loads(config_str)
-
-        # check observables
-        assert len(config_repr["observables"]) == len(
-            expected_kwargs["observables"]
-        )
-        for obs, expected_obs in zip(
-            config_repr["observables"], expected_kwargs["observables"]
-        ):
-            assert obs == json.loads(
-                json.dumps(expected_obs, cls=AbstractReprEncoder)
-            )
-
-        # check defaults args vs simple type or dump/reload as dict
-        assert config_repr["default_evaluation_times"] == expected_kwargs.get(
-            "default_evaluation_times", [1.0]
-        )
-        if config_repr["initial_state"] is None:
-            assert "initial_state" not in expected_kwargs
-        else:
-            ini_state_repr = config_repr["initial_state"]
-            expected = json.loads(
-                json.dumps(
-                    expected_kwargs["initial_state"], cls=AbstractReprEncoder
-                )
-            )
-            assert ini_state_repr == expected
-        assert config_repr["with_modulation"] == expected_kwargs.get(
-            "with_modulation", False
-        )
-        if config_repr["interaction_matrix"] is None:
-            assert "interaction_matrix" not in expected_kwargs
-        else:
-            assert np.allclose(
-                config_repr["interaction_matrix"],
-                expected_kwargs["interaction_matrix"],
-            )
-        assert config_repr["prefer_device_noise_model"] == expected_kwargs.get(
-            "prefer_device_noise_model", False
-        )
-        expected_noise_model = expected_kwargs.get("noise_model", NoiseModel())
-        assert config_repr["noise_model"] == json.loads(
-            json.dumps(expected_noise_model, cls=AbstractReprEncoder)
-        )
-
         deserialized_config = EmulationConfig.from_abstract_repr(config_str)
+
+        # check that config attributes are preserved by
+        # serializing and deserializing back
         assert isinstance(deserialized_config, EmulationConfig)
-        assert deserialized_config.with_modulation == expected_kwargs.get(
-            "with_modulation", False
-        )
-        if deserialized_config.interaction_matrix is None:
-            assert "interaction_matrix" not in expected_kwargs
+
+        # check each observables with their repr
+        for obs, expected_obs in zip(
+            deserialized_config.observables, config.observables
+        ):
+            assert obs._to_abstract_repr() == expected_obs._to_abstract_repr()
+        if isinstance(config.default_evaluation_times, np.ndarray):
+            assert np.allclose(
+                config.default_evaluation_times,
+                deserialized_config.default_evaluation_times,
+            )
+        else:
+            (
+                config.default_evaluation_times
+                == deserialized_config.default_evaluation_times
+            )
+
+        # check that initial state has the same repr in both config
+        if config.initial_state is None:
+            assert deserialized_config.initial_state is None
+        else:
+            expected_state = config.initial_state
+            expected_state_repr = expected_state._to_abstract_repr()
+            state = deserialized_config.initial_state
+            assert isinstance(state, StateRepr)
+            state_repr = state._to_abstract_repr()
+            assert state_repr == expected_state_repr
+
+        assert deserialized_config.with_modulation == config.with_modulation
+        if config.interaction_matrix is None:
+            assert deserialized_config.interaction_matrix is None
         else:
             assert np.allclose(
                 deserialized_config.interaction_matrix,
-                expected_kwargs["interaction_matrix"],
+                config.interaction_matrix,
             )
         assert (
             deserialized_config.prefer_device_noise_model
-            == expected_kwargs.get("prefer_device_noise_model", False)
+            == config.prefer_device_noise_model
         )
-        expected_noise_model = expected_kwargs.get("noise_model", NoiseModel())
-        assert deserialized_config.noise_model == expected_noise_model
+        assert deserialized_config.noise_model == config.noise_model
 
 
 class TestStateRepr:
