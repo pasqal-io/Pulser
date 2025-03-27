@@ -22,7 +22,6 @@ from pulser.backend.operator import OperatorRepr
 from pulser.backend.state import StateRepr
 from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr.backend import (
-    _deserialize_emulation_config,
     _deserialize_observable,
     _deserialize_operator,
     _deserialize_state,
@@ -250,6 +249,13 @@ class TestConfigRepr:
         eigenstates=("0", "1"), amplitudes={"1111": 0.1}
     )
 
+    def test_config_not_from_str(self):
+        with pytest.raises(
+            TypeError,
+            match="The serialized EmulationConfig must be given as a string. ",
+        ):
+            EmulationConfig.from_abstract_repr(1.0)
+
     @mark.parametrize(
         "observables",
         [
@@ -327,9 +333,8 @@ class TestConfigRepr:
             json.dumps(expected_noise_model, cls=AbstractReprEncoder)
         )
 
-        deserialized_config = _deserialize_emulation_config(
-            config_repr, EmulationConfig, StateRepr, OperatorRepr
-        )
+        deserialized_config = EmulationConfig.from_abstract_repr(config_str)
+        assert isinstance(deserialized_config, EmulationConfig)
         assert deserialized_config.with_modulation == expected_kwargs.get(
             "with_modulation", False
         )
