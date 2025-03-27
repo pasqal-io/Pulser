@@ -18,7 +18,7 @@ from pulser.json.abstract_repr.deserializer import (
     _convert_complex,
     _deserialize_noise_model,
 )
-from pulser.json.exceptions import AbstractReprError
+from pulser.exceptions.serialization import AbstractReprError
 
 if TYPE_CHECKING:
     from pulser.backend import EmulationConfig, Observable, Operator, State
