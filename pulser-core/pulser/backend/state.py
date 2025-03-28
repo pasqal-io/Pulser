@@ -16,17 +16,18 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import Counter
-from collections.abc import Sequence
-from typing import Generic, Literal, Type, TypeVar, Union
+from collections.abc import Mapping, Sequence
+from typing import Any, Generic, Literal, SupportsFloat, Type, TypeVar, Union
 
 import numpy as np
 
 from pulser.channels.base_channel import States
+from pulser.exceptions.serialization import AbstractReprError
 
 Eigenstate = Union[States, Literal["0", "1"]]
 
 ArgScalarType = TypeVar("ArgScalarType")
-ReturnScalarType = TypeVar("ReturnScalarType")
+ReturnScalarType = TypeVar("ReturnScalarType", bound=SupportsFloat)
 StateType = TypeVar("StateType", bound="State")
 
 
@@ -37,6 +38,13 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     """
 
     _eigenstates: Sequence[Eigenstate]
+    _amplitudes: Mapping[str, complex] | None
+
+    def __init__(self, *, eigenstates: Sequence[Eigenstate]) -> None:
+        """Initializes a State."""
+        self._validate_eigenstates(eigenstates)
+        self._eigenstates = eigenstates
+        self._amplitudes = None
 
     @property
     @abstractmethod
@@ -125,22 +133,42 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         pass
 
     @classmethod
-    @abstractmethod
     def from_state_amplitudes(
         cls: Type[StateType],
         *,
         eigenstates: Sequence[Eigenstate],
-        amplitudes: dict[str, ArgScalarType],
+        amplitudes: Mapping[str, ArgScalarType],
     ) -> StateType:
         """Construct the state from its basis states' amplitudes.
+
+        Only states constructed with this method are allowed in remote backend.
 
         Args:
             eigenstates: The basis states (e.g., ('r', 'g')).
             amplitudes: A mapping between basis state combinations and
-                complex amplitudes.
+                complex amplitudes (e.g., {"rgr": 0.5, "grg": 0.5}).
 
         Returns:
             The state constructed from the amplitudes.
+        """
+        obj, _amplitudes = cls._from_state_amplitudes(
+            eigenstates=eigenstates, amplitudes=amplitudes
+        )
+        obj._amplitudes = _amplitudes
+        return obj
+
+    @classmethod
+    @abstractmethod
+    def _from_state_amplitudes(
+        cls: Type[StateType],
+        *,
+        eigenstates: Sequence[Eigenstate],
+        amplitudes: Mapping[str, ArgScalarType],
+    ) -> tuple[StateType, Mapping[str, complex]]:
+        """Implements the conversion used in `from_state_amplitudes()`.
+
+        Expected to return the State instance alongside the amplitudes used
+        in serialization.
         """
         pass
 
@@ -166,9 +194,134 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
 
     @staticmethod
     def _validate_eigenstates(eigenstates: Sequence[Eigenstate]) -> None:
+        if not isinstance(eigenstates, Sequence):
+            raise TypeError(
+                "'eigenstates' must be a 'collections.Sequence' "
+                f"(list or tuple), not {type(eigenstates).__name__}."
+            )
         if any(not isinstance(s, str) or len(s) != 1 for s in eigenstates):
             raise ValueError(
                 "All eigenstates must be represented by single characters."
             )
         if len(eigenstates) != len(set(eigenstates)):
             raise ValueError("'eigenstates' can't contain repeated entries.")
+
+    @staticmethod
+    def _validate_amplitudes(
+        amplitudes: Mapping[str, Any], eigenstates: Sequence[Eigenstate]
+    ) -> int:
+        """Validates the state amplitudes mapping.
+
+        Returns:
+            int: The number of qudits in the state.
+        """
+        basis_states = list(amplitudes)
+        n_qudits = len(basis_states[0])
+        if not all(
+            len(bs) == n_qudits and set(bs) <= set(eigenstates)
+            for bs in basis_states
+        ):
+            raise ValueError(
+                "All basis states must be combinations of eigenstates with the"
+                f" same length. Expected combinations of {eigenstates}, each "
+                f"with {n_qudits} elements."
+            )
+        return n_qudits
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        cls_name = self.__class__.__name__
+        if self._amplitudes is None:
+            raise AbstractReprError(
+                f"Failed to serialize state of type {cls_name!r} because it "
+                f"was not created via '{cls_name}.from_state_amplitudes()'."
+            )
+        stashed_state = self.from_state_amplitudes(
+            eigenstates=self._eigenstates,
+            amplitudes=self._amplitudes,  # type: ignore[arg-type]
+        )
+
+        if abs(float(self.overlap(stashed_state)) - 1.0) > 1e-12:
+            raise AbstractReprError(
+                f"Failed to serialize state of type {cls_name!r} because it "
+                "was modified in place after its creation."
+            )
+        return {
+            "eigenstates": tuple(self._eigenstates),
+            "amplitudes": dict(self._amplitudes),
+        }
+
+
+class StateRepr(State):
+    """Define a backend-independent quantum state representation.
+
+    Allows the user to define a quantum state with the usual dedicated class
+    method `from_state_amplitudes`, which requires:
+    - eigenstates: The basis states (e.g., ('r', 'g')).
+    - amplitudes: A mapping between basis state combinations and
+        complex amplitudes (e.g., {"rgr": 0.5, "grg": 0.5}).
+
+    The created state, supports de/serialization methods for remote backend
+    execution.
+
+    Example:
+    ```python
+    eigenstates = ("r", "g")
+    amplitudes = {"rgr"=0.5, "grg"=0.5}
+    state = StateRepr.from_state_amplitudes(
+        eigenstates=eigenstates, amplitudes=amplitudes
+    )
+    ```
+    """
+
+    _n_qudits: int
+
+    @classmethod
+    def _from_state_amplitudes(
+        cls,
+        *,
+        eigenstates: Sequence[Eigenstate],
+        amplitudes: Mapping[str, complex],
+    ) -> tuple[StateRepr, Mapping[str, complex]]:
+        """Implements the conversion used in `from_state_amplitudes()`.
+
+        Expected to return the State instance alongside the amplitudes used
+        in serialization.
+        """
+        state = cls(eigenstates=eigenstates)
+        n_qudits = state._validate_amplitudes(
+            eigenstates=eigenstates, amplitudes=amplitudes
+        )
+        cls._n_qudits = n_qudits
+        return state, amplitudes
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        cls_name = self.__class__.__name__
+        if self._amplitudes is None:
+            raise AbstractReprError(
+                f"Failed to serialize state of type {cls_name!r} because it "
+                f"was not created via '{cls_name}.from_state_amplitudes()'."
+            )
+        return {
+            "eigenstates": tuple(self._eigenstates),
+            "amplitudes": dict(self._amplitudes),
+        }
+
+    @property
+    def n_qudits(self) -> int:
+        """The number of qudits in the state."""
+        return self._n_qudits
+
+    def overlap(self, other: StateRepr, /) -> None:
+        """``overlap`` not implemented in ``StateRepr``."""
+        raise NotImplementedError
+
+    def sample(
+        self,
+        *,
+        num_shots: int,
+        one_state: Eigenstate | None = None,
+        p_false_pos: float = 0.0,
+        p_false_neg: float = 0.0,
+    ) -> Counter[str]:
+        """``sample`` not implemented in ``StateRepr``."""
+        raise NotImplementedError

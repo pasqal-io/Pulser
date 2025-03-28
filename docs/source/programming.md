@@ -44,7 +44,7 @@ $$i\frac{d\left|\Psi\right>(t)}{dt} = \frac{H(t)}{\hbar} \left|\Psi\right>(t)$$
 
 Here $H(t)$ is the Hamiltonian describing the evolution of the system. For a system of atoms in the initial state $\left|\Psi_0\right>$, the final state of the system after a time $\Delta t$ is:
 
-$$ \left|\Psi_f\right> = \exp\left(-\frac{i}{\hbar}\int_0^{\Delta t} H(t) dt\right)\left|\Psi_0\right>$$
+$$ \left|\Psi_f\right> = \mathcal{T}\exp\left(-\frac{i}{\hbar}\int_0^{\Delta t} H(t) dt\right)\left|\Psi_0\right>$$
 
 :::{tip}
 The equation below uses the [Indexed Operator](conventions.md#indexed-operator) notation.

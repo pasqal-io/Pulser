@@ -18,13 +18,16 @@ import copy
 import functools
 from collections import Counter
 from collections.abc import Sequence
-from typing import Any, Type
+from typing import TYPE_CHECKING, Any, Type
 
 import pulser.math as pm
-from pulser.backend.config import EmulationConfig
 from pulser.backend.observable import Observable
 from pulser.backend.operator import Operator, OperatorType
 from pulser.backend.state import Eigenstate, State, StateType
+from pulser.exceptions.serialization import AbstractReprError
+
+if TYPE_CHECKING:
+    from pulser.backend.config import EmulationConfig
 
 
 class StateResult(Observable):
@@ -42,6 +45,14 @@ class StateResult(Observable):
     @property
     def _base_tag(self) -> str:
         return "state"
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        raise AbstractReprError(
+            """`StateResult` observable is not supported in any remote backend.
+            If you are interested in the full quantum state at arbitrary times
+            during the emulation, please, consider using the local version of
+            the same backend."""
+        )
 
     def apply(self, *, state: StateType, **kwargs: Any) -> StateType:
         """Calculates the observable to store in the Results."""
@@ -92,6 +103,12 @@ class BitStrings(Observable):
     @property
     def _base_tag(self) -> str:
         return "bitstrings"
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        repr = super()._to_abstract_repr()
+        repr["num_shots"] = self.num_shots
+        repr["one_state"] = self.one_state
+        return repr
 
     def apply(
         self,
@@ -149,6 +166,11 @@ class Fidelity(Observable):
     def _base_tag(self) -> str:
         return "fidelity"
 
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        repr = super()._to_abstract_repr()
+        repr["state"] = self.state
+        return repr
+
     def apply(self, *, state: State, **kwargs: Any) -> Any:
         """Calculates the observable to store in the Results."""
         return self.state.overlap(state)
@@ -190,6 +212,11 @@ class Expectation(Observable):
     def _base_tag(self) -> str:
         return "expectation"
 
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        repr = super()._to_abstract_repr()
+        repr["operator"] = self.operator
+        return repr
+
     def apply(self, *, state: State, **kwargs: Any) -> Any:
         """Calculates the observable to store in the Results."""
         return self.operator.expect(state)
@@ -230,6 +257,11 @@ class CorrelationMatrix(Observable):
     @property
     def _base_tag(self) -> str:
         return "correlation_matrix"
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        repr = super()._to_abstract_repr()
+        repr["one_state"] = self.one_state
+        return repr
 
     @staticmethod
     @functools.cache
@@ -306,6 +338,11 @@ class Occupation(Observable):
     def _base_tag(self) -> str:
         return "occupation"
 
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        repr = super()._to_abstract_repr()
+        repr["one_state"] = self.one_state
+        return repr
+
     def apply(
         self, *, state: State, hamiltonian: Operator, **kwargs: Any
     ) -> list:
@@ -349,7 +386,7 @@ class Energy(Observable):
 
 
 class EnergyVariance(Observable):
-    r"""Stores the varaiance of the Hamiltonian at the evaluation times.
+    r"""Stores the variance of the Hamiltonian at the evaluation times.
 
     The variance of the Hamiltonian at time ``t`` is calculated by
     ``<φ(t)|H(t)^2|φ(t)> - <φ(t)|H(t)|φ(t)>^2``

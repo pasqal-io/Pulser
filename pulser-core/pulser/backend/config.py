@@ -15,15 +15,18 @@
 from __future__ import annotations
 
 import copy
+import json
 import warnings
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import (
     Any,
+    ClassVar,
     Generic,
     Literal,
     Sequence,
     SupportsFloat,
+    Type,
     TypeVar,
     cast,
     get_args,
@@ -34,7 +37,11 @@ from numpy.typing import ArrayLike
 
 import pulser.math as pm
 from pulser.backend.observable import Observable
-from pulser.backend.state import State
+from pulser.backend.operator import Operator, OperatorRepr
+from pulser.backend.state import State, StateRepr
+from pulser.json.abstract_repr.backend import _deserialize_emulation_config
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.noise_model import NoiseModel
 
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
@@ -46,20 +53,25 @@ class BackendConfig:
     """The base backend configuration."""
 
     _backend_options: dict[str, Any]
+    # Whether to warn if unexpected kwargs are received
+    _enforce_expected_kwargs: ClassVar[bool] = True
 
     def __init__(self, **backend_options: Any) -> None:
         """Initializes the backend config."""
         cls_name = self.__class__.__name__
-        if invalid_kwargs := (
-            set(backend_options)
-            - (self._expected_kwargs() | {"backend_options"})
+        if self._enforce_expected_kwargs and (
+            invalid_kwargs := (
+                set(backend_options)
+                - (self._expected_kwargs() | {"backend_options"})
+            )
         ):
             warnings.warn(
                 f"{cls_name!r} received unexpected keyword arguments: "
                 f"{invalid_kwargs}; only the following keyword "
-                f"arguments are expected: {self._expected_kwargs()}.",
+                f"arguments are expected: {self._expected_kwargs()}. ",
                 stacklevel=2,
             )
+        # Store the abstract repr of the config in _backend_options
         # Prevents potential issues with mutable arguments
         self._backend_options = copy.deepcopy(backend_options)
         if "backend_options" in backend_options:
@@ -116,6 +128,14 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         noise_model: An optional noise model to emulate the sequence with.
             Ignored if the sequence's device has default noise model and
             `prefer_device_noise_model=True`.
+
+    Note:
+        Additional parameters may be provided. It is up to the emulation
+        backend that receives a configuration with extra parameters to assess
+        whether it recognizes them and how it will use them. To know all
+        parameters expected by an EmulatorBackend, consult its associated
+        EmulationConfig subclass found under 'EmulatorBackend.default_config'.
+
     """
 
     observables: Sequence[Observable]
@@ -125,6 +145,11 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     interaction_matrix: pm.AbstractArray | None
     prefer_device_noise_model: bool
     noise_model: NoiseModel
+    # Whether to warn if unexpected kwargs are received
+    _enforce_expected_kwargs: ClassVar[bool] = False
+
+    _state_type: ClassVar[Type[State]]
+    _operator_type: ClassVar[Type[Operator]]
 
     def __init__(
         self,
@@ -254,6 +279,40 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         """Checks if a time is within a collection of evaluation times."""
         return 0.0 <= t <= 1.0 and bool(
             np.any(np.abs(np.array(evaluation_times, dtype=float) - t) <= tol)
+        )
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return self._backend_options
+
+    def to_abstract_repr(self, skip_validation: bool = False) -> str:
+        """Serialize `EmulationConfig` to a JSON formatted str."""
+        obj_str = json.dumps(self, cls=AbstractReprEncoder)
+        if not skip_validation:
+            validate_abstract_repr(obj_str, "config")
+        return obj_str
+
+    @classmethod
+    def from_abstract_repr(cls, obj_str: str) -> EmulationConfig:
+        """Deserialize an EmulationConfig from an abstract JSON object.
+
+        Args:
+            obj_str (str): the JSON string representing the sequence encoded
+                in the abstract JSON format.
+
+        Returns:
+            EmulationConfig: The EmulationConfig instance.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized EmulationConfig must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+        validate_abstract_repr(obj_str, "config")
+        return _deserialize_emulation_config(
+            json.loads(obj_str),
+            cls,
+            getattr(cls, "_state_type", StateRepr),
+            getattr(cls, "_operator_type", OperatorRepr),
         )
 
 

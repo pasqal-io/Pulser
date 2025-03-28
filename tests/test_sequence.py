@@ -548,7 +548,12 @@ def test_ising_mode(
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
 def test_switch_register(
-    reg, mappable_reg, parametrized, starts_mappable, config_det_map
+    reg,
+    mappable_reg,
+    parametrized,
+    starts_mappable,
+    config_det_map,
+    catch_phase_shift_warning,
 ):
     pulse = Pulse.ConstantPulse(1000, 1, -1, 2)
     with_slm_mask = not starts_mappable and not mappable_reg
@@ -573,6 +578,8 @@ def test_switch_register(
         seq.switch_register(Register(dict(q1=(0, 0), qN=(10, 10))))
 
     seq.declare_channel("ryd", "rydberg_global")
+    with catch_phase_shift_warning:
+        seq.phase_shift(3)
     seq.add(pulse, "ryd", protocol="no-delay")
 
     if mappable_reg:
@@ -588,7 +595,8 @@ def test_switch_register(
         context_manager = contextlib.nullcontext()
 
     with context_manager:
-        new_seq = seq.switch_register(new_reg)
+        with catch_phase_shift_warning:
+            new_seq = seq.switch_register(new_reg)
     assert seq.declared_variables or not parametrized
     assert seq.declared_variables == new_seq.declared_variables
     assert new_seq.is_parametrized() == parametrized
@@ -596,13 +604,19 @@ def test_switch_register(
     assert new_seq._calls[1:] == seq._calls[1:]  # Excludes __init__
     assert new_seq._to_build_calls == seq._to_build_calls
 
+    if not parametrized and not mappable_reg:
+        assert new_seq.current_phase_ref("foo") == 3
+        assert new_seq.current_phase_ref("q0") == 3
+        assert seq.current_phase_ref("q1") == 3
+
     build_kwargs = {}
     if parametrized:
         build_kwargs["delay"] = 120
     if mappable_reg:
         build_kwargs["qubits"] = {"q0": 1, "q1": 4}
     if build_kwargs:
-        new_seq = new_seq.build(**build_kwargs)
+        with catch_phase_shift_warning:
+            new_seq = new_seq.build(**build_kwargs)
 
     assert isinstance(
         (raman_pulse_slot := new_seq._schedule["raman"][1]).type, Pulse
@@ -619,7 +633,8 @@ def test_switch_register(
     if config_det_map:
         if with_slm_mask:
             if parametrized:
-                seq = seq.build(**build_kwargs)
+                with catch_phase_shift_warning:
+                    seq = seq.build(**build_kwargs)
             assert np.any(reg.qubits["q0"] != new_reg.qubits["q0"])
             assert "dmm_0" in seq.declared_channels
             prev_qubit_wmap = seq._schedule[
@@ -1435,7 +1450,7 @@ def test_delay_min_duration(reg, device):
     )
 
 
-def test_phase(reg, device, det_map):
+def test_phase(reg, device, det_map, catch_phase_shift_warning):
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     seq.phase_shift(-1, "q0", "q1")
@@ -1456,11 +1471,14 @@ def test_phase(reg, device, det_map):
     with pytest.raises(ValueError, match="ids have to be qubit ids"):
         seq.phase_shift(np.pi, "q1", "q4", "q100")
 
+    # Test global phase shift
     seq.declare_channel("ch1", "rydberg_global")
-    seq.phase_shift(1, *seq._qids, basis="ground-rydberg")
+    with catch_phase_shift_warning:
+        seq.phase_shift(1, basis="ground-rydberg")
     for q in seq.qubit_info:
         assert seq.current_phase_ref(q, "ground-rydberg") == 1
-    seq.phase_shift(1, *seq._qids)
+    with catch_phase_shift_warning:
+        seq.phase_shift(1)
     assert seq.current_phase_ref("q1", "digital") == 0
     assert seq.current_phase_ref("q10", "digital") == 1
 

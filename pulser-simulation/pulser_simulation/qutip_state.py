@@ -23,6 +23,7 @@ import numpy as np
 import qutip
 
 from pulser.backend.state import Eigenstate, State
+from pulser.math.multinomial import multinomial
 
 QutipStateType = TypeVar("QutipStateType", bound="QutipState")
 
@@ -31,7 +32,7 @@ TensorOp = Sequence[tuple[QuditOp, Collection[int]]]
 FullOp = Sequence[tuple[SupportsComplex, TensorOp]]
 
 
-class QutipState(State[SupportsComplex, complex]):
+class QutipState(State[SupportsComplex, float]):
     """A quantum state stored as a qutip.Qobj.
 
     Args:
@@ -48,8 +49,7 @@ class QutipState(State[SupportsComplex, complex]):
         self, state: qutip.Qobj, *, eigenstates: Sequence[Eigenstate]
     ):
         """Initializes a QutipState."""
-        self._validate_eigenstates(eigenstates)
-        self._eigenstates = tuple(eigenstates)
+        super().__init__(eigenstates=eigenstates)
         valid_types = ("ket", "bra", "oper")
         if not isinstance(state, qutip.Qobj) or state.type not in valid_types:
             raise TypeError(
@@ -183,26 +183,22 @@ class QutipState(State[SupportsComplex, complex]):
         )
         bitstrings = np.array(list(bitstring_probs))
         probs = np.array(list(map(float, bitstring_probs.values())))
-        dist = np.random.multinomial(num_shots, probs)
-        # Filter out bitstrings without counts
-        non_zero_counts = dist > 0
-        bitstrings = bitstrings[non_zero_counts]
-        dist = dist[non_zero_counts]
+        indices = multinomial(num_shots, probs)
         if p_false_pos == 0.0 and p_false_neg == 0.0:
-            return Counter(dict(zip(bitstrings, dist)))
+            return Counter(bitstrings[indices])
 
         # Convert bitstrings to a 2D array
-        bitstr_arr = np.array([list(bs) for bs in bitstrings], dtype=int)
+        bitstr_arr = np.array(
+            [list(bs) for bs in bitstrings[indices]], dtype=int
+        )
         # If 1 is measured, flip_prob=p_false_neg else flip_prob=p_false_pos
         flip_probs = np.where(bitstr_arr == 1, p_false_neg, p_false_pos)
-        # Repeat flip_probs of a bitstring as many times as it was measured
-        flip_probs_repeated = np.repeat(flip_probs, dist, axis=0)
         # Generate random matrix of same shape
-        random_matrix = np.random.uniform(size=flip_probs_repeated.shape)
+        random_matrix = np.random.uniform(size=flip_probs.shape)
         # Compare random matrix with flip probabilities to get the flips
-        flips = random_matrix < flip_probs_repeated
+        flips = random_matrix < flip_probs
         # Apply the flips with an XOR between original array and flips
-        new_bitstrings = bitstr_arr.repeat(dist, axis=0) ^ flips
+        new_bitstrings = bitstr_arr ^ flips
 
         # Count all the new_bitstrings
         # Not converting to str right away because tuple indexing is faster
@@ -212,12 +208,12 @@ class QutipState(State[SupportsComplex, complex]):
         )
 
     @classmethod
-    def from_state_amplitudes(
+    def _from_state_amplitudes(
         cls: Type[QutipStateType],
         *,
         eigenstates: Sequence[Eigenstate],
-        amplitudes: dict[str, SupportsComplex],
-    ) -> QutipStateType:
+        amplitudes: Mapping[str, SupportsComplex],
+    ) -> tuple[QutipStateType, Mapping[str, complex]]:
         """Construct the state from its basis states' amplitudes.
 
         Args:
@@ -226,21 +222,11 @@ class QutipState(State[SupportsComplex, complex]):
                 complex amplitudes.
 
         Returns:
-            The state constructed from the amplitudes.
+            The state constructed from the amplitudes, the eigenstates and the
+            amplitudes that defined the state.
         """
         cls._validate_eigenstates(eigenstates)
-        basis_states = list(amplitudes)
-        n_qudits = len(basis_states[0])
-        if not all(
-            len(bs) == n_qudits and set(bs) <= set(eigenstates)
-            for bs in basis_states
-        ):
-            raise ValueError(
-                "All basis states must be combinations of eigenstates with the"
-                f" same length. Expected combinations of {eigenstates}, each "
-                f"with {n_qudits} elements."
-            )
-
+        n_qudits = cls._validate_amplitudes(amplitudes, eigenstates)
         qudit_dim = len(eigenstates)
 
         def make_qobj(basis_state: str) -> qutip.Qobj:
@@ -253,10 +239,11 @@ class QutipState(State[SupportsComplex, complex]):
 
         # Start with an empty Qobj with the right dimension
         state = make_qobj(eigenstates[0] * n_qudits) * 0
-        for basis_state, amp in amplitudes.items():
-            state += complex(amp) * make_qobj(basis_state)
+        amps = {k: complex(v) for k, v in amplitudes.items()}
+        for basis_state, amp in amps.items():
+            state += amp * make_qobj(basis_state)
 
-        return cls(state, eigenstates=eigenstates)
+        return cls(state, eigenstates=eigenstates), amps
 
     def __repr__(self) -> str:
         return "\n".join(
