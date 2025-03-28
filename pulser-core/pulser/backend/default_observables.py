@@ -18,14 +18,16 @@ import copy
 import functools
 from collections import Counter
 from collections.abc import Sequence
-from typing import Any, Type
+from typing import TYPE_CHECKING, Any, Type
 
 import pulser.math as pm
-from pulser.backend.config import EmulationConfig
 from pulser.backend.observable import Observable
 from pulser.backend.operator import Operator, OperatorType
 from pulser.backend.state import Eigenstate, State, StateType
 from pulser.exceptions.serialization import AbstractReprError
+
+if TYPE_CHECKING:
+    from pulser.backend.config import EmulationConfig
 
 
 class StateResult(Observable):

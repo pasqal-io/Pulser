@@ -421,21 +421,25 @@ def _deserialize_register3d(
     return cast(pulser.Register3D, reg)
 
 
-def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
-
-    def convert_complex(obj: Any) -> Any:
-        if isinstance(obj, (list, tuple)):
-            return [convert_complex(e) for e in obj]
-        elif isinstance(obj, dict):
+def _convert_complex(obj: Any) -> Any:
+    """Searches for serialized complex numbers and converts them."""
+    if isinstance(obj, list):
+        return [_convert_complex(e) for e in obj]
+    if isinstance(obj, tuple):
+        return tuple(_convert_complex(e) for e in obj)
+    if isinstance(obj, dict):
+        if obj.keys() == {"real", "imag"}:
             return obj["real"] + 1j * obj["imag"]
-        else:
-            return obj
+        return {k: _convert_complex(v) for k, v in obj.items()}
+    return obj
 
+
+def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
     eff_noise_rates = []
     eff_noise_opers = []
     for rate, oper in noise_model_obj.pop("eff_noise"):
         eff_noise_rates.append(rate)
-        eff_noise_opers.append(convert_complex(oper))
+        eff_noise_opers.append(_convert_complex(oper))
 
     noise_types = noise_model_obj.pop("noise_types")
     with_leakage = "leakage" in noise_types

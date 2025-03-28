@@ -21,6 +21,11 @@ from pulser.backend import (
 from pulser.backend.operator import OperatorRepr
 from pulser.backend.state import StateRepr
 from pulser.exceptions.serialization import AbstractReprError
+from pulser.json.abstract_repr.backend import (
+    _deserialize_observable,
+    _deserialize_operator,
+    _deserialize_state,
+)
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.noise_model import NoiseModel
 
@@ -92,32 +97,41 @@ class TestObservableRepr:
     )
     def test_observable_repr(self, observable, arg, expected_kwargs):
         obs = observable(*arg, **expected_kwargs)
+
+        # serialized repr
         obs_repr = json.loads(json.dumps(obs, cls=AbstractReprEncoder))
 
-        # test default values
-        assert obs_repr["observable"] == obs._base_tag
-        assert obs_repr["tag_suffix"] == expected_kwargs.get(
-            "tag_suffix", None
+        # deserialized repr
+        deserialized_obs = _deserialize_observable(
+            obs_repr, StateRepr, OperatorRepr
         )
-        if obs_repr["evaluation_times"] is None:
-            assert "evaluation_times" not in expected_kwargs
-        else:
-            assert np.allclose(
-                obs_repr["evaluation_times"],
-                expected_kwargs["evaluation_times"],
+        deserialized_obs_repr = deserialized_obs._to_abstract_repr()
+
+        for repr in [obs_repr, deserialized_obs_repr]:
+            # test default values
+            assert repr["observable"] == obs._base_tag
+            assert repr["tag_suffix"] == expected_kwargs.get(
+                "tag_suffix", None
             )
-            assert obs_repr["evaluation_times"] == json.loads(
-                json.dumps(
+            if repr["evaluation_times"] is None:
+                assert "evaluation_times" not in expected_kwargs
+            else:
+                assert np.allclose(
+                    repr["evaluation_times"],
                     expected_kwargs["evaluation_times"],
-                    cls=AbstractReprEncoder,
                 )
+                assert repr["evaluation_times"] == json.loads(
+                    json.dumps(
+                        expected_kwargs["evaluation_times"],
+                        cls=AbstractReprEncoder,
+                    )
+                )
+            assert repr.get("one_state", None) == expected_kwargs.get(
+                "one_state", None
             )
-        assert obs_repr.get("one_state", None) == expected_kwargs.get(
-            "one_state", None
-        )
-        assert obs_repr.get("num_shots", 1000) == expected_kwargs.get(
-            "num_shots", 1000
-        )
+            assert repr.get("num_shots", 1000) == expected_kwargs.get(
+                "num_shots", 1000
+            )
 
     @mark.parametrize(
         "state_kwargs",
@@ -130,21 +144,37 @@ class TestObservableRepr:
                 "eigenstates": ("0", "1"),
                 "amplitudes": {"1000": 1.0 + 0.5j, "0001": 1.0 - 0.5j},
             },
+            {
+                "eigenstates": ["u", "d", "x"],
+                "amplitudes": {"uuddx": 1 / 2},
+            },
         ],
     )
     def test_state_in_fidelity_repr(self, state_kwargs):
         state = StateRepr.from_state_amplitudes(**state_kwargs)
         fidelity = Fidelity(state)
+
+        # state repr as dict
         fidelity_repr = fidelity._to_abstract_repr()
-        # test default values
-        assert fidelity_repr["observable"] == "fidelity"
-        assert fidelity_repr["tag_suffix"] is None
-        assert fidelity_repr["evaluation_times"] is None
-        # test state in repr
-        state_in_repr = fidelity_repr["state"]
-        assert state_in_repr is state
-        assert state_in_repr._eigenstates == state_kwargs["eigenstates"]
-        assert state_in_repr._amplitudes == state_kwargs["amplitudes"]
+        state_repr = fidelity_repr["state"]
+        assert state_repr._eigenstates == state_kwargs["eigenstates"]
+        assert state_repr._amplitudes == state_kwargs["amplitudes"]
+
+        # deserialized state
+        dumped_fidelity_repr = json.loads(
+            json.dumps(fidelity, cls=AbstractReprEncoder)
+        )
+        deserialized_fidelity = _deserialize_observable(
+            dumped_fidelity_repr, StateRepr, OperatorRepr
+        )
+        deserialized_state = deserialized_fidelity.state
+        assert isinstance(deserialized_state, StateRepr)
+        assert deserialized_state._eigenstates == list(
+            state_kwargs["eigenstates"]
+        )
+        assert deserialized_state._amplitudes == dict(
+            state_kwargs["amplitudes"]
+        )
 
     @mark.parametrize(
         "op_kwargs",
@@ -177,11 +207,23 @@ class TestObservableRepr:
         op = OperatorRepr.from_operator_repr(**op_kwargs)
         expectation = Expectation(op)
         expectation_repr = expectation._to_abstract_repr()
-        op_in_repr = expectation_repr["operator"]
-        assert op_in_repr is op
-        assert op_in_repr._eigenstates == op_kwargs["eigenstates"]
-        assert op_in_repr._n_qudits == op_kwargs["n_qudits"]
-        assert op_in_repr._operations == op_kwargs["operations"]
+        op_repr = expectation_repr["operator"]
+        assert op_repr._eigenstates == op_kwargs["eigenstates"]
+        assert op_repr._n_qudits == op_kwargs["n_qudits"]
+        assert op_repr._operations == op_kwargs["operations"]
+
+        # deserialized operator
+        dumped_expectation_repr = json.loads(
+            json.dumps(expectation, cls=AbstractReprEncoder)
+        )
+        deserialized_expectation = _deserialize_observable(
+            dumped_expectation_repr, StateRepr, OperatorRepr
+        )
+        deserialized_op = deserialized_expectation.operator
+        assert isinstance(deserialized_op, OperatorRepr)
+        assert deserialized_op._eigenstates == list(op_kwargs["eigenstates"])
+        assert deserialized_op._n_qudits == op_kwargs["n_qudits"]
+        assert deserialized_op._operations == op_kwargs["operations"]
 
     def test_state_result_not_supported(self):
         with pytest.raises(
@@ -189,11 +231,30 @@ class TestObservableRepr:
         ):
             json.dumps(StateResult(), cls=AbstractReprEncoder)
 
+    def test_not_supported_observable(self):
+        obs = BitStrings()
+
+        corrupted_obs_repr = json.loads(
+            json.dumps(obs, cls=AbstractReprEncoder)
+        )
+        corrupted_obs_repr["observable"] = "I'm not valid"
+        with pytest.raises(AbstractReprError, match="Failed to deserialize"):
+            _deserialize_observable(
+                corrupted_obs_repr, StateRepr, OperatorRepr
+            )
+
 
 class TestConfigRepr:
     example_state = StateRepr.from_state_amplitudes(
         eigenstates=("0", "1"), amplitudes={"1111": 0.1}
     )
+
+    def test_config_not_from_str(self):
+        with pytest.raises(
+            TypeError,
+            match="The serialized EmulationConfig must be given as a string. ",
+        ):
+            EmulationConfig.from_abstract_repr(1.0)
 
     @mark.parametrize(
         "observables",
@@ -218,6 +279,7 @@ class TestConfigRepr:
                 "interaction_matrix": [[0.0, 0.5], [0.5, 0.0]],
             },
             {"noise_model": NoiseModel(p_false_pos=0.1, dephasing_rate=0.01)},
+            {"max_bond_dim": 10, "precision": 1e-6, "gpu": True},
         ],
     )
     def test_config_repr(self, observables, kwargs):
@@ -225,58 +287,59 @@ class TestConfigRepr:
         expected_kwargs |= kwargs
 
         config = EmulationConfig(**expected_kwargs)
-        # dump with AbstrctReprEncoder & validation
         config_str = config.to_abstract_repr()
-        config_repr = json.loads(config_str)
+        deserialized_config = EmulationConfig.from_abstract_repr(config_str)
 
-        # check observables
-        assert len(config_repr["observables"]) == len(
-            expected_kwargs["observables"]
-        )
+        # check that config attributes are preserved by
+        # serializing and deserializing back
+        assert isinstance(deserialized_config, EmulationConfig)
+
+        # check each observables with their repr
         for obs, expected_obs in zip(
-            config_repr["observables"], expected_kwargs["observables"]
+            deserialized_config.observables, config.observables
         ):
-            assert obs == json.loads(
-                json.dumps(expected_obs, cls=AbstractReprEncoder)
+            assert obs._to_abstract_repr() == expected_obs._to_abstract_repr()
+        if isinstance(config.default_evaluation_times, np.ndarray):
+            assert np.allclose(
+                config.default_evaluation_times,
+                deserialized_config.default_evaluation_times,
+            )
+        else:
+            (
+                config.default_evaluation_times
+                == deserialized_config.default_evaluation_times
             )
 
-        # check defaults args vs simple type or dump/reload as dict
-        assert config_repr["default_evaluation_times"] == expected_kwargs.get(
-            "default_evaluation_times", [1.0]
-        )
-        if config_repr["initial_state"] is None:
-            assert "initial_state" not in expected_kwargs
+        # check that initial state has the same repr in both config
+        if config.initial_state is None:
+            assert deserialized_config.initial_state is None
         else:
-            ini_state_repr = config_repr["initial_state"]
-            expected = json.loads(
-                json.dumps(
-                    expected_kwargs["initial_state"], cls=AbstractReprEncoder
-                )
-            )
-            assert ini_state_repr == expected
-        assert config_repr["with_modulation"] == expected_kwargs.get(
-            "with_modulation", False
-        )
-        if config_repr["interaction_matrix"] is None:
-            assert "interaction_matrix" not in expected_kwargs
+            expected_state = config.initial_state
+            expected_state_repr = expected_state._to_abstract_repr()
+            state = deserialized_config.initial_state
+            assert isinstance(state, StateRepr)
+            state_repr = state._to_abstract_repr()
+            assert state_repr == expected_state_repr
+
+        assert deserialized_config.with_modulation == config.with_modulation
+        if config.interaction_matrix is None:
+            assert deserialized_config.interaction_matrix is None
         else:
             assert np.allclose(
-                config_repr["interaction_matrix"],
-                expected_kwargs["interaction_matrix"],
+                deserialized_config.interaction_matrix,
+                config.interaction_matrix,
             )
-            assert config_repr["interaction_matrix"] == json.loads(
-                json.dumps(
-                    expected_kwargs["interaction_matrix"],
-                    cls=AbstractReprEncoder,
-                )
-            )
-        assert config_repr["prefer_device_noise_model"] == expected_kwargs.get(
-            "prefer_device_noise_model", False
+        assert (
+            deserialized_config.prefer_device_noise_model
+            == config.prefer_device_noise_model
         )
-        expected_noise_model = expected_kwargs.get("noise_model", NoiseModel())
-        assert config_repr["noise_model"] == json.loads(
-            json.dumps(expected_noise_model, cls=AbstractReprEncoder)
-        )
+        assert deserialized_config.noise_model == config.noise_model
+
+        # check additional kwargs
+        additional_kwargs = expected_kwargs.keys() - config._expected_kwargs()
+        for key in additional_kwargs:
+            assert getattr(config, key) == expected_kwargs[key]
+            assert getattr(deserialized_config, key) == expected_kwargs[key]
 
 
 class TestStateRepr:
@@ -329,6 +392,10 @@ class TestStateRepr:
                 "amplitudes": {"rgr": 1.0j + 0.2, "grg": 0.22j, "rrr": -2.0},
             },
             {
+                "eigenstates": ["r", "g"],
+                "amplitudes": {"rgr": 1.0j + 0.2, "grg": 0.22j, "rrr": -2.0},
+            },
+            {
                 "eigenstates": ("0", "1"),
                 "amplitudes": {"10001": 0.5, "01010": 0.5},
             },
@@ -336,19 +403,19 @@ class TestStateRepr:
     )
     def test_state_repr(self, expected_repr):
         state = StateRepr.from_state_amplitudes(**expected_repr)
-        state_repr = state._to_abstract_repr()
-        assert state_repr == expected_repr
 
-        # dump and reload repr
-        state_repr = json.loads(json.dumps(state, cls=AbstractReprEncoder))
-        assert state_repr["eigenstates"] == list(expected_repr["eigenstates"])
-        amplitudes = state_repr["amplitudes"]
-        expected_amplitudes = expected_repr["amplitudes"]
-        for k, expected_amp in expected_amplitudes.items():
-            amp = amplitudes[k]
-            if isinstance(expected_amp, complex):
-                amp = complex(amp["real"], amp["imag"])
-            assert amp == expected_amp
+        state_repr = state._to_abstract_repr()
+        assert state_repr["eigenstates"] == tuple(expected_repr["eigenstates"])
+        assert state_repr["amplitudes"] == dict(expected_repr["amplitudes"])
+
+        # repr is preserved serializing an deserializing a state
+        state_repr_from_str = json.loads(
+            json.dumps(state, cls=AbstractReprEncoder)
+        )
+        deserialized_state = _deserialize_state(state_repr_from_str, StateRepr)
+        assert isinstance(deserialized_state, StateRepr)
+        deserialized_state_repr = deserialized_state._to_abstract_repr()
+        assert deserialized_state_repr == state_repr
 
 
 class TestOperatorRepr:
@@ -386,34 +453,41 @@ class TestOperatorRepr:
                     ),
                 ],
             },
+            {
+                "eigenstates": ["r", "g", "l"],
+                "n_qudits": 2,
+                "operations": [
+                    (
+                        -1.0j,
+                        [
+                            ({"gr": 1.0, "rg": 1.0}, [0]),
+                            ({"ll": 1.0}, [1]),
+                        ],
+                    )
+                ],
+            },
         ],
     )
     def test_operator_repr(self, expected_repr):
         operator = OperatorRepr.from_operator_repr(**expected_repr)
-        op_repr = operator._to_abstract_repr()
-        assert op_repr == expected_repr
 
-        # dump and reload repr
-        op_repr = json.loads(json.dumps(operator, cls=AbstractReprEncoder))
-        assert op_repr["eigenstates"] == list(expected_repr["eigenstates"])
-        assert op_repr["n_qudits"] == expected_repr["n_qudits"]
-        operations = op_repr["operations"]
-        for i, tensor_op in enumerate(operations):
-            if isinstance(tensor_op[0], dict):
-                tensor_op[0] = complex(
-                    tensor_op[0]["real"], tensor_op[0]["imag"]
-                )
-            for j, qudit_op in enumerate(tensor_op[1]):
-                assert len(qudit_op) == 2
-                assert isinstance(qudit_op[0], dict)
-                assert isinstance(qudit_op[1], list)
-                for k, v in qudit_op[0].items():
-                    if isinstance(v, dict):
-                        qudit_op[0][k] = complex(v["real"], v["imag"])
-                # repack as tuple
-                tensor_op[1][j] = tuple(qudit_op)
-            operations[i] = tuple(tensor_op)
-        assert operations == expected_repr["operations"]
+        operator_repr = operator._to_abstract_repr()
+        assert operator_repr["eigenstates"] == tuple(
+            expected_repr["eigenstates"]
+        )
+        assert operator_repr["n_qudits"] == expected_repr["n_qudits"]
+        assert operator_repr["operations"] == expected_repr["operations"]
+
+        # repr is preserved serializing an deserializing an operator
+        operator_repr_from_str = json.loads(
+            json.dumps(operator, cls=AbstractReprEncoder)
+        )
+        deserialized_operator = _deserialize_operator(
+            operator_repr_from_str, OperatorRepr
+        )
+        assert isinstance(deserialized_operator, OperatorRepr)
+        deserialized_operator_repr = deserialized_operator._to_abstract_repr()
+        assert deserialized_operator_repr == operator_repr
 
     def test_operator_repr_not_implemented(self):
         op_repr = {"eigenstates": ("r", "g"), "n_qudits": 5, "operations": []}
