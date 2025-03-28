@@ -202,6 +202,12 @@ class Results:
         d = json.loads(repr)
         return cls._from_abstract_repr(d)
 
+    def __getstate__(self) -> dict:
+        return self._to_abstract_repr()  # type: ignore[operator]
+
+    def __setstate__(self, d: dict) -> None:
+        self.__dict__ = d
+
 
 ResultsType = TypeVar("ResultsType", bound=Results)
 
