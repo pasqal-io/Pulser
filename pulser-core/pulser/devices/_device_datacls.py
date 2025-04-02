@@ -30,6 +30,21 @@ import pulser.math as pm
 from pulser.channels.base_channel import Channel, States, get_states_from_bases
 from pulser.channels.dmm import DMM
 from pulser.devices.interaction_coefficients import c6_dict
+from pulser.exceptions.base import PulserValueError
+from pulser.exceptions.sequence import (
+    AtomsNumberError,
+    DimensionChoiceError,
+    DimensionPositionsTooHighError,
+    DimensionTooHighError,
+    DistanceError,
+    MaxNumberOfTrapsError,
+    OptimalLayoutFillingError,
+    QubitsNumberError,
+    RadiusError,
+    RydbergLevelError,
+    TrapsNumberTooHighError,
+    TrapsNumberTooLowError,
+)
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
@@ -132,6 +147,19 @@ class BaseDevice(ABC):
         def type_check(
             param: str, type_: type, value_override: Any = None
         ) -> None:
+            """Check that one instance attribute has the right type.
+
+            Arguments:
+                param: The name of the instance attribute. The value
+                    checked is `getattr(self, param)`. Ignored
+                    if `value_override` is specified.
+                type_: The expected type.
+                value_override: If specified, uses `value_override`
+                    instead of `getattr(self, param)`.
+
+            Raises:
+                TypeError if the value doesn't have the expected type.
+            """
             value = (
                 getattr(self, param)
                 if value_override is None
@@ -144,13 +172,14 @@ class BaseDevice(ABC):
                 )
 
         type_check("name", str)
-        if self.dimensions not in get_args(DIMENSIONS):
-            raise ValueError(
-                f"'dimensions' must be one of {get_args(DIMENSIONS)}, "
-                f"not {self.dimensions}."
+        expected_dimensions = cast(list[DIMENSIONS], get_args(DIMENSIONS))
+        if self.dimensions not in expected_dimensions:
+            raise DimensionChoiceError(
+                self, invalid=self.dimensions, expected=expected_dimensions
             )
         self._validate_rydberg_level(self.rydberg_level)
 
+        # Check constraints on int and optional int parameters.
         for param in (
             "min_atom_distance",
             "max_atom_num",
@@ -201,20 +230,15 @@ class BaseDevice(ABC):
         if self.optimal_layout_filling is not None and not (
             0.0 < self.optimal_layout_filling <= self.max_layout_filling
         ):
-            raise ValueError(
-                "When defined, the optimal layout filling fraction "
-                "must be greater than 0. and less than or equal to "
-                f"`max_layout_filling` ({self.max_layout_filling}), "
-                f"not {self.optimal_layout_filling}."
+            raise OptimalLayoutFillingError(
+                device=self,
+                invalid=self.optimal_layout_filling,
             )
 
         if self.max_layout_traps is not None:
             if self.max_layout_traps < self.min_layout_traps:
-                raise ValueError(
-                    "The maximum number of layout traps "
-                    f"({self.max_layout_traps}) must be greater than "
-                    "or equal to the minimum number of layout traps "
-                    f"({self.min_layout_traps})."
+                raise MaxNumberOfTrapsError(
+                    device=self,
                 )
             if (
                 self.max_atom_num is not None
@@ -225,7 +249,7 @@ class BaseDevice(ABC):
                 )
                 < self.max_atom_num
             ):
-                raise ValueError(
+                raise PulserValueError(
                     "With the given maximum layout filling and maximum number "
                     f"of traps, a layout supports at most {max_atoms_} atoms, "
                     "which is less than the maximum number of atoms allowed"
@@ -239,7 +263,7 @@ class BaseDevice(ABC):
             type_check("All DMM channels", DMM, value_override=dmm_obj)
 
         if self.supports_slm_mask and not self.dmm_objects:
-            raise ValueError(
+            raise PulserValueError(
                 "One DMM object should be defined to support SLM mask."
             )
 
@@ -253,17 +277,17 @@ class BaseDevice(ABC):
                     "of strings."
                 )
             if len(self.channel_ids) != len(set(self.channel_ids)):
-                raise ValueError(
+                raise PulserValueError(
                     "When defined, 'channel_ids' can't have "
                     "repeated elements."
                 )
             if len(self.channel_ids) != len(self.channel_objects):
-                raise ValueError(
+                raise PulserValueError(
                     "When defined, the number of channel IDs must"
                     " match the number of channel objects."
                 )
             if set(self.channel_ids) & set(self.dmm_channels.keys()):
-                raise ValueError(
+                raise PulserValueError(
                     "When defined, the names of channel IDs must be different"
                     " than the names of DMM channels 'dmm_0', 'dmm_1', ... ."
                 )
@@ -386,20 +410,22 @@ class BaseDevice(ABC):
             )
 
         if register.dimensionality > self.dimensions:
-            raise ValueError(
-                f"All qubit positions must be at most {self.dimensions}D "
-                "vectors."
+            raise DimensionPositionsTooHighError(
+                device=self,
+                invalid=register.dimensionality,
             )
         self._validate_coords(register.qubits, kind="atoms")
 
         if register.layout is not None:
             try:
                 self.validate_layout(register.layout)
-            except (ValueError, TypeError):
-                raise ValueError(
+            except (ValueError, TypeError) as e:
+                # For compatibility, we wrap all these errors as a WrapedError.
+                # If you need details, check field `wrapped`.
+                raise PulserValueError(
                     "The 'register' is associated with an incompatible "
-                    "register layout."
-                )
+                    + "register layout."
+                ) from e
             self.validate_layout_filling(register)
 
     def validate_layout(self, layout: RegisterLayout) -> None:
@@ -412,26 +438,23 @@ class BaseDevice(ABC):
             raise TypeError("'layout' must be a RegisterLayout instance.")
 
         if layout.dimensionality > self.dimensions:
-            raise ValueError(
-                "The device supports register layouts of at most "
-                f"{self.dimensions} dimensions."
-            )
+            raise DimensionTooHighError(self, invalid=layout.dimensionality)
 
         if layout.number_of_traps < self.min_layout_traps:
-            raise ValueError(
-                "The device requires register layouts to have "
-                f"at least {self.min_layout_traps} traps; "
-                f"{layout!s} has only {layout.number_of_traps}."
+            raise TrapsNumberTooLowError(
+                device=self,
+                invalid=layout.number_of_traps,
+                layout=layout,
             )
 
         if (
             self.max_layout_traps is not None
             and layout.number_of_traps > self.max_layout_traps
         ):
-            raise ValueError(
-                "The device requires register layouts to have "
-                f"at most {self.max_layout_traps} traps; "
-                f"{layout!s} has {layout.number_of_traps}."
+            raise TrapsNumberTooHighError(
+                self,
+                invalid=layout.number_of_traps,
+                layout=layout,
             )
 
         self._validate_coords(layout.traps_dict, kind="traps")
@@ -455,23 +478,16 @@ class BaseDevice(ABC):
             register.layout.number_of_traps * self.max_layout_filling
         )
         if n_qubits > max_qubits:
-            raise ValueError(
-                "Given the number of traps in the layout and the "
-                "device's maximum layout filling fraction, the given"
-                f" register has too many qubits ({n_qubits}). "
-                "On this device, this layout can hold at most "
-                f"{max_qubits} qubits."
+            raise QubitsNumberError(
+                device=self,
+                invalid=n_qubits,
+                max=max_qubits,
             )
 
     def _validate_atom_number(self, coords: list[pm.AbstractArray]) -> None:
         max_atom_num = cast(int, self.max_atom_num)
         if len(coords) > max_atom_num:
-            raise ValueError(
-                f"The number of atoms ({len(coords)})"
-                " must be less than or equal to the maximum"
-                f" number of atoms supported by this device"
-                f" ({max_atom_num})."
-            )
+            raise AtomsNumberError(device=self, invalid=len(coords))
 
     def _validate_atom_distance(
         self, ids: list[QubitId], coords: list[pm.AbstractArray], kind: str
@@ -496,11 +512,11 @@ class BaseDevice(ABC):
                     np.logical_and(invalid_dists(sq_dists), mask)
                 )
                 bad_qbt_pairs = [(ids[i], ids[j]) for i, j in bad_pairs]
-                raise ValueError(
-                    f"The minimal distance between {kind} in this device "
-                    f"({self.min_atom_distance} µm) is not respected "
-                    f"(up to a precision of 1e{-COORD_PRECISION} µm) "
-                    f"for the pairs: {bad_qbt_pairs}"
+                raise DistanceError(
+                    device=self,
+                    kind=kind,
+                    precision_exp=COORD_PRECISION,
+                    invalid=bad_qbt_pairs,
                 )
 
     def _validate_radial_distance(
@@ -511,17 +527,22 @@ class BaseDevice(ABC):
             > self.max_radial_distance
         )
         if np.any(too_far):
-            raise ValueError(
-                f"All {kind} must be at most {self.max_radial_distance} μm "
-                f"away from the center of the array, which is not the case "
-                f"for: {[ids[int(i)] for i in np.where(too_far)[0]]}"
+            # At this stage, `self.max_radial_distance`` is not `None`
+            # but mypy cannot see it.
+            assert self.max_radial_distance is not None
+            raise RadiusError(
+                device=self,
+                kind=kind,
+                invalid=[ids[int(i)] for i in np.where(too_far)[0]],
             )
 
     def _validate_rydberg_level(self, ryd_lvl: int) -> None:
         if not isinstance(ryd_lvl, int):
             raise TypeError("Rydberg level has to be an int.")
         if not 49 < ryd_lvl < 101:
-            raise ValueError("Rydberg level should be between 50 and 100.")
+            raise RydbergLevelError(
+                device=self, min=50, max=100, invalid=ryd_lvl
+            )
 
     def _params(self, init_only: bool = False) -> dict[str, Any]:
         # This is used instead of dataclasses.asdict() because asdict()

@@ -6,5 +6,7 @@ nbsphinx
 nbsphinx-link
 ipython >= 8.10 # Avoids bug with code highlighting
 myst-parser
+# To document pulser-pasqal classes
+pulser-pasqal
 # Not on PyPI
 # pandoc

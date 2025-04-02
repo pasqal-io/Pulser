@@ -16,24 +16,40 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Sequence
-from typing import Generic, Type, TypeVar
+from typing import Any, Generic, Type, TypeVar
 
 from pulser.backend.state import Eigenstate, State
+from pulser.exceptions.serialization import AbstractReprError
 
 ArgScalarType = TypeVar("ArgScalarType")
 ReturnScalarType = TypeVar("ReturnScalarType")
 StateType = TypeVar("StateType", bound=State)
 OperatorType = TypeVar("OperatorType", bound="Operator")
 
-QuditOp = Mapping[str, ArgScalarType]  # single qudit operator
+# Generic type aliases
+T = TypeVar("T")
+QuditOp = Mapping[str, T]  # single qudit operator
 TensorOp = Sequence[
-    tuple[QuditOp, Collection[int]]
+    tuple[QuditOp[T], Collection[int]]
 ]  # QuditOp applied to set of qudits
-FullOp = Sequence[tuple[ArgScalarType, TensorOp]]  # weighted sum of TensorOp
+FullOp = Sequence[tuple[T, TensorOp[T]]]  # weighted sum of TensorOp
 
 
 class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
-    """Base class for a quantum operator."""
+    """Base class enforcing an API for quantum operator.
+
+    Each backend will implement its own type of state and the methods below.
+    """
+
+    _eigenstates: Sequence[Eigenstate] | None
+    _n_qudits: int | None
+    _operations: FullOp[complex] | None
+
+    def __init__(self) -> None:
+        """Initializes an Operator."""
+        self._eigenstates = None
+        self._n_qudits = None
+        self._operations = None
 
     @abstractmethod
     def apply_to(self, state: StateType, /) -> StateType:
@@ -96,15 +112,17 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         pass
 
     @classmethod
-    @abstractmethod
     def from_operator_repr(
         cls: Type[OperatorType],
         *,
         eigenstates: Sequence[Eigenstate],
         n_qudits: int,
-        operations: FullOp,
+        operations: FullOp[ArgScalarType],
     ) -> OperatorType:
         """Create an operator from the operator representation.
+
+        Only operators constructed with this method are allowed in remote
+        backend.
 
         The full operator representation (``FullOp``) is a weigthed sum of
         tensor operators (``TensorOp``), written as a sequence of coefficient
@@ -139,4 +157,135 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         Returns:
             The constructed operator.
         """
+        obj, _operations = cls._from_operator_repr(
+            eigenstates=eigenstates, n_qudits=n_qudits, operations=operations
+        )
+        obj._eigenstates = eigenstates
+        obj._n_qudits = n_qudits
+        obj._operations = _operations
+        return obj
+
+    @classmethod
+    @abstractmethod
+    def _from_operator_repr(
+        cls: Type[OperatorType],
+        *,
+        eigenstates: Sequence[Eigenstate],
+        n_qudits: int,
+        operations: FullOp[ArgScalarType],
+    ) -> tuple[OperatorType, FullOp[complex]]:
+        """Implements the conversion used in `from_operator_repr()`.
+
+        Expected to return the Operator instance alongside the 'operations' to
+        use in serialization.
+        """
         pass
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        if (
+            self._eigenstates is None
+            or self._n_qudits is None
+            or self._operations is None
+        ):
+            cls_name = self.__class__.__name__
+            raise AbstractReprError(
+                f"Failed to serialize state of type {cls_name!r} because it "
+                f"was not created via '{cls_name}.from_operator_repr()'."
+            )
+        return {
+            "eigenstates": tuple(self._eigenstates),
+            "n_qudits": self._n_qudits,
+            "operations": self._operations,
+        }
+
+
+class OperatorRepr(Operator):
+    """Define a backend-independent quantum operator representation.
+
+    Allows the user to define a quantum operator with the dedicated class
+    method `from_operator_repr`, which requires:
+    - eigenstates: The basis states (e.g., ('r', 'g')).
+    - n_qudits: Number of qudits in the system.
+    - operations: A sequence of tuples weight, tensor operators on each qudit,
+        as described in `from_operator_repr`.
+
+    The created operator, supports de/serialization methods for remote backend
+    execution.
+
+    Example:
+    ```python
+    eigenstates = ("r", "g")
+    n_qudits = 4
+    # define X,Y,Z
+    X = {"gr": 1.0, "rg": 1.0}
+    Y = {"gr": 1.0j, "rg": -1.0j}
+    Z = {"rr": 1.0, "gg": -1.0}
+    # build for example 0.5*X0Y1X2Z3
+    operations = [
+        (
+            0.5,
+            [
+                (X, [0, 2]), # acts on qudit 0 and 2
+                (Y, [1]),
+                (Z, [3]),
+            ],
+        )
+    ]
+    op = OperatorRepr.from_operator_repr(
+        eigenstates=eigenstates,
+        n_qudits=n_qudits,
+        operations=operations
+    )
+    ```
+    """
+
+    @classmethod
+    def _from_operator_repr(
+        cls: Type[OperatorType],
+        *,
+        eigenstates: Sequence[Eigenstate],
+        n_qudits: int,
+        operations: FullOp[complex],
+    ) -> tuple[OperatorType, FullOp[complex]]:
+        """Implements the conversion used in `from_operator_repr()`.
+
+        Expected to return the Operator instance alongside the 'operations' to
+        use in serialization.
+        """
+        op = cls()
+        State._validate_eigenstates(eigenstates=eigenstates)
+        # TODO: operations validation
+        # op._validate_operations(
+        #    eigenstates=eigenstates, n_qudits=n_qudits, operations=operations
+        # )
+        return op, operations
+
+    def apply_to(self, state: StateType, /) -> StateType:
+        """``apply_to`` not implemented in ``OperatorRepr``."""
+        raise NotImplementedError(
+            "``apply_to`` not implemented in ``OperatorRepr``."
+        )
+
+    def expect(self, state: StateType, /) -> None:
+        """``expect`` not implemented in ``OperatorRepr``."""
+        raise NotImplementedError(
+            "``expect`` not implemented in ``OperatorRepr``."
+        )
+
+    def __add__(self: OperatorType, other: OperatorType, /) -> OperatorType:
+        """``__add__`` not implemented in ``OperatorRepr``."""
+        raise NotImplementedError(
+            "``__add__`` not implemented in ``OperatorRepr``."
+        )
+
+    def __rmul__(self: OperatorType, scalar: ArgScalarType) -> OperatorType:
+        """``__rmul__`` not implemented in ``OperatorRepr``."""
+        raise NotImplementedError(
+            "``__rmul__`` not implemented in ``OperatorRepr``."
+        )
+
+    def __matmul__(self: OperatorType, other: OperatorType) -> OperatorType:
+        """``__matmul__`` not implemented in ``OperatorRepr``."""
+        raise NotImplementedError(
+            "``__matmul__`` not implemented in ``OperatorRepr``."
+        )

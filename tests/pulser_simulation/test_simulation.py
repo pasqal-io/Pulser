@@ -734,13 +734,18 @@ def test_config(matrices):
     )
 
 
+@pytest.mark.skipif(
+    np.lib.NumpyVersion(np.__version__) >= "2.0.0",
+    reason="Random number generation doesn't produce the same results in numpy"
+    " >v2",
+)
 def test_noise(seq, matrices):
     np.random.seed(3)
     sim2 = QutipEmulator.from_sequence(
         seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.9)
     )
     assert sim2.run().sample_final_state() == Counter(
-        {"000": 857, "110": 73, "100": 70}
+        {"000": 818, "100": 82, "110": 55, "010": 31, "001": 14}
     )
     with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(SimConfig(noise="depolarizing"))
@@ -780,13 +785,13 @@ def test_noise_with_zero_epsilons(seq, matrices):
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
-        ("dephasing", {"0": 586, "1": 414}, 1),
-        ("relaxation", {"0": 586, "1": 414}, 1),
-        ("eff_noise", {"0": 586, "1": 414}, 1),
-        ("depolarizing", {"0": 581, "1": 419}, 3),
-        (("dephasing", "depolarizing", "relaxation"), {"0": 582, "1": 418}, 5),
-        (("eff_noise", "dephasing"), {"0": 587, "1": 413}, 2),
-        (("eff_noise", "leakage"), {"0": 586, "1": 414}, 1),
+        ("dephasing", {"0": 571, "1": 429}, 1),
+        ("relaxation", {"0": 571, "1": 429}, 1),
+        ("eff_noise", {"0": 571, "1": 429}, 1),
+        ("depolarizing", {"0": 560, "1": 440}, 3),
+        (("dephasing", "depolarizing", "relaxation"), {"0": 561, "1": 439}, 5),
+        (("eff_noise", "dephasing"), {"0": 572, "1": 428}, 2),
+        (("eff_noise", "leakage"), {"0": 571, "1": 429}, 1),
     ],
 )
 def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
@@ -850,27 +855,28 @@ def test_relaxation_noise():
         ryd_pop = new_ryd_pop
 
 
-deph_res = {"111": 978, "110": 11, "011": 6, "101": 5}
+deph_res = {"111": 978, "110": 12, "011": 7, "101": 3}
 depo_res = {
-    "111": 821,
-    "110": 61,
-    "011": 59,
-    "101": 48,
-    "100": 5,
-    "001": 3,
-    "010": 3,
+    "111": 829,
+    "101": 62,
+    "011": 58,
+    "110": 40,
+    "010": 5,
+    "001": 4,
+    "000": 1,
+    "100": 1,
 }
 deph_depo_res = {
-    "111": 806,
-    "110": 65,
-    "011": 63,
-    "101": 52,
-    "100": 6,
-    "001": 4,
-    "010": 3,
+    "111": 809,
+    "101": 63,
+    "011": 59,
+    "110": 56,
+    "001": 5,
+    "010": 4,
+    "100": 3,
     "000": 1,
 }
-eff_deph_res = {"111": 958, "110": 19, "011": 12, "101": 11}
+eff_deph_res = {"111": 961, "101": 15, "110": 14, "011": 9, "001": 1}
 
 
 @pytest.mark.parametrize(
@@ -927,35 +933,36 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
         assert np.all(np.isclose(state[:, 2], np.zeros_like(state[:, 2])))
 
 
-res_deph_relax = {
-    "000": 412,
-    "010": 230,
-    "001": 176,
-    "100": 174,
-    "101": 7,
-    "011": 1,
-}
+res_deph_relax = {"000": 451, "010": 205, "001": 170, "100": 168, "101": 6}
 
 
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
-        ("dephasing", {"111": 958, "110": 19, "011": 12, "101": 11}, 2),
-        ("eff_noise", {"111": 958, "110": 19, "011": 12, "101": 11}, 2),
+        (
+            "dephasing",
+            {"111": 961, "101": 15, "110": 14, "011": 9, "001": 1},
+            2,
+        ),
+        (
+            "eff_noise",
+            {"111": 961, "101": 15, "110": 14, "011": 9, "001": 1},
+            2,
+        ),
         (
             "relaxation",
-            {"000": 420, "010": 231, "001": 173, "100": 171, "101": 5},
+            {"000": 459, "010": 202, "001": 168, "100": 167, "101": 4},
             1,
         ),
         (("dephasing", "relaxation"), res_deph_relax, 3),
         (
             ("eff_noise", "dephasing"),
-            {"111": 922, "110": 33, "011": 23, "101": 21, "100": 1},
+            {"111": 932, "101": 28, "011": 24, "110": 15, "001": 1},
             4,
         ),
         (
             ("eff_noise", "leakage"),
-            {"111": 958, "110": 19, "011": 12, "101": 11},
+            {"111": 961, "101": 15, "110": 14, "011": 9, "001": 1},
             2,
         ),
     ],
@@ -1204,12 +1211,24 @@ def test_run_xy():
     assert sim.samples_obj._measurement == "XY"
 
 
-res1 = {"0000": 950, "0100": 19, "0001": 21, "0010": 10}
-res2 = {"0000": 944, "0010": 15, "1000": 33, "0100": 8}
-res3 = {"0000": 950, "0100": 19, "0010": 10, "0001": 21}
-res4 = {"0000": 951, "0100": 19, "1000": 30}
+res1 = {"0000": 907, "0100": 24, "0001": 41, "0010": 8, "1000": 20}
+res2 = {
+    "0000": 907,
+    "0010": 15,
+    "1000": 34,
+    "0100": 22,
+    "0001": 12,
+    "0101": 10,
+}
+res3 = {"0000": 907, "0100": 24, "1000": 20, "0010": 8, "0001": 41}
+res4 = {"0000": 907, "0100": 24, "1000": 20, "0010": 8, "0001": 41}
 
 
+@pytest.mark.skipif(
+    np.lib.NumpyVersion(np.__version__) >= "2.0.0",
+    reason="Random number generation doesn't produce the same results in numpy"
+    " >v2",
+)
 @pytest.mark.parametrize(
     "masked_qubit, noise, result, n_collapse_ops",
     [

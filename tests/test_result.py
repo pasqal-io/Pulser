@@ -22,8 +22,35 @@ import qutip
 
 import pulser.result
 from pulser.backend.results import ResultsSequence, ResultsType
-from pulser.result import SampledResult
+from pulser.result import Result, SampledResult
 from pulser_simulation.qutip_result import QutipResult
+
+
+def test_get_samples():
+    class TestResult(Result):
+        def __init__(self, weights):
+            assert weights.sum() == pytest.approx(1.0)
+            self.weights = weights
+            self.atom_order = tuple(
+                f"q{x}" for x in range(int(np.log2(weights.shape[0])))
+            )
+
+        def sampling_errors(self):
+            return {}
+
+        def _weights(self):
+            return self.weights
+
+    np.random.seed(123)
+    assert TestResult(np.array([0.1, 0.2, 0.3, 0.4])).get_samples(
+        100
+    ) == Counter({"10": 41, "11": 38, "01": 15, "00": 6})
+    assert TestResult(np.array([0.1, 0.2, 0.3, 0.4])).get_samples(
+        1000
+    ) == Counter({"11": 383, "10": 310, "01": 195, "00": 112})
+    assert TestResult(
+        np.array([1.0 if x == 0b110101 else 0.0 for x in range(2**6)])
+    ).get_samples(1000) == Counter({"110101": 1000})
 
 
 def test_sampled_result(patch_plt_show):

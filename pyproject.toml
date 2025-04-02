@@ -5,7 +5,7 @@ line-length = 79
 profile = "black"
 line_length = 79
 skip = ["__venv__", "__init__.py"]
-src_paths = ["pulser-core", "pulser-simulation", "pulser-pasqal"]
+src_paths = ["pulser-core", "pulser-simulation"]
 
 [tool.pytest.ini_options]
 filterwarnings = [
@@ -19,3 +19,6 @@ filterwarnings = [
 [build-system]
 requires = ["setuptools >= 64"]
 build-backend = "setuptools.build_meta"
+
+[tool.ruff.lint]
+select = ["NPY201"]
