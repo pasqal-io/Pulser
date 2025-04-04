@@ -491,6 +491,16 @@ def test_get_hamiltonian():
         ),
     )
 
+    simple_ham_noiseless = simple_sim_noise.get_hamiltonian(
+        144, noiseless=True
+    )
+    simple_ham_noiseless_expected = QutipEmulator.from_sequence(
+        simple_seq, config=SimConfig()
+    ).get_hamiltonian(144)
+    np.testing.assert_allclose(
+        simple_ham_noiseless.full(), simple_ham_noiseless_expected.full()
+    )
+
 
 def test_single_atom_simulation():
     one_reg = Register.from_coordinates([(0, 0)], "atom")
