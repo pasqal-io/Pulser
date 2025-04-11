@@ -15,7 +15,7 @@ packages=$(cat packages.txt)
 for pkg in $packages
 do
   echo "Packaging $pkg"
-  python -m build $pkg --wheel -o "../dist"
+  python -m build $pkg --wheel -o "dist"
   rm -r $pkg/build
 done
 
