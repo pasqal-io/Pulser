@@ -418,6 +418,8 @@ class Register(BaseRegister, RegDrawer):
         kwargs_savefig: dict = {},
         custom_ax: Optional[Axes] = None,
         show: bool = True,
+        draw_empty_sites: bool = False,
+        empty_color: Optional[str] = None,
     ) -> None:
         """Draws the entire register.
 
@@ -448,6 +450,8 @@ class Register(BaseRegister, RegDrawer):
             show: Whether or not to call `plt.show()` before returning. When
                 combining this plot with other ones in a single figure, one may
                 need to set this flag to False.
+            draw_empty_sites: If True, draws the empty sites as well.
+            empty_color: The color of the empty sites. Default is 'r'.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -462,25 +466,56 @@ class Register(BaseRegister, RegDrawer):
             draw_half_radius=draw_half_radius,
         )
 
+        if draw_empty_sites:
+            if self.layout is None:
+                raise ValueError(
+                    "The register must have an associated RegisterLayout "
+                    "to draw the empty sites."
+                )
+            layout_ids = list(self.layout.traps_dict.keys())
+            empty_layout = self.layout.define_register(
+                *layout_ids, qubit_ids=layout_ids
+            )
+            breakpoint()
+            empty_qubit_colors : Mapping[Union[int, str], str] = {
+                trap: empty_color or "r" for trap in layout_ids
+            }
+            empty_pos = empty_layout._coords_arr.as_array(detach=True)
+
         pos = self._coords_arr.as_array(detach=True)
         if custom_ax is None:
             custom_ax = cast(
                 plt.Axes,
                 self._initialize_fig_axes(
-                    pos,
+                    empty_pos if draw_empty_sites else pos,
                     blockade_radius=blockade_radius,
-                    draw_half_radius=draw_half_radius,
-                )[1],
-            )
-        super()._draw_2D(
-            custom_ax,
-            pos,
-            self._ids,
-            with_labels=with_labels,
+                    draw_half_radius=draw_half_radius
+                    )[1],
+                )
+
+        draw_kwargs = dict(
+            ax=custom_ax,
             blockade_radius=blockade_radius,
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,
+        )
+
+        if draw_empty_sites:
+            RegDrawer._draw_2D(empty_layout,
+                ids=empty_layout._ids,
+                pos=empty_pos,
+                qubit_colors=empty_qubit_colors,
+                with_labels=False,
+                label_name="empty",
+                **draw_kwargs,
+            )
+
+        super()._draw_2D(
+            ids=self._ids,
+            pos=pos,
             qubit_colors=qubit_colors,
+            with_labels=with_labels,
+            **draw_kwargs,
         )
 
         if fig_name is not None:
