@@ -15,12 +15,12 @@ packages=$(cat packages.txt)
 for pkg in $packages
 do
   echo "Packaging $pkg"
-  python $pkg/setup.py -q bdist_wheel -d "../dist"
+  python -m build $pkg --wheel -o "dist"
   rm -r $pkg/build
 done
 
 # Build the pulser metapackage
-python setup.py -q bdist_wheel -d "dist"
+python -m build --wheel -o "dist"
 rm -r build
 
 echo "Built wheels:"
