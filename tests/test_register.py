@@ -635,6 +635,30 @@ def test_automatic_layout(optimal_filling):
             reg.with_automatic_layout(bound_above_dev).layout.number_of_traps
             == bound_above_dev.max_layout_traps
         )
+        # If we set min_layout_filling to the optimal filling, we should end
+        # up with the optimal number of traps (because there can't be more)
+        bound_above_from_min_filling = dataclasses.replace(
+            device, min_layout_filling=optimal_filling
+        )
+        assert (
+            reg.with_automatic_layout(
+                bound_above_from_min_filling
+            ).layout.number_of_traps
+            == optimal_traps
+        )
+
+        # However, if the maximum number of traps allowed by min_layout_filling
+        # matches the minimum number of traps allowed the constraint is not
+        # imposed and we end up back to the original trap number
+        not_bound_above_from_min_filling = dataclasses.replace(
+            bound_above_from_min_filling, min_layout_traps=optimal_traps
+        )
+        assert (
+            reg.with_automatic_layout(
+                not_bound_above_from_min_filling
+            ).layout.number_of_traps
+            == trap_num
+        )
 
     with pytest.raises(TypeError, match="must be of type Device"):
         reg.with_automatic_layout(MockDevice)

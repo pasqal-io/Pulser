@@ -37,6 +37,8 @@ from pulser.exceptions.sequence import (
     DimensionTooHighError,
     DistanceError,
     InvalidSequenceError,
+    MaxQubitNumberError,
+    MinQubitNumberError,
     QubitsNumberError,
     RadiusError,
     RydbergLevelError,
@@ -140,16 +142,28 @@ def test_post_init_type_checks(test_params, param, value, msg):
             " less than or equal to 1.",
         ),
         (
+            "min_layout_filling",
+            0.5,
+            "minimum layout filling fraction must be greater than or equal to"
+            " 0. and less than `max_layout_filling`",
+        ),
+        (
             "optimal_layout_filling",
-            0.0,
-            "When defined, the optimal layout filling fraction must be greater"
-            " than 0. and less than or equal to `max_layout_filling`",
+            -0.1,
+            re.escape(
+                "When defined, the optimal layout filling fraction must be "
+                "greater than or equal to `min_layout_filling` (0.0) and less "
+                "than or equal to `max_layout_filling`"
+            ),
         ),
         (
             "optimal_layout_filling",
             0.9,
-            "When defined, the optimal layout filling fraction must be greater"
-            " than 0. and less than or equal to `max_layout_filling`",
+            re.escape(
+                "When defined, the optimal layout filling fraction must be "
+                "greater than or equal to `min_layout_filling` (0.0) and less "
+                "than or equal to `max_layout_filling`"
+            ),
         ),
         (
             "min_layout_traps",
@@ -319,6 +333,7 @@ def test_device_specs(device):
             + check_none_fn(
                 dev, "max_layout_traps", "Maximal number of traps: {}"
             )
+            + f" - Minimum layout filling fraction: {dev.min_layout_filling}\n"
             + f" - Maximum layout filling fraction: {dev.max_layout_filling}\n"
         )
 
@@ -546,7 +561,7 @@ def test_validate_layout(helpers):
         TriangularLatticeLayout(100, 5).make_mappable_register(51),
     ],
 )
-def test_layout_filling(helpers, register):
+def test_layout_filling_too_high(helpers, register):
     assert DigitalAnalogDevice.max_layout_filling == 0.5
     assert register.layout.number_of_traps == 100
     with helpers.raises_all(
@@ -554,6 +569,7 @@ def test_layout_filling(helpers, register):
             ValueError,
             QubitsNumberError,
             InvalidSequenceError,
+            MaxQubitNumberError,
         ],
         match=re.escape(
             "the given register has too many qubits "
@@ -562,6 +578,52 @@ def test_layout_filling(helpers, register):
         ),
     ):
         DigitalAnalogDevice.validate_layout_filling(register)
+
+
+@pytest.mark.parametrize(
+    "register",
+    [
+        TriangularLatticeLayout(100, 5).hexagonal_register(10),
+        TriangularLatticeLayout(100, 5).make_mappable_register(29),
+    ],
+)
+def test_layout_filling_too_low(helpers, register):
+    mod_device = replace(DigitalAnalogDevice, min_layout_filling=0.3)
+    assert register.layout.number_of_traps == 100
+    with helpers.raises_all(
+        [
+            ValueError,
+            QubitsNumberError,
+            InvalidSequenceError,
+            MinQubitNumberError,
+        ],
+        match=re.escape(
+            "the given register has too few qubits "
+            f"({len(register.qubit_ids)}). "
+            "On this device, this layout must hold at least 30 qubits."
+        ),
+    ):
+        mod_device.validate_layout_filling(register)
+
+
+def test_layout_filling_min_traps():
+    min_traps = 10
+    device = replace(
+        AnalogDevice, min_layout_filling=0.4, min_layout_traps=min_traps
+    )
+
+    # When the layout has more traps than 'min_layout_traps',
+    # `min_layout_filling` is enforced
+    register = TriangularLatticeLayout(min_traps + 1, 5).hexagonal_register(1)
+    assert register.layout.number_of_traps > min_traps
+    with pytest.raises(MinQubitNumberError):
+        device.validate_layout_filling(register)
+
+    # When the layout has only 'min_layout_traps',
+    # `min_layout_filling` not is enforced
+    register = TriangularLatticeLayout(min_traps, 5).hexagonal_register(1)
+    assert register.layout.number_of_traps == min_traps
+    device.validate_layout_filling(register)
 
 
 def test_layout_filling_fail():

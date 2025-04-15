@@ -362,6 +362,22 @@ class Register(BaseRegister, RegDrawer):
                 "registers with differentiable coordinates."
             )
 
+        max_traps = device.max_layout_traps
+        if device.min_layout_filling > 0:
+            # This is akin to imposing a max number of traps
+            max_allowed_traps = int(
+                len(self.qubit_ids) / device.min_layout_filling
+            )
+            if max_allowed_traps > device.min_layout_traps:
+                # We only enforce min_layout_filling if the maximum number
+                # of traps it allows is greater than the minimum number of
+                # traps required
+                max_traps = min(
+                    max_traps
+                    or max_allowed_traps,  # In case max_traps is None
+                    max_allowed_traps,
+                )
+
         trap_coords = generate_trap_coordinates(
             self.sorted_coords,
             min_trap_dist=device.min_atom_distance,
@@ -369,7 +385,7 @@ class Register(BaseRegister, RegDrawer):
             max_layout_filling=device.max_layout_filling,
             optimal_layout_filling=device.optimal_layout_filling,
             min_traps=device.min_layout_traps,
-            max_traps=device.max_layout_traps,
+            max_traps=max_traps,
         )
         layout = pulser.register.RegisterLayout(trap_coords, slug=layout_slug)
         trap_ids = layout.get_traps_from_coordinates(
