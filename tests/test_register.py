@@ -626,10 +626,13 @@ def test_automatic_layout(optimal_filling):
             reg.with_automatic_layout(bound_below_dev).layout.number_of_traps
             == bound_below_dev.min_layout_traps
         )
-    elif trap_num < optimal_traps:
+    else:
         assert trap_num > min_traps
         bound_above_dev = dataclasses.replace(
-            device, max_layout_traps=trap_num - 1
+            device,
+            max_layout_traps=trap_num - 1,
+            # So that we can still fit 20 atoms
+            max_layout_filling=device.max_layout_filling + 0.1,
         )
         assert (
             reg.with_automatic_layout(bound_above_dev).layout.number_of_traps
@@ -640,6 +643,7 @@ def test_automatic_layout(optimal_filling):
         bound_above_from_min_filling = dataclasses.replace(
             device, min_layout_filling=optimal_filling
         )
+        assert bound_above_from_min_filling.min_layout_filling > 0.0
         assert (
             reg.with_automatic_layout(
                 bound_above_from_min_filling

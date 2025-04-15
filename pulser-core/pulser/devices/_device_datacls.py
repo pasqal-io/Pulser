@@ -269,7 +269,7 @@ class BaseDevice(ABC):
                 raise PulserValueError(
                     "With the given maximum layout filling and maximum number "
                     f"of traps, a layout supports at most {max_atoms_} atoms, "
-                    "which is less than the maximum number of atoms allowed"
+                    "which is less than the maximum number of atoms allowed "
                     f"({self.max_atom_num})."
                 )
 

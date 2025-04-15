@@ -363,7 +363,7 @@ class Register(BaseRegister, RegDrawer):
             )
 
         max_traps = device.max_layout_traps
-        if device.min_layout_filling > 0:
+        if device.min_layout_filling > 0.0:
             # This is akin to imposing a max number of traps
             max_allowed_traps = int(
                 len(self.qubit_ids) / device.min_layout_filling
