@@ -65,7 +65,7 @@ The publication of the release notes will trigger a Github Actions workflow that
 Make sure this workflow ran without errors - if not, assess why it failed and, if it was a third-party problem (e.g. a network connection issue), try to rerun the workflow.
 However, in the unlikely scenario that the deployment failed, it is more likely that there is something that needs to be fixed, in which case you should make an hotfix right away.
 
-The documentation on Read the Docs will be automatically updated to the new version. To get the latest documentation on the docs portal (docs.pasqal.cloud/pulser), notify the compute team, so that they will manually rebuild and deploy.
+The documentation on Read the Docs will be automatically updated to the new version. To get the latest documentation on the [docs portal](https://docs.pasqal.com/pulser), notify the compute team, so that they will manually rebuild and deploy.
 
 ## Merging the changes back to `develop`
 
