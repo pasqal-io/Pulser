@@ -38,8 +38,10 @@ from pulser.exceptions.sequence import (
     DimensionTooHighError,
     DistanceError,
     MaxNumberOfTrapsError,
+    MaxQubitNumberError,
+    MinimumLayoutFillingError,
+    MinQubitNumberError,
     OptimalLayoutFillingError,
-    QubitsNumberError,
     RadiusError,
     RydbergLevelError,
     TrapsNumberTooHighError,
@@ -70,6 +72,7 @@ OPTIONAL_IN_ABSTR_REPR = tuple(
         "requires_layout",
         "accepts_new_layouts",
         "min_layout_traps",
+        "min_layout_filling",
     ]
 )
 PARAMS_WITH_ABSTR_REPR = ("channel_objects", "channel_ids", "dmm_objects")
@@ -91,6 +94,9 @@ class BaseDevice(ABC):
         min_layout_traps: The minimum number of traps a layout can have.
         max_layout_traps: An optional value for the maximum number of traps a
             layout can have.
+        min_layout_filling: The smallest fraction of a layout that must be
+            filled with atoms. Only enforced when the layout has more traps
+            than 'min_layout_traps'.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
         optimal_layout_filling: An optional value for the fraction of a layout
@@ -129,6 +135,7 @@ class BaseDevice(ABC):
     max_radial_distance: int | None
     interaction_coeff_xy: float | None = None
     supports_slm_mask: bool = False
+    min_layout_filling: float = 0.0
     max_layout_filling: float = 0.5
     optimal_layout_filling: float | None = None
     min_layout_traps: int = 1
@@ -227,8 +234,18 @@ class BaseDevice(ABC):
                 f"not {self.max_layout_filling}."
             )
 
+        if self.min_layout_filling is not None and not (
+            0.0 <= self.min_layout_filling < self.max_layout_filling
+        ):
+            raise MinimumLayoutFillingError(
+                device=self,
+                invalid=self.min_layout_filling,
+            )
+
         if self.optimal_layout_filling is not None and not (
-            0.0 < self.optimal_layout_filling <= self.max_layout_filling
+            self.min_layout_filling
+            <= self.optimal_layout_filling
+            <= self.max_layout_filling
         ):
             raise OptimalLayoutFillingError(
                 device=self,
@@ -252,7 +269,7 @@ class BaseDevice(ABC):
                 raise PulserValueError(
                     "With the given maximum layout filling and maximum number "
                     f"of traps, a layout supports at most {max_atoms_} atoms, "
-                    "which is less than the maximum number of atoms allowed"
+                    "which is less than the maximum number of atoms allowed "
                     f"({self.max_atom_num})."
                 )
 
@@ -474,11 +491,24 @@ class BaseDevice(ABC):
                 " registers with a register layout."
             )
         n_qubits = len(register.qubit_ids)
+        min_qubits = int(
+            np.ceil(register.layout.number_of_traps * self.min_layout_filling)
+        )
+        if (
+            register.layout.number_of_traps > self.min_layout_traps
+            and n_qubits < min_qubits
+        ):
+            raise MinQubitNumberError(
+                device=self,
+                invalid=n_qubits,
+                min=min_qubits,
+            )
+
         max_qubits = int(
             register.layout.number_of_traps * self.max_layout_filling
         )
         if n_qubits > max_qubits:
-            raise QubitsNumberError(
+            raise MaxQubitNumberError(
                 device=self,
                 invalid=n_qubits,
                 max=max_qubits,
@@ -663,6 +693,7 @@ class BaseDevice(ABC):
             self._param_check_none(self.max_layout_traps)(
                 " - Maximal number of traps: {}"
             ),
+            f" - Minimum layout filling fraction: {self.min_layout_filling}",
             f" - Maximum layout filling fraction: {self.max_layout_filling}",
         ]
 
@@ -788,6 +819,9 @@ class Device(BaseDevice):
         accepts_new_layouts: Whether registers built from register layouts
             that are not already calibrated are accepted. Only enforced in
             QPU execution.
+        min_layout_filling: The smallest fraction of a layout that must be
+            filled with atoms. Only enforced when the layout has more traps
+            than 'min_layout_traps'.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
         optimal_layout_filling: An optional value for the fraction of a layout
@@ -970,6 +1004,9 @@ class VirtualDevice(BaseDevice):
         min_atom_distance: The closest together two atoms can be (in μm).
         requires_layout: Whether the register used in the sequence must be
             created from a register layout. Only enforced in QPU execution.
+        min_layout_filling: The smallest fraction of a layout that must be
+            filled with atoms. Only enforced when the layout has more traps
+            than 'min_layout_traps'.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
         optimal_layout_filling: An optional value for the fraction of a layout
