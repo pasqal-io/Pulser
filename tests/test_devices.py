@@ -620,7 +620,7 @@ def test_layout_filling_min_traps():
         device.validate_layout_filling(register)
 
     # When the layout has only 'min_layout_traps',
-    # `min_layout_filling` not is enforced
+    # `min_layout_filling` is not enforced
     register = TriangularLatticeLayout(min_traps, 5).hexagonal_register(1)
     assert register.layout.number_of_traps == min_traps
     device.validate_layout_filling(register)
