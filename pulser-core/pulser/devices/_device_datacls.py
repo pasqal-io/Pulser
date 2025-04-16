@@ -95,8 +95,8 @@ class BaseDevice(ABC):
         max_layout_traps: An optional value for the maximum number of traps a
             layout can have.
         min_layout_filling: The smallest fraction of a layout that must be
-            filled with atoms. Only enforced for layouts with more traps than
-            'min_layout_traps'.
+            filled with atoms. Only enforced when the layout has more traps
+            than 'min_layout_traps'.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
         optimal_layout_filling: An optional value for the fraction of a layout
@@ -820,8 +820,8 @@ class Device(BaseDevice):
             that are not already calibrated are accepted. Only enforced in
             QPU execution.
         min_layout_filling: The smallest fraction of a layout that must be
-            filled with atoms. Only enforced for layouts with more traps than
-            'min_layout_traps'.
+            filled with atoms. Only enforced when the layout has more traps
+            than 'min_layout_traps'.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
         optimal_layout_filling: An optional value for the fraction of a layout
@@ -1005,8 +1005,8 @@ class VirtualDevice(BaseDevice):
         requires_layout: Whether the register used in the sequence must be
             created from a register layout. Only enforced in QPU execution.
         min_layout_filling: The smallest fraction of a layout that must be
-            filled with atoms. Only enforced for layouts with more traps than
-            'min_layout_traps'.
+            filled with atoms. Only enforced when the layout has more traps
+            than 'min_layout_traps'.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
         optimal_layout_filling: An optional value for the fraction of a layout
