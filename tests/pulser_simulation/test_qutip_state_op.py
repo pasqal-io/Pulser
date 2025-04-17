@@ -454,8 +454,11 @@ class TestQutipOperator:
     def test_from_operator_repr(self, pauli_i):
         with pytest.raises(
             ValueError,
-            match="QuditOp key must be made up of two eigenstates; instead, "
-            "got 'gggg'",
+            match=re.escape(
+                "Every QuditOp key must be made up of"
+                " two eigenstates among ('r', 'g');"
+                " instead, got 'gggg'."
+            ),
         ):
             QutipOperator.from_operator_repr(
                 eigenstates=("r", "g"),
@@ -465,8 +468,11 @@ class TestQutipOperator:
 
         with pytest.raises(
             ValueError,
-            match="QuditOp key must be made up of two eigenstates; instead, "
-            "got 'hh'",
+            match=re.escape(
+                "Every QuditOp key must be made up of"
+                " two eigenstates among ('r', 'g');"
+                " instead, got 'hh'."
+            ),
         ):
             QutipOperator.from_operator_repr(
                 eigenstates=("r", "g"),
@@ -476,8 +482,11 @@ class TestQutipOperator:
 
         with pytest.raises(
             ValueError,
-            match="QuditOp key must be made up of two eigenstates; instead, "
-            "got 'hh'",
+            match=re.escape(
+                "Every QuditOp key must be made up of"
+                " two eigenstates among ('r', 'g');"
+                " instead, got 'hh'."
+            ),
         ):
             QutipOperator.from_operator_repr(
                 eigenstates=("r", "g"),

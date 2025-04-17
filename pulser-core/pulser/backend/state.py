@@ -151,8 +151,10 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         Returns:
             The state constructed from the amplitudes.
         """
+        cls._validate_eigenstates(eigenstates)
+        n_qudits = cls._validate_amplitudes(amplitudes, eigenstates)
         obj, _amplitudes = cls._from_state_amplitudes(
-            eigenstates=eigenstates, amplitudes=amplitudes
+            eigenstates=eigenstates, n_qudits=n_qudits, amplitudes=amplitudes
         )
         obj._amplitudes = _amplitudes
         return obj
@@ -163,6 +165,7 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         cls: Type[StateType],
         *,
         eigenstates: Sequence[Eigenstate],
+        n_qudits: int,
         amplitudes: Mapping[str, ArgScalarType],
     ) -> tuple[StateType, Mapping[str, complex]]:
         """Implements the conversion used in `from_state_amplitudes()`.
@@ -280,6 +283,7 @@ class StateRepr(State):
         cls,
         *,
         eigenstates: Sequence[Eigenstate],
+        n_qudits: int,
         amplitudes: Mapping[str, complex],
     ) -> tuple[StateRepr, Mapping[str, complex]]:
         """Implements the conversion used in `from_state_amplitudes()`.
@@ -288,9 +292,6 @@ class StateRepr(State):
         in serialization.
         """
         state = cls(eigenstates=eigenstates)
-        n_qudits = state._validate_amplitudes(
-            eigenstates=eigenstates, amplitudes=amplitudes
-        )
         cls._n_qudits = n_qudits
         return state, amplitudes
 
