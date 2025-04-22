@@ -36,7 +36,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.math as pm
-from pulser.backend.observable import Observable
+from pulser.backend.observable import Callback, Observable
 from pulser.backend.operator import Operator, OperatorRepr
 from pulser.backend.state import State, StateRepr
 from pulser.json.abstract_repr.backend import _deserialize_emulation_config
@@ -138,6 +138,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
 
     """
 
+    callbacks: Sequence[Callback]
     observables: Sequence[Observable]
     default_evaluation_times: np.ndarray | Literal["Full"]
     initial_state: StateType | None
@@ -154,6 +155,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     def __init__(
         self,
         *,
+        callbacks: Sequence[Callback] = (),
         observables: Sequence[Observable] = (),
         # Default evaluation times for observables that don't specify one
         default_evaluation_times: Sequence[SupportsFloat] | Literal["Full"] = (
@@ -175,7 +177,17 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
                 " empty.",
                 stacklevel=2,
             )
-
+        for cb in callbacks:
+            if isinstance(cb, Observable):
+                raise TypeError(
+                    "All entries in 'callbacks' must not be instances of "
+                    "Observable, since those go in 'observables'."
+                )
+            if not isinstance(cb, Callback):
+                raise TypeError(
+                    "All entries in 'callbacks' must be instances of "
+                    f"Callback. Instead, got instance of type {type(cb)}."
+                )
         for obs in observables:
             if not isinstance(obs, Observable):
                 raise TypeError(
@@ -241,6 +253,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             )
 
         super().__init__(
+            callbacks=tuple(callbacks),
             observables=tuple(observables),
             default_evaluation_times=default_evaluation_times,
             initial_state=initial_state,
@@ -253,6 +266,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
 
     def _expected_kwargs(self) -> set[str]:
         return super()._expected_kwargs() | {
+            "callbacks",
             "observables",
             "default_evaluation_times",
             "initial_state",
