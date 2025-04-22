@@ -212,6 +212,7 @@ class QutipState(State[SupportsComplex, float]):
         cls: Type[QutipStateType],
         *,
         eigenstates: Sequence[Eigenstate],
+        n_qudits: int,
         amplitudes: Mapping[str, SupportsComplex],
     ) -> tuple[QutipStateType, Mapping[str, complex]]:
         """Construct the state from its basis states' amplitudes.
@@ -225,8 +226,6 @@ class QutipState(State[SupportsComplex, float]):
             The state constructed from the amplitudes, the eigenstates and the
             amplitudes that defined the state.
         """
-        cls._validate_eigenstates(eigenstates)
-        n_qudits = cls._validate_amplitudes(amplitudes, eigenstates)
         qudit_dim = len(eigenstates)
 
         def make_qobj(basis_state: str) -> qutip.Qobj:

@@ -187,19 +187,11 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
         Returns:
             The constructed operator.
         """
-        QutipState._validate_eigenstates(eigenstates)
         qudit_dim = len(eigenstates)
 
         def build_qudit_op(qudit_op: QuditOp[SupportsComplex]) -> qutip.Qobj:
             op = qutip.identity(qudit_dim) * 0
             for proj_str, coeff in qudit_op.items():
-                if len(proj_str) != 2 or any(
-                    s_ not in eigenstates for s_ in proj_str
-                ):
-                    raise ValueError(
-                        "Every QuditOp key must be made up of two eigenstates;"
-                        f" instead, got '{proj_str}'."
-                    )
                 ket = qutip.basis(qudit_dim, eigenstates.index(proj_str[0]))
                 bra = qutip.basis(
                     qudit_dim, eigenstates.index(proj_str[1])
@@ -215,19 +207,10 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
             qobj_qudit_ops = [
                 qutip.identity(qudit_dim) for _ in range(n_qudits)
             ]
-            free_inds = set(range(n_qudits))
             re_tensor_op = []
             for qudit_op, qudit_inds in tensor_op:
-                if bad_inds_ := (set(qudit_inds) - free_inds):
-                    raise ValueError(
-                        "Got invalid indices for a system with "
-                        f"{n_qudits} qudits: {bad_inds_}. For TensorOp "
-                        f"#{tensor_op_num}, only indices {free_inds} "
-                        "were still available."
-                    )
                 for ind in qudit_inds:
                     qobj_qudit_ops[ind] = build_qudit_op(qudit_op)
-                    free_inds.remove(ind)
                 re_qudit_op = {k: complex(v) for k, v in qudit_op.items()}
                 re_tensor_op.append((re_qudit_op, set(qudit_inds)))
             tensor_ops.append(qutip.tensor(qobj_qudit_ops))

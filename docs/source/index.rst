@@ -23,9 +23,9 @@ Pulser is designed to let users create experiments that are tailored to a
 specific device. In this way, you can have maximal flexibility and control over
 the behaviour of relevant physical parameters, within the bounds set by the chosen device.
 
-.. figure:: files/pulser_animation.gif
+.. figure:: files/pulser_animation.webp
     :align: center
-    :alt: pulser_animation
+    :alt: Animated diagram depicting the execution of a multi-channel sequence as different types of laser pulses acting on an atom register
     :figclass: align-center
 
     Execution of a pulse sequence designed for a specific device.

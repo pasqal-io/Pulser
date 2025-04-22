@@ -42,6 +42,7 @@ if TYPE_CHECKING:
 _BACKENDS = {
     "QPUBackend": "pulser.backend",
     "QutipBackend": "pulser_simulation",
+    "QutipBackendV2": "pulser_simulation",
     "EmuFreeBackend": "pulser_pasqal",
     "EmuTNBackend": "pulser_pasqal",
 }
