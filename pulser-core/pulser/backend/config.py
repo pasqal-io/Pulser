@@ -106,6 +106,9 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         observables: A sequence of observables to compute at specific
             evaluation times. The observables without specified evaluation
             times will use this configuration's 'default_evaluation_times'.
+        callbacks: A general callback that is not an observable. Observables
+            must be fed into the observables arg, since they all interact
+            with the Results, and are subject to additional validation.
         default_evaluation_times: The default times at which observables
             are computed. Can be a sequence of unique relative times between 0
             (the start of the sequence) and 1 (the end of the sequence), in
@@ -170,7 +173,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     ) -> None:
         """Initializes the EmulationConfig."""
         obs_tags = []
-        if not observables:
+        if not observables and not callbacks:
             warnings.warn(
                 f"{self.__class__.__name__!r} was initialized without any "
                 "observables. The corresponding emulation results will be"

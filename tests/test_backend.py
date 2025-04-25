@@ -416,7 +416,6 @@ def test_emulation_config():
     ):
         EmulationConfig(
             callbacks=(BitStrings(),),
-            observables=(BitStrings(),),
             default_evaluation_times=[-1e15, 0.0, 0.5, 1.0],
         )
     with pytest.raises(
