@@ -146,17 +146,21 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
 
         ``QuditOp = Mapping[str, ScalarType]``
 
-        By default it identifies strings ``"ij"`` as single-qudit operators,
+        By default, it identifies strings ``"ij"`` as single-qudit operators,
         where ``i`` and ``j`` are eigenstates that denote ``|i><j|``.
 
         Args:
             eigenstates: The eigenstates to use.
-            n_qubits: How many qubits there are in the system.
+            n_qudits: How many qudits there are in the system.
             operations: The full operator representation.
 
         Returns:
             The constructed operator.
         """
+        State._validate_eigenstates(eigenstates)
+        cls._validate_operations(
+            eigenstates=eigenstates, n_qudits=n_qudits, operations=operations
+        )
         obj, _operations = cls._from_operator_repr(
             eigenstates=eigenstates, n_qudits=n_qudits, operations=operations
         )
@@ -197,6 +201,38 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             "n_qudits": self._n_qudits,
             "operations": self._operations,
         }
+
+    @staticmethod
+    def _validate_operations(
+        *, eigenstates: Sequence[Eigenstate], n_qudits: int, operations: FullOp
+    ) -> None:
+        """Check validity of operations.
+
+        Check that operations passed as FullOp
+        to `from_operator_repr` are valid.
+        """
+        for tensor_op_num, (coeff, tensor_op) in enumerate(operations):
+            free_inds = set(range(n_qudits))
+            for qudit_op, qudit_inds in tensor_op:
+                if bad_inds_ := (set(qudit_inds) - free_inds):
+                    raise ValueError(
+                        "Got invalid indices for a system with "
+                        f"{n_qudits} qudits: {bad_inds_}. For TensorOp "
+                        f"#{tensor_op_num}, only indices {free_inds} "
+                        "were still available."
+                    )
+                free_inds.difference_update(qudit_inds)
+
+                for proj_str, coeff in qudit_op.items():
+                    if len(proj_str) != 2 or any(
+                        s_ not in eigenstates for s_ in proj_str
+                    ):
+                        raise ValueError(
+                            f"Every QuditOp key must be made up"
+                            f" of two eigenstates"
+                            f" among {eigenstates};"
+                            f" instead, got '{proj_str}'."
+                        )
 
 
 class OperatorRepr(Operator):
@@ -253,11 +289,6 @@ class OperatorRepr(Operator):
         use in serialization.
         """
         op = cls()
-        State._validate_eigenstates(eigenstates=eigenstates)
-        # TODO: operations validation
-        # op._validate_operations(
-        #    eigenstates=eigenstates, n_qudits=n_qudits, operations=operations
-        # )
         return op, operations
 
     def apply_to(self, state: StateType, /) -> StateType:
