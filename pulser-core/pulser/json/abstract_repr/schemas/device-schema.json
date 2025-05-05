@@ -209,6 +209,10 @@
               "description": "The closest together two atoms can be (in μm).",
               "type": "number"
             },
+            "min_layout_filling": {
+              "description": "The smallest fraction of a layout that must be filled with atoms.",
+              "type": "number"
+            },
             "min_layout_traps": {
               "description": "The minimum number of traps a layout can have.",
               "type": "number"
@@ -348,6 +352,10 @@
             },
             "min_atom_distance": {
               "description": "The closest together two atoms can be (in μm).",
+              "type": "number"
+            },
+            "min_layout_filling": {
+              "description": "The smallest fraction of a layout that must be filled with atoms.",
               "type": "number"
             },
             "min_layout_traps": {
