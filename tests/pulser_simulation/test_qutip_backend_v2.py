@@ -32,6 +32,10 @@ from pulser_simulation.simulation import QutipEmulator
 
 class CountCalls(Callback):
     def __init__(self):
+        """
+        Simple callback that counts how often it's been called.
+        The count can be queried after the simulation from self.counter.
+        """
         self.counter = 0
 
     def __call__(self, **kwargs):
@@ -96,7 +100,10 @@ def test_callback():
 
 def test_qutip_backend_v2_energy():
     seq = sequence()
-
+    with pytest.raises(
+        TypeError, match="'config' must be an instance of 'EmulationConfig'"
+    ):
+        QutipBackendV2(seq, config="tralala")
     config = QutipConfig(
         default_evaluation_times="Full",
         observables=[

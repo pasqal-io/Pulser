@@ -109,6 +109,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         callbacks: A general callback that is not an observable. Observables
             must be fed into the observables arg, since they all interact
             with the Results, and are subject to additional validation.
+            Unlike observables, these are called at every emulation step.
         default_evaluation_times: The default times at which observables
             are computed. Can be a sequence of unique relative times between 0
             (the start of the sequence) and 1 (the end of the sequence), in
