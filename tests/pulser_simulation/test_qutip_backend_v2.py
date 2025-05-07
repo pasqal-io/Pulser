@@ -32,8 +32,8 @@ from pulser_simulation.simulation import QutipEmulator
 
 class CountCalls(Callback):
     def __init__(self):
-        """
-        Simple callback that counts how often it's been called.
+        """Simple callback that counts how often it's been called.
+
         The count can be queried after the simulation from self.counter.
         """
         self.counter = 0
