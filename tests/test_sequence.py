@@ -147,7 +147,9 @@ def test_dmm_declaration(reg, device, det_map):
     seq.config_detuning_map(det_map, "dmm_1")
     with pytest.raises(
         ValueError,
-        match=r"No DMM called dmm_2 is available in the device\. Your selected device .* has the following DMM channels available: \['dmm_0', 'dmm_1'\]\.",
+        match=r"No DMM called dmm_2 is available in the device\. "
+        r"Your selected device .* has the following DMM channels "
+        r"available: \['dmm_0', 'dmm_1'\]\.",
     ):
         seq.config_detuning_map(det_map, "dmm_2")
     with pytest.raises(ValueError, match="DMM dmm_0 is not available"):
@@ -198,7 +200,9 @@ def test_slm_declaration(reg, device, det_map):
     assert seq.get_addressed_bases() == ()
     with pytest.raises(
         ValueError,
-        match=r"No DMM called dmm_2 is available in the device\. Your selected device .* has the following DMM channels available: \['dmm_0', 'dmm_1'\]\.",
+        match=r"No DMM called dmm_2 is available in the device\. Your "
+        r"selected device .* has the following DMM channels "
+        r"available: \['dmm_0', 'dmm_1'\]\.",
     ):
         seq.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_2")
     seq.config_slm_mask(["q0", "q1", "q3", "q4"])

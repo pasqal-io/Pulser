@@ -600,8 +600,9 @@ class Sequence(Generic[DeviceType]):
             if dmm_id not in self.device.dmm_channels:
                 raise ValueError(
                     f"No DMM called {dmm_id} is available in the device. "
-                    f"Your selected device {self.device.name} has the following "
-                    f"DMM channels available: {list(self.device.dmm_channels.keys())}."
+                    f"Your selected device {self.device.name} has the "
+                    "following DMM channels available: "
+                    f"{list(self.device.dmm_channels.keys())}."
                 )
             self._slm_mask_dmm = dmm_id
         if not self._in_xy and self._in_ising:
@@ -641,7 +642,8 @@ class Sequence(Generic[DeviceType]):
             raise ValueError(
                 f"No DMM called {dmm_id} is available in the device. "
                 f"Your selected device {self.device.name} has the following "
-                f"DMM channels available: {list(self.device.dmm_channels.keys())}."
+                "DMM channels available: "
+                f"{list(self.device.dmm_channels.keys())}."
             )
 
         dmm_ch = self.device.dmm_channels[dmm_id]
