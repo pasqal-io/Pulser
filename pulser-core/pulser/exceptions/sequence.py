@@ -110,7 +110,34 @@ class TrapsNumberTooHighError(TrapsNumberError):
 
 @dataclass
 class QubitsNumberError(InvalidSequenceError):
-    """An error in the number of qubits.
+    """An error in the number of qubits."""
+
+
+@dataclass
+class MinQubitNumberError(QubitsNumberError):
+    """Too few qubits for the layout.
+
+    Attributes:
+        invalid: The invalid number of qubits.
+        min: The minimum number of qubits.
+    """
+
+    invalid: int
+    min: int
+
+    def __str__(self) -> str:
+        return (
+            "Given the number of traps in the layout and the "
+            "device's minimum layout filling fraction, the given"
+            f" register has too few qubits ({self.invalid}). "
+            "On this device, this layout must hold at least "
+            f"{self.min} qubits."
+        )
+
+
+@dataclass
+class MaxQubitNumberError(QubitsNumberError):
+    """Too many qubits for the layout.
 
     Attributes:
         invalid: The invalid number of qubits.
@@ -224,9 +251,28 @@ class OptimalLayoutFillingError(InvalidSequenceError):
     def __str__(self) -> str:
         return (
             "When defined, the optimal layout filling fraction "
-            "must be greater than 0. and less than or equal to "
+            "must be greater than or equal to `min_layout_filling` "
+            f"({self.device.min_layout_filling}) and less than or equal to "
             f"`max_layout_filling` ({self.device.max_layout_filling}), "
             f"not {self.invalid}."
+        )
+
+
+@dataclass
+class MinimumLayoutFillingError(InvalidSequenceError):
+    """Invalid minimum layout filling.
+
+    Attributes:
+        invalid: The invalid value.
+    """
+
+    invalid: float
+
+    def __str__(self) -> str:
+        return (
+            "The minimum layout filling fraction must be greater than "
+            "or equal to 0. and less than `max_layout_filling` "
+            f"({self.device.max_layout_filling}), not {self.invalid}."
         )
 
 

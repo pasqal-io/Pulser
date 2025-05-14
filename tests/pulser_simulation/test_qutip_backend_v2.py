@@ -22,11 +22,24 @@ import qutip
 
 import pulser
 from pulser.backend.default_observables import Energy, Occupation, StateResult
+from pulser.backend.observable import Callback
 from pulser_simulation.qutip_backend import QutipBackendV2
 from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simulation import QutipEmulator
+
+
+class CountCalls(Callback):
+    def __init__(self):
+        """Simple callback that counts how often it's been called.
+
+        The count can be queried after the simulation from self.counter.
+        """
+        self.counter = 0
+
+    def __call__(self, **kwargs):
+        self.counter += 1
 
 
 def sequence(device: pulser.devices.Device | None = None):
@@ -64,13 +77,33 @@ def sequence(device: pulser.devices.Device | None = None):
     return seq
 
 
+def test_callback():
+    seq = sequence()
+
+    config = QutipConfig(
+        callbacks=[CountCalls()],
+    )
+    backend = QutipBackendV2(seq, config=config)
+    backend.run()
+    assert backend._config.callbacks[0].counter == seq.get_duration() + 1
+
+    config = QutipConfig(
+        callbacks=[CountCalls()],
+        noise_model=pulser.NoiseModel(
+            amp_sigma=0.1, runs=1, samples_per_run=1
+        ),
+    )
+    backend = QutipBackendV2(seq, config=config)
+    backend.run()
+    assert backend._config.callbacks[0].counter == seq.get_duration() + 1
+
+
 def test_qutip_backend_v2_energy():
     seq = sequence()
     with pytest.raises(
         TypeError, match="'config' must be an instance of 'EmulationConfig'"
     ):
         QutipBackendV2(seq, config="tralala")
-
     config = QutipConfig(
         default_evaluation_times="Full",
         observables=[
