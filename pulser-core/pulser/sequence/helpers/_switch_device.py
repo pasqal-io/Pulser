@@ -69,7 +69,7 @@ def switch_device(
         name_in_msg = "Rydberg level"
 
     if getattr(new_device, interaction_param) != getattr(
-        seq._device, interaction_param
+        seq.device, interaction_param
     ):
         if strict:
             raise ValueError(

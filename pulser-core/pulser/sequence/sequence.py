@@ -283,13 +283,13 @@ class Sequence(Generic[DeviceType]):
     @property
     def available_channels(self) -> dict[str, Channel]:
         """Channels still available for declaration."""
-        all_channels = {**self._device.channels, **self._device.dmm_channels}
+        all_channels = {**self.device.channels, **self.device.dmm_channels}
         if not self._in_xy and not self._in_ising:
             # If no channel has been declared nor any DMM configured, and if
             # device is physical, don't show the DMM used for the SLM Mask
             if (
                 self._slm_mask_dmm is not None
-                and not self._device.reusable_channels
+                and not self.device.reusable_channels
             ):
                 return {
                     id: ch
@@ -313,7 +313,7 @@ class Sequence(Generic[DeviceType]):
                     # MockDevice channels can be declared multiple times
                     (
                         id not in occupied_ch_ids
-                        or self._device.reusable_channels
+                        or self.device.reusable_channels
                     )
                     and (
                         # If we are in XY mode, the dmm channels are available
@@ -571,9 +571,9 @@ class Sequence(Generic[DeviceType]):
                 pulse of the sequence.
             dmm_id: Id of the DMM channel to use in the device.
         """
-        if not self._device.supports_slm_mask:
+        if not self.device.supports_slm_mask:
             raise ValueError(
-                f"The '{self._device}' device does not have an SLM mask."
+                f"The '{self.device}' device does not have an SLM mask."
             )
 
         if self.is_register_mappable():
@@ -597,8 +597,13 @@ class Sequence(Generic[DeviceType]):
             raise ValueError("SLM mask can be configured only once.")
 
         if self._in_xy or (not self._in_xy and not self._in_ising):
-            if dmm_id not in self._device.dmm_channels:
-                raise ValueError(f"No DMM {dmm_id} in the device.")
+            if dmm_id not in self.device.dmm_channels:
+                raise ValueError(
+                    f"No DMM called {dmm_id} is available in the device. "
+                    f"Your selected device {self.device.name} has the "
+                    "following DMM channels available: "
+                    f"{list(self.device.dmm_channels.keys())}."
+                )
             self._slm_mask_dmm = dmm_id
         if not self._in_xy and self._in_ising:
             self._set_slm_mask_dmm(dmm_id, targets)
@@ -633,10 +638,15 @@ class Sequence(Generic[DeviceType]):
         detuning_map: DetuningMap,
         dmm_id: str,
     ) -> None:
-        if dmm_id not in self._device.dmm_channels:
-            raise ValueError(f"No DMM {dmm_id} in the device.")
+        if dmm_id not in self.device.dmm_channels:
+            raise ValueError(
+                f"No DMM called {dmm_id} is available in the device. "
+                f"Your selected device {self.device.name} has the following "
+                "DMM channels available: "
+                f"{list(self.device.dmm_channels.keys())}."
+            )
 
-        dmm_ch = self._device.dmm_channels[dmm_id]
+        dmm_ch = self.device.dmm_channels[dmm_id]
         if self._in_xy:
             raise ValueError(
                 f"DMM '{dmm_ch}' cannot work simultaneously "
@@ -653,7 +663,7 @@ class Sequence(Generic[DeviceType]):
         # Add a suffix to the DMM id if repetition in the declared channels
         dmm_name = dmm_id
         if dmm_id in self.declared_channels:
-            assert self._device.reusable_channels
+            assert self.device.reusable_channels
             dmm_name = _get_dmm_name(
                 dmm_id, list(self.declared_channels.keys())
             )
@@ -694,7 +704,7 @@ class Sequence(Generic[DeviceType]):
         Returns:
             The sequence with the new register.
         """
-        new_seq = type(self)(register=new_register, device=self._device)
+        new_seq = type(self)(register=new_register, device=self.device)
         # Copy the variables to the new sequence
         new_seq._variables = self.declared_variables
         for call in self._calls[1:] + self._to_build_calls:
@@ -768,10 +778,10 @@ class Sequence(Generic[DeviceType]):
         if name in self._schedule:
             raise ValueError("The given name is already in use.")
 
-        if channel_id not in self._device.channels:
+        if channel_id not in self.device.channels:
             raise ValueError(f"No channel {channel_id} in the device.")
 
-        ch = self._device.channels[channel_id]
+        ch = self.device.channels[channel_id]
         if channel_id not in self.available_channels:
             if self._in_xy and ch.basis != "XY":
                 raise ValueError(
@@ -1490,9 +1500,7 @@ class Sequence(Generic[DeviceType]):
                 the available options).
         """
         available = (
-            self._device.supported_bases - {"XY"}
-            if not self._in_xy
-            else {"XY"}
+            self.device.supported_bases - {"XY"} if not self._in_xy else {"XY"}
         )
         if basis not in available:
             raise ValueError(
@@ -2390,7 +2398,7 @@ class Sequence(Generic[DeviceType]):
 
     def _set_register(self, seq: Sequence, reg: BaseRegister) -> None:
         """Sets the register on a sequence who had a mappable register."""
-        self._device.validate_register(reg)
+        self.device.validate_register(reg)
         qids = set(reg.qubit_ids)
         used_qubits = set()
         for ch, ch_schedule in self._schedule.items():
