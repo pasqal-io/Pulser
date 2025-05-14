@@ -120,6 +120,8 @@ class QutipConfig(EmulationConfig[QutipState]):
         self, total_duration_ns: int
     ) -> Literal["Full"] | np.ndarray:
         extra_eval_times: set[float] = set()
+        if self.callbacks:
+            return "Full"
         for obs in self.observables:
             extra_eval_times.update(obs.evaluation_times or [])
 

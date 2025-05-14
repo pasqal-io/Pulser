@@ -411,6 +411,23 @@ def test_emulation_config():
     ):
         EmulationConfig(observables=["fidelity"])
     with pytest.raises(
+        TypeError,
+        match="All entries in 'callbacks' must not be instances of Observable",
+    ):
+        EmulationConfig(
+            callbacks=(BitStrings(),),
+            default_evaluation_times=[-1e15, 0.0, 0.5, 1.0],
+        )
+    with pytest.raises(
+        TypeError,
+        match="All entries in 'callbacks' must be instances of Callback",
+    ):
+        EmulationConfig(
+            callbacks=("Hello",),
+            observables=(BitStrings(),),
+            default_evaluation_times=[-1e15, 0.0, 0.5, 1.0],
+        )
+    with pytest.raises(
         ValueError,
         match="Some of the provided 'observables' share identical tags",
     ):
