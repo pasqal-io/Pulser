@@ -178,6 +178,14 @@ class QutipBackendV2(EmulatorBackend):
                     ),
                     eigenstates=eigenstates,
                 )
+                for callback in self._config.callbacks:
+                    callback(
+                        config=self._config,
+                        t=t,
+                        state=state,
+                        hamiltonian=ham,
+                        result=res,
+                    )
                 for obs in self._config.observables:
                     obs(
                         config=self._config,
@@ -226,6 +234,14 @@ class QutipBackendV2(EmulatorBackend):
                     ),
                     eigenstates=eigenstates,
                 )
+                for callback in self._config.callbacks:
+                    callback(
+                        config=self._config,
+                        t=t,
+                        state=state,
+                        hamiltonian=ham,
+                        result=res,
+                    )
                 for obs in self._config.observables:
                     obs(
                         config=self._config,
