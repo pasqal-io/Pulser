@@ -17,8 +17,9 @@ from __future__ import annotations
 
 import warnings
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Iterator
 from dataclasses import asdict, replace
+from functools import cached_property
 from typing import Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
@@ -170,6 +171,16 @@ class QutipEmulator:
                 self._meas_basis = self.basis_name.replace("_with_error", "")
         self.set_initial_state("all-ground")
 
+    @cached_property
+    def _noiseless_hamiltonian(self) -> Hamiltonian:
+        return Hamiltonian(
+            self.samples_obj,
+            self._register.qubits,
+            self._hamiltonian._device,
+            self._sampling_rate,
+            NoiseModel(),
+        )
+
     @property
     def sampling_times(self) -> np.ndarray:
         """The times at which hamiltonian is sampled."""
@@ -199,6 +210,11 @@ class QutipEmulator:
     def config(self) -> SimConfig:
         """The current configuration, as a SimConfig instance."""
         return SimConfig.from_noise_model(self._hamiltonian.config)
+
+    @property
+    def total_duration_ns(self) -> int:
+        """The total duration of the sequence, in ns."""
+        return self._tot_duration
 
     def set_config(self, cfg: SimConfig) -> None:
         """Sets current config to cfg and updates simulation parameters.
@@ -348,7 +364,9 @@ class QutipEmulator:
                     "Incompatible shape of initial state."
                     + f"Expected {legal_shape}, got {shape}."
                 )
-            self._initial_state = qutip.Qobj(state, dims=legal_dims)
+            self._initial_state = (
+                qutip.Qobj(state, dims=legal_dims).unit().to("CSR")
+            )
 
     @property
     def evaluation_times(self) -> np.ndarray:
@@ -446,7 +464,9 @@ class QutipEmulator:
         """
         return self._hamiltonian.build_operator(operations)
 
-    def get_hamiltonian(self, time: float) -> qutip.Qobj:
+    def get_hamiltonian(
+        self, time: float, noiseless: bool = False
+    ) -> qutip.Qobj:
         r"""Get the Hamiltonian created from the sequence at a fixed time.
 
         Note:
@@ -473,9 +493,131 @@ class QutipEmulator:
                 f"Provided time (`time` = {time}) must be "
                 "greater than or equal to 0."
             )
+
+        if noiseless:
+            return self._noiseless_hamiltonian._hamiltonian(time / 1000)
+
         return self._hamiltonian._hamiltonian(
             time / 1000
         )  # Creates new Qutip.Qobj
+
+    @staticmethod
+    def _get_min_variation(ch_sample: ChannelSamples) -> int:
+        """Compute minimum variations of samples.
+
+        This is used as default value for the max_step option.
+        """
+        end_point = ch_sample.duration - 1
+        min_variations: list[int] = []
+        for sample in (
+            ch_sample.amp.as_array(detach=True),
+            ch_sample.det.as_array(detach=True),
+        ):
+            min_variations.append(
+                int(
+                    np.min(
+                        np.diff(
+                            np.nonzero(np.diff(sample)),
+                            prepend=-1,
+                            append=end_point,
+                        )
+                    )
+                )
+            )
+
+        return min(min_variations)
+
+    def _run_solver(
+        self, progress_bar: bool = False, **options: Any
+    ) -> CoherentResults:
+        """Returns CoherentResults: Object containing evolution results."""
+        # Decide if progress bar will be fed to QuTiP solver
+        p_bar: Optional[bool]
+        if progress_bar is True:
+            p_bar = True
+        elif (progress_bar is False) or (progress_bar is None):
+            p_bar = None
+        else:
+            raise ValueError("`progress_bar` must be a bool.")
+
+        if (
+            # TODO: Check that the relevant dephasing parameter is > 0.
+            "dephasing" in self.config.noise
+            or "relaxation" in self.config.noise
+            or "depolarizing" in self.config.noise
+            or "eff_noise" in self.config.noise
+        ):
+            result = qutip.mesolve(
+                self._hamiltonian._hamiltonian,
+                self.initial_state,
+                self._eval_times_array,
+                self._hamiltonian._collapse_ops,
+                options=dict(
+                    progress_bar=p_bar, normalize_output=False, **options
+                ),
+            )
+        else:
+            result = qutip.sesolve(
+                self._hamiltonian._hamiltonian,
+                self.initial_state,
+                self._eval_times_array,
+                options=dict(
+                    progress_bar=p_bar, normalize_output=False, **options
+                ),
+            )
+        results = [
+            QutipResult(
+                tuple(self._hamiltonian._qdict),
+                self._meas_basis,
+                state,
+                self._meas_basis in self.basis_name,
+                evaluation_time=t / self._tot_duration * 1e3,
+            )
+            for state, t in zip(result.states, self._eval_times_array)
+        ]
+
+        meas_errors = (
+            {k: self.config.spam_dict[k] for k in ("epsilon", "epsilon_prime")}
+            if "SPAM" in self.config.noise
+            else None
+        )
+
+        return CoherentResults(
+            results,
+            self._hamiltonian._size,
+            self.basis_name,
+            self._eval_times_array,
+            self._meas_basis,
+            meas_errors,
+        )
+
+    def _validate_options(self, options: Any) -> None:
+        options.setdefault(
+            "max_step",
+            min(
+                self._get_min_variation(ch_sample)
+                for ch_sample in self.samples_obj.samples_list
+            )
+            / 1000,
+        )
+
+        options.setdefault(
+            "nsteps", max(1000, self._tot_duration // options["max_step"])
+        )
+
+        if "SPAM" in self.config.noise:
+            if self.config.eta > 0 and self.initial_state != qutip.tensor(
+                [
+                    self._hamiltonian.basis[
+                        "u" if self._hamiltonian._interaction == "XY" else "g"
+                    ]
+                    for _ in range(self._hamiltonian._size)
+                ]
+            ):
+                raise NotImplementedError(
+                    "Can't combine state preparation errors with an initial "
+                    "state different from the ground."
+                )
 
     # Run Simulation Evolution using Qutip
     def run(
@@ -491,7 +633,7 @@ class QutipEmulator:
         Args:
             progress_bar: If True, the progress bar of QuTiP's
                 solver will be shown. If None or False, no text appears.
-            options: Used as arguments for qutip.Options(). If specified, will
+            options: Given directly to the Qutip Solver. If specified, will
                 override SimConfig solver_options. If no `max_step` value is
                 provided, an automatic one is calculated from the `Sequence`'s
                 schedule (half of the shortest duration among pulses and
@@ -500,177 +642,21 @@ class QutipEmulator:
 
                 .. _docs: https://bit.ly/3il9A2u
         """
+        self._validate_options(options)
 
-        def get_min_variation(ch_sample: ChannelSamples) -> int:
-            end_point = ch_sample.duration - 1
-            min_variations: list[int] = []
-            for sample in (
-                ch_sample.amp.as_array(detach=True),
-                ch_sample.det.as_array(detach=True),
-            ):
-                min_variations.append(
-                    int(
-                        np.min(
-                            np.diff(
-                                np.nonzero(np.diff(sample)),
-                                prepend=-1,
-                                append=end_point,
-                            )
-                        )
-                    )
-                )
-
-            return min(min_variations)
-
-        if "max_step" not in options:
-            options["max_step"] = (
-                min(
-                    [
-                        get_min_variation(ch_sample)
-                        for ch_sample in self.samples_obj.samples_list
-                    ]
-                )
-                / 1000
-            )
-        if "nsteps" not in options:
-            options["nsteps"] = max(
-                1000, self._tot_duration // options["max_step"]
-            )
-        solv_ops = qutip.Options(**options)
-
-        meas_errors: Optional[Mapping[str, float]] = None
-        if "SPAM" in self.config.noise:
-            meas_errors = {
-                k: self.config.spam_dict[k]
-                for k in ("epsilon", "epsilon_prime")
-            }
-            if self.config.eta > 0 and self.initial_state != qutip.tensor(
-                [
-                    self._hamiltonian.basis[
-                        "u" if self._hamiltonian._interaction == "XY" else "g"
-                    ]
-                    for _ in range(self._hamiltonian._size)
-                ]
-            ):
-                raise NotImplementedError(
-                    "Can't combine state preparation errors with an initial "
-                    "state different from the ground."
-                )
-
-        def _run_solver() -> CoherentResults:
-            """Returns CoherentResults: Object containing evolution results."""
-            # Decide if progress bar will be fed to QuTiP solver
-            p_bar: Optional[bool]
-            if progress_bar is True:
-                p_bar = True
-            elif (progress_bar is False) or (progress_bar is None):
-                p_bar = None
-            else:
-                raise ValueError("`progress_bar` must be a bool.")
-
-            if (
-                # TODO: Check that the relevant dephasing parameter is > 0.
-                "dephasing" in self.config.noise
-                or "relaxation" in self.config.noise
-                or "depolarizing" in self.config.noise
-                or "eff_noise" in self.config.noise
-            ):
-                result = qutip.mesolve(
-                    self._hamiltonian._hamiltonian,
-                    self.initial_state,
-                    self._eval_times_array,
-                    self._hamiltonian._collapse_ops,
-                    progress_bar=p_bar,
-                    options=solv_ops,
-                )
-            else:
-                result = qutip.sesolve(
-                    self._hamiltonian._hamiltonian,
-                    self.initial_state,
-                    self._eval_times_array,
-                    progress_bar=p_bar,
-                    options=solv_ops,
-                )
-            results = [
-                QutipResult(
-                    tuple(self._hamiltonian._qdict),
-                    self._meas_basis,
-                    state,
-                    self._meas_basis in self.basis_name,
-                )
-                for state in result.states
-            ]
-            return CoherentResults(
-                results,
-                self._hamiltonian._size,
-                self.basis_name,
-                self._eval_times_array,
-                self._meas_basis,
-                meas_errors,
-            )
-
-        # Check if noises ask for averaging over multiple runs:
-        if set(self.config.noise).issubset(
-            {
-                "dephasing",
-                "relaxation",
-                "SPAM",
-                "depolarizing",
-                "eff_noise",
-                "amplitude",
-                "leakage",
-            }
-        ) and (
-            # If amplitude is in noise, not resampling needs amp_sigma=0.
+        if (
             "amplitude" not in self.config.noise
             or self.config.amp_sigma == 0.0
-        ):
-            # If there is "SPAM", the preparation errors must be zero
-            if "SPAM" not in self.config.noise or self.config.eta == 0:
-                return _run_solver()
-
-            else:
-                # Stores the different initial configurations and frequency
-                initial_configs = Counter(
-                    "".join(
-                        (
-                            np.random.uniform(
-                                size=len(self._hamiltonian._qid_index)
-                            )
-                            < self.config.eta
-                        )
-                        .astype(int)
-                        .astype(str)  # Turns bool->int->str
-                    )
-                    for _ in range(self.config.runs)
-                ).most_common()
-                loop_runs = len(initial_configs)
-                update_ham = False
-        else:
-            loop_runs = self.config.runs
-            update_ham = True
+        ) and ("SPAM" not in self.config.noise or self.config.eta == 0):
+            # A single run is needed, regardless of self.config.runs
+            return self._run_solver(progress_bar, **options)
 
         # Will return NoisyResults
-        time_indices = range(len(self._eval_times_array))
-        total_count = np.array([Counter() for _ in time_indices])
-        # We run the system multiple times
-        for i in range(loop_runs):
-            if not update_ham:
-                initial_state, reps = initial_configs[i]
-                # We load the initial state manually
-                self._hamiltonian._bad_atoms = dict(
-                    zip(
-                        self._hamiltonian._qid_index,
-                        np.array(list(initial_state)).astype(bool),
-                    )
-                )
-            else:
-                reps = 1
-            # At each run, new random noise: new Hamiltonian
-            self._hamiltonian._construct_hamiltonian(update=update_ham)
-            # Get CoherentResults instance from sequence with added noise:
-            cleanres_noisyseq = _run_solver()
-            # Extract statistics at eval time:
+        total_count = np.array([Counter() for _ in self._eval_times_array])
+
+        for cleanres_noisyseq, reps in self._noisy_runs(
+            progress_bar=progress_bar, **options
+        ):
             total_count += np.array(
                 [
                     cleanres_noisyseq.sample_state(
@@ -679,14 +665,16 @@ class QutipEmulator:
                     for t in self._eval_times_array
                 ]
             )
+
         n_measures = self.config.runs * self.config.samples_per_run
         results = [
             SampledResult(
                 tuple(self._hamiltonian._qdict),
                 self._meas_basis,
-                total_count[t],
+                total_count[ind],
+                evaluation_time=t / self._tot_duration * 1e3,
             )
-            for t in time_indices
+            for ind, t in enumerate(self._eval_times_array)
         ]
         return NoisyResults(
             results,
@@ -695,6 +683,54 @@ class QutipEmulator:
             self._eval_times_array,
             n_measures,
         )
+
+    def _noisy_runs(
+        self, progress_bar: bool, **options: Any
+    ) -> Iterator[tuple[SimulationResults, int]]:
+        if "doppler" in self.config.noise or (
+            "amplitude" in self.config.noise and self.config.amp_sigma != 0.0
+        ):
+            loop_runs = self.config.runs
+            update_ham = True
+        else:
+            # Only state preparation noise for monte-carlo:
+            # a single run is needed
+            # for all identical sets of random dark qubits.
+
+            assert self.config.eta != 0
+
+            initial_configs = Counter(
+                "".join(
+                    (
+                        np.random.uniform(
+                            size=len(self._hamiltonian._qid_index)
+                        )
+                        < self.config.eta
+                    )
+                    .astype(int)
+                    .astype(str)  # Turns bool->int->str
+                )
+                for _ in range(self.config.runs)
+            ).most_common()
+            loop_runs = len(initial_configs)
+            update_ham = False
+
+        for i in range(loop_runs):
+            if update_ham:
+                reps = 1
+            else:
+                initial_state, reps = initial_configs[i]
+                # We load the initial state manually
+                self._hamiltonian._bad_atoms = dict(
+                    zip(
+                        self._hamiltonian._qid_index,
+                        np.array(list(initial_state)).astype(bool),
+                    )
+                )
+            # At each run, new random noise: new Hamiltonian
+            self._hamiltonian._construct_hamiltonian(update=update_ham)
+            # Yield CoherentResults instance from sequence with added noise:
+            yield self._run_solver(progress_bar, **options), reps
 
     def draw(
         self,

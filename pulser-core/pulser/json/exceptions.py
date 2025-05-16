@@ -11,26 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Custom exceptions for serialization errors."""
+"""Custom exceptions for serialization errors.
 
+Note: This module has migrated to pulser.exceptions.serialization. Please
+use the new path for any future work.
+"""
 
-class SerializationError(Exception):
-    """Exception raised when sequence serialization fails."""
+import warnings
 
-    pass
+from pulser.exceptions import serialization
 
+warnings.warn(
+    "module pulser.json.exceptions is deprecated, "
+    "please migrate your code to "
+    "use pulser.exceptions.serialization",
+    category=DeprecationWarning,
+    stacklevel=2,
+)
 
-class AbstractReprError(Exception):
-    """Exception raised for abstract representation errors.
-
-    Raised when an error occurs during the serialization to or deserialization
-    from the abstract representation.
-    """
-
-    pass
-
-
-class DeserializeDeviceError(Exception):
-    """Exception raised when device deserialization fails."""
-
-    pass
+# For backwards compatibility, re-export the exceptions
+# from their new module `pulser.exceptions`.
+SerializationError = serialization.SerializationError
+AbstractReprError = serialization.AbstractReprError
+DeserializeDeviceError = serialization.DeserializeDeviceError

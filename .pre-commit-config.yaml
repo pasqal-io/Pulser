@@ -5,9 +5,16 @@ repos:
       - id: black-jupyter
 
   - repo: https://github.com/PyCQA/flake8
-    rev: 4.0.1
+    rev: 7.1.1
     hooks:
       - id: flake8
+
+  # Ruff only checks numpy v2 compatibility at this moment
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.1
+    hooks:
+      - id: ruff
+        args: [ --fix ]
 
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0

@@ -144,10 +144,11 @@ class NoiseModel:
         p_false_neg: Probability of measuring a false negative.
         temperature: Temperature, set in µK, of the atoms in the array.
             Also sets the standard deviation of the speed of the atoms.
-        laser_waist: Waist of the gaussian laser, set in µm, for global
-            pulses.
-        amp_sigma: Dictates the fluctuations in amplitude as a standard
-            deviation of a normal distribution centered in 1.
+        laser_waist: Waist of the gaussian lasers, set in µm, for global
+            pulses. Assumed to be the same for all global channels.
+        amp_sigma: Dictates the fluctuations in amplitude of global pulses
+            from run to run as a standard deviation of a normal distribution
+            centered in 1. Assumed to be the same for all global channels.
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
@@ -354,10 +355,16 @@ class NoiseModel:
             # type checking
             try:
                 operator = np.array(op, dtype=complex)
-            except Exception:
-                raise TypeError(
-                    f"Operator {op!r} is not castable to a Numpy array."
-                )
+            except TypeError as e1:
+                try:
+                    operator = np.array(
+                        op.to("Dense").data_as("ndarray"),  # type: ignore
+                        dtype=complex,
+                    )
+                except AttributeError:
+                    raise TypeError(
+                        f"Operator {op!r} is not castable to a Numpy array."
+                    ) from e1
             if operator.ndim != 2:
                 raise ValueError(f"Operator '{op!r}' is not a 2D array.")
 

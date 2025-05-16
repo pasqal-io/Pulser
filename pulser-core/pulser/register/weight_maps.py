@@ -123,7 +123,9 @@ class WeightMap(Traps, RegDrawer):
         pos = self.trap_coordinates
         custom_ax = custom_ax or cast(Axes, self._initialize_fig_axes(pos)[1])
 
-        labels_ = labels if labels is not None else list(range(len(pos)))
+        labels_ = (
+            labels if labels is not None else [str(i) for i in range(len(pos))]
+        )
 
         super()._draw_2D(
             custom_ax,
@@ -178,8 +180,10 @@ class WeightMap(Traps, RegDrawer):
 class DetuningMap(WeightMap):
     """Defines a DetuningMap.
 
-    A DetuningMap associates a detuning weight (a value between 0 and 1)
-    to the coordinates of a trap.
+    A ``DetuningMap`` is associated to a ``DMM`` in a ``Sequence``. It links a
+    set of weights to a set of trap coordinates. It is intended to be defined
+    by the user from a ``RegisterLayout``, a ``Register`` or a
+    ``MappableRegister`` using ``define_detuning_map``.
 
     Args:
         trap_coordinates: An array containing the coordinates of the traps.

@@ -15,12 +15,15 @@
 
 from __future__ import annotations
 
+import json
 import warnings
 from dataclasses import MISSING, Field
 from typing import TYPE_CHECKING, Any, Optional, Sequence
 
+import numpy as np
+
 import pulser
-from pulser.json.exceptions import AbstractReprError
+from pulser.exceptions.serialization import AbstractReprError
 
 if TYPE_CHECKING:  # pragma: no cover
     from pulser.register import QubitId
@@ -77,6 +80,23 @@ def obj_to_dict(
 
     pulser.json.supported.validate_serialization(d)
     return d
+
+
+def make_json_compatible(obj: Any) -> Any:
+    """Makes an object compatible with JSON serialization.
+
+    For now, simply converts Numpy arrays to lists, but more can be added
+    as needed.
+    """
+
+    class NumpyEncoder(json.JSONEncoder):
+        def default(self, o: Any) -> Any:
+            if isinstance(o, np.ndarray):
+                return o.tolist()
+            return json.JSONEncoder.default(self, o)
+
+    # Serializes with the custom encoder and then deserializes back
+    return json.loads(json.dumps(obj, cls=NumpyEncoder))
 
 
 def stringify_qubit_ids(qubit_ids: Sequence[QubitId]) -> list[str]:

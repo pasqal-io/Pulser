@@ -42,9 +42,17 @@ from pulser.register.weight_maps import DetuningMap
 class RegisterLayout(Traps, RegDrawer):
     """A layout of traps out of which registers can be defined.
 
-    The traps are always sorted under the same convention: ascending order
-    along x, then along y, then along z (if applicable). Respecting this order,
-    the traps are then numbered starting from 0.
+    A ``RegisterLayout`` is used to define a register from a set of traps. It
+    is intended to be given to the user by the hardware provider as a way of
+    showing which layouts are already available on a given device. In turn,
+    the user can create a ``Register`` by selecting the traps on which to place
+    atoms, or even a ``MappableRegister``, which allows for the creation of
+    sequences whose register can be defined at build time.
+
+    Note:
+        The traps are always sorted under the same convention: ascending order
+        along x, then along y, then along z (if applicable). Respecting this
+        order, the traps are then numbered starting from 0.
 
     Args:
         trap_coordinates: The trap coordinates defining the layout.
@@ -118,7 +126,7 @@ class RegisterLayout(Traps, RegDrawer):
 
         Returns:
             A DetuningMap associating detuning weights to the trap coordinates
-                of the targeted traps.
+            of the targeted traps.
         """
         if not set(detuning_weights.keys()) <= set(self.traps_dict):
             raise ValueError(
@@ -139,6 +147,7 @@ class RegisterLayout(Traps, RegDrawer):
         projection: bool = True,
         fig_name: str | None = None,
         kwargs_savefig: dict = {},
+        show: bool = True,
     ) -> None:
         """Draws the entire register layout.
 
@@ -158,6 +167,9 @@ class RegisterLayout(Traps, RegDrawer):
             kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
+            show: Whether or not to call `plt.show()` before returning. When
+                combining this plot with other ones in a single figure, one may
+                need to set this flag to False.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -172,7 +184,7 @@ class RegisterLayout(Traps, RegDrawer):
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,
         )
-        ids = list(range(self.number_of_traps))
+        ids = [str(i) for i in range(self.number_of_traps)]
         if self.dimensionality == 2:
             fig, ax = self._initialize_fig_axes(
                 coords,
@@ -201,7 +213,9 @@ class RegisterLayout(Traps, RegDrawer):
             )
         if fig_name is not None:
             plt.savefig(fig_name, **kwargs_savefig)
-        plt.show()
+
+        if show:
+            plt.show()
 
     def make_mappable_register(
         self, n_qubits: int, prefix: str = "q"

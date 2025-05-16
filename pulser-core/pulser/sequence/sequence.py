@@ -45,12 +45,12 @@ from pulser.channels.base_channel import Channel, States, get_states_from_bases
 from pulser.channels.dmm import DMM, _dmm_id_from_name, _get_dmm_name
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices._device_datacls import BaseDevice
+from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_sequence,
 )
 from pulser.json.abstract_repr.serializer import serialize_abstract_sequence
 from pulser.json.coders import PulserDecoder, PulserEncoder
-from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.parametrized.variable import VariableItem
@@ -82,7 +82,7 @@ class Sequence(Generic[DeviceType]):
 
     A sequence is composed by
 
-        - The device in which we want to implement it
+        - The device constraints it must respect
         - The register of qubits on which to act
         - The device's channels that are used
         - The schedule of operations on each channel
@@ -104,8 +104,7 @@ class Sequence(Generic[DeviceType]):
         register: The atom register on which to apply the pulses. If given as
             a MappableRegister instance, the traps corrresponding to each
             qubit ID must be given when building the sequence.
-        device: A valid device in which to execute the Sequence (import
-            it from ``pulser.devices``).
+        device: A valid device in which to execute the Sequence.
 
     Note:
         The register and device do not support variable parameters. As such,
@@ -284,13 +283,13 @@ class Sequence(Generic[DeviceType]):
     @property
     def available_channels(self) -> dict[str, Channel]:
         """Channels still available for declaration."""
-        all_channels = {**self._device.channels, **self._device.dmm_channels}
+        all_channels = {**self.device.channels, **self.device.dmm_channels}
         if not self._in_xy and not self._in_ising:
             # If no channel has been declared nor any DMM configured, and if
             # device is physical, don't show the DMM used for the SLM Mask
             if (
                 self._slm_mask_dmm is not None
-                and not self._device.reusable_channels
+                and not self.device.reusable_channels
             ):
                 return {
                     id: ch
@@ -314,7 +313,7 @@ class Sequence(Generic[DeviceType]):
                     # MockDevice channels can be declared multiple times
                     (
                         id not in occupied_ch_ids
-                        or self._device.reusable_channels
+                        or self.device.reusable_channels
                     )
                     and (
                         # If we are in XY mode, the dmm channels are available
@@ -572,9 +571,9 @@ class Sequence(Generic[DeviceType]):
                 pulse of the sequence.
             dmm_id: Id of the DMM channel to use in the device.
         """
-        if not self._device.supports_slm_mask:
+        if not self.device.supports_slm_mask:
             raise ValueError(
-                f"The '{self._device}' device does not have an SLM mask."
+                f"The '{self.device}' device does not have an SLM mask."
             )
 
         if self.is_register_mappable():
@@ -598,8 +597,13 @@ class Sequence(Generic[DeviceType]):
             raise ValueError("SLM mask can be configured only once.")
 
         if self._in_xy or (not self._in_xy and not self._in_ising):
-            if dmm_id not in self._device.dmm_channels:
-                raise ValueError(f"No DMM {dmm_id} in the device.")
+            if dmm_id not in self.device.dmm_channels:
+                raise ValueError(
+                    f"No DMM called {dmm_id} is available in the device. "
+                    f"Your selected device {self.device.name} has the "
+                    "following DMM channels available: "
+                    f"{list(self.device.dmm_channels.keys())}."
+                )
             self._slm_mask_dmm = dmm_id
         if not self._in_xy and self._in_ising:
             self._set_slm_mask_dmm(dmm_id, targets)
@@ -634,10 +638,15 @@ class Sequence(Generic[DeviceType]):
         detuning_map: DetuningMap,
         dmm_id: str,
     ) -> None:
-        if dmm_id not in self._device.dmm_channels:
-            raise ValueError(f"No DMM {dmm_id} in the device.")
+        if dmm_id not in self.device.dmm_channels:
+            raise ValueError(
+                f"No DMM called {dmm_id} is available in the device. "
+                f"Your selected device {self.device.name} has the following "
+                "DMM channels available: "
+                f"{list(self.device.dmm_channels.keys())}."
+            )
 
-        dmm_ch = self._device.dmm_channels[dmm_id]
+        dmm_ch = self.device.dmm_channels[dmm_id]
         if self._in_xy:
             raise ValueError(
                 f"DMM '{dmm_ch}' cannot work simultaneously "
@@ -654,7 +663,7 @@ class Sequence(Generic[DeviceType]):
         # Add a suffix to the DMM id if repetition in the declared channels
         dmm_name = dmm_id
         if dmm_id in self.declared_channels:
-            assert self._device.reusable_channels
+            assert self.device.reusable_channels
             dmm_name = _get_dmm_name(
                 dmm_id, list(self.declared_channels.keys())
             )
@@ -685,9 +694,9 @@ class Sequence(Generic[DeviceType]):
 
         Warns:
             UserWarning: If the sequence is configuring a detuning map, a
-            warning is raised to remind the user that the detuning map is
-            unchanged and might no longer be aligned with the qubits in
-            the new register.
+                warning is raised to remind the user that the detuning map is
+                unchanged and might no longer be aligned with the qubits in
+                the new register.
 
         Args:
             new_register: The new register to give the sequence.
@@ -695,7 +704,7 @@ class Sequence(Generic[DeviceType]):
         Returns:
             The sequence with the new register.
         """
-        new_seq = type(self)(register=new_register, device=self._device)
+        new_seq = type(self)(register=new_register, device=self.device)
         # Copy the variables to the new sequence
         new_seq._variables = self.declared_variables
         for call in self._calls[1:] + self._to_build_calls:
@@ -726,8 +735,7 @@ class Sequence(Generic[DeviceType]):
                 guarantee the pulse sequence is left unchanged.
 
         Returns:
-            The sequence on the new device, using the match channels of
-            the former device declared in the sequence.
+            The sequence on the new device.
         """
         return switch_device(self, new_device, strict)
 
@@ -738,7 +746,7 @@ class Sequence(Generic[DeviceType]):
         channel_id: str,
         initial_target: Optional[Union[QubitId, Collection[QubitId]]] = None,
     ) -> None:
-        """Declares a new channel to the Sequence.
+        """Declares a new channel in the Sequence.
 
         The first declared channel implicitly defines the sequence's mode of
         operation (i.e. the underlying Hamiltonian). In particular, if the
@@ -749,7 +757,8 @@ class Sequence(Generic[DeviceType]):
 
         Note:
             Regular devices only allow a channel to be declared once, but
-            ``MockDevice`` channels can be repeatedly declared if needed.
+            channels in ``VirtualDevice`` with ``reusable_channels=True``
+            can be repeatedly declared if needed.
 
         Args:
             name: Unique name for the channel in the sequence.
@@ -769,10 +778,10 @@ class Sequence(Generic[DeviceType]):
         if name in self._schedule:
             raise ValueError("The given name is already in use.")
 
-        if channel_id not in self._device.channels:
+        if channel_id not in self.device.channels:
             raise ValueError(f"No channel {channel_id} in the device.")
 
-        ch = self._device.channels[channel_id]
+        ch = self.device.channels[channel_id]
         if channel_id not in self.available_channels:
             if self._in_xy and ch.basis != "XY":
                 raise ValueError(
@@ -1344,7 +1353,7 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             qubits: The new target for this channel. Must correspond to a
-                qubit index or an collection of qubit indices, when multi-qubit
+                qubit index or a collection of qubit indices, when multi-qubit
                 addressing is possible.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
@@ -1381,6 +1390,98 @@ class Sequence(Generic[DeviceType]):
         """
         self._delay(duration, channel, at_rest)
 
+    def estimate_added_delay(
+        self,
+        pulse: Union[Pulse, Parametrized],
+        channel: str,
+        protocol: PROTOCOLS = "min-delay",
+    ) -> int:
+        """Delay that will be added before the pulse when added to a channel.
+
+        When adding a pulse to a channel of the Sequence, a delay can be added
+        to account for the modulation bandwidth of the channel or the protocol
+        chosen. This method estimates the delay that will be added before the
+        pulse if this pulse was added to this channel with this protocol. It
+        works even if the channel is in EOM mode, but to be appropriate, the
+        Pulse should be a ConstantPulse with amplitude and detuning
+        respectively the rabi_freq and detuning_on of the EOM block.
+
+        Args:
+            pulse: The pulse object to add to the channel.
+            channel: The channel's name provided when declared.
+            protocol: Stipulates how to deal with
+                eventual conflicts with other channels, specifically in terms
+                of having multiple channels act on the same target
+                simultaneously.
+
+                - ``'min-delay'``: Before adding the pulse, introduces the
+                  smallest possible delay that avoids all exisiting conflicts.
+                - ``'no-delay'``: Adds the pulse to the channel, regardless of
+                  existing conflicts.
+                - ``'wait-for-all'``: Before adding the pulse, adds a delay
+                  that idles the channel until the end of the other channels'
+                  latest pulse.
+
+        Returns:
+            The delay that would be added before the pulse.
+        """
+        self._validate_channel(
+            channel,
+            block_if_slm=channel.startswith("dmm_"),
+        )
+        self._validate_add_protocol(protocol)
+        if self.is_parametrized() or isinstance(pulse, Parametrized):
+            raise ValueError(
+                "Can't compute the delay to add before a pulse if sequence or"
+                "pulse is parametrized."
+            )
+        if self.is_in_eom_mode(channel):
+            eom_settings = self._schedule[channel].eom_blocks[-1]
+            if np.any(pulse.amplitude.samples != eom_settings.rabi_freq):
+                warnings.warn(
+                    f"Channel {channel} is in EOM mode, the amplitude of the "
+                    "pulse will be constant and equal to "
+                    f"{eom_settings.rabi_freq}.",
+                    UserWarning,
+                )
+            if np.any(pulse.detuning.samples != eom_settings.detuning_on):
+                warnings.warn(
+                    f"Channel {channel} is in EOM mode, the detuning of the "
+                    "pulse will be constant and equal to "
+                    f"{eom_settings.detuning_on}.",
+                    UserWarning,
+                )
+        channel_obj = self._schedule[channel].channel_obj
+        last = self._last(channel)
+        basis = channel_obj.basis
+
+        ph_refs = {
+            self._basis_ref[basis][q].phase.last_phase for q in last.targets
+        }
+        if isinstance(channel_obj, DMM):
+            phase_ref = None
+        elif len(ph_refs) != 1:
+            raise ValueError(
+                "Cannot do a multiple-target pulse on qubits with different "
+                "phase references for the same basis."
+            )
+        else:
+            phase_ref = ph_refs.pop()
+
+        pulse = self._validate_and_adjust_pulse(pulse, channel, phase_ref)
+
+        phase_barriers = [
+            self._basis_ref[basis][q].phase.last_time for q in last.targets
+        ]
+        next_time_slot = self._schedule.make_next_pulse_slot(
+            pulse,
+            channel,
+            phase_barriers,
+            protocol,
+            # phase_drift_params does not impact delay between pulses
+        )
+        return next_time_slot.ti - last.tf
+
     @seq_decorators.store
     @seq_decorators.block_if_measured
     def measure(self, basis: str = "ground-rydberg") -> None:
@@ -1399,9 +1500,7 @@ class Sequence(Generic[DeviceType]):
                 the available options).
         """
         available = (
-            self._device.supported_bases - {"XY"}
-            if not self._in_xy
-            else {"XY"}
+            self.device.supported_bases - {"XY"} if not self._in_xy else {"XY"}
         )
         if basis not in available:
             raise ValueError(
@@ -1425,7 +1524,7 @@ class Sequence(Generic[DeviceType]):
     def phase_shift(
         self,
         phi: float | Parametrized,
-        *targets: QubitId,
+        *specific_targets: QubitId,
         basis: str = "digital",
     ) -> None:
         r"""Shifts the phase of a qubit's reference by 'phi', on a given basis.
@@ -1436,18 +1535,21 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             phi: The intended phase shift (in rad).
-            targets: The ids of the qubits to apply the phase shift to.
+            specific_targets: The ids of the qubits to apply the phase shift
+                to. If no specific targets are given, the phase shift will be
+                applied to all qubits in the ``Register`` or
+                ``MappableRegister``.
             basis: The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
         """
-        self._phase_shift(phi, *targets, basis=basis)
+        self._phase_shift(phi, *specific_targets, basis=basis)
 
     @seq_decorators.store
     def phase_shift_index(
         self,
         phi: float | Parametrized,
-        *targets: int | Parametrized,
+        *specific_targets: int | Parametrized,
         basis: str = "digital",
     ) -> None:
         r"""Shifts the phase of a qubit's reference by 'phi', on a given basis.
@@ -1458,10 +1560,12 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             phi: The intended phase shift (in rad).
-            targets: The indices of the qubits to apply the phase shift to.
-                A qubit index is a number between 0 and the number of qubits.
-                It is then converted to a Qubit ID using the order in which
-                they were declared when instantiating the ``Register``
+            specific_targets: The indices of the qubits to apply the phase
+                shift to. A qubit index is a number between 0 and the number
+                of qubits. It is then converted to a Qubit ID using the order
+                in which they were declared when instantiating the ``Register``
+                or ``MappableRegister``. If no specific targets are given, the
+                phase shift will be applied to all qubits in the ``Register``
                 or ``MappableRegister``.
             basis: The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
@@ -1471,7 +1575,7 @@ class Sequence(Generic[DeviceType]):
             Cannot be used on non-parametrized sequences using a mappable
             register.
         """
-        self._phase_shift(phi, *targets, basis=basis, _index=True)
+        self._phase_shift(phi, *specific_targets, basis=basis, _index=True)
 
     @seq_decorators.store
     @seq_decorators.block_if_measured
@@ -1734,7 +1838,7 @@ class Sequence(Generic[DeviceType]):
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
-        draw_phase_curve: bool = False,
+        draw_phase_curve: bool = True,
         draw_detuning_maps: bool = False,
         draw_qubit_amp: bool = False,
         draw_qubit_det: bool = False,
@@ -1746,7 +1850,7 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             mode: The curves to draw. 'input'
-                draws only the programmed curves, 'output' the excepted curves
+                draws only the programmed curves, 'output' the expected curves
                 after modulation. 'input+output' will draw both curves except
                 for channels without a defined modulation bandwidth, in which
                 case only the input is drawn.
@@ -1754,8 +1858,7 @@ class Sequence(Generic[DeviceType]):
                 offsets, displays the equivalent phase modulation.
             draw_phase_area: Whether phase and area values need to be
                 shown as text on the plot, defaults to False. Doesn't work in
-                'output' mode. If `draw_phase_curve=True`, phase values are
-                ommited.
+                'output' mode.
             draw_interp_pts: When the sequence has pulses with waveforms
                 of type InterpolatedWaveform, draws the points of interpolation
                 on top of the respective input waveforms (defaults to True).
@@ -1849,7 +1952,7 @@ class Sequence(Generic[DeviceType]):
             if fig_qubit is not None:
                 fig_qubit.savefig(name + "_per_qubit" + ext, **kwargs_savefig)
                 if fig_legend is not None:
-                    fig_qubit.savefig(
+                    fig_legend.savefig(
                         name + "_per_qubit_legend" + ext, **kwargs_savefig
                     )
 
@@ -1966,7 +2069,7 @@ class Sequence(Generic[DeviceType]):
     @seq_decorators.block_if_measured
     def _target(
         self,
-        qubits: Union[Collection[QubitId], QubitId, Parametrized],
+        qubits: Union[Collection[QubitId | int], QubitId | int, Parametrized],
         channel: str,
         _index: bool = False,
     ) -> None:
@@ -2014,7 +2117,7 @@ class Sequence(Generic[DeviceType]):
             self._schedule.add_target(qubit_ids_set, channel)
 
     def _check_qubits_give_ids(
-        self, *qubits: Union[QubitId, Parametrized], _index: bool = False
+        self, *qubits: Union[QubitId, int, Parametrized], _index: bool = False
     ) -> set[QubitId]:
         if _index:
             if self.is_parametrized():
@@ -2067,7 +2170,7 @@ class Sequence(Generic[DeviceType]):
     def _phase_shift(
         self,
         phi: float | Parametrized,
-        *targets: QubitId | Parametrized,
+        *specific_targets: QubitId | int | Parametrized,
         basis: str,
         _index: bool = False,
     ) -> None:
@@ -2075,7 +2178,23 @@ class Sequence(Generic[DeviceType]):
             raise ValueError(
                 f"No declared channel targets the given 'basis' ('{basis}')."
             )
-        target_ids = self._check_qubits_give_ids(*targets, _index=_index)
+
+        if not specific_targets:
+            warnings.warn(
+                "In version v1.4.0 the behavior of `Sequence.phase_shift` and "
+                "`Sequence.phase_shift_index` changed when called without "
+                "specifying targets. In previous versions calling without "
+                "targets wouldn't add a phase shift to any qubit, whereas in "
+                "versions v1.4.0 and up a phase shift will be added to all "
+                "qubits in the register if no specific targets are given.",
+                stacklevel=3,
+            )
+            specific_targets = self._register.qubit_ids
+            _index = False
+
+        target_ids = self._check_qubits_give_ids(
+            *specific_targets, _index=_index
+        )
 
         if not self.is_parametrized():
             phi = float(cast(float, phi))
@@ -2279,7 +2398,7 @@ class Sequence(Generic[DeviceType]):
 
     def _set_register(self, seq: Sequence, reg: BaseRegister) -> None:
         """Sets the register on a sequence who had a mappable register."""
-        self._device.validate_register(reg)
+        self.device.validate_register(reg)
         qids = set(reg.qubit_ids)
         used_qubits = set()
         for ch, ch_schedule in self._schedule.items():

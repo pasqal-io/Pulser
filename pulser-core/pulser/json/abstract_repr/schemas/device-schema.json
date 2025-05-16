@@ -31,6 +31,13 @@
           "description": "The duration of a clock cycle (in ns).",
           "type": "number"
         },
+        "custom_phase_jump_time": {
+          "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
         "eom_config": {
           "description": "Configuration of an associated EOM.",
           "type": "null"
@@ -81,6 +88,22 @@
             "number",
             "null"
           ]
+        },
+        "propagation_dir": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The propagation direction of the beam leaving the channel."
         },
         "total_bottom_detuning": {
           "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
@@ -184,6 +207,10 @@
             },
             "min_atom_distance": {
               "description": "The closest together two atoms can be (in μm).",
+              "type": "number"
+            },
+            "min_layout_filling": {
+              "description": "The smallest fraction of a layout that must be filled with atoms.",
               "type": "number"
             },
             "min_layout_traps": {
@@ -327,6 +354,10 @@
               "description": "The closest together two atoms can be (in μm).",
               "type": "number"
             },
+            "min_layout_filling": {
+              "description": "The smallest fraction of a layout that must be filled with atoms.",
+              "type": "number"
+            },
             "min_layout_traps": {
               "description": "The minimum number of traps a layout can have.",
               "type": "number"
@@ -401,6 +432,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "anyOf": [
                 {
@@ -520,6 +558,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -555,6 +609,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
               "type": "null"
@@ -610,6 +671,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -645,6 +722,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
               "type": "null"
@@ -700,6 +784,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -735,6 +835,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "anyOf": [
                 {
@@ -857,6 +964,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -892,6 +1015,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
               "type": "null"
@@ -950,6 +1080,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -985,6 +1131,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
               "type": "null"
@@ -1043,6 +1196,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1083,6 +1252,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "anyOf": [
                 {
@@ -1193,6 +1369,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1228,6 +1420,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
               "type": "null"
@@ -1274,6 +1473,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1309,6 +1524,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
               "type": "null"
@@ -1355,6 +1577,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1390,6 +1628,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "anyOf": [
                 {
@@ -1500,6 +1745,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1535,6 +1796,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
               "type": "null"
@@ -1581,6 +1849,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1616,6 +1900,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
               "type": "null"
@@ -1662,6 +1953,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1702,6 +2009,13 @@
         "clock_period": {
           "description": "The duration of a clock cycle (in ns).",
           "type": "number"
+        },
+        "custom_phase_jump_time": {
+          "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "eom_config": {
           "description": "Configuration of an associated EOM.",
@@ -1750,6 +2064,22 @@
             "number",
             "null"
           ]
+        },
+        "propagation_dir": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The propagation direction of the beam leaving the channel."
         },
         "total_bottom_detuning": {
           "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",

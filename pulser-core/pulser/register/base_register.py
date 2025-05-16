@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping
 from collections.abc import Sequence as abcSequence
@@ -44,7 +45,7 @@ if TYPE_CHECKING:
     from pulser.register.register_layout import RegisterLayout
 
 T = TypeVar("T", bound="BaseRegister")
-QubitId = Union[int, str]
+QubitId = str
 
 
 class _LayoutInfo(NamedTuple):
@@ -77,6 +78,15 @@ class BaseRegister(ABC, CoordsCollection):
             [pm.AbstractArray(v, dtype=float) for v in qubits.values()]
         )
         self._ids: tuple[QubitId, ...] = tuple(qubits.keys())
+        if any(not isinstance(id, str) for id in self._ids):
+            warnings.warn(
+                "Usage of `int`s or any non-`str`types as `QubitId`s will be "
+                "deprecated. Define your `QubitId`s as `str`s, prefer setting "
+                "`prefix='q'` when using classmethods, as that will become the"
+                " new default once `int` qubit IDs become invalid.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         self._layout_info: Optional[_LayoutInfo] = None
         self._init_kwargs(**kwargs)
 
@@ -233,7 +243,7 @@ class BaseRegister(ABC, CoordsCollection):
 
         Returns:
             A DetuningMap associating detuning weights to the trap coordinates
-                of the targeted qubits.
+            of the targeted qubits.
         """
         if not set(detuning_weights.keys()) <= set(self.qubit_ids):
             raise ValueError(
