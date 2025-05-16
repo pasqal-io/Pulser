@@ -70,7 +70,7 @@ class _BaseEOMDefaults:
 class BaseEOM(_BaseEOMDefaults, _BaseEOM):
     """A base class for the EOM configuration.
 
-    Attributes:
+    Args:
         mod_bandwidth: The EOM modulation bandwidth at -3dB (50% reduction),
             in MHz.
         custom_buffer_time: A custom wait time to enforce during EOM buffers.
@@ -146,7 +146,7 @@ class _RydbergEOMDefaults:
 class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
     """The EOM configuration for a Rydberg channel.
 
-    Attributes:
+    Args:
         limiting_beam: The beam with the smallest amplitude range.
         max_limiting_amp: The maximum amplitude the limiting beam can reach,
             in rad/µs.

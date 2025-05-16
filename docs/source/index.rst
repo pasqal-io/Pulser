@@ -23,9 +23,9 @@ Pulser is designed to let users create experiments that are tailored to a
 specific device. In this way, you can have maximal flexibility and control over
 the behaviour of relevant physical parameters, within the bounds set by the chosen device.
 
-.. figure:: files/pulser_animation.gif
+.. figure:: files/pulser_animation.webp
     :align: center
-    :alt: pulser_animation
+    :alt: Animated diagram depicting the execution of a multi-channel sequence as different types of laser pulses acting on an atom register
     :figclass: align-center
 
     Execution of a pulse sequence designed for a specific device.
@@ -39,83 +39,72 @@ Additionally, Pulser features built-in tools for classical simulation to aid in
 the development and testing of new pulse sequences.
 
 To get started with Pulser, follow the instructions in :doc:`installation` and
-check out the :doc:`intro_rydberg_blockade` page. For a more in-depth
-introduction, consult the tutorials on :doc:`tutorials/creating` and
-:doc:`tutorials/simulating`.
-To better understand neutral atom devices and how they serve as quantum
-computers and simulators, check the pages in :doc:`review`.
+check out the :doc:`programming` page to learn what mathematical objects you
+are programming with Pulser and how to program them. Then, you can see examples
+of quantum programs written with Pulser on :doc:`tutorials/creating`.
 
 
 .. toctree::
    :maxdepth: 2
-   :caption: Installation and First Steps
+   :caption: Getting Started
 
    installation
-   intro_rydberg_blockade
+   programming
    tutorials/creating
-   tutorials/simulating
 
 .. toctree::
    :maxdepth: 2
-   :caption: Fundamental Concepts
+   :caption: Fundamentals
 
-   review
    conventions
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Backend Execution
-   
+   hardware
+   register
+   pulses
+   sequence
    tutorials/backends
 
 .. toctree::
+   :maxdepth: 1
+   :caption: Extended Usage
+
+   extended_usage_intro
+   tutorials/reg_layouts
+   tutorials/output_mod_eom
+   tutorials/virtual_devices
+   tutorials/paramseqs
+   tutorials/composite_wfs
+   tutorials/interpolated_wfs
+   tutorials/serialization
+   tutorials/dmm
+   tutorials/slm_mask
+   tutorials/xy_spin_chain
+   tutorials/phase_shifts_vz_gates
+
+.. toctree::
    :maxdepth: 2
-   :caption: Classical Simulation
+   :caption: Emulation
 
    tutorials/noisy_sim
    tutorials/spam
    tutorials/laser_noise
    tutorials/effective_noise
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Advanced Features
-
-   tutorials/phase_shifts_vz_gates
-   tutorials/composite_wfs
-   tutorials/paramseqs
-   tutorials/reg_layouts
-   tutorials/interpolated_wfs
-   tutorials/serialization
-   tutorials/dmm
-   tutorials/slm_mask
-   tutorials/output_mod_eom
-   tutorials/virtual_devices
-
 
 .. toctree::
    :maxdepth: 1
-   :caption: Quantum Simulation
+   :caption: Applications
 
-   tutorials/afm_prep
    tutorials/optimization
-   tutorials/xy_spin_chain
-   tutorials/mw_engineering
-   tutorials/shadow_est
-   tutorials/1D_crystals
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Other Applications
-
-   tutorials/cz_gate
    tutorials/qubo
+   tutorials/mwis
 
 .. toctree::
    :maxdepth: 3
-   :caption: Documentation
+   :caption: API Reference
 
-   apidoc/pulser
+   apidoc/core
+   apidoc/simulation
+   apidoc/pasqal
 
 
 Indices and tables

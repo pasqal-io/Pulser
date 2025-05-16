@@ -71,6 +71,11 @@ class AbstractArray:
         """Whether the stored array is a tensor."""
         return self.has_torch() and isinstance(self._array, torch.Tensor)
 
+    @property
+    def requires_grad(self) -> bool:
+        """Whether the stored array is a tensor that needs a gradient."""
+        return self.is_tensor and cast(torch.Tensor, self._array).requires_grad
+
     def astype(self, dtype: DTypeLike) -> AbstractArray:
         """Casts the data type of the array contents."""
         if self.is_tensor:
@@ -143,8 +148,19 @@ class AbstractArray:
             return AbstractArray(cast(torch.Tensor, self._array).detach())
         return self
 
-    def __array__(self, dtype: Any = None) -> np.ndarray:
-        return self._array.__array__(dtype)
+    def __array__(
+        self,
+        dtype: None = None,
+        copy: np.bool_ | None = None,
+    ) -> np.ndarray:
+        if self.is_tensor or np.lib.NumpyVersion(np.__version__) < "2.0.0":
+            array: np.ndarray = self._array.__array__(dtype)
+            if copy:
+                return np.copy(array)
+            else:
+                return array
+        else:  # pragma: no cover
+            return self._array.__array__(dtype, copy=copy)  # type: ignore
 
     def __repr__(self) -> str:
         return str(self._array.__repr__())
@@ -271,10 +287,7 @@ class AbstractArray:
                 self._process_indices(indices)
             ] = values  # type: ignore[assignment]
         except RuntimeError as e:
-            if (
-                self.is_tensor
-                and cast(torch.Tensor, self._array).requires_grad
-            ):
+            if self.requires_grad:
                 raise RuntimeError(
                     "Failed to modify a tensor that requires grad in place."
                 ) from e

@@ -37,6 +37,7 @@ from pulser.register.base_register import BaseRegister, QubitId
 
 if TYPE_CHECKING:
     from pulser.devices import Device
+    from pulser.devices._device_datacls import BaseDevice
 
 
 class Register(BaseRegister, RegDrawer):
@@ -70,7 +71,7 @@ class Register(BaseRegister, RegDrawer):
         spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes the register with the qubits in a square array.
+        """Creates the register with the qubits in a square array.
 
         Args:
             side: Side of the square in number of qubits.
@@ -173,7 +174,7 @@ class Register(BaseRegister, RegDrawer):
         spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes the register with the qubits in a triangular lattice.
+        """Creates the register with the qubits in a triangular lattice.
 
         Initializes the qubits in a triangular lattice pattern, more
         specifically a triangular lattice with horizontal rows, meaning the
@@ -226,7 +227,7 @@ class Register(BaseRegister, RegDrawer):
         spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes the register with the qubits in a hexagonal layout.
+        """Creates the register with the qubits in a hexagonal layout.
 
         Args:
             layers: Number of layers around a central atom.
@@ -262,7 +263,7 @@ class Register(BaseRegister, RegDrawer):
     def max_connectivity(
         cls,
         n_qubits: int,
-        device: pulser.devices._device_datacls.BaseDevice,
+        device: BaseDevice,
         spacing: float | pm.TensorLike | None = None,
         prefix: str | None = None,
     ) -> Register:
@@ -344,6 +345,8 @@ class Register(BaseRegister, RegDrawer):
         Raises:
             RuntimeError: If the automatic layout generation fails to meet
                 the device constraints.
+            NotImplementedError: When the register has differentiable
+                coordinates (ie torch Tensors with requires_grad=True).
 
         Returns:
             Register: A new register instance with identical qubit IDs and
@@ -353,6 +356,29 @@ class Register(BaseRegister, RegDrawer):
             raise TypeError(
                 f"'device' must be of type Device, not {type(device)}."
             )
+        if self._coords_arr.requires_grad:
+            raise NotImplementedError(
+                "'Register.with_automatic_layout()' does not support "
+                "registers with differentiable coordinates."
+            )
+
+        max_traps = device.max_layout_traps
+        if device.min_layout_filling > 0.0:
+            # This is akin to imposing a max number of traps for a given
+            # minimum filling and number of qubits
+            max_allowed_traps = int(
+                len(self.qubit_ids) / device.min_layout_filling
+            )
+            if max_allowed_traps > device.min_layout_traps:
+                # We only enforce min_layout_filling if the maximum number
+                # of traps it allows is greater than the minimum number of
+                # traps required
+                max_traps = min(
+                    max_traps
+                    or max_allowed_traps,  # In case max_traps is None
+                    max_allowed_traps,
+                )
+
         trap_coords = generate_trap_coordinates(
             self.sorted_coords,
             min_trap_dist=device.min_atom_distance,
@@ -360,11 +386,16 @@ class Register(BaseRegister, RegDrawer):
             max_layout_filling=device.max_layout_filling,
             optimal_layout_filling=device.optimal_layout_filling,
             min_traps=device.min_layout_traps,
-            max_traps=device.max_layout_traps,
+            max_traps=max_traps,
         )
         layout = pulser.register.RegisterLayout(trap_coords, slug=layout_slug)
-        trap_ids = layout.get_traps_from_coordinates(*self.sorted_coords)
-        return cast(Register, layout.define_register(*trap_ids))
+        trap_ids = layout.get_traps_from_coordinates(
+            *self._coords_arr.as_array()
+        )
+        return cast(
+            Register,
+            layout.define_register(*trap_ids, qubit_ids=self.qubit_ids),
+        )
 
     def rotated(self, degrees: float) -> Register:
         """Makes a new rotated register.

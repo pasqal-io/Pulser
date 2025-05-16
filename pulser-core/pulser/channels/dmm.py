@@ -28,7 +28,7 @@ from pulser.register.weight_maps import DetuningMap
 OPTIONAL_ABSTR_DMM_FIELDS = ["total_bottom_detuning"]
 
 
-@dataclass(init=True, repr=False, frozen=True)
+@dataclass(init=True, frozen=True)
 class DMM(Channel):
     """Defines a Detuning Map Modulator (DMM) Channel.
 

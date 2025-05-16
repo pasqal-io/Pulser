@@ -508,9 +508,9 @@ def _assert_reg_requires_grad(
 ) -> None:
     for coords in reg.qubits.values():
         if invert:
-            assert not coords.as_tensor().requires_grad
+            assert not coords.requires_grad
         else:
-            assert coords.is_tensor and coords.as_tensor().requires_grad
+            assert coords.is_tensor and coords.requires_grad
 
 
 @pytest.mark.parametrize(
@@ -593,7 +593,7 @@ def test_register_recipes_torch(
 
 @pytest.mark.parametrize("optimal_filling", [None, 0.4, 0.1])
 def test_automatic_layout(optimal_filling):
-    reg = Register.square(4, spacing=5)
+    reg = Register.square(4, spacing=5, prefix="test")
     max_layout_filling = 0.5
     min_traps = int(np.ceil(len(reg.qubits) / max_layout_filling))
     optimal_traps = int(
@@ -610,6 +610,8 @@ def test_automatic_layout(optimal_filling):
 
     # On its own, it works
     new_reg = reg.with_automatic_layout(device, layout_slug="foo")
+    assert new_reg.qubit_ids == reg.qubit_ids  # Same IDs in the same order
+    assert new_reg == reg  # The register itself is identical
     assert isinstance(new_reg.layout, RegisterLayout)
     assert str(new_reg.layout) == "foo"
     trap_num = new_reg.layout.number_of_traps
@@ -624,14 +626,42 @@ def test_automatic_layout(optimal_filling):
             reg.with_automatic_layout(bound_below_dev).layout.number_of_traps
             == bound_below_dev.min_layout_traps
         )
-    elif trap_num < optimal_traps:
+    else:
         assert trap_num > min_traps
         bound_above_dev = dataclasses.replace(
-            device, max_layout_traps=trap_num - 1
+            device,
+            max_layout_traps=trap_num - 1,
+            # So that we can still fit 20 atoms
+            max_layout_filling=device.max_layout_filling + 0.1,
         )
         assert (
             reg.with_automatic_layout(bound_above_dev).layout.number_of_traps
             == bound_above_dev.max_layout_traps
+        )
+        # If we set min_layout_filling to the optimal filling, we should end
+        # up with the optimal number of traps (because there can't be more)
+        bound_above_from_min_filling = dataclasses.replace(
+            device, min_layout_filling=optimal_filling
+        )
+        assert bound_above_from_min_filling.min_layout_filling > 0.0
+        assert (
+            reg.with_automatic_layout(
+                bound_above_from_min_filling
+            ).layout.number_of_traps
+            == optimal_traps
+        )
+
+        # However, if the maximum number of traps allowed by min_layout_filling
+        # matches the minimum number of traps allowed the constraint is not
+        # imposed and we end up back to the original trap number
+        not_bound_above_from_min_filling = dataclasses.replace(
+            bound_above_from_min_filling, min_layout_traps=optimal_traps
+        )
+        assert (
+            reg.with_automatic_layout(
+                not_bound_above_from_min_filling
+            ).layout.number_of_traps
+            == trap_num
         )
 
     with pytest.raises(TypeError, match="must be of type Device"):
@@ -657,3 +687,14 @@ def test_automatic_layout(optimal_filling):
         big_reg.with_automatic_layout(device).layout.number_of_traps
         >= min_traps
     )
+
+
+def test_automatic_layout_diff():
+    torch = pytest.importorskip("torch")
+    with pytest.raises(
+        NotImplementedError,
+        match="does not support registers with differentiable coordinates",
+    ):
+        Register.square(
+            2, spacing=torch.tensor(10.0, requires_grad=True)
+        ).with_automatic_layout(AnalogDevice)

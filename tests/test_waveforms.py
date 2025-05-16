@@ -19,6 +19,7 @@ import numpy as np
 import pytest
 from scipy.interpolate import PchipInterpolator, interp1d
 
+import pulser
 from pulser.channels import Rydberg
 from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.parametrized import ParamObj, Variable
@@ -266,6 +267,53 @@ def test_interpolated():
     )
     assert np.all((wf.samples >= 0).as_array())
 
+    # Init an InterpolatedWaveform that always fails at build fails
+    seq = pulser.Sequence(
+        pulser.Register.square(2, 5), device=pulser.DigitalAnalogDevice
+    )
+
+    values = seq.declare_variable("values", size=5)  # a Variable
+    duration, *other_values = values  # a list of Variables
+    # Init an InterpolatedWaveform with a list of Variable fails
+    with pytest.raises(
+        TypeError,
+        match=(
+            "`values` must be a parametrized object or a sequence of "
+            "elements castable to float."
+        ),
+    ):
+        InterpolatedWaveform(1000, values=other_values)
+    # So this will always fail at build
+    with pytest.raises(
+        TypeError,
+        match=(
+            "`values` must be a parametrized object or a sequence of "
+            "elements castable to float."
+        ),
+    ):
+        InterpolatedWaveform(duration, values=other_values)
+    # this as well
+    with pytest.raises(
+        TypeError,
+        match=(
+            "`times` must be a parametrized object or a sequence of "
+            "elements castable to float."
+        ),
+    ):
+        InterpolatedWaveform(duration, [0, 0.1, 0.2, 0.3], other_values)
+    times = seq.declare_variable("times", size=6)  # a Variable
+    interp_wvf = InterpolatedWaveform(1000, values, times)  # this works
+    times._assign([0, 0.1, 0.2, 0.3, 0.4, 0.5])
+    values._assign([0, 1, 2, 3, 4])
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "When specified, the number of time coordinates in `times`"
+            " (6) must match the number of `values` (5)."
+        ),
+    ):
+        interp_wvf.build()
+
 
 def test_kaiser():
     duration: int = 40
@@ -490,10 +538,7 @@ def test_waveform_diff(
 
     samples_tensor = wf.samples.as_tensor()
     assert samples_tensor.requires_grad == requires_grad
-    assert (
-        wf.modulated_samples(rydberg_global).as_tensor().requires_grad
-        == requires_grad
-    )
+    assert wf.modulated_samples(rydberg_global).requires_grad == requires_grad
     wfx2_tensor = (-wf * 2).samples.as_tensor()
     assert torch.equal(wfx2_tensor, samples_tensor * -2.0)
     assert wfx2_tensor.requires_grad == requires_grad
@@ -501,15 +546,12 @@ def test_waveform_diff(
     wfdiv2 = wf / torch.tensor(2.0, requires_grad=True)
     assert torch.equal(wfdiv2.samples.as_tensor(), samples_tensor / 2.0)
     # Should always be true because it was divided by diff tensor
-    assert wfdiv2.samples.as_tensor().requires_grad
+    assert wfdiv2.samples.requires_grad
 
-    assert wf[-1].as_tensor().requires_grad == requires_grad
+    assert wf[-1].requires_grad == requires_grad
 
     try:
-        assert (
-            wf.change_duration(1000).samples.as_tensor().requires_grad
-            == requires_grad
-        )
+        assert wf.change_duration(1000).samples.requires_grad == requires_grad
     except NotImplementedError:
         pass
 

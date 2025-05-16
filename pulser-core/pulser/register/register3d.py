@@ -155,8 +155,8 @@ class Register3D(BaseRegister, RegDrawer):
         """Converts a Register3D into a Register (if possible).
 
         Args:
-            tol_width: The allowed transverse width of
-            the register to be projected.
+            tol_width: The allowed transverse width of the register to be
+                projected.
 
         Returns:
             Returns a 2D register with the coordinates of the atoms

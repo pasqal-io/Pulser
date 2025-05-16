@@ -19,9 +19,15 @@ import pytest
 
 from pulser import Register, Register3D, Sequence
 from pulser.devices import DigitalAnalogDevice, MockDevice
+from pulser.exceptions.serialization import (
+    SerializationError,
+    SerializationSupportAttributeMissing,
+    SerializationSupportClassMissing,
+    SerializationSupportModuleMissing,
+)
 from pulser.json.coders import PulserDecoder, PulserEncoder
-from pulser.json.exceptions import SerializationError
 from pulser.json.supported import validate_serialization
+from pulser.json.utils import make_json_compatible
 from pulser.parametrized.decorators import parametrize
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
@@ -52,9 +58,14 @@ def test_encoder():
         encode(1j)
 
 
-def test_device(mod_device):
+def test_device(mod_device, helpers):
     assert encode_decode(DigitalAnalogDevice) == DigitalAnalogDevice
-    with pytest.raises(SerializationError):
+    with helpers.raises_all(
+        [
+            SerializationSupportClassMissing,
+            SerializationError,
+        ]
+    ):
         encode_decode(mod_device)
 
 
@@ -119,15 +130,24 @@ def test_detuning_map():
 
 
 @pytest.mark.parametrize(
-    "reg",
+    "reg_dict",
     [
-        Register(dict(enumerate([(2, 3), (5, 1), (10, 0)]))),
-        Register3D({3: (2, 3, 4), 4: (3, 4, 5), 2: (4, 5, 7)}),
+        dict(enumerate([(2, 3), (5, 1), (10, 0)])),
+        {3: (2, 3, 4), 4: (3, 4, 5), 2: (4, 5, 7)},
     ],
 )
-def test_register_numbered_keys(reg):
+def test_register_numbered_keys(reg_dict):
+    with pytest.warns(
+        DeprecationWarning,
+        match="Usage of `int`s or any non-`str`types as `QubitId`s",
+    ):
+        reg = (Register if len(reg_dict[2]) == 2 else Register3D)(reg_dict)
     j = json.dumps(reg, cls=PulserEncoder)
-    decoded_reg = json.loads(j, cls=PulserDecoder)
+    with pytest.warns(
+        DeprecationWarning,
+        match="Usage of `int`s or any non-`str`types as `QubitId`s",
+    ):
+        decoded_reg = json.loads(j, cls=PulserDecoder)
     assert reg == decoded_reg
     assert all([type(i) is int for i in decoded_reg.qubit_ids])
 
@@ -147,7 +167,7 @@ def test_mappable_register():
     assert not new_mapped_seq.is_register_mappable()
 
 
-def test_rare_cases(patch_plt_show):
+def test_rare_cases(patch_plt_show, helpers):
     reg = Register.square(4)
     seq = Sequence(reg, DigitalAnalogDevice)
     var = seq.declare_variable("var")
@@ -188,7 +208,7 @@ def test_rare_cases(patch_plt_show):
         encode(rotated_reg)
 
 
-def test_support():
+def test_support(helpers):
     seq = Sequence(Register.square(2), DigitalAnalogDevice)
     var = seq.declare_variable("var")
 
@@ -198,24 +218,27 @@ def test_support():
         validate_serialization(obj_dict)
 
     obj_dict["__module__"] = "pulser.fake"
-    with pytest.raises(
-        SerializationError,
+    with helpers.raises_all(
+        [SerializationSupportModuleMissing, SerializationError],
         match="No serialization support for module 'pulser.fake'.",
     ):
         validate_serialization(obj_dict)
 
     wf_obj_dict = obj_dict["__args__"][0]
     wf_obj_dict["__submodule__"] = "RampWaveform"
-    with pytest.raises(
-        SerializationError,
+    with helpers.raises_all(
+        [SerializationSupportAttributeMissing, SerializationError],
         match="No serialization support for attributes of "
         "'pulser.waveforms.RampWaveform'",
     ):
         validate_serialization(wf_obj_dict)
 
     del wf_obj_dict["__submodule__"]
-    with pytest.raises(
-        SerializationError,
+    with helpers.raises_all(
+        [
+            SerializationSupportClassMissing,
+            SerializationError,
+        ],
         match="No serialization support for 'pulser.waveforms.from_max_val'",
     ):
         validate_serialization(wf_obj_dict)
@@ -278,3 +301,13 @@ def test_deprecated_device_args():
     s = json.dumps(seq_dict)
     new_seq = Sequence._deserialize(s)
     assert new_seq.device == MockDevice
+
+
+def test_make_json_compatible():
+    assert make_json_compatible(np.arange(3, dtype=np.int8)) == [0, 1, 2]
+    assert make_json_compatible(
+        np.linspace(0, 1, num=3, dtype=np.float16)
+    ) == [0.0, 0.5, 1.0]
+    assert make_json_compatible("abc") == "abc"
+    with pytest.raises(TypeError, match="not JSON serializable"):
+        make_json_compatible(1j)

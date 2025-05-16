@@ -39,8 +39,7 @@ def test_pad(cast_to, requires_grad):
         arr = torch.tensor(arr, requires_grad=requires_grad)
 
     def check_match(arr1: pm.AbstractArray, arr2):
-        if requires_grad:
-            assert arr1.as_tensor().requires_grad
+        assert arr1.requires_grad == requires_grad
         np.testing.assert_array_equal(
             arr1.as_array(detach=requires_grad), arr2
         )
@@ -173,6 +172,7 @@ class TestAbstractArray:
             assert val != 0
         else:
             val = values
+        val_np = val
         if use_tensor:
             torch = pytest.importorskip("torch")
             val = torch.tensor(val)
@@ -180,31 +180,31 @@ class TestAbstractArray:
         arr = pm.AbstractArray(val)
         # add
         np.testing.assert_array_equal(arr + 5.0, val + 5.0)
-        np.testing.assert_array_equal(arr + values, val + values)
+        np.testing.assert_array_equal(arr + values, val_np + values)
         np.testing.assert_array_equal(2.0 + arr, val + 2.0)
 
         # sub
         np.testing.assert_array_equal(arr - 5.0, val - 5.0)
-        np.testing.assert_array_equal(arr - values, val - values)
+        np.testing.assert_array_equal(arr - values, val_np - values)
         np.testing.assert_array_equal(2.0 - arr, 2.0 - val)
 
         # mul
         np.testing.assert_array_equal(arr * 5.0, val * 5.0)
-        np.testing.assert_array_equal(arr * values, val * values)
+        np.testing.assert_array_equal(arr * values, val_np * values)
         np.testing.assert_array_equal(2.0 * arr, val * 2.0)
 
         # truediv
         np.testing.assert_array_equal(arr / 5.0, val / 5.0)
         # Avoid zero division
         np.testing.assert_array_equal(
-            arr / (values + 2.0), val / (values + 2.0)
+            arr / (values + 2.0), val_np / (values + 2.0)
         )
         np.testing.assert_array_equal(2.0 / arr, 2.0 / val)
 
         # floordiv
         np.testing.assert_array_equal(arr // 5.0, val // 5.0)
         np.testing.assert_array_equal(
-            arr // (values + 2.0), val // (values + 2.0)
+            arr // (values + 2.0), val_np // (values + 2.0)
         )
         np.testing.assert_array_equal(2.0 // arr, 2.0 // val)
 
@@ -212,13 +212,13 @@ class TestAbstractArray:
         np.testing.assert_array_equal(arr**5.0, val**5.0)
 
         np.testing.assert_array_almost_equal(
-            abs(arr) ** values, abs(val) ** values
+            abs(arr) ** values, abs(val_np) ** values
         )  # rounding errors here
         np.testing.assert_array_equal(2.0**arr, 2.0**val)
 
         # mod
         np.testing.assert_array_equal(arr % 5.0, val % 5.0)
-        np.testing.assert_array_equal(arr % values, val % values)
+        np.testing.assert_array_equal(arr % values, val_np % values)
         np.testing.assert_array_equal(2.0 % arr, 2.0 % val)
 
         # matmul
@@ -260,8 +260,7 @@ class TestAbstractArray:
             assert item == val[i]
             assert isinstance(item, pm.AbstractArray)
             assert item.is_tensor == use_tensor
-            if use_tensor:
-                assert item.as_tensor().requires_grad == requires_grad
+            assert item.requires_grad == requires_grad
 
         # setitem
         if not requires_grad:
@@ -292,8 +291,8 @@ class TestAbstractArray:
             new_val[indices] = 0.0
             assert np.all(arr_np == new_val)
             assert arr_np.is_tensor
-            # The resulting tensor requires grad if the assing one did
-            assert arr_np.as_tensor().requires_grad == requires_grad
+            # The resulting tensor requires grad if the assigned one did
+            assert arr_np.requires_grad == requires_grad
 
     @pytest.mark.parametrize("scalar", [False, True])
     @pytest.mark.parametrize(
@@ -334,3 +333,9 @@ class TestAbstractArray:
             deserialized = json.loads(legacy_ser, cls=PulserDecoder)
             assert isinstance(deserialized, pm.AbstractArray)
             np.testing.assert_array_equal(deserialized, val)
+
+    def test_copy(self):
+        arr = pm.AbstractArray(np.array([1, 2, 5, 1, 4.0, 234]))
+        arr_copy = arr.__array__(copy=True)
+        assert np.all(arr == arr_copy)
+        assert arr is not arr_copy

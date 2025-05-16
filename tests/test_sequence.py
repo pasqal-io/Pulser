@@ -145,7 +145,12 @@ def test_dmm_declaration(reg, device, det_map):
     seq.config_detuning_map(det_map, "dmm_0")
     assert seq.get_addressed_bases() == ("ground-rydberg",)
     seq.config_detuning_map(det_map, "dmm_1")
-    with pytest.raises(ValueError, match="No DMM dmm_2"):
+    with pytest.raises(
+        ValueError,
+        match=r"No DMM called dmm_2 is available in the device\. "
+        r"Your selected device .* has the following DMM channels "
+        r"available: \['dmm_0', 'dmm_1'\]\.",
+    ):
         seq.config_detuning_map(det_map, "dmm_2")
     with pytest.raises(ValueError, match="DMM dmm_0 is not available"):
         seq.config_detuning_map(det_map, "dmm_0")
@@ -193,7 +198,12 @@ def test_slm_declaration(reg, device, det_map):
     seq = Sequence(reg, device)
     available_channels = set(seq.available_channels)
     assert seq.get_addressed_bases() == ()
-    with pytest.raises(ValueError, match="No DMM dmm_2 in the device"):
+    with pytest.raises(
+        ValueError,
+        match=r"No DMM called dmm_2 is available in the device\. Your "
+        r"selected device .* has the following DMM channels "
+        r"available: \['dmm_0', 'dmm_1'\]\.",
+    ):
         seq.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_2")
     seq.config_slm_mask(["q0", "q1", "q3", "q4"])
     assert seq.get_addressed_bases() == tuple()
@@ -548,7 +558,12 @@ def test_ising_mode(
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
 def test_switch_register(
-    reg, mappable_reg, parametrized, starts_mappable, config_det_map
+    reg,
+    mappable_reg,
+    parametrized,
+    starts_mappable,
+    config_det_map,
+    catch_phase_shift_warning,
 ):
     pulse = Pulse.ConstantPulse(1000, 1, -1, 2)
     with_slm_mask = not starts_mappable and not mappable_reg
@@ -573,6 +588,8 @@ def test_switch_register(
         seq.switch_register(Register(dict(q1=(0, 0), qN=(10, 10))))
 
     seq.declare_channel("ryd", "rydberg_global")
+    with catch_phase_shift_warning:
+        seq.phase_shift(3)
     seq.add(pulse, "ryd", protocol="no-delay")
 
     if mappable_reg:
@@ -588,7 +605,8 @@ def test_switch_register(
         context_manager = contextlib.nullcontext()
 
     with context_manager:
-        new_seq = seq.switch_register(new_reg)
+        with catch_phase_shift_warning:
+            new_seq = seq.switch_register(new_reg)
     assert seq.declared_variables or not parametrized
     assert seq.declared_variables == new_seq.declared_variables
     assert new_seq.is_parametrized() == parametrized
@@ -596,13 +614,19 @@ def test_switch_register(
     assert new_seq._calls[1:] == seq._calls[1:]  # Excludes __init__
     assert new_seq._to_build_calls == seq._to_build_calls
 
+    if not parametrized and not mappable_reg:
+        assert new_seq.current_phase_ref("foo") == 3
+        assert new_seq.current_phase_ref("q0") == 3
+        assert seq.current_phase_ref("q1") == 3
+
     build_kwargs = {}
     if parametrized:
         build_kwargs["delay"] = 120
     if mappable_reg:
         build_kwargs["qubits"] = {"q0": 1, "q1": 4}
     if build_kwargs:
-        new_seq = new_seq.build(**build_kwargs)
+        with catch_phase_shift_warning:
+            new_seq = new_seq.build(**build_kwargs)
 
     assert isinstance(
         (raman_pulse_slot := new_seq._schedule["raman"][1]).type, Pulse
@@ -619,7 +643,8 @@ def test_switch_register(
     if config_det_map:
         if with_slm_mask:
             if parametrized:
-                seq = seq.build(**build_kwargs)
+                with catch_phase_shift_warning:
+                    seq = seq.build(**build_kwargs)
             assert np.any(reg.qubits["q0"] != new_reg.qubits["q0"])
             assert "dmm_0" in seq.declared_channels
             prev_qubit_wmap = seq._schedule[
@@ -1435,7 +1460,7 @@ def test_delay_min_duration(reg, device):
     )
 
 
-def test_phase(reg, device, det_map):
+def test_phase(reg, device, det_map, catch_phase_shift_warning):
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     seq.phase_shift(-1, "q0", "q1")
@@ -1456,11 +1481,14 @@ def test_phase(reg, device, det_map):
     with pytest.raises(ValueError, match="ids have to be qubit ids"):
         seq.phase_shift(np.pi, "q1", "q4", "q100")
 
+    # Test global phase shift
     seq.declare_channel("ch1", "rydberg_global")
-    seq.phase_shift(1, *seq._qids, basis="ground-rydberg")
+    with catch_phase_shift_warning:
+        seq.phase_shift(1, basis="ground-rydberg")
     for q in seq.qubit_info:
         assert seq.current_phase_ref(q, "ground-rydberg") == 1
-    seq.phase_shift(1, *seq._qids)
+    with catch_phase_shift_warning:
+        seq.phase_shift(1)
     assert seq.current_phase_ref("q1", "digital") == 0
     assert seq.current_phase_ref("q10", "digital") == 1
 
@@ -1614,8 +1642,11 @@ def test_str(reg, device, mod_device, det_map):
 
     measure_msg = "\n\nMeasured in basis: digital"
     assert seq.__str__() == msg_ch0 + msg_ch1 + msg_det_map + measure_msg
-
-    seq2 = Sequence(Register({"q0": (0, 0), 1: (5, 5)}), device)
+    with pytest.warns(
+        DeprecationWarning,
+        match="Usage of `int`s or any non-`str`types as `QubitId`s",
+    ):
+        seq2 = Sequence(Register({"q0": (0, 0), 1: (5, 5)}), device)
     seq2.declare_channel("ch1", "rydberg_global")
     with pytest.raises(
         NotImplementedError,
@@ -1727,6 +1758,110 @@ def test_sequence(reg, device, patch_plt_show):
     assert json.loads(s)["__version__"] == pulser.__version__
     seq_ = Sequence._deserialize(s)
     assert str(seq) == str(seq_)
+
+
+@pytest.mark.parametrize("custom_phase_jump_time", (None, 0))
+@pytest.mark.parametrize("eom", [False, True])
+def test_estimate_added_delay(eom, custom_phase_jump_time):
+    ryd_ch_obj = dataclasses.replace(
+        AnalogDevice.channels["rydberg_global"],
+        custom_phase_jump_time=custom_phase_jump_time,
+    )
+    device = dataclasses.replace(AnalogDevice, channel_objects=(ryd_ch_obj,))
+    reg = Register.square(2, 5)
+    seq = Sequence(reg, device)
+    pulse_0 = Pulse.ConstantPulse(100, 1, 0, 0)
+    pulse_pi_2 = Pulse.ConstantPulse(100, 1, 0, np.pi / 2)
+
+    with pytest.raises(
+        ValueError, match="Use the name of a declared channel."
+    ):
+        seq.estimate_added_delay(pulse_0, "ising", "min-delay")
+    seq.declare_channel("ising", "rydberg_global")
+    ising_obj = seq.declared_channels["ising"]
+    if eom:
+        seq.enable_eom_mode("ising", 1, 0)
+        with pytest.warns(
+            UserWarning,
+            match="Channel ising is in EOM mode, the amplitude",
+        ):
+            assert (
+                seq.estimate_added_delay(
+                    Pulse.ConstantPulse(100, 2, 0, 0), "ising"
+                )
+                == 0
+            )
+        with pytest.warns(
+            UserWarning,
+            match="Channel ising is in EOM mode, the detuning",
+        ):
+            assert (
+                seq.estimate_added_delay(
+                    Pulse.ConstantPulse(100, 1, 1, 0), "ising"
+                )
+                == 0
+            )
+    assert seq.estimate_added_delay(pulse_0, "ising", "min-delay") == 0
+    seq._add(pulse_0, "ising", "min-delay")
+    first_pulse = seq._last("ising")
+    assert first_pulse.ti == 0
+    phase_jump_time = (
+        custom_phase_jump_time
+        if custom_phase_jump_time is not None and not eom
+        else 2 * ising_obj.rise_time
+    )
+    if not eom:
+        assert ising_obj.phase_jump_time == phase_jump_time
+    delay = pulse_0.fall_time(ising_obj, eom) + phase_jump_time
+    assert seq.estimate_added_delay(pulse_pi_2, "ising") == delay
+    seq._add(pulse_pi_2, "ising", "min-delay")
+    second_pulse = seq._last("ising")
+    assert second_pulse.ti - first_pulse.tf == delay
+    assert seq.estimate_added_delay(pulse_0, "ising") == delay
+    seq.delay(100, "ising")
+    assert seq.estimate_added_delay(pulse_0, "ising") == delay - 100
+    with pytest.warns(
+        UserWarning,
+        match="The sequence's duration exceeded the maximum duration",
+    ):
+        seq.estimate_added_delay(
+            pulser.Pulse.ConstantPulse(6000, 1, 0, np.pi), "ising"
+        )
+    var = seq.declare_variable("var", dtype=int)
+    with pytest.raises(
+        ValueError, match="Can't compute the delay to add before a pulse"
+    ):
+        seq.estimate_added_delay(Pulse.ConstantPulse(var, 1, 0, 0), "ising")
+    # We shift the phase of just one qubit, which blocks addition
+    # of new pulses on this basis
+    seq.phase_shift(1.0, 0, basis="ground-rydberg")
+    with pytest.raises(
+        ValueError,
+        match="Cannot do a multiple-target pulse on qubits with different",
+    ):
+        seq.estimate_added_delay(pulse_0, "ising")
+
+
+def test_estimate_added_delay_dmm():
+    pulse_0 = Pulse.ConstantPulse(100, 1, 0, 0)
+    det_pulse = Pulse.ConstantPulse(100, 0, -1, 0)
+    seq = Sequence(Register.square(2, 5), DigitalAnalogDevice)
+    seq.declare_channel("ising", "rydberg_global")
+    seq.config_slm_mask([0, 1])
+    with pytest.raises(
+        ValueError, match="You should add a Pulse to a Global Channel"
+    ):
+        seq.estimate_added_delay(det_pulse, "dmm_0")
+    seq.add(pulse_0, "ising")
+    assert seq.estimate_added_delay(det_pulse, "dmm_0") == 0
+    with pytest.raises(
+        ValueError, match="The detuning in a DMM must not be positive."
+    ):
+        seq.estimate_added_delay(Pulse.ConstantPulse(100, 0, 1, 0), "dmm_0")
+    with pytest.raises(
+        ValueError, match="The pulse's amplitude goes over the maximum"
+    ):
+        seq.estimate_added_delay(pulse_0, "dmm_0")
 
 
 @pytest.mark.parametrize("qubit_ids", [["q0", "q1", "q2"], [0, 1, 2]])
@@ -1910,7 +2045,7 @@ def test_draw_slm_mask_in_ising(
             seq1.draw(
                 draw_qubit_det=True, draw_interp_pts=False, mode="output"
             )  # Drawing Sequence with only a DMM
-        assert len(record) == 9
+        assert len(record) == 5
         assert np.all(
             str(record[i].message).startswith(
                 "No modulation bandwidth defined"
@@ -1932,7 +2067,7 @@ def test_draw_slm_mask_in_ising(
         mask_time, 0, -100, 0
     )
     # Possible to modulate dmm_0_1 after slm declaration
-    seq1.add_dmm_detuning(RampWaveform(300, 0, -10), "dmm_0_1")
+    seq1.add_dmm_detuning(InterpolatedWaveform(300, (-10, 0)), "dmm_0_1")
     assert seq1._slm_mask_time == [0, mask_time]
     # Possible to add pulses afterwards,
     seq1.declare_channel("ryd_loc", "rydberg_local", ["q0", "q1"])
@@ -1943,7 +2078,7 @@ def test_draw_slm_mask_in_ising(
             mode,
             draw_qubit_det=draw_qubit_det,
             draw_qubit_amp=draw_qubit_amp,
-            draw_interp_pts=False,
+            draw_interp_pts=True,
             draw_register=draw_register,
             fig_name="local_quantities",
         )
@@ -2406,6 +2541,7 @@ def test_multiple_index_targets(reg):
     assert built_seq._last("ch0").targets == {"q2", "q3"}
 
 
+@pytest.mark.parametrize("custom_phase_jump_time", (None, 0))
 @pytest.mark.parametrize("check_wait_for_fall", (True, False))
 @pytest.mark.parametrize("correct_phase_drift", (True, False))
 @pytest.mark.parametrize("custom_buffer_time", (None, 400))
@@ -2415,6 +2551,7 @@ def test_eom_mode(
     custom_buffer_time,
     correct_phase_drift,
     check_wait_for_fall,
+    custom_phase_jump_time,
     patch_plt_show,
 ):
     # Setting custom_buffer_time
@@ -2424,7 +2561,9 @@ def test_eom_mode(
         custom_buffer_time=custom_buffer_time,
     )
     channels["rydberg_global"] = dataclasses.replace(
-        channels["rydberg_global"], eom_config=eom_config
+        channels["rydberg_global"],
+        eom_config=eom_config,
+        custom_phase_jump_time=custom_phase_jump_time,
     )
     dev_ = dataclasses.replace(
         mod_device, channel_ids=None, channel_objects=tuple(channels.values())
@@ -2492,8 +2631,7 @@ def test_eom_mode(
     )
     second_pulse_slot = seq._schedule["ch0"].last_pulse_slot()
     phase_buffer = (
-        eom_pulse.fall_time(ch0_obj, in_eom_mode=True)
-        + seq.declared_channels["ch0"].phase_jump_time
+        eom_pulse.fall_time(ch0_obj, in_eom_mode=True) + 2 * ch0_obj.rise_time
     )
     assert second_pulse_slot.ti == first_pulse_slot.tf + phase_buffer
     # Corrects the phase acquired during the phase buffer
@@ -2776,12 +2914,12 @@ def test_sequence_diff(device, parametrized, with_modulation, with_eom):
 
     seq_samples = sample(seq, modulation=with_modulation)
     ryd_ch_samples = seq_samples.channel_samples["ryd_global"]
-    assert ryd_ch_samples.amp.as_tensor().requires_grad
-    assert ryd_ch_samples.det.as_tensor().requires_grad
-    assert ryd_ch_samples.phase.as_tensor().requires_grad
+    assert ryd_ch_samples.amp.requires_grad
+    assert ryd_ch_samples.det.requires_grad
+    assert ryd_ch_samples.phase.requires_grad
     if "dmm_0" in seq_samples.channel_samples:
         dmm_ch_samples = seq_samples.channel_samples["dmm_0"]
         # Only detuning is modulated
-        assert not dmm_ch_samples.amp.as_tensor().requires_grad
-        assert dmm_ch_samples.det.as_tensor().requires_grad
-        assert not dmm_ch_samples.phase.as_tensor().requires_grad
+        assert not dmm_ch_samples.amp.requires_grad
+        assert dmm_ch_samples.det.requires_grad
+        assert not dmm_ch_samples.phase.requires_grad

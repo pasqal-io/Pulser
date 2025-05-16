@@ -25,7 +25,6 @@ from pulser.channels.base_channel import (
     States,
     get_states_from_bases,
 )
-from pulser.register import QubitId
 from pulser.result import Result
 
 
@@ -43,10 +42,9 @@ class QutipResult(Result):
             same as the state's basis.
     """
 
-    atom_order: tuple[QubitId, ...]
-    meas_basis: str
     state: qutip.Qobj
     matching_meas_basis: bool
+    evaluation_time: float = 1.0
 
     @property
     def sampling_errors(self) -> dict[str, float]:
@@ -229,11 +227,16 @@ class QutipResult(Result):
                     ]
                 )
             ]
-            ex_probs = np.abs(state.extract_states(ex_inds).full()) ** 2
+            state_arr = state.full()
+            ex_probs = np.abs(state_arr[ex_inds]) ** 2
             if not np.all(np.isclose(ex_probs, 0, atol=tol)):
                 raise TypeError(
                     "Can't reduce to chosen basis because the population of a "
                     "state to eliminate is above the allowed tolerance."
                 )
-            state = state.eliminate_states(ex_inds, normalize=normalize)
+            mask = np.ones_like(state_arr, dtype=bool)
+            mask[ex_inds] = False
+            state = qutip.Qobj(state_arr[mask])
+            if normalize:
+                state.unit(inplace=True)
         return state.tidyup()

@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import cast, Protocol, TypeVar
+from typing import Any, cast, Protocol, TypeVar
 
 import numpy as np
 import scipy.fft
@@ -40,7 +40,7 @@ class TensorLike(Protocol[T]):
 
     def detach(self: T) -> T: ...  # noqa: D102
 
-    def __array__(self) -> np.ndarray: ...
+    def __array__(self, dtype: Any = None) -> np.ndarray: ...
 
 
 # Custom function definitions
@@ -93,6 +93,13 @@ def tan(a: AbstractArrayLike, /) -> AbstractArray:
     if a.is_tensor:
         return AbstractArray(torch.tan(a.as_tensor()))
     return AbstractArray(np.tan(a.as_array()))
+
+
+def tanh(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.tanh(a.as_tensor()))
+    return AbstractArray(np.tanh(a.as_array()))
 
 
 def pad(

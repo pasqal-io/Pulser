@@ -14,27 +14,44 @@
 """Classes to store measurement results."""
 from __future__ import annotations
 
-import collections.abc
-import typing
+import uuid
+import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
-from dataclasses import dataclass
-from typing import Any, TypeVar, overload
+from dataclasses import dataclass, field
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pulser.register import QubitId
+import pulser.backend.results as backend_results
+from pulser.backend.default_observables import BitStrings
+from pulser.math.multinomial import multinomial
 
-__all__ = ["Result", "SampledResult", "Results", "ResultType"]
+
+def __getattr__(name: str) -> Any:
+    name_map = {"Results": "ResultsSequence", "ResultType": "ResultsType"}
+    if name not in name_map:
+        raise AttributeError(f"Module {__name__!r} has no attribute {name!r}.")
+    warnings.warn(
+        f"The 'pulser.result.{name}' class has been renamed to "
+        f"'{name_map[name]}' and moved to 'pulser.backend.results'. "
+        "Importing it as '{name}' from 'pulser.results' is deprecated.",
+        DeprecationWarning,
+        stacklevel=3,
+    )
+    return getattr(backend_results, name_map[name])
+
+
+__all__ = ["Result", "SampledResult"]
 
 
 @dataclass
-class Result(ABC):
-    """Base class for storing the result of a sequence run."""
+class Result(ABC, backend_results.Results):
+    """Base class for storing the result of an observable at specific time."""
 
-    atom_order: tuple[QubitId, ...]
     meas_basis: str
+    total_duration: int = field(default=0, init=False)
 
     @property
     def sampling_dist(self) -> dict[str, float]:
@@ -79,12 +96,9 @@ class Result(ABC):
         Returns:
             Samples of bitstrings corresponding to measured quantum states.
         """
-        dist = np.random.multinomial(n_samples, self._weights())
         return Counter(
-            {
-                np.binary_repr(i, self._size): dist[i]
-                for i in np.nonzero(dist)[0]
-            }
+            np.binary_repr(i, self._size)
+            for i in multinomial(n_samples, self._weights())
         )
 
     def get_state(self) -> Any:
@@ -136,12 +150,28 @@ class SampledResult(Result):
         meas_basis: The measurement basis.
         bitstring_counts: The number of times each bitstring was
             measured.
+        evaluation_time: Relative time at which the samples were
+            taken.
     """
 
     bitstring_counts: dict[str, int]
+    evaluation_time: float = 1.0
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         self.n_samples = sum(self.bitstring_counts.values())
+        # TODO: Make sure this is not too hacky
+        bitstrings_obs = BitStrings()
+        # Override UUID so that two SampledResult instances with
+        # the same counts are identical
+        bitstrings_obs._uuid = uuid.UUID(
+            "00000000-0000-0000-0000-000000000000"
+        )
+        self._store(
+            observable=bitstrings_obs,
+            time=self.evaluation_time,
+            value=self.bitstring_counts,
+        )
 
     @property
     def sampling_errors(self) -> dict[str, float]:
@@ -159,32 +189,3 @@ class SampledResult(Result):
         for bitstr, counts in self.bitstring_counts.items():
             weights[int(bitstr, base=2)] = counts / self.n_samples
         return weights / sum(weights)
-
-
-ResultType = TypeVar("ResultType", bound=Result)
-
-
-class Results(typing.Sequence[ResultType]):
-    """An immutable sequence of results."""
-
-    _results: tuple[ResultType, ...]
-
-    @overload
-    def __getitem__(self, key: int) -> ResultType:
-        pass
-
-    @overload
-    def __getitem__(self, key: slice) -> tuple[ResultType, ...]:
-        pass
-
-    def __getitem__(
-        self, key: int | slice
-    ) -> ResultType | tuple[ResultType, ...]:
-        return self._results[key]
-
-    def __len__(self) -> int:
-        return len(self._results)
-
-    def __iter__(self) -> collections.abc.Iterator[ResultType]:
-        for res in self._results:
-            yield res

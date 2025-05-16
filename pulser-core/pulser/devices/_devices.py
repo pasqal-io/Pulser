@@ -65,19 +65,21 @@ DigitalAnalogDevice = Device(
             total_bottom_detuning=-2 * np.pi * 2000,
         ),
     ),
+    short_description="A device with digital and analog capabilites.",
 )
 
 AnalogDevice = Device(
     name="AnalogDevice",
     dimensions=2,
     rydberg_level=60,
-    max_atom_num=25,
-    max_radial_distance=35,
+    max_atom_num=80,
+    max_radial_distance=38,
     min_atom_distance=5,
-    max_sequence_duration=4000,
+    max_sequence_duration=6000,
     max_runs=2000,
     requires_layout=True,
-    accepts_new_layouts=False,
+    accepts_new_layouts=True,
+    optimal_layout_filling=0.45,
     channel_objects=(
         Rydberg.Global(
             max_abs_detuning=2 * np.pi * 20,
@@ -96,4 +98,5 @@ AnalogDevice = Device(
         ),
     ),
     pre_calibrated_layouts=(TriangularLatticeLayout(61, 5),),
+    short_description="A realistic device for analog sequence execution.",
 )

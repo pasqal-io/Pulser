@@ -540,8 +540,7 @@ def _draw_channel_content(
             the solver. If present, plots the effective pulse alongside the
             input pulse.
         draw_phase_area: Whether phase and area values need to be shown
-            as text on the plot, defaults to False. If `draw_phase_curve=True`,
-            phase values are ommited.
+            as text on the plot, defaults to False.
         draw_phase_shifts: Whether phase shift and reference information
             should be added to the plot, defaults to False.
         draw_input: Draws the programmed pulses on the channels, defaults
@@ -732,10 +731,6 @@ def _draw_channel_content(
 
         if draw_phase_area:
             top = False  # Variable to track position of box, top or center.
-            print_phase = not draw_phase_curve and any(
-                np.any(ch_data.samples.phase[slot.ti : slot.tf] != 0)
-                for slot in ch_data.samples.slots
-            )
 
             for slot in ch_data.samples.slots:
                 if sampling_rate:
@@ -767,11 +762,8 @@ def _draw_channel_content(
                     if round(area_val, 2) == 1
                     else rf"A: {float(area_val):.2g}$\pi$"
                 )
-                if not print_phase:
-                    txt = area_fmt
-                else:
-                    phase_fmt = rf"$\phi$: {phase_str(phase_val)}"
-                    txt = "\n".join([phase_fmt, area_fmt])
+                phase_fmt = rf"$\phi$: {phase_str(phase_val)}"
+                txt = "\n".join([phase_fmt, area_fmt])
                 axes[0].text(
                     x_plot,
                     y_plot,
@@ -1246,7 +1238,7 @@ def draw_samples(
     sampling_rate: Optional[float] = None,
     draw_phase_area: bool = False,
     draw_phase_shifts: bool = False,
-    draw_phase_curve: bool = False,
+    draw_phase_curve: bool = True,
     draw_detuning_maps: bool = False,
     draw_qubit_amp: bool = False,
     draw_qubit_det: bool = False,
@@ -1263,8 +1255,7 @@ def draw_samples(
             the solver. If present, plots the effective pulse alongside the
             input pulse.
         draw_phase_area: Whether phase and area values need to be shown
-            as text on the plot, defaults to False. If `draw_phase_curve=True`,
-            phase values are ommited.
+            as text on the plot, defaults to False.
         draw_phase_shifts: Whether phase shift and reference information
             should be added to the plot, defaults to False.
         draw_phase_curve: Draws the changes in phase in its own curve (ignored
@@ -1322,7 +1313,7 @@ def draw_sequence(
     draw_register: bool = False,
     draw_input: bool = True,
     draw_modulation: bool = False,
-    draw_phase_curve: bool = False,
+    draw_phase_curve: bool = True,
     draw_detuning_maps: bool = False,
     draw_qubit_amp: bool = False,
     draw_qubit_det: bool = False,
@@ -1336,8 +1327,7 @@ def draw_sequence(
             the solver. If present, plots the effective pulse alongside the
             input pulse.
         draw_phase_area: Whether phase and area values need to be shown
-            as text on the plot, defaults to False. If `draw_phase_curve=True`,
-            phase values are ommited.
+            as text on the plot, defaults to False.
         draw_interp_pts: When the sequence has pulses with waveforms of
             type InterpolatedWaveform, draws the points of interpolation on
             top of the respective waveforms (defaults to True).
@@ -1429,14 +1419,22 @@ def draw_sequence(
         if interp_pts:
             data[ch].interp_pts = dict(interp_pts)
 
-    for ch, axes in ch_axes.items():
-        ch_data = data[ch]
-
-        if draw_interp_pts:
+    if draw_interp_pts:
+        for ch, axes in ch_axes.items():
+            ch_data = data[ch]
+            # Construct map between quantity and indices
+            ind_map = {}
+            ax_ind = 0
+            for color_ind, qty in enumerate(CURVES_ORDER):
+                if ch_data.curves_on[qty]:
+                    ind_map[qty] = (ax_ind, color_ind)
+                    ax_ind += 1
             for qty in ("amplitude", "detuning"):
                 if qty in ch_data.interp_pts and ch_data.curves_on[qty]:
-                    ind = CURVES_ORDER.index(qty)
+                    ax_ind, color_ind = ind_map[qty]
                     pts = np.array(ch_data.interp_pts[qty])
-                    axes[ind].scatter(pts[:, 0], pts[:, 1], color=COLORS[ind])
+                    axes[ax_ind].scatter(
+                        pts[:, 0], pts[:, 1], color=COLORS[color_ind]
+                    )
 
     return (fig_reg, fig, fig_qubit, fig_legend)

@@ -19,16 +19,34 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, field, fields
-from typing import Any, Literal, cast, get_args
+from typing import Any, Callable, Literal, cast, get_args
 
 import numpy as np
 from scipy.spatial.distance import squareform
 
+import pulser
 import pulser.json.abstract_repr as pulser_abstract_repr
 import pulser.math as pm
 from pulser.channels.base_channel import Channel, States, get_states_from_bases
 from pulser.channels.dmm import DMM
 from pulser.devices.interaction_coefficients import c6_dict
+from pulser.exceptions.base import PulserValueError
+from pulser.exceptions.sequence import (
+    AtomsNumberError,
+    DimensionChoiceError,
+    DimensionPositionsTooHighError,
+    DimensionTooHighError,
+    DistanceError,
+    MaxNumberOfTrapsError,
+    MaxQubitNumberError,
+    MinimumLayoutFillingError,
+    MinQubitNumberError,
+    OptimalLayoutFillingError,
+    RadiusError,
+    RydbergLevelError,
+    TrapsNumberTooHighError,
+    TrapsNumberTooLowError,
+)
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
@@ -54,6 +72,7 @@ OPTIONAL_IN_ABSTR_REPR = tuple(
         "requires_layout",
         "accepts_new_layouts",
         "min_layout_traps",
+        "min_layout_filling",
     ]
 )
 PARAMS_WITH_ABSTR_REPR = ("channel_objects", "channel_ids", "dmm_objects")
@@ -63,9 +82,33 @@ PARAMS_WITH_ABSTR_REPR = ("channel_objects", "channel_ids", "dmm_objects")
 class BaseDevice(ABC):
     r"""Base class of a neutral-atom device.
 
-    Attributes:
+    Args:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
+        max_atom_num: Maximum number of atoms supported in an array.
+        max_radial_distance: The furthest away an atom can be from the center
+            of the array (in μm).
+        min_atom_distance: The closest together two atoms can be (in μm).
+        requires_layout: Whether the register used in the sequence must be
+            created from a register layout. Only enforced in QPU execution.
+        min_layout_traps: The minimum number of traps a layout can have.
+        max_layout_traps: An optional value for the maximum number of traps a
+            layout can have.
+        min_layout_filling: The smallest fraction of a layout that must be
+            filled with atoms. Only enforced when the layout has more traps
+            than 'min_layout_traps'.
+        max_layout_filling: The largest fraction of a layout that can be filled
+            with atoms.
+        optimal_layout_filling: An optional value for the fraction of a layout
+            that should be filled with atoms.
+        rydberg_level: The value of the principal quantum number :math:`n`
+            when the Rydberg level used is of the form
+            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
+        interaction_coeff_xy: :math:`C_3/\hbar`
+            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
+            which sets the van der Waals interaction strength between atoms in
+            different Rydberg states. Needed only if there is a Microwave
+            channel in the device. If unsure, 3700.0 is a good default value.
         channel_objects: The Channel subclass instances specifying each
             channel in the device.
         channel_ids: Custom IDs for each channel object. When defined,
@@ -74,26 +117,7 @@ class BaseDevice(ABC):
         dmm_objects: The DMM subclass instances specifying each channel in the
             device. They are referenced by their order in the list, with the ID
             "dmm_[index in dmm_objects]".
-        rydberg_level: The value of the principal quantum number :math:`n`
-            when the Rydberg level used is of the form
-            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
-        max_atom_num: Maximum number of atoms supported in an array.
-        max_radial_distance: The furthest away an atom can be from the center
-            of the array (in μm).
-        min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff_xy: :math:`C_3/\hbar`
-            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
-            which sets the van der Waals interaction strength between atoms in
-            different Rydberg states. Needed only if there is a Microwave
-            channel in the device. If unsure, 3700.0 is a good default value.
         supports_slm_mask: Whether the device supports the SLM mask feature.
-        max_layout_filling: The largest fraction of a layout that can be filled
-            with atoms.
-        optimal_layout_filling: An optional value for the fraction of a layout
-            that should be filled with atoms.
-        min_layout_traps: The minimum number of traps a layout can have.
-        max_layout_traps: An optional value for the maximum number of traps a
-            layout can have.
         max_sequence_duration: The maximum allowed duration for a sequence
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
@@ -101,8 +125,6 @@ class BaseDevice(ABC):
         default_noise_model: An optional noise model characterizing the default
             noise of the device. Can be used by emulator backends that support
             noise.
-        requires_layout: Whether the register used in the sequence must be
-            created from a register layout. Only enforced in QPU execution.
     """
 
     name: str
@@ -113,6 +135,7 @@ class BaseDevice(ABC):
     max_radial_distance: int | None
     interaction_coeff_xy: float | None = None
     supports_slm_mask: bool = False
+    min_layout_filling: float = 0.0
     max_layout_filling: float = 0.5
     optimal_layout_filling: float | None = None
     min_layout_traps: int = 1
@@ -125,11 +148,25 @@ class BaseDevice(ABC):
     channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
     dmm_objects: tuple[DMM, ...] = field(default_factory=tuple)
     default_noise_model: NoiseModel | None = None
+    short_description: str = field(default="", repr=False, compare=False)
 
     def __post_init__(self) -> None:
         def type_check(
             param: str, type_: type, value_override: Any = None
         ) -> None:
+            """Check that one instance attribute has the right type.
+
+            Arguments:
+                param: The name of the instance attribute. The value
+                    checked is `getattr(self, param)`. Ignored
+                    if `value_override` is specified.
+                type_: The expected type.
+                value_override: If specified, uses `value_override`
+                    instead of `getattr(self, param)`.
+
+            Raises:
+                TypeError if the value doesn't have the expected type.
+            """
             value = (
                 getattr(self, param)
                 if value_override is None
@@ -142,13 +179,14 @@ class BaseDevice(ABC):
                 )
 
         type_check("name", str)
-        if self.dimensions not in get_args(DIMENSIONS):
-            raise ValueError(
-                f"'dimensions' must be one of {get_args(DIMENSIONS)}, "
-                f"not {self.dimensions}."
+        expected_dimensions = cast(list[DIMENSIONS], get_args(DIMENSIONS))
+        if self.dimensions not in expected_dimensions:
+            raise DimensionChoiceError(
+                self, invalid=self.dimensions, expected=expected_dimensions
             )
         self._validate_rydberg_level(self.rydberg_level)
 
+        # Check constraints on int and optional int parameters.
         for param in (
             "min_atom_distance",
             "max_atom_num",
@@ -196,23 +234,28 @@ class BaseDevice(ABC):
                 f"not {self.max_layout_filling}."
             )
 
-        if self.optimal_layout_filling is not None and not (
-            0.0 < self.optimal_layout_filling <= self.max_layout_filling
+        if self.min_layout_filling is not None and not (
+            0.0 <= self.min_layout_filling < self.max_layout_filling
         ):
-            raise ValueError(
-                "When defined, the optimal layout filling fraction "
-                "must be greater than 0. and less than or equal to "
-                f"`max_layout_filling` ({self.max_layout_filling}), "
-                f"not {self.optimal_layout_filling}."
+            raise MinimumLayoutFillingError(
+                device=self,
+                invalid=self.min_layout_filling,
+            )
+
+        if self.optimal_layout_filling is not None and not (
+            self.min_layout_filling
+            <= self.optimal_layout_filling
+            <= self.max_layout_filling
+        ):
+            raise OptimalLayoutFillingError(
+                device=self,
+                invalid=self.optimal_layout_filling,
             )
 
         if self.max_layout_traps is not None:
             if self.max_layout_traps < self.min_layout_traps:
-                raise ValueError(
-                    "The maximum number of layout traps "
-                    f"({self.max_layout_traps}) must be greater than "
-                    "or equal to the minimum number of layout traps "
-                    f"({self.min_layout_traps})."
+                raise MaxNumberOfTrapsError(
+                    device=self,
                 )
             if (
                 self.max_atom_num is not None
@@ -223,10 +266,10 @@ class BaseDevice(ABC):
                 )
                 < self.max_atom_num
             ):
-                raise ValueError(
+                raise PulserValueError(
                     "With the given maximum layout filling and maximum number "
                     f"of traps, a layout supports at most {max_atoms_} atoms, "
-                    "which is less than the maximum number of atoms allowed"
+                    "which is less than the maximum number of atoms allowed "
                     f"({self.max_atom_num})."
                 )
 
@@ -237,7 +280,7 @@ class BaseDevice(ABC):
             type_check("All DMM channels", DMM, value_override=dmm_obj)
 
         if self.supports_slm_mask and not self.dmm_objects:
-            raise ValueError(
+            raise PulserValueError(
                 "One DMM object should be defined to support SLM mask."
             )
 
@@ -251,17 +294,17 @@ class BaseDevice(ABC):
                     "of strings."
                 )
             if len(self.channel_ids) != len(set(self.channel_ids)):
-                raise ValueError(
+                raise PulserValueError(
                     "When defined, 'channel_ids' can't have "
                     "repeated elements."
                 )
             if len(self.channel_ids) != len(self.channel_objects):
-                raise ValueError(
+                raise PulserValueError(
                     "When defined, the number of channel IDs must"
                     " match the number of channel objects."
                 )
             if set(self.channel_ids) & set(self.dmm_channels.keys()):
-                raise ValueError(
+                raise PulserValueError(
                     "When defined, the names of channel IDs must be different"
                     " than the names of DMM channels 'dmm_0', 'dmm_1', ... ."
                 )
@@ -291,6 +334,8 @@ class BaseDevice(ABC):
         if self.default_noise_model is not None:
             type_check("default_noise_model", NoiseModel)
 
+        type_check("short_description", str)
+
         def to_tuple(obj: tuple | list) -> tuple:
             if isinstance(obj, (tuple, list)):
                 obj = tuple(to_tuple(el) for el in obj)
@@ -300,6 +345,9 @@ class BaseDevice(ABC):
         for param in self._params():
             if "channel" in param or param == "dmm_objects":
                 object.__setattr__(self, param, to_tuple(getattr(self, param)))
+
+        # Hack to override the docstring of an instance
+        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
 
     @property
     @abstractmethod
@@ -379,20 +427,22 @@ class BaseDevice(ABC):
             )
 
         if register.dimensionality > self.dimensions:
-            raise ValueError(
-                f"All qubit positions must be at most {self.dimensions}D "
-                "vectors."
+            raise DimensionPositionsTooHighError(
+                device=self,
+                invalid=register.dimensionality,
             )
         self._validate_coords(register.qubits, kind="atoms")
 
         if register.layout is not None:
             try:
                 self.validate_layout(register.layout)
-            except (ValueError, TypeError):
-                raise ValueError(
+            except (ValueError, TypeError) as e:
+                # For compatibility, we wrap all these errors as a WrapedError.
+                # If you need details, check field `wrapped`.
+                raise PulserValueError(
                     "The 'register' is associated with an incompatible "
-                    "register layout."
-                )
+                    + "register layout."
+                ) from e
             self.validate_layout_filling(register)
 
     def validate_layout(self, layout: RegisterLayout) -> None:
@@ -405,26 +455,23 @@ class BaseDevice(ABC):
             raise TypeError("'layout' must be a RegisterLayout instance.")
 
         if layout.dimensionality > self.dimensions:
-            raise ValueError(
-                "The device supports register layouts of at most "
-                f"{self.dimensions} dimensions."
-            )
+            raise DimensionTooHighError(self, invalid=layout.dimensionality)
 
         if layout.number_of_traps < self.min_layout_traps:
-            raise ValueError(
-                "The device requires register layouts to have "
-                f"at least {self.min_layout_traps} traps; "
-                f"{layout!s} has only {layout.number_of_traps}."
+            raise TrapsNumberTooLowError(
+                device=self,
+                invalid=layout.number_of_traps,
+                layout=layout,
             )
 
         if (
             self.max_layout_traps is not None
             and layout.number_of_traps > self.max_layout_traps
         ):
-            raise ValueError(
-                "The device requires register layouts to have "
-                f"at most {self.max_layout_traps} traps; "
-                f"{layout!s} has {layout.number_of_traps}."
+            raise TrapsNumberTooHighError(
+                self,
+                invalid=layout.number_of_traps,
+                layout=layout,
             )
 
         self._validate_coords(layout.traps_dict, kind="traps")
@@ -444,27 +491,33 @@ class BaseDevice(ABC):
                 " registers with a register layout."
             )
         n_qubits = len(register.qubit_ids)
+        min_qubits = int(
+            np.ceil(register.layout.number_of_traps * self.min_layout_filling)
+        )
+        if (
+            register.layout.number_of_traps > self.min_layout_traps
+            and n_qubits < min_qubits
+        ):
+            raise MinQubitNumberError(
+                device=self,
+                invalid=n_qubits,
+                min=min_qubits,
+            )
+
         max_qubits = int(
             register.layout.number_of_traps * self.max_layout_filling
         )
         if n_qubits > max_qubits:
-            raise ValueError(
-                "Given the number of traps in the layout and the "
-                "device's maximum layout filling fraction, the given"
-                f" register has too many qubits ({n_qubits}). "
-                "On this device, this layout can hold at most "
-                f"{max_qubits} qubits."
+            raise MaxQubitNumberError(
+                device=self,
+                invalid=n_qubits,
+                max=max_qubits,
             )
 
     def _validate_atom_number(self, coords: list[pm.AbstractArray]) -> None:
         max_atom_num = cast(int, self.max_atom_num)
         if len(coords) > max_atom_num:
-            raise ValueError(
-                f"The number of atoms ({len(coords)})"
-                " must be less than or equal to the maximum"
-                f" number of atoms supported by this device"
-                f" ({max_atom_num})."
-            )
+            raise AtomsNumberError(device=self, invalid=len(coords))
 
     def _validate_atom_distance(
         self, ids: list[QubitId], coords: list[pm.AbstractArray], kind: str
@@ -489,11 +542,11 @@ class BaseDevice(ABC):
                     np.logical_and(invalid_dists(sq_dists), mask)
                 )
                 bad_qbt_pairs = [(ids[i], ids[j]) for i, j in bad_pairs]
-                raise ValueError(
-                    f"The minimal distance between {kind} in this device "
-                    f"({self.min_atom_distance} µm) is not respected "
-                    f"(up to a precision of 1e{-COORD_PRECISION} µm) "
-                    f"for the pairs: {bad_qbt_pairs}"
+                raise DistanceError(
+                    device=self,
+                    kind=kind,
+                    precision_exp=COORD_PRECISION,
+                    invalid=bad_qbt_pairs,
                 )
 
     def _validate_radial_distance(
@@ -504,17 +557,22 @@ class BaseDevice(ABC):
             > self.max_radial_distance
         )
         if np.any(too_far):
-            raise ValueError(
-                f"All {kind} must be at most {self.max_radial_distance} μm "
-                f"away from the center of the array, which is not the case "
-                f"for: {[ids[int(i)] for i in np.where(too_far)[0]]}"
+            # At this stage, `self.max_radial_distance`` is not `None`
+            # but mypy cannot see it.
+            assert self.max_radial_distance is not None
+            raise RadiusError(
+                device=self,
+                kind=kind,
+                invalid=[ids[int(i)] for i in np.where(too_far)[0]],
             )
 
     def _validate_rydberg_level(self, ryd_lvl: int) -> None:
         if not isinstance(ryd_lvl, int):
             raise TypeError("Rydberg level has to be an int.")
         if not 49 < ryd_lvl < 101:
-            raise ValueError("Rydberg level should be between 50 and 100.")
+            raise RydbergLevelError(
+                device=self, min=50, max=100, invalid=ryd_lvl
+            )
 
     def _params(self, init_only: bool = False) -> dict[str, Any]:
         # This is used instead of dataclasses.asdict() because asdict()
@@ -523,7 +581,7 @@ class BaseDevice(ABC):
         return {
             f.name: getattr(self, f.name)
             for f in fields(self)
-            if not init_only or f.init
+            if (not init_only or f.init) and f.name != "short_description"
         }
 
     def _validate_coords(
@@ -533,7 +591,7 @@ class BaseDevice(ABC):
         ),
         kind: Literal["atoms", "traps"] = "atoms",
     ) -> None:
-        ids = list(coords_dict.keys())
+        ids = [str(id) for id in list(coords_dict.keys())]
         coords = list(map(pm.AbstractArray, coords_dict.values()))
         if kind == "atoms" and not (
             "max_atom_num" in self._optional_parameters
@@ -565,7 +623,13 @@ class BaseDevice(ABC):
         for ch_name, ch_obj in self.channels.items():
             ch_list.append(ch_obj._to_abstract_repr(ch_name))
         # Add version and channels to params
-        params.update({"version": "1", "channels": ch_list})
+        params.update(
+            {
+                "version": "1",
+                "pulser_version": pulser.__version__,
+                "channels": ch_list,
+            }
+        )
         dmm_list = []
         for dmm_name, dmm_obj in self.dmm_channels.items():
             dmm_list.append(dmm_obj._to_abstract_repr(dmm_name))
@@ -579,18 +643,202 @@ class BaseDevice(ABC):
         validate_abstract_repr(abstr_dev_str, "device")
         return abstr_dev_str
 
+    def print_specs(self) -> None:
+        """Prints the device specifications."""
+        title = f"{self.name} Specifications"
+        header = ["-" * len(title), title, "-" * len(title)]
+        print("\n".join(header))
+        print(self._specs())
+
+    @property
+    def specs(self) -> str:
+        """Text summarizing the specifications of the device."""
+        return self._specs(for_docs=False)
+
+    def _param_yes_no(self, param: Any) -> str:
+        return "Yes" if param is True else "No"
+
+    def _param_check_none(self, param: Any) -> Callable[[str], str]:
+        def empty_str_if_none(line: str) -> str:
+            if param is None:
+                return ""
+            else:
+                return line.format(param)
+
+        return empty_str_if_none
+
+    def _register_lines(self) -> list[str]:
+
+        register_lines = [
+            "\nRegister parameters:",
+            f" - Dimensions: {self.dimensions}D",
+            self._param_check_none(self.max_atom_num)(
+                " - Maximum number of atoms: {}"
+            ),
+            self._param_check_none(self.max_radial_distance)(
+                " - Maximum distance from origin: {} µm"
+            ),
+            " - Minimum distance between neighbouring atoms: "
+            + f"{self.min_atom_distance} μm",
+        ]
+
+        return [line for line in register_lines if line != ""]
+
+    def _layout_lines(self) -> list[str]:
+
+        layout_lines = [
+            "\nLayout parameters:",
+            f" - Requires layout: {self._param_yes_no(self.requires_layout)}",
+            f" - Minimal number of traps: {self.min_layout_traps}",
+            self._param_check_none(self.max_layout_traps)(
+                " - Maximal number of traps: {}"
+            ),
+            f" - Minimum layout filling fraction: {self.min_layout_filling}",
+            f" - Maximum layout filling fraction: {self.max_layout_filling}",
+        ]
+
+        return [line for line in layout_lines if line != ""]
+
+    def _device_lines(self) -> list[str]:
+
+        device_lines = [
+            "\nDevice parameters:",
+            f" - Rydberg level: {self.rydberg_level}",
+            self._param_check_none(self.interaction_coeff)(
+                " - Ising interaction coefficient: {}",
+            ),
+            self._param_check_none(self.interaction_coeff_xy)(
+                " - XY interaction coefficient: {}",
+            ),
+            " - Channels can be reused: "
+            + self._param_yes_no(self.reusable_channels),
+            f" - Supported bases: {', '.join(self.supported_bases)}",
+            f" - Supported states: {', '.join(self.supported_states)}",
+            f" - SLM Mask: {self._param_yes_no(self.supports_slm_mask)}",
+            self._param_check_none(self.max_sequence_duration)(
+                " - Maximum sequence duration: {} ns",
+            ),
+            self._param_check_none(self.max_runs)(
+                " - Maximum number of runs: {}"
+            ),
+            self._param_check_none(self.default_noise_model)(
+                " - Default noise model: {}",
+            ),
+        ]
+
+        return [line for line in device_lines if line != ""]
+
+    def _channel_lines(self, for_docs: bool = False) -> list[str]:
+
+        ch_lines = ["\nChannels:"]
+        for name, ch in {**self.channels, **self.dmm_channels}.items():
+            if for_docs:
+                max_amp = "None"
+                if ch.max_abs_detuning is not None:
+                    max_amp = f"{float(cast(float, ch.max_amp)):.4g} rad/µs"
+
+                max_abs_detuning = "None"
+                if ch.max_abs_detuning is not None:
+                    max_abs_detuning = (
+                        f"{float(ch.max_abs_detuning):.4g} rad/µs"
+                    )
+
+                bottom_detuning = "None"
+                if isinstance(ch, DMM) and ch.bottom_detuning is not None:
+                    bottom_detuning = f"{float(ch.bottom_detuning):.4g} rad/µs"
+
+                ch_lines += [
+                    f" - ID: '{name}'",
+                    f"\t- Type: {ch.name} (*{ch.basis}* basis)",
+                    f"\t- Addressing: {ch.addressing}",
+                    ("\t" + r"- Maximum :math:`\Omega`: " + max_amp),
+                    (
+                        (
+                            "\t"
+                            + r"- Maximum :math:`|\delta|`: "
+                            + max_abs_detuning
+                        )
+                        if not isinstance(ch, DMM)
+                        else (
+                            "\t"
+                            + r"- Bottom :math:`|\delta|`: "
+                            + bottom_detuning
+                        )
+                    ),
+                    f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
+                ]
+                if ch.addressing == "Local":
+                    ch_lines += [
+                        "\t- Minimum time between retargets: "
+                        f"{ch.min_retarget_interval} ns",
+                        f"\t- Fixed retarget time: {ch.fixed_retarget_t} ns",
+                        f"\t- Maximum simultaneous targets: {ch.max_targets}",
+                    ]
+                ch_lines += [
+                    f"\t- Clock period: {ch.clock_period} ns",
+                    f"\t- Minimum instruction duration: {ch.min_duration} ns",
+                ]
+            else:
+                ch_lines.append(f" - '{name}': {ch!r}")
+
+        return [line for line in ch_lines if line != ""]
+
+    def _specs(self, for_docs: bool = False) -> str:
+
+        return "\n".join(
+            ([self.short_description] if self.short_description else [])
+            + self._register_lines()
+            + self._layout_lines()
+            + self._device_lines()
+            + self._channel_lines(for_docs=for_docs)
+        )
+
 
 @dataclass(frozen=True, repr=False)
 class Device(BaseDevice):
     r"""Specifications of a neutral-atom device.
 
-    A Device instance is immutable and must have all of its parameters defined.
-    For usage in emulations, it can be converted to a VirtualDevice through the
-    `Device.to_virtual()` method.
+    Each ``Device`` instance holds the characteristics of a physical device,
+    which when associated with a :class:`pulser.Sequence` condition its
+    development.
 
-    Attributes:
+    Note:
+        A Device instance is immutable and must have all of its parameters
+        defined. For more unconstrained usage in emulations, it can be
+        converted to a VirtualDevice through the `Device.to_virtual()` method.`
+
+    Args:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
+        max_atom_num: Maximum number of atoms supported in an array.
+        max_radial_distance: The furthest away an atom can be from the center
+            of the array (in μm).
+        min_atom_distance: The closest together two atoms can be (in μm).
+        requires_layout: Whether the register used in the sequence must be
+            created from a register layout. Only enforced in QPU execution.
+        accepts_new_layouts: Whether registers built from register layouts
+            that are not already calibrated are accepted. Only enforced in
+            QPU execution.
+        min_layout_filling: The smallest fraction of a layout that must be
+            filled with atoms. Only enforced when the layout has more traps
+            than 'min_layout_traps'.
+        max_layout_filling: The largest fraction of a layout that can be filled
+            with atoms.
+        optimal_layout_filling: An optional value for the fraction of a layout
+            that should be filled with atoms.
+        min_layout_traps: The minimum number of traps a layout can have.
+        max_layout_traps: An optional value for the maximum number of traps a
+            layout can have.
+        pre_calibrated_layouts: RegisterLayout instances that are already
+            available on the Device.
+        rydberg_level: The value of the principal quantum number :math:`n`
+            when the Rydberg level used is of the form
+            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
+        interaction_coeff_xy: :math:`C_3/\hbar`
+            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
+            which sets the van der Waals interaction strength between atoms in
+            different Rydberg states. Needed only if there is a Microwave
+            channel in the device. If unsure, 3700.0 is a good default value.
         channel_objects: The Channel subclass instances specifying each
             channel in the device.
         channel_ids: Custom IDs for each channel object. When defined,
@@ -599,26 +847,7 @@ class Device(BaseDevice):
         dmm_objects: The DMM subclass instances specifying each channel in the
             device. They are referenced by their order in the list, with the ID
             "dmm_[index in dmm_objects]".
-        rydberg_level: The value of the principal quantum number :math:`n`
-            when the Rydberg level used is of the form
-            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
-        max_atom_num: Maximum number of atoms supported in an array.
-        max_radial_distance: The furthest away an atom can be from the center
-            of the array (in μm).
-        min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff_xy: :math:`C_3/\hbar`
-            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
-            which sets the van der Waals interaction strength between atoms in
-            different Rydberg states. Needed only if there is a Microwave
-            channel in the device. If unsure, 3700.0 is a good default value.
         supports_slm_mask: Whether the device supports the SLM mask feature.
-        max_layout_filling: The largest fraction of a layout that can be filled
-            with atoms.
-        optimal_layout_filling: An optional value for the fraction of a layout
-            that should be filled with atoms.
-        min_layout_traps: The minimum number of traps a layout can have.
-        max_layout_traps: An optional value for the maximum number of traps a
-            layout can have.
         max_sequence_duration: The maximum allowed duration for a sequence
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
@@ -626,13 +855,6 @@ class Device(BaseDevice):
         default_noise_model: An optional noise model characterizing the default
             noise of the device. Can be used by emulator backends that support
             noise.
-        requires_layout: Whether the register used in the sequence must be
-            created from a register layout. Only enforced in QPU execution.
-        pre_calibrated_layouts: RegisterLayout instances that are already
-            available on the Device.
-        accepts_new_layouts: Whether registers built from register layouts
-            that are not already calibrated are accepted. Only enforced in
-            QPU execution.
     """
 
     max_atom_num: int
@@ -655,8 +877,6 @@ class Device(BaseDevice):
                 )
         for layout in self.pre_calibrated_layouts:
             self.validate_layout(layout)
-        # Hack to override the docstring of an instance
-        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:
@@ -718,79 +938,6 @@ class Device(BaseDevice):
             del params[param]
         return VirtualDevice(**params)
 
-    def print_specs(self) -> None:
-        """Prints the device specifications."""
-        title = f"{self.name} Specifications"
-        header = ["-" * len(title), title, "-" * len(title)]
-        print("\n".join(header))
-        print(self._specs())
-
-    def _specs(self, for_docs: bool = False) -> str:
-        lines = [
-            "\nRegister parameters:",
-            f" - Dimensions: {self.dimensions}D",
-            f" - Rydberg level: {self.rydberg_level}",
-            f" - Maximum number of atoms: {self.max_atom_num}",
-            f" - Maximum distance from origin: {self.max_radial_distance} μm",
-            (
-                " - Minimum distance between neighbouring atoms: "
-                f"{self.min_atom_distance} μm"
-            ),
-            f" - Maximum layout filling fraction: {self.max_layout_filling}",
-            f" - SLM Mask: {'Yes' if self.supports_slm_mask else 'No'}",
-        ]
-
-        if self.max_sequence_duration is not None:
-            lines.append(
-                " - Maximum sequence duration: "
-                f"{self.max_sequence_duration} ns"
-            )
-
-        ch_lines = ["\nChannels:"]
-        for name, ch in {**self.channels, **self.dmm_channels}.items():
-            if for_docs:
-                ch_lines += [
-                    f" - ID: '{name}'",
-                    f"\t- Type: {ch.name} (*{ch.basis}* basis)",
-                    f"\t- Addressing: {ch.addressing}",
-                    (
-                        "\t"
-                        + r"- Maximum :math:`\Omega`:"
-                        + f" {float(cast(float,ch.max_amp)):.4g} rad/µs"
-                    ),
-                    (
-                        (
-                            "\t"
-                            + r"- Maximum :math:`|\delta|`:"
-                            + f" {float(cast(float, ch.max_abs_detuning)):.4g}"
-                            + " rad/µs"
-                        )
-                        if not isinstance(ch, DMM)
-                        else (
-                            "\t"
-                            + r"- Bottom :math:`|\delta|`:"
-                            + f" {float(cast(float,ch.bottom_detuning)):.4g}"
-                            + " rad/µs"
-                        )
-                    ),
-                    f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
-                ]
-                if ch.addressing == "Local":
-                    ch_lines += [
-                        "\t- Minimum time between retargets: "
-                        f"{ch.min_retarget_interval} ns",
-                        f"\t- Fixed retarget time: {ch.fixed_retarget_t} ns",
-                        f"\t- Maximum simultaneous targets: {ch.max_targets}",
-                    ]
-                ch_lines += [
-                    f"\t- Clock period: {ch.clock_period} ns",
-                    f"\t- Minimum instruction duration: {ch.min_duration} ns",
-                ]
-            else:
-                ch_lines.append(f" - '{name}': {ch!r}")
-
-        return "\n".join(lines + ch_lines)
-
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
             self, _build=False, _module="pulser.devices", _name=self.name
@@ -828,6 +975,16 @@ class Device(BaseDevice):
             )
         return device
 
+    def _layout_lines(self) -> list[str]:
+        layout_lines = super()._layout_lines()
+        layout_lines.insert(
+            2,
+            " - Accepts new layout: "
+            + self._param_yes_no(self.accepts_new_layouts),
+        )
+
+        return layout_lines
+
 
 @dataclass(frozen=True)
 class VirtualDevice(BaseDevice):
@@ -838,9 +995,35 @@ class VirtualDevice(BaseDevice):
     to be declared multiple times in the same Sequence (when
     `reusable_channels=True`) and allows the Rydberg level to be changed.
 
-    Attributes:
+    Args:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
+        max_atom_num: Maximum number of atoms supported in an array.
+        max_radial_distance: The furthest away an atom can be from the center
+            of the array (in μm).
+        min_atom_distance: The closest together two atoms can be (in μm).
+        requires_layout: Whether the register used in the sequence must be
+            created from a register layout. Only enforced in QPU execution.
+        min_layout_filling: The smallest fraction of a layout that must be
+            filled with atoms. Only enforced when the layout has more traps
+            than 'min_layout_traps'.
+        max_layout_filling: The largest fraction of a layout that can be filled
+            with atoms.
+        optimal_layout_filling: An optional value for the fraction of a layout
+            that should be filled with atoms.
+        min_layout_traps: The minimum number of traps a layout can have.
+        max_layout_traps: An optional value for the maximum number of traps a
+            layout can have.
+        rydberg_level: The value of the principal quantum number :math:`n`
+            when the Rydberg level used is of the form
+            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
+        interaction_coeff_xy: :math:`C_3/\hbar`
+            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
+            which sets the van der Waals interaction strength between atoms in
+            different Rydberg states. Needed only if there is a Microwave
+            channel in the device. If unsure, 3700.0 is a good default value.
+        reusable_channels: Whether each channel can be declared multiple times
+            on the same pulse sequence.
         channel_objects: The Channel subclass instances specifying each
             channel in the device.
         channel_ids: Custom IDs for each channel object. When defined,
@@ -849,26 +1032,7 @@ class VirtualDevice(BaseDevice):
         dmm_objects: The DMM subclass instances specifying each channel in the
             device. They are referenced by their order in the list, with the ID
             "dmm_[index in dmm_objects]".
-        rydberg_level: The value of the principal quantum number :math:`n`
-            when the Rydberg level used is of the form
-            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
-        max_atom_num: Maximum number of atoms supported in an array.
-        max_radial_distance: The furthest away an atom can be from the center
-            of the array (in μm).
-        min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff_xy: :math:`C_3/\hbar`
-            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
-            which sets the van der Waals interaction strength between atoms in
-            different Rydberg states. Needed only if there is a Microwave
-            channel in the device. If unsure, 3700.0 is a good default value.
         supports_slm_mask: Whether the device supports the SLM mask feature.
-        max_layout_filling: The largest fraction of a layout that can be filled
-            with atoms.
-        optimal_layout_filling: An optional value for the fraction of a layout
-            that should be filled with atoms.
-        min_layout_traps: The minimum number of traps a layout can have.
-        max_layout_traps: An optional value for the maximum number of traps a
-            layout can have.
         max_sequence_duration: The maximum allowed duration for a sequence
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
@@ -876,10 +1040,6 @@ class VirtualDevice(BaseDevice):
         default_noise_model: An optional noise model characterizing the default
             noise of the device. Can be used by emulator backends that support
             noise.
-        requires_layout: Whether the register used in the sequence must be
-            created from a register layout. Only enforced in QPU execution.
-        reusable_channels: Whether each channel can be declared multiple times
-            on the same pulse sequence.
     """
 
     min_atom_distance: float = 0
@@ -889,6 +1049,9 @@ class VirtualDevice(BaseDevice):
     # Needed to support SLM mask by default
     dmm_objects: tuple[DMM, ...] = (DMM(),)
     reusable_channels: bool = True
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:

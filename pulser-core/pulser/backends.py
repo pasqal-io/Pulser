@@ -11,23 +11,38 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""A module gathering all available backends."""
+"""A module gathering all available backends.
+
+This module is a single-point access to backends spread across different
+packages. As long as the appropriate package is installed, the ``Backend``
+instances defined within it should be importable via this module, like so::
+
+    import pulser.backends as backends
+
+    backends.QPUBackend  # Same as pulser.QPUBackend
+    backends.QutipBackend  # Same as pulser_simulation.QutipBackend
+
+Attributes:
+    QPUBackend: See :py:class:`pulser.backend.QPUBackend`.
+    QutipBackend: See :py:class:`pulser_simulation.QutipBackend`.
+    EmuFreeBackend: See :py:class:`pulser_pasqal.EmuFreeBackend`.
+    EmuTNBackend: See :py:class:`pulser_pasqal.EmuTNBackend`.
+
+"""
 from __future__ import annotations
 
 import importlib
 from typing import TYPE_CHECKING, Type
 
-from pulser.backend.abc import Backend
-
 if TYPE_CHECKING:
     from pulser.backend import QPUBackend as QPUBackend
-    from pulser_pasqal import EmuFreeBackend as EmuFreeBackend
-    from pulser_pasqal import EmuTNBackend as EmuTNBackend
+    from pulser.backend.abc import Backend
     from pulser_simulation import QutipBackend as QutipBackend
 
 _BACKENDS = {
     "QPUBackend": "pulser.backend",
     "QutipBackend": "pulser_simulation",
+    "QutipBackendV2": "pulser_simulation",
     "EmuFreeBackend": "pulser_pasqal",
     "EmuTNBackend": "pulser_pasqal",
 }

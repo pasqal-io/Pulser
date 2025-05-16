@@ -1,10 +1,12 @@
 # For generating documentation.
-Sphinx < 7
+Sphinx < 8
 sphinx-rtd-theme # documentation theme
-sphinx_autodoc_typehints == 1.21.3
+sphinx_autodoc_typehints == 2.2.1
 nbsphinx
 nbsphinx-link
 ipython >= 8.10 # Avoids bug with code highlighting
-
+myst-parser
+# To document pulser-pasqal classes
+pulser-pasqal
 # Not on PyPI
 # pandoc

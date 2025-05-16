@@ -23,7 +23,7 @@ import numpy as np
 
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import _get_dmm_name
-from pulser.channels.eom import RydbergEOM
+from pulser.channels.eom import BaseEOM
 from pulser.devices._device_datacls import BaseDevice
 
 if TYPE_CHECKING:
@@ -69,7 +69,7 @@ def switch_device(
         name_in_msg = "Rydberg level"
 
     if getattr(new_device, interaction_param) != getattr(
-        seq._device, interaction_param
+        seq.device, interaction_param
     ):
         if strict:
             raise ValueError(
@@ -118,43 +118,41 @@ def switch_device(
             # EOM configuration
             if new_ch_obj.eom_config is None:
                 return (" with an EOM configuration.", "")
+            # If the Channels are of the same type, so must be the EOM configs
+            assert type(new_ch_obj.eom_config) is type(old_ch_obj.eom_config)
             if strict:
                 if not seq.is_parametrized():
                     if (
                         new_ch_obj.eom_config.mod_bandwidth
-                        != cast(
-                            RydbergEOM, old_ch_obj.eom_config
-                        ).mod_bandwidth
+                        != cast(BaseEOM, old_ch_obj.eom_config).mod_bandwidth
                     ):
                         return (
                             "",
                             " with the same mod_bandwidth for the EOM.",
                         )
                 else:
-                    # Eom configs have to match is Sequence is parametrized
-                    new_eom_config = dataclasses.asdict(
-                        cast(RydbergEOM, new_ch_obj.eom_config)
-                    )
+                    # Eom configs have to match if Sequence is parametrized
+                    new_eom_config = dataclasses.asdict(new_ch_obj.eom_config)
                     old_eom_config = dataclasses.asdict(
-                        cast(RydbergEOM, old_ch_obj.eom_config)
+                        cast(BaseEOM, old_ch_obj.eom_config)
                     )
                     # However, multiple_beam_control only matters when
                     # the two beams are controlled
-                    if len(old_eom_config["controlled_beams"]) == 1:
-                        new_eom_config.pop("multiple_beam_control")
-                        old_eom_config.pop("multiple_beam_control")
+                    if len(old_eom_config.get("controlled_beams", [])) <= 1:
+                        new_eom_config.pop("multiple_beam_control", None)
+                        old_eom_config.pop("multiple_beam_control", None)
                         # Controlled beams only matter when only one beam
                         # is controlled by the new eom
-                        if len(new_eom_config["controlled_beams"]) > 1:
-                            new_eom_config.pop("controlled_beams")
-                            old_eom_config.pop("controlled_beams")
+                        if len(new_eom_config.get("controlled_beams", [])) > 1:
+                            new_eom_config.pop("controlled_beams", None)
+                            old_eom_config.pop("controlled_beams", None)
                     # Controlled_beams doesn't matter if the two EOMs
                     # control two beams
-                    elif set(new_eom_config["controlled_beams"]) == set(
-                        old_eom_config["controlled_beams"]
-                    ):
-                        new_eom_config.pop("controlled_beams")
-                        old_eom_config.pop("controlled_beams")
+                    elif set(
+                        new_eom_config.get("controlled_beams", [])
+                    ) == set(old_eom_config.get("controlled_beams", [])):
+                        new_eom_config.pop("controlled_beams", None)
+                        old_eom_config.pop("controlled_beams", None)
 
                     # And custom_buffer_time doesn't have to match as long
                     # as `Channel_eom_buffer_time`` does

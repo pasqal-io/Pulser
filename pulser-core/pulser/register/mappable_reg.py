@@ -137,7 +137,7 @@ class MappableRegister:
 
         Returns:
             A DetuningMap associating detuning weights to the trap coordinates
-                of the targeted traps.
+            of the targeted traps.
         """
         return self._layout.define_detuning_map(detuning_weights, slug)
 

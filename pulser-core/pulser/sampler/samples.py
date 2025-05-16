@@ -424,9 +424,16 @@ class ChannelSamples:
             new_samples["amp"] = channel_obj.modulate(self.amp)
             new_samples["det"] = channel_obj.modulate(self.det, keep_ends=True)
 
-        new_samples["phase"] = channel_obj.modulate(self.phase, keep_ends=True)
-        new_samples["_centered_phase"] = channel_obj.modulate(
-            self.centered_phase, keep_ends=True
+        new_len_ = len(new_samples["amp"])
+        new_samples["phase"] = pm.pad(
+            self.phase,
+            (0, new_len_ - len(self.phase)),
+            mode="edge",
+        )
+        new_samples["_centered_phase"] = pm.pad(
+            self.centered_phase,
+            (0, new_len_ - len(self.centered_phase)),
+            mode="edge",
         )
         for key in new_samples:
             new_samples[key] = new_samples[key].astype(float)[
