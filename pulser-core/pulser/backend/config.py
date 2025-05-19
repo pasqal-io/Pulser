@@ -65,11 +65,10 @@ class BackendConfig:
                 - (self._expected_kwargs() | {"backend_options"})
             )
         ):
-            warnings.warn(
+            raise ValueError(
                 f"{cls_name!r} received unexpected keyword arguments: "
                 f"{invalid_kwargs}; only the following keyword "
-                f"arguments are expected: {self._expected_kwargs()}. ",
-                stacklevel=2,
+                f"arguments are expected: {self._expected_kwargs()}. "
             )
         # Store the abstract repr of the config in _backend_options
         # Prevents potential issues with mutable arguments

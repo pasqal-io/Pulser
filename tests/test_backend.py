@@ -378,13 +378,13 @@ def test_emulator_backend(sequence):
 
 
 def test_backend_config():
-    with pytest.warns(
-        UserWarning,
+    with pytest.raises(
+        ValueError,
         match="'BackendConfig' received unexpected keyword arguments",
     ):
-        config1 = BackendConfig(prefer_device_noise_model=True)
-        assert config1.prefer_device_noise_model
+        BackendConfig(prefer_device_noise_model=True)
 
+    config1 = BackendConfig()
     with pytest.raises(AttributeError, match="'dt' has not been passed"):
         config1.dt
 
@@ -508,8 +508,8 @@ def test_emulation_config():
     try:
         EmulationConfig._enforce_expected_kwargs = True
         # Now it does
-        with pytest.warns(
-            UserWarning,
+        with pytest.raises(
+            ValueError,
             match="'EmulationConfig' received unexpected keyword arguments",
         ):
             EmulationConfig(observables=(BitStrings(),), dt=1)
