@@ -436,7 +436,6 @@ class Register(BaseRegister, RegDrawer):
         custom_ax: Optional[Axes] = None,
         show: bool = True,
         draw_empty_sites: bool = False,
-        empty_color: Optional[str] = None,
     ) -> None:
         """Draws the entire register.
 
@@ -467,8 +466,8 @@ class Register(BaseRegister, RegDrawer):
             show: Whether or not to call `plt.show()` before returning. When
                 combining this plot with other ones in a single figure, one may
                 need to set this flag to False.
-            draw_empty_sites: If True, draws the empty sites as well.
-            empty_color: The color of the empty sites. Default is 'r'.
+            draw_empty_sites: If True, also draws the sites of the associated
+                layout that do not contain an atom.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -490,25 +489,28 @@ class Register(BaseRegister, RegDrawer):
                     "to draw the empty sites."
                 )
             layout_ids = list(self.layout.traps_dict.keys())
-            empty_layout = self.layout.define_register(
-                *layout_ids, qubit_ids=layout_ids
+            filled_traps_ids = self.layout.get_traps_from_coordinates(
+                *tuple(self.qubits.values())
             )
-            breakpoint()
-            empty_qubit_colors : Mapping[Union[int, str], str] = {
-                trap: empty_color or "r" for trap in layout_ids
-            }
-            empty_pos = empty_layout._coords_arr.as_array(detach=True)
+            empty_traps_ids = [
+                trap_id
+                for trap_id in layout_ids
+                if trap_id not in filled_traps_ids
+            ]
+            empty_traps_reg = self.layout.define_register(
+                *empty_traps_ids, qubit_ids=empty_traps_ids
+            )
 
         pos = self._coords_arr.as_array(detach=True)
         if custom_ax is None:
             custom_ax = cast(
                 plt.Axes,
                 self._initialize_fig_axes(
-                    empty_pos if draw_empty_sites else pos,
+                    self.layout.sorted_coords if draw_empty_sites else pos,
                     blockade_radius=blockade_radius,
-                    draw_half_radius=draw_half_radius
-                    )[1],
-                )
+                    draw_half_radius=draw_half_radius,
+                )[1],
+            )
 
         draw_kwargs = dict(
             ax=custom_ax,
@@ -518,12 +520,12 @@ class Register(BaseRegister, RegDrawer):
         )
 
         if draw_empty_sites:
-            RegDrawer._draw_2D(empty_layout,
-                ids=empty_layout._ids,
-                pos=empty_pos,
-                qubit_colors=empty_qubit_colors,
+            super()._draw_2D(
+                ids=empty_traps_reg.qubit_ids,
+                pos=empty_traps_reg._coords_arr.as_array(detach=True),
                 with_labels=False,
                 label_name="empty",
+                are_traps=True,
                 **draw_kwargs,
             )
 

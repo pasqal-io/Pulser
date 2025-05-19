@@ -328,6 +328,8 @@ def test_drawing(draw_params, patch_plt_show):
 
     reg = Register.from_coordinates([(1, 0), (0, 1)])
     reg.draw(blockade_radius=0.1, draw_graph=True, **draw_params)
+    with pytest.raises(ValueError, match="The register must have"):
+        reg.draw(draw_empty_sites=True)
 
     reg = Register.triangular_lattice(3, 8)
     reg.draw(**draw_params)
@@ -349,6 +351,11 @@ def test_drawing(draw_params, patch_plt_show):
     reg = Register.square(1)
     with pytest.raises(NotImplementedError, match="Needs more than one atom"):
         reg.draw(blockade_radius=5, draw_half_radius=True, **draw_params)
+
+    reg = RegisterLayout(
+        [[0, 0], [1, 1], [1, 0], [0, 1]], slug="2DLayout"
+    ).define_register(0)
+    reg.draw(draw_empty_sites=True)
 
 
 def test_orthorombic():
