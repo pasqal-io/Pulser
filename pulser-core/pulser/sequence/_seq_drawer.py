@@ -421,7 +421,6 @@ def _draw_register_det_maps(
                     ids=register._ids,
                     plane=(ix, iy),
                     masked_qubits=sampled_seq._slm_mask.targets,
-                    
                 )
                 ax_reg.set_title(
                     title
