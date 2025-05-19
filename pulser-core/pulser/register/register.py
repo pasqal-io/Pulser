@@ -488,8 +488,9 @@ class Register(BaseRegister, RegDrawer):
                     "The register must have an associated RegisterLayout "
                     "to draw the empty sites."
                 )
-            layout_ids = list(self.layout.traps_dict.keys())
-            filled_traps_ids = self.layout.get_traps_from_coordinates(
+            layout = self.layout
+            layout_ids = list(layout.traps_dict.keys())
+            filled_traps_ids = layout.get_traps_from_coordinates(
                 *tuple(self.qubits.values())
             )
             empty_traps_ids = [
@@ -498,7 +499,8 @@ class Register(BaseRegister, RegDrawer):
                 if trap_id not in filled_traps_ids
             ]
             empty_traps_reg = self.layout.define_register(
-                *empty_traps_ids, qubit_ids=empty_traps_ids
+                *empty_traps_ids,
+                qubit_ids=[str(trap_id) for trap_id in empty_traps_ids],
             )
 
         pos = self._coords_arr.as_array(detach=True)
@@ -506,7 +508,7 @@ class Register(BaseRegister, RegDrawer):
             custom_ax = cast(
                 plt.Axes,
                 self._initialize_fig_axes(
-                    self.layout.sorted_coords if draw_empty_sites else pos,
+                    layout.sorted_coords if draw_empty_sites else pos,
                     blockade_radius=blockade_radius,
                     draw_half_radius=draw_half_radius,
                 )[1],
@@ -526,7 +528,7 @@ class Register(BaseRegister, RegDrawer):
                 with_labels=False,
                 label_name="empty",
                 are_traps=True,
-                **draw_kwargs,
+                **draw_kwargs,  # type: ignore
             )
 
         super()._draw_2D(
@@ -534,7 +536,7 @@ class Register(BaseRegister, RegDrawer):
             pos=pos,
             qubit_colors=qubit_colors,
             with_labels=with_labels,
-            **draw_kwargs,
+            **draw_kwargs,  # type: ignore
         )
 
         if fig_name is not None:
