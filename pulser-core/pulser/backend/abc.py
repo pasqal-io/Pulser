@@ -53,6 +53,12 @@ class Backend(ABC):
         if not mimic_qpu:
             return
 
+        if sequence.is_empty:
+            raise ValueError(
+                "'sequence' should not be empty, please add content to it's "
+                "schedule."
+            )
+
         if not isinstance(device := sequence.device, Device):
             raise TypeError(
                 "To be sent to a QPU, the device of the sequence "

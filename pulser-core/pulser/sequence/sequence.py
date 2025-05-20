@@ -327,6 +327,16 @@ class Sequence(Generic[DeviceType]):
             }
 
     @property
+    def is_empty(self) -> bool:
+        """States whether the sequence is empty.
+
+        Note:
+            This is equivalent to testing if the sequence duration is equal to
+            0.
+        """
+        return self.get_duration() == 0
+
+    @property
     def magnetic_field(self) -> np.ndarray:
         """The magnetic field acting on the array of atoms.
 
