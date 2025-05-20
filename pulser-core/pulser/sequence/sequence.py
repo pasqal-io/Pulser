@@ -326,7 +326,6 @@ class Sequence(Generic[DeviceType]):
                 )
             }
 
-    @property
     def is_empty(self) -> bool:
         """States whether the sequence is empty.
 

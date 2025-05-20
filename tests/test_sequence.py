@@ -2933,7 +2933,8 @@ def test_sequence_is_empty(reg, device, channel):
         if channel == "rydberg_global"
         else sequence._register.qubit_ids[0]
     )
+    assert sequence.is_empty()
     sequence.declare_channel(channel, channel, initial_target=target)
-    assert sequence.is_empty
+    assert sequence.is_empty()
     sequence.delay(84162, channel)
-    assert not sequence.is_empty
+    assert not sequence.is_empty()

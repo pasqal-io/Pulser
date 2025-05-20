@@ -53,10 +53,10 @@ class Backend(ABC):
         if not mimic_qpu:
             return
 
-        if sequence.is_empty:
+        if sequence.is_empty():
             raise ValueError(
-                "'sequence' should not be empty, please add content to it's "
-                "schedule."
+                "'sequence' should not be empty, please add an instruction "
+                "to a declared channel."
             )
 
         if not isinstance(device := sequence.device, Device):
