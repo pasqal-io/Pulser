@@ -81,6 +81,14 @@ def test_abc_backend(sequence):
         ConcreteBackend(sequence.to_abstract_repr())
 
 
+def test_abc_backend_validate_sequence_empty():
+    reg = pulser.Register.square(2, spacing=5, prefix="q")
+    seq = pulser.Sequence(reg, MockDevice)
+    seq.declare_channel("rydberg_global", "rydberg_global")
+    with pytest.raises(ValueError, match="should not be empty"):
+        Backend.validate_sequence(seq, mimic_qpu=True)
+
+
 @pytest.mark.parametrize(
     "param, value, msg",
     [

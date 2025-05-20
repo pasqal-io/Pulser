@@ -2923,3 +2923,18 @@ def test_sequence_diff(device, parametrized, with_modulation, with_eom):
         assert not dmm_ch_samples.amp.requires_grad
         assert dmm_ch_samples.det.requires_grad
         assert not dmm_ch_samples.phase.requires_grad
+
+
+@pytest.mark.parametrize("channel", ["rydberg_global", "raman_local"])
+def test_sequence_is_empty(reg, device, channel):
+    sequence = Sequence(reg, device)
+    target = (
+        None
+        if channel == "rydberg_global"
+        else sequence._register.qubit_ids[0]
+    )
+    assert sequence.is_empty()
+    sequence.declare_channel(channel, channel, initial_target=target)
+    assert sequence.is_empty()
+    sequence.delay(84162, channel)
+    assert not sequence.is_empty()
