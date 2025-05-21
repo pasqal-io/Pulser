@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 import qutip
 
-from pulser import Pulse, Register, Sequence
+from pulser import NoiseModel, Pulse, Register, Sequence
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
@@ -755,7 +755,7 @@ def test_noise(seq, matrices):
         seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.9)
     )
     assert sim2.run().sample_final_state() == Counter(
-        {"000": 818, "100": 82, "110": 55, "010": 31, "001": 14}
+        {"000": 824, "100": 92, "110": 56, "001": 28}
     )
     with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(SimConfig(noise="depolarizing"))
@@ -1606,7 +1606,7 @@ def test_simulation_with_modulation(
     mod_dt = pulse1.duration + pulse1.fall_time(ch1_obj)
     assert pulse1_mod_samples.size == mod_dt
 
-    sim_config = SimConfig(("amplitude", "doppler"))
+    sim_config = SimConfig(("amplitude", "doppler"), amp_sigma=0)
     sim = QutipEmulator.from_sequence(
         seq, with_modulation=True, config=sim_config
     )
@@ -1701,3 +1701,47 @@ def test_initial_state_sim():
             1e-2,
         )
     )
+
+
+def test_amp_sigma_noise(mod_device):
+    reg = Register({"q0": (0, 0), "q1": (10, 10)})
+    seq = Sequence(reg, mod_device)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="q0")
+
+    pulse1 = Pulse.ConstantPulse(120, 1, 0, 2.0)
+    seq.add(pulse1, "ch1")
+    seq.target("q1", "ch1")
+    seq.add(pulse1, "ch1")
+    # Added twice to check it fluctuation doesn't change from pulse to pulse
+    seq.add(pulse1, "ch0")
+    seq.add(pulse1, "ch0")
+
+    sim = QutipEmulator.from_sequence(
+        seq,
+        config=SimConfig.from_noise_model(
+            NoiseModel(amp_sigma=0.1, runs=1, samples_per_run=1)
+        ),
+    )
+
+    noiseless_samples = QutipEmulator.from_sequence(
+        seq
+    ).samples_obj.to_nested_dict(all_local=True)
+    # All samples are local (because of the noise)
+    sim_samples = sim._hamiltonian.samples
+    amp_factors = {}
+    assert sim_samples["Global"] == {}
+    for ch, _ch_obj in seq.declared_channels.items():
+        samples_dict = sim_samples["Local"][_ch_obj.basis]
+        _amps = samples_dict["q0"]["amp"]
+        # The amplitude factor is not 1. and is the same for the channel
+        amp_factors[ch] = _amps[_amps != 0][0] / pulse1.amplitude[0]
+        assert amp_factors[ch] > 0 and amp_factors[ch] != 1
+        for qid in reg.qubit_ids:
+            np.testing.assert_equal(
+                noiseless_samples["Local"][_ch_obj.basis][qid]["amp"]
+                * amp_factors[ch],
+                samples_dict[qid]["amp"],
+            )
+    # The amplitude factors are different between channels
+    assert amp_factors["ch0"] != amp_factors["ch1"]
