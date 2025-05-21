@@ -328,6 +328,8 @@ def test_drawing(draw_params, patch_plt_show):
 
     reg = Register.from_coordinates([(1, 0), (0, 1)])
     reg.draw(blockade_radius=0.1, draw_graph=True, **draw_params)
+    with pytest.raises(ValueError, match="The register must have"):
+        reg.draw(draw_empty_sites=True)
 
     reg = Register.triangular_lattice(3, 8)
     reg.draw(**draw_params)
@@ -349,6 +351,11 @@ def test_drawing(draw_params, patch_plt_show):
     reg = Register.square(1)
     with pytest.raises(NotImplementedError, match="Needs more than one atom"):
         reg.draw(blockade_radius=5, draw_half_radius=True, **draw_params)
+
+    reg = RegisterLayout(
+        [[0, 0], [1, 1], [1, 0], [0, 1]], slug="2DLayout"
+    ).define_register(0)
+    reg.draw(draw_empty_sites=True)
 
 
 def test_orthorombic():
@@ -626,14 +633,42 @@ def test_automatic_layout(optimal_filling):
             reg.with_automatic_layout(bound_below_dev).layout.number_of_traps
             == bound_below_dev.min_layout_traps
         )
-    elif trap_num < optimal_traps:
+    else:
         assert trap_num > min_traps
         bound_above_dev = dataclasses.replace(
-            device, max_layout_traps=trap_num - 1
+            device,
+            max_layout_traps=trap_num - 1,
+            # So that we can still fit 20 atoms
+            max_layout_filling=device.max_layout_filling + 0.1,
         )
         assert (
             reg.with_automatic_layout(bound_above_dev).layout.number_of_traps
             == bound_above_dev.max_layout_traps
+        )
+        # If we set min_layout_filling to the optimal filling, we should end
+        # up with the optimal number of traps (because there can't be more)
+        bound_above_from_min_filling = dataclasses.replace(
+            device, min_layout_filling=optimal_filling
+        )
+        assert bound_above_from_min_filling.min_layout_filling > 0.0
+        assert (
+            reg.with_automatic_layout(
+                bound_above_from_min_filling
+            ).layout.number_of_traps
+            == optimal_traps
+        )
+
+        # However, if the maximum number of traps allowed by min_layout_filling
+        # matches the minimum number of traps allowed the constraint is not
+        # imposed and we end up back to the original trap number
+        not_bound_above_from_min_filling = dataclasses.replace(
+            bound_above_from_min_filling, min_layout_traps=optimal_traps
+        )
+        assert (
+            reg.with_automatic_layout(
+                not_bound_above_from_min_filling
+            ).layout.number_of_traps
+            == trap_num
         )
 
     with pytest.raises(TypeError, match="must be of type Device"):

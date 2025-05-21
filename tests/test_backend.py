@@ -81,6 +81,14 @@ def test_abc_backend(sequence):
         ConcreteBackend(sequence.to_abstract_repr())
 
 
+def test_abc_backend_validate_sequence_empty():
+    reg = pulser.Register.square(2, spacing=5, prefix="q")
+    seq = pulser.Sequence(reg, MockDevice)
+    seq.declare_channel("rydberg_global", "rydberg_global")
+    with pytest.raises(ValueError, match="should not be empty"):
+        Backend.validate_sequence(seq, mimic_qpu=True)
+
+
 @pytest.mark.parametrize(
     "param, value, msg",
     [
@@ -378,13 +386,13 @@ def test_emulator_backend(sequence):
 
 
 def test_backend_config():
-    with pytest.warns(
-        UserWarning,
+    with pytest.raises(
+        ValueError,
         match="'BackendConfig' received unexpected keyword arguments",
     ):
-        config1 = BackendConfig(prefer_device_noise_model=True)
-        assert config1.prefer_device_noise_model
+        BackendConfig(prefer_device_noise_model=True)
 
+    config1 = BackendConfig()
     with pytest.raises(AttributeError, match="'dt' has not been passed"):
         config1.dt
 
@@ -410,6 +418,23 @@ def test_emulation_config():
         match="All entries in 'observables' must be instances of Observable",
     ):
         EmulationConfig(observables=["fidelity"])
+    with pytest.raises(
+        TypeError,
+        match="All entries in 'callbacks' must not be instances of Observable",
+    ):
+        EmulationConfig(
+            callbacks=(BitStrings(),),
+            default_evaluation_times=[-1e15, 0.0, 0.5, 1.0],
+        )
+    with pytest.raises(
+        TypeError,
+        match="All entries in 'callbacks' must be instances of Callback",
+    ):
+        EmulationConfig(
+            callbacks=("Hello",),
+            observables=(BitStrings(),),
+            default_evaluation_times=[-1e15, 0.0, 0.5, 1.0],
+        )
     with pytest.raises(
         ValueError,
         match="Some of the provided 'observables' share identical tags",
@@ -491,8 +516,8 @@ def test_emulation_config():
     try:
         EmulationConfig._enforce_expected_kwargs = True
         # Now it does
-        with pytest.warns(
-            UserWarning,
+        with pytest.raises(
+            ValueError,
             match="'EmulationConfig' received unexpected keyword arguments",
         ):
             EmulationConfig(observables=(BitStrings(),), dt=1)

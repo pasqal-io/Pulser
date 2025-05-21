@@ -102,7 +102,7 @@ def test_collapse_op(sequence, collapse_op):
     backend = QutipBackend(
         sequence, config=pulser.EmulatorConfig(noise_model=noise_model)
     )
-    assert [
-        op.type == qutip.core.data.CSR
+    assert all(
+        op.dtype == qutip.core.data.CSR
         for op in backend._sim_obj._hamiltonian._collapse_ops
-    ]
+    )

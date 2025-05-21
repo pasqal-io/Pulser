@@ -36,7 +36,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.math as pm
-from pulser.backend.observable import Observable
+from pulser.backend.observable import Callback, Observable
 from pulser.backend.operator import Operator, OperatorRepr
 from pulser.backend.state import State, StateRepr
 from pulser.json.abstract_repr.backend import _deserialize_emulation_config
@@ -65,11 +65,10 @@ class BackendConfig:
                 - (self._expected_kwargs() | {"backend_options"})
             )
         ):
-            warnings.warn(
+            raise ValueError(
                 f"{cls_name!r} received unexpected keyword arguments: "
                 f"{invalid_kwargs}; only the following keyword "
-                f"arguments are expected: {self._expected_kwargs()}. ",
-                stacklevel=2,
+                f"arguments are expected: {self._expected_kwargs()}. "
             )
         # Store the abstract repr of the config in _backend_options
         # Prevents potential issues with mutable arguments
@@ -106,6 +105,10 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         observables: A sequence of observables to compute at specific
             evaluation times. The observables without specified evaluation
             times will use this configuration's 'default_evaluation_times'.
+        callbacks: A general callback that is not an observable. Observables
+            must be fed into the observables arg, since they all interact
+            with the Results, and are subject to additional validation.
+            Unlike observables, these are called at every emulation step.
         default_evaluation_times: The default times at which observables
             are computed. Can be a sequence of unique relative times between 0
             (the start of the sequence) and 1 (the end of the sequence), in
@@ -138,6 +141,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
 
     """
 
+    callbacks: Sequence[Callback]
     observables: Sequence[Observable]
     default_evaluation_times: np.ndarray | Literal["Full"]
     initial_state: StateType | None
@@ -154,6 +158,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     def __init__(
         self,
         *,
+        callbacks: Sequence[Callback] = (),
         observables: Sequence[Observable] = (),
         # Default evaluation times for observables that don't specify one
         default_evaluation_times: Sequence[SupportsFloat] | Literal["Full"] = (
@@ -168,14 +173,24 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     ) -> None:
         """Initializes the EmulationConfig."""
         obs_tags = []
-        if not observables:
+        if not observables and not callbacks:
             warnings.warn(
                 f"{self.__class__.__name__!r} was initialized without any "
                 "observables. The corresponding emulation results will be"
                 " empty.",
                 stacklevel=2,
             )
-
+        for cb in callbacks:
+            if isinstance(cb, Observable):
+                raise TypeError(
+                    "All entries in 'callbacks' must not be instances of "
+                    "Observable, since those go in 'observables'."
+                )
+            if not isinstance(cb, Callback):
+                raise TypeError(
+                    "All entries in 'callbacks' must be instances of "
+                    f"Callback. Instead, got instance of type {type(cb)}."
+                )
         for obs in observables:
             if not isinstance(obs, Observable):
                 raise TypeError(
@@ -241,6 +256,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             )
 
         super().__init__(
+            callbacks=tuple(callbacks),
             observables=tuple(observables),
             default_evaluation_times=default_evaluation_times,
             initial_state=initial_state,
@@ -253,6 +269,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
 
     def _expected_kwargs(self) -> set[str]:
         return super()._expected_kwargs() | {
+            "callbacks",
             "observables",
             "default_evaluation_times",
             "initial_state",

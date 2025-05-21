@@ -145,7 +145,12 @@ def test_dmm_declaration(reg, device, det_map):
     seq.config_detuning_map(det_map, "dmm_0")
     assert seq.get_addressed_bases() == ("ground-rydberg",)
     seq.config_detuning_map(det_map, "dmm_1")
-    with pytest.raises(ValueError, match="No DMM dmm_2"):
+    with pytest.raises(
+        ValueError,
+        match=r"No DMM called dmm_2 is available in the device\. "
+        r"Your selected device .* has the following DMM channels "
+        r"available: \['dmm_0', 'dmm_1'\]\.",
+    ):
         seq.config_detuning_map(det_map, "dmm_2")
     with pytest.raises(ValueError, match="DMM dmm_0 is not available"):
         seq.config_detuning_map(det_map, "dmm_0")
@@ -193,7 +198,12 @@ def test_slm_declaration(reg, device, det_map):
     seq = Sequence(reg, device)
     available_channels = set(seq.available_channels)
     assert seq.get_addressed_bases() == ()
-    with pytest.raises(ValueError, match="No DMM dmm_2 in the device"):
+    with pytest.raises(
+        ValueError,
+        match=r"No DMM called dmm_2 is available in the device\. Your "
+        r"selected device .* has the following DMM channels "
+        r"available: \['dmm_0', 'dmm_1'\]\.",
+    ):
         seq.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_2")
     seq.config_slm_mask(["q0", "q1", "q3", "q4"])
     assert seq.get_addressed_bases() == tuple()
@@ -2913,3 +2923,18 @@ def test_sequence_diff(device, parametrized, with_modulation, with_eom):
         assert not dmm_ch_samples.amp.requires_grad
         assert dmm_ch_samples.det.requires_grad
         assert not dmm_ch_samples.phase.requires_grad
+
+
+@pytest.mark.parametrize("channel", ["rydberg_global", "raman_local"])
+def test_sequence_is_empty(reg, device, channel):
+    sequence = Sequence(reg, device)
+    target = (
+        None
+        if channel == "rydberg_global"
+        else sequence._register.qubit_ids[0]
+    )
+    assert sequence.is_empty()
+    sequence.declare_channel(channel, channel, initial_target=target)
+    assert sequence.is_empty()
+    sequence.delay(84162, channel)
+    assert not sequence.is_empty()
