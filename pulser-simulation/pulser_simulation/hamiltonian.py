@@ -283,9 +283,9 @@ class Hamiltonian:
                     samples_dict[qid]["det"][slot.ti : slot.tf] += noise_det
                 # Gaussian beam loss in amplitude for global pulses only
                 # Noise is drawn at random for each pulse
-                if "amplitude" in self.config.noise_types and is_global_pulse:
+                if "amplitude" in self.config.noise_types:
                     amp_fraction = amp_fluctuation
-                    if self.config.laser_waist is not None:
+                    if self.config.laser_waist is not None and is_global_pulse:
                         # Default to an optical axis along y
                         prop_dir = propagation_dir or (0.0, 1.0, 0.0)
                         amp_fraction *= self._finite_waist_amp_fraction(
@@ -299,14 +299,15 @@ class Hamiltonian:
             for ch, ch_samples in self.samples_obj.channel_samples.items():
                 _ch_obj = self.samples_obj._ch_objs[ch]
                 samples_dict = samples["Local"][_ch_obj.basis]
+                ch_amp_fluctuation = max(
+                    0, np.random.normal(1.0, self.config.amp_sigma)
+                )
                 for slot in ch_samples.slots:
                     add_noise(
                         slot,
                         samples_dict,
                         _ch_obj.addressing == "Global",
-                        amp_fluctuation=max(
-                            0, np.random.normal(1.0, self.config.amp_sigma)
-                        ),
+                        amp_fluctuation=ch_amp_fluctuation,
                         propagation_dir=_ch_obj.propagation_dir,
                     )
             # Delete samples for badly prepared atoms

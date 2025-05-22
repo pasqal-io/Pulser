@@ -209,4 +209,4 @@ def test_qutip_backend_v2_stochastic_noise():
         [qutip.tensor([qutip.basis(2, 0).proj(), qutip.qeye(2)])]
     )[0][indices]
 
-    assert np.max(np.abs(occupation - occupation_old_api)) < 0.029
+    assert np.max(np.abs(occupation - occupation_old_api)) < 0.03
