@@ -50,7 +50,7 @@ from pulser.backend.remote import (
     _OpenBatchContextManager,
 )
 from pulser.backend.results import Results
-from pulser.devices import AnalogDevice, MockDevice
+from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
 from pulser_simulation import QutipOperator, QutipState
@@ -81,12 +81,22 @@ def test_abc_backend(sequence):
         ConcreteBackend(sequence.to_abstract_repr())
 
 
-def test_abc_backend_validate_sequence_empty():
-    reg = pulser.Register.square(2, spacing=5, prefix="q")
-    seq = pulser.Sequence(reg, MockDevice)
-    seq.declare_channel("rydberg_global", "rydberg_global")
+@pytest.mark.parametrize("parametrized", [True, False])
+def test_abc_backend_validate_sequence_empty(parametrized):
+    layout = pulser.register.SquareLatticeLayout(3, 3, 5)
+    reg = layout.square_register(2, prefix="q")
+    seq = pulser.Sequence(reg, DigitalAnalogDevice)
+    seq.declare_channel("rydberg_local", "rydberg_local")
+    if parametrized:
+        targ = seq.declare_variable("targ", dtype=int)
+    else:
+        targ = 0
+    seq.target_index(targ, "rydberg_local")
     with pytest.raises(ValueError, match="should not be empty"):
         Backend.validate_sequence(seq, mimic_qpu=True)
+    # Now it's ok
+    seq.delay(100, "rydberg_local")
+    Backend.validate_sequence(seq, mimic_qpu=True)
 
 
 @pytest.mark.parametrize(

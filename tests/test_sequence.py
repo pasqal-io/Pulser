@@ -2925,16 +2925,31 @@ def test_sequence_diff(device, parametrized, with_modulation, with_eom):
         assert not dmm_ch_samples.phase.requires_grad
 
 
-@pytest.mark.parametrize("channel", ["rydberg_global", "raman_local"])
-def test_sequence_is_empty(reg, device, channel):
+@pytest.mark.parametrize("first_instruction", ["delay", "add"])
+@pytest.mark.parametrize(
+    "channel, parametrized",
+    [("rydberg_global", False), ("raman_local", False), ("raman_local", True)],
+)
+def test_sequence_is_empty(
+    reg, device, channel, parametrized, first_instruction
+):
     sequence = Sequence(reg, device)
-    target = (
-        None
-        if channel == "rydberg_global"
-        else sequence._register.qubit_ids[0]
-    )
     assert sequence.is_empty()
-    sequence.declare_channel(channel, channel, initial_target=target)
+    sequence.declare_channel(channel, channel)
     assert sequence.is_empty()
-    sequence.delay(84162, channel)
+    if channel == "raman_local":
+        target = (
+            sequence.declare_variable("target", dtype=int)
+            if parametrized
+            else 0
+        )
+        sequence.target_index(target, channel)
+    assert sequence.is_parametrized() == parametrized
+    assert sequence.is_empty()
+    if first_instruction == "delay":
+        sequence.delay(84162, channel)
+    elif first_instruction == "add":
+        sequence.add(Pulse.ConstantPulse(100, 1, 0, 0), channel)
+    else:
+        assert False
     assert not sequence.is_empty()
