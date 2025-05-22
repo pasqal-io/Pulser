@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 import qutip
 
-from pulser import Pulse, Register, Sequence
+from pulser import NoiseModel, Pulse, Register, Sequence
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
@@ -755,7 +755,7 @@ def test_noise(seq, matrices):
         seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.9)
     )
     assert sim2.run().sample_final_state() == Counter(
-        {"000": 818, "100": 82, "110": 55, "010": 31, "001": 14}
+        {"000": 824, "100": 92, "110": 56, "001": 28}
     )
     with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(SimConfig(noise="depolarizing"))
@@ -1606,7 +1606,7 @@ def test_simulation_with_modulation(
     mod_dt = pulse1.duration + pulse1.fall_time(ch1_obj)
     assert pulse1_mod_samples.size == mod_dt
 
-    sim_config = SimConfig(("amplitude", "doppler"))
+    sim_config = SimConfig(("amplitude", "doppler"), amp_sigma=0)
     sim = QutipEmulator.from_sequence(
         seq, with_modulation=True, config=sim_config
     )
@@ -1700,4 +1700,81 @@ def test_initial_state_sim():
             ),
             1e-2,
         )
+    )
+
+
+def test_amp_sigma_noise():
+    reg = Register({"q0": (0, 0), "q1": (10, 10)})
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="q0")
+    seq.declare_channel("ch2", "raman_local", initial_target="q1")
+
+    pulse1 = Pulse.ConstantPulse(120, 1, 0, 2.0)
+    # Added twice to check the fluctuation doesn't change from pulse to pulse
+    seq.add(pulse1, "ch0")
+    seq.add(pulse1, "ch0")
+    # The two local channels target alternating qubits on the same basis
+    seq.add(pulse1, "ch1", protocol="no-delay")
+    seq.target("q1", "ch1")
+    seq.add(pulse1, "ch1", protocol="no-delay")
+    # ch2 targets only q1
+    seq.add(pulse1, "ch2", protocol="no-delay")
+
+    sim = QutipEmulator.from_sequence(
+        seq,
+        config=SimConfig.from_noise_model(
+            NoiseModel(amp_sigma=0.1, runs=1, samples_per_run=1)
+        ),
+    )
+
+    noiseless_samples = QutipEmulator.from_sequence(
+        seq
+    ).samples_obj.to_nested_dict(all_local=True)
+    # All samples are local (because of the noise)
+    sim_samples = sim._hamiltonian.samples
+    amp_factors = {}
+    assert sim_samples["Global"] == {}
+
+    # Global channel, ground-rydberg basis
+    ryd_samples_dict = sim_samples["Local"]["ground-rydberg"]
+    amp_factors["ch0"] = ryd_samples_dict["q0"]["amp"][0] / pulse1.amplitude[0]
+    for qid in reg.qubit_ids:
+        np.testing.assert_equal(
+            noiseless_samples["Local"]["ground-rydberg"][qid]["amp"]
+            * amp_factors["ch0"],
+            ryd_samples_dict[qid]["amp"],
+        )
+
+    # Local channels, digital basis
+    dig_samples_dict = sim_samples["Local"]["digital"]
+    # Ch1 starts with q0
+    amp_factors["ch1"] = dig_samples_dict["q0"]["amp"][0] / pulse1.amplitude[0]
+    # Ch2 starts with q1
+    amp_factors["ch2"] = dig_samples_dict["q1"]["amp"][0] / pulse1.amplitude[0]
+
+    # All factors are different than 1. and greater than 0.
+    assert all(
+        amp_factors[ch] > 0 and amp_factors[ch] != 1 for ch in amp_factors
+    )
+    # The amplitude factors are different between channels
+    assert len(set(amp_factors.values())) == len(amp_factors)
+
+    # q0 is acted only be ch1, so we use just the ch1 amp_factor
+    np.testing.assert_equal(
+        noiseless_samples["Local"]["digital"]["q0"]["amp"]
+        * amp_factors["ch1"],
+        dig_samples_dict["q0"]["amp"],
+    )
+
+    # q1 is acted by both channels
+    expected_q1_dig_samples = noiseless_samples["Local"]["digital"]["q1"][
+        "amp"
+    ]
+    # First pulse on q1 is applied by ch2
+    expected_q1_dig_samples[: pulse1.duration] *= amp_factors["ch2"]
+    # Second pulse on q1 is applied by ch1
+    expected_q1_dig_samples[-pulse1.duration - 1 :] *= amp_factors["ch1"]
+    np.testing.assert_equal(
+        expected_q1_dig_samples, dig_samples_dict["q1"]["amp"]
     )
