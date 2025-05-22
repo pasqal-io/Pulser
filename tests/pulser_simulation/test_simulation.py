@@ -1703,19 +1703,23 @@ def test_initial_state_sim():
     )
 
 
-def test_amp_sigma_noise(mod_device):
+def test_amp_sigma_noise():
     reg = Register({"q0": (0, 0), "q1": (10, 10)})
-    seq = Sequence(reg, mod_device)
+    seq = Sequence(reg, MockDevice)
     seq.declare_channel("ch0", "rydberg_global")
     seq.declare_channel("ch1", "raman_local", initial_target="q0")
+    seq.declare_channel("ch2", "raman_local", initial_target="q1")
 
     pulse1 = Pulse.ConstantPulse(120, 1, 0, 2.0)
-    seq.add(pulse1, "ch1")
+    # Added twice to check the fluctuation doesn't change from pulse to pulse
+    seq.add(pulse1, "ch0")
+    seq.add(pulse1, "ch0")
+    # The two local channels target alternating qubits on the same basis
+    seq.add(pulse1, "ch1", protocol="no-delay")
     seq.target("q1", "ch1")
-    seq.add(pulse1, "ch1")
-    # Added twice to check it fluctuation doesn't change from pulse to pulse
-    seq.add(pulse1, "ch0")
-    seq.add(pulse1, "ch0")
+    seq.add(pulse1, "ch1", protocol="no-delay")
+    # ch2 targets only q1
+    seq.add(pulse1, "ch2", protocol="no-delay")
 
     sim = QutipEmulator.from_sequence(
         seq,
@@ -1731,17 +1735,46 @@ def test_amp_sigma_noise(mod_device):
     sim_samples = sim._hamiltonian.samples
     amp_factors = {}
     assert sim_samples["Global"] == {}
-    for ch, _ch_obj in seq.declared_channels.items():
-        samples_dict = sim_samples["Local"][_ch_obj.basis]
-        _amps = samples_dict["q0"]["amp"]
-        # The amplitude factor is not 1. and is the same for the channel
-        amp_factors[ch] = _amps[_amps != 0][0] / pulse1.amplitude[0]
-        assert amp_factors[ch] > 0 and amp_factors[ch] != 1
-        for qid in reg.qubit_ids:
-            np.testing.assert_equal(
-                noiseless_samples["Local"][_ch_obj.basis][qid]["amp"]
-                * amp_factors[ch],
-                samples_dict[qid]["amp"],
-            )
+
+    # Global channel, ground-rydberg basis
+    ryd_samples_dict = sim_samples["Local"]["ground-rydberg"]
+    amp_factors["ch0"] = ryd_samples_dict["q0"]["amp"][0] / pulse1.amplitude[0]
+    for qid in reg.qubit_ids:
+        np.testing.assert_equal(
+            noiseless_samples["Local"]["ground-rydberg"][qid]["amp"]
+            * amp_factors["ch0"],
+            ryd_samples_dict[qid]["amp"],
+        )
+
+    # Local channels, digital basis
+    dig_samples_dict = sim_samples["Local"]["digital"]
+    # Ch1 starts with q0
+    amp_factors["ch1"] = dig_samples_dict["q0"]["amp"][0] / pulse1.amplitude[0]
+    # Ch2 starts with q1
+    amp_factors["ch2"] = dig_samples_dict["q1"]["amp"][0] / pulse1.amplitude[0]
+
+    # All factors are different than 1. and greater than 0.
+    assert all(
+        amp_factors[ch] > 0 and amp_factors[ch] != 1 for ch in amp_factors
+    )
     # The amplitude factors are different between channels
-    assert amp_factors["ch0"] != amp_factors["ch1"]
+    assert len(set(amp_factors.values())) == len(amp_factors)
+
+    # q0 is acted only be ch1, so we use just the ch1 amp_factor
+    np.testing.assert_equal(
+        noiseless_samples["Local"]["digital"]["q0"]["amp"]
+        * amp_factors["ch1"],
+        dig_samples_dict["q0"]["amp"],
+    )
+
+    # q1 is acted by both channels
+    expected_q1_dig_samples = noiseless_samples["Local"]["digital"]["q1"][
+        "amp"
+    ]
+    # First pulse on q1 is applied by ch2
+    expected_q1_dig_samples[: pulse1.duration] *= amp_factors["ch2"]
+    # Second pulse on q1 is applied by ch1
+    expected_q1_dig_samples[-pulse1.duration - 1 :] *= amp_factors["ch1"]
+    np.testing.assert_equal(
+        expected_q1_dig_samples, dig_samples_dict["q1"]["amp"]
+    )
