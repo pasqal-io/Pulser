@@ -327,13 +327,15 @@ class Sequence(Generic[DeviceType]):
             }
 
     def is_empty(self) -> bool:
-        """States whether the sequence is empty.
-
-        Note:
-            This is equivalent to testing if the sequence duration is equal to
-            0.
-        """
-        return self.get_duration() == 0
+        """States whether the sequence is empty."""
+        # _empty_sequence is False whenever there is an add... type call
+        if not self._empty_sequence:
+            return False
+        # But the sequence is also not empty if there is a delay call
+        for call in self._calls + self._to_build_calls:
+            if call.name == "delay":
+                return False
+        return True
 
     @property
     def magnetic_field(self) -> np.ndarray:
