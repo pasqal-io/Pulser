@@ -562,6 +562,10 @@ def test_custom_register_torch(register_type, coords, patch_plt_show):
         # Check that drawing still works too
         r.draw()
 
+    # check that generating with long type works
+    reg4 = pulser.Register.from_coordinates([torch.tensor(coord, dtype=torch.long) for coord in coords])
+    assert reg4 == reg3
+
 
 @pytest.mark.parametrize(
     "reg_classmethod, param_name, extra_params",
