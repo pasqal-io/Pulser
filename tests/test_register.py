@@ -64,9 +64,10 @@ def test_creation():
     )
     coords_ = np.array([(-0.5, 0), (0.5, 0)])
     assert reg3._ids == ("foo0", "foo1")
+    # Data is always stored as float -> float64 for numpy, float32 for torch
     assert (reg3._coords[0].dtype, reg3._coords[1].dtype) == (
-        np.float32,
-        np.float32,
+        np.float64,
+        np.float64,
     )
     assert reg3.sorted_coords.dtype == np.float64
     assert np.all(reg3._coords == coords_)
