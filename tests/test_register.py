@@ -640,6 +640,17 @@ def test_register_recipes_torch(
             ),
             8,
         ),
+        (
+            Register.from_coordinates(
+                [
+                    np.array([-2.501571, -0.003283], dtype=np.float32),
+                    np.array([2.50157, 0.003283], dtype=np.float32),
+                    np.array([-2.501571, 5.0], dtype=np.float64),
+                    np.array([2.50157, 5.1], dtype=np.float64),
+                ]
+            ),
+            8,
+        ),
     ],
 )
 def test_automatic_layout(optimal_filling, reg, max_atom_num):
