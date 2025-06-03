@@ -95,7 +95,7 @@ class Traps(ABC, CoordsCollection):
         """
         traps = []
         rounded_coords = np.round(
-            np.array(coordinates), decimals=COORD_PRECISION
+            np.array(coordinates).astype(float), decimals=COORD_PRECISION
         )
         for coord, rounded in zip(coordinates, rounded_coords):
             key = tuple(rounded)
