@@ -532,14 +532,14 @@ def _assert_reg_requires_grad(
 @pytest.mark.parametrize(
     "register_type, coords",
     [
-        (Register, [[1.0, -4.0], [0.0, 0.0]]),
-        (Register3D, [[1.0, -4.0, 5.0], [0.0, 0.0, 0.0]]),
+        (Register, [[1, -4], [0, 0]]),
+        (Register3D, [[1, -4, 5], [0, 0, 0]]),
     ],
 )
 def test_custom_register_torch(register_type, coords, patch_plt_show):
     torch = pytest.importorskip("torch")
 
-    diff_qubit = torch.tensor(coords[0], requires_grad=True)
+    diff_qubit = torch.tensor(coords[0], requires_grad=True, dtype=float)
 
     reg1 = register_type({"q0": diff_qubit, "q1": coords[1]})
     reg2 = register_type.from_coordinates(
