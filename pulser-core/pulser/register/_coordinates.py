@@ -42,7 +42,7 @@ class CoordsCollection:
 
     @cached_property
     def _coords_arr(self) -> pm.AbstractArray:
-        return pm.vstack(cast(Sequence, self._coords))
+        return pm.vstack(cast(Sequence, self._coords)).astype(float)
 
     @cached_property
     def _rounded_coords(self) -> pm.AbstractArray:
