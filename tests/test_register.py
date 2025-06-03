@@ -641,7 +641,7 @@ def test_register_recipes_torch(
             8,
         ),
         (
-            Register.from_coordinates(
+            Register.from_coordinates(  # type: ignore
                 [
                     np.array([-2.501571, -0.003283], dtype=np.float32),
                     np.array([2.50157, 0.003283], dtype=np.float32),
