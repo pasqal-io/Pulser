@@ -85,7 +85,9 @@ class WeightMap(Traps, RegDrawer):
                 np.all(
                     np.isclose(
                         coords_arr,
-                        pm.AbstractArray(pos).as_array(detach=True),
+                        pm.AbstractArray(pos)
+                        .astype(float)
+                        .as_array(detach=True),
                         atol=10 ** (-COORD_PRECISION),
                     ),
                     axis=1,

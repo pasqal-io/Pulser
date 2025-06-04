@@ -50,6 +50,7 @@ def test_creation():
     reg1 = Register(qubits)
     reg2 = Register.from_coordinates(coords, center=False, prefix="q")
     assert np.all(np.array(reg1._coords) == np.array(reg2._coords))
+    assert reg2.sorted_coords.dtype == np.float64
     assert reg1._ids == reg2._ids
 
     reg2b = Register.from_coordinates(coords, center=False, labels=["a", "b"])
@@ -58,9 +59,17 @@ def test_creation():
     with pytest.raises(ValueError, match="Label length"):
         Register.from_coordinates(coords, center=False, labels=["a", "b", "c"])
 
-    reg3 = Register.from_coordinates(np.array(coords), prefix="foo")
+    reg3 = Register.from_coordinates(
+        np.array(coords, dtype=np.float32), prefix="foo"
+    )
     coords_ = np.array([(-0.5, 0), (0.5, 0)])
     assert reg3._ids == ("foo0", "foo1")
+    # Data is always stored as float -> float64 for numpy, float32 for torch
+    assert (reg3._coords[0].dtype, reg3._coords[1].dtype) == (
+        np.float64,
+        np.float64,
+    )
+    assert reg3.sorted_coords.dtype == np.float64
     assert np.all(reg3._coords == coords_)
     assert not np.all(coords_ == coords)
 
@@ -523,14 +532,14 @@ def _assert_reg_requires_grad(
 @pytest.mark.parametrize(
     "register_type, coords",
     [
-        (Register, [[1.0, -4.0], [0.0, 0.0]]),
-        (Register3D, [[1.0, -4.0, 5.0], [0.0, 0.0, 0.0]]),
+        (Register, [[1, -4], [0, 0]]),
+        (Register3D, [[1, -4, 5], [0, 0, 0]]),
     ],
 )
 def test_custom_register_torch(register_type, coords, patch_plt_show):
     torch = pytest.importorskip("torch")
 
-    diff_qubit = torch.tensor(coords[0], requires_grad=True)
+    diff_qubit = torch.tensor(coords[0], requires_grad=True, dtype=float)
 
     reg1 = register_type({"q0": diff_qubit, "q1": coords[1]})
     reg2 = register_type.from_coordinates(
@@ -553,6 +562,12 @@ def test_custom_register_torch(register_type, coords, patch_plt_show):
 
         # Check that drawing still works too
         r.draw()
+
+    # check that generating with long type works
+    reg4 = register_type.from_coordinates(
+        [torch.tensor(coord, dtype=torch.long) for coord in coords]
+    )
+    assert reg4 == reg3
 
 
 @pytest.mark.parametrize(
@@ -599,8 +614,46 @@ def test_register_recipes_torch(
 
 
 @pytest.mark.parametrize("optimal_filling", [None, 0.4, 0.1])
-def test_automatic_layout(optimal_filling):
-    reg = Register.square(4, spacing=5, prefix="test")
+@pytest.mark.parametrize(
+    "reg, max_atom_num",
+    [
+        (Register.square(4, spacing=5, prefix="test"), 20),
+        (
+            Register.from_coordinates(
+                [
+                    np.array([-2.501571, -0.003283]),
+                    np.array([2.50157, 0.003283]),
+                    np.array([-2.501571, 5.0]),
+                    np.array([2.50157, 5.1]),
+                ]
+            ),
+            8,
+        ),
+        (
+            Register.from_coordinates(
+                [
+                    np.array([-2.501571, -0.003283], dtype=np.float32),
+                    np.array([2.50157, 0.003283], dtype=np.float32),
+                    np.array([-2.501571, 5.0], dtype=np.float32),
+                    np.array([2.50157, 5.1], dtype=np.float32),
+                ]
+            ),
+            8,
+        ),
+        (
+            Register.from_coordinates(
+                [  # type: ignore
+                    np.array([-2.501571, -0.003283], dtype=np.float32),
+                    np.array([2.50157, 0.003283], dtype=np.float32),
+                    np.array([-2.501571, 5.0], dtype=np.float64),
+                    np.array([2.50157, 5.1], dtype=np.float64),
+                ]
+            ),
+            8,
+        ),
+    ],
+)
+def test_automatic_layout(optimal_filling, reg, max_atom_num):
     max_layout_filling = 0.5
     min_traps = int(np.ceil(len(reg.qubits) / max_layout_filling))
     optimal_traps = int(
@@ -608,7 +661,7 @@ def test_automatic_layout(optimal_filling):
     )
     device = dataclasses.replace(
         AnalogDevice,
-        max_atom_num=20,
+        max_atom_num=max_atom_num,
         max_layout_filling=max_layout_filling,
         optimal_layout_filling=optimal_filling,
         pre_calibrated_layouts=(),
@@ -639,7 +692,7 @@ def test_automatic_layout(optimal_filling):
             device,
             max_layout_traps=trap_num - 1,
             # So that we can still fit 20 atoms
-            max_layout_filling=device.max_layout_filling + 0.1,
+            max_layout_filling=device.max_layout_filling + 0.4,
         )
         assert (
             reg.with_automatic_layout(bound_above_dev).layout.number_of_traps
