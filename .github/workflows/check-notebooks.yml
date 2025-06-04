@@ -1,0 +1,30 @@
+name: check-notebooks
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  nbmake:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Check out Pulser
+        uses: actions/checkout@v4
+      - name: Pulser install
+        uses: ./.github/workflows/pulser-setup
+        with:
+          python-version: 3.13
+          extra-packages: pytest
+          with-torch: true
+          numpy: 2
+      - name: Install development dependencies
+        run: pip install -r dev_requirements.txt
+      - name: Run the notebooks in the docs
+        run: pytest --nbmake docs/source/*.ipynb
+      - name: Run the tutorial notebooks
+        run: |
+          cd tutorials
+          pytest --nbmake advanced_features applications classical_simulation quantum_simulation

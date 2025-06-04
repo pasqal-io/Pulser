@@ -12,6 +12,8 @@ ruff==0.11.1
 pre-commit
 
 # tutorials
+nbmake ~= 1.5
 notebook
+pulser-pasqal
 python-igraph
 scikit-optimize
