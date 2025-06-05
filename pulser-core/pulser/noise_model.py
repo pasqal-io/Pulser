@@ -33,6 +33,7 @@ NoiseTypes = Literal[
     "leakage",
     "doppler",
     "amplitude",
+    "detuning",
     "SPAM",
     "dephasing",
     "relaxation",
@@ -44,6 +45,7 @@ _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "leakage": ("with_leakage",),
     "doppler": ("temperature",),
     "amplitude": ("laser_waist", "amp_sigma"),
+    "detuning": ("detuning_sigma",),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
     "dephasing": ("dephasing_rate", "hyperfine_dephasing_rate"),
     "relaxation": ("relaxation_rate",),
@@ -76,6 +78,7 @@ _PROBABILITY_LIKE = {
     "p_false_pos",
     "p_false_neg",
     "amp_sigma",
+    "detuning_sigma",
 }
 
 _BOOLEAN = {"with_leakage"}
@@ -93,6 +96,7 @@ _LEGACY_DEFAULTS = {
     "dephasing_rate": 0.05,
     "hyperfine_dephasing_rate": 1e-3,
     "depolarizing_rate": 0.05,
+    "detuning_sigma": 0.0,
 }
 
 
@@ -128,6 +132,8 @@ class NoiseModel:
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
+    - **detuning**: Dephasing fluctuations, parametrized by
+      ``dephasing_sigma``.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
 
@@ -150,6 +156,11 @@ class NoiseModel:
             run to run as a standard deviation of a normal distribution
             centered in 1. Assumed to be the same for all channels (though
             each channel has its own randomly sampled value in each run).
+        detuning_sigma: Dictates the fluctuation in detuning of a channel from
+            run to run as a standard deviation of a normal distribution
+            centered in 0. Assumed to be the same for all channels (though
+            each channel has its own randomly sampled value in each run).
+        relaxation_rate: The rate of relaxation from the Rydberg to the
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
@@ -176,6 +187,7 @@ class NoiseModel:
     temperature: float
     laser_waist: float | None
     amp_sigma: float
+    detuning_sigma: float
     relaxation_rate: float
     dephasing_rate: float
     hyperfine_dephasing_rate: float
@@ -194,6 +206,7 @@ class NoiseModel:
         temperature: float | None = None,
         laser_waist: float | None = None,
         amp_sigma: float | None = None,
+        detuning_sigma: float | None = None,
         relaxation_rate: float | None = None,
         dephasing_rate: float | None = None,
         hyperfine_dephasing_rate: float | None = None,
@@ -218,6 +231,7 @@ class NoiseModel:
             temperature=temperature,
             laser_waist=laser_waist,
             amp_sigma=amp_sigma,
+            detuning_sigma=detuning_sigma,
             relaxation_rate=relaxation_rate,
             dephasing_rate=dephasing_rate,
             hyperfine_dephasing_rate=hyperfine_dephasing_rate,
@@ -248,6 +262,7 @@ class NoiseModel:
             cast(float, param_vals["state_prep_error"]),
             cast(float, param_vals["amp_sigma"]),
             cast(Union[float, None], param_vals["laser_waist"]),
+            cast(float, param_vals["detuning_sigma"]),
         )
 
         relevant_param_vals = {
@@ -279,6 +294,7 @@ class NoiseModel:
         state_prep_error: float,
         amp_sigma: float,
         laser_waist: float | None,
+        detuning_sigma: float,
     ) -> set[str]:
         relevant_params: set[str] = set()
         for nt_ in noise_types:
@@ -287,6 +303,7 @@ class NoiseModel:
                 nt_ == "doppler"
                 or (nt_ == "amplitude" and amp_sigma != 0.0)
                 or (nt_ == "SPAM" and state_prep_error != 0.0)
+                or (nt_ == "detuning" and detuning_sigma != 0.0)
             ):
                 relevant_params.update(("runs", "samples_per_run"))
         # Disregard laser_waist when not defined
@@ -413,6 +430,7 @@ class NoiseModel:
             self.state_prep_error,
             self.amp_sigma,
             self.laser_waist,
+            self.detuning_sigma,
         )
         relevant_params.add("noise_types")
         params_list = []
