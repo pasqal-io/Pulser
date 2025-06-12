@@ -115,7 +115,7 @@ class SimConfig:
     temperature: float = _LEGACY_DEFAULTS["temperature"]
     laser_waist: float = _LEGACY_DEFAULTS["laser_waist"]
     amp_sigma: float = _LEGACY_DEFAULTS["amp_sigma"]
-    detuning_sigma: float = _LEGACY_DEFAULTS["detuning_sigma"]
+    detuning_sigma: float = 0.0
     eta: float = _LEGACY_DEFAULTS["state_prep_error"]
     epsilon: float = _LEGACY_DEFAULTS["p_false_pos"]
     epsilon_prime: float = _LEGACY_DEFAULTS["p_false_neg"]
@@ -164,7 +164,6 @@ class SimConfig:
             self.eta,
             self.amp_sigma,
             laser_waist_,
-            self.detuning_sigma,
         )
         kwargs = {}
         for param in relevant_params:
