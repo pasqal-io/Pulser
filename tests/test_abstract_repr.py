@@ -19,7 +19,7 @@ import re
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import replace
-from typing import Any, Type
+from typing import Any, Type, cast
 from unittest.mock import patch
 
 import jsonschema
@@ -284,7 +284,7 @@ class TestDevice:
             with pytest.raises(DeserializeDeviceError) as exc_info:
                 func(obj_str)
 
-            cause = exc_info.value.__cause__
+            cause = cast(DeserializeDeviceError, exc_info.value).__cause__
             assert isinstance(cause, original_err)
             assert re.search(re.escape(err_msg), str(cause)) is not None
             return cause

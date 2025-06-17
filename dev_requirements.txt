@@ -4,7 +4,7 @@ flake8
 flake8-docstrings
 isort
 mypy == 1.2
-pytest < 8.4.0
+pytest
 pytest-cov
 ruff==0.11.1
 
@@ -12,6 +12,8 @@ ruff==0.11.1
 pre-commit
 
 # tutorials
+nbmake ~= 1.5
 notebook
+pulser-pasqal
 python-igraph
 scikit-optimize
