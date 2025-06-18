@@ -174,10 +174,6 @@ class _MockConnection(RemoteConnection):
     def supports_open_batch(self) -> bool:
         return bool(self._support_open_batch)
 
-    def fetch_available_devices(self):
-        device = pulser.AnalogDevice
-        return {device.name: device}
-
 
 @pytest.mark.parametrize("job_ids", [None, ["jobID1"]])
 def test_remote_results(job_ids):
@@ -212,6 +208,11 @@ def test_remote_connection(sequence):
 
     with pytest.raises(NotImplementedError, match="Unable to find job IDs"):
         connection._get_job_ids("abc")
+
+    with pytest.raises(
+        NotImplementedError, match="Unable to fetch the available devices"
+    ):
+        connection.fetch_available_devices()
 
     assert not sequence.is_measured()
     new_seq = connection._add_measurement_to_sequence(sequence)
@@ -317,6 +318,13 @@ def test_qpu_backend(sequence):
         ),
     ):
         qpu_backend.run(job_params=[{"runs": 100000}])
+
+    device = pulser.AnalogDevice
+
+    def fetch_available_devices():
+        return {device.name: device}
+
+    connection.fetch_available_devices = fetch_available_devices
 
     remote_results = qpu_backend.run(job_params=[{"runs": 10}])
 
