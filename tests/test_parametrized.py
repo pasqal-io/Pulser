@@ -342,8 +342,8 @@ def test_numpy_compat(obj):
 
     with pytest.raises(TypeError):
         # Only ufunc.__call__ is supported
-        np.add.reduce(arr, obj)
+        np.add.reduce(obj)
 
     # Unsupported ufuncs fail too
     with pytest.raises(TypeError):
-        np.divmod(arr, obj)
+        np.cbrt(obj)
