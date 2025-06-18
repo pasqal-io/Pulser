@@ -319,6 +319,13 @@ def test_qpu_backend(sequence):
     ):
         qpu_backend.run(job_params=[{"runs": 100000}])
 
+    device = pulser.AnalogDevice
+
+    def fetch_available_devices():
+        return {device.name: device}
+
+    connection.fetch_available_devices = fetch_available_devices
+
     remote_results = qpu_backend.run(job_params=[{"runs": 10}])
 
     with pytest.raises(AttributeError, match="no attribute 'result'"):
