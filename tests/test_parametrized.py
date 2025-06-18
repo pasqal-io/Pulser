@@ -22,7 +22,7 @@ from numpy.polynomial import Polynomial
 
 from pulser import Pulse
 from pulser.json.coders import PulserDecoder, PulserEncoder
-from pulser.parametrized import ParamObj, Variable
+from pulser.parametrized import Parametrized, ParamObj, Variable
 from pulser.waveforms import BlackmanWaveform, CompositeWaveform
 
 
@@ -320,3 +320,30 @@ def test_opsupport(a, b, with_diff_tensor):
         y.build().as_array(detach=with_diff_tensor),
     )
     check_var_grad(y2)
+
+
+@pytest.mark.parametrize(
+    "obj",
+    [
+        Variable("var", float, size=4),  # Variable
+        Variable("var", float, size=1)[0],  # VariableItem
+        Variable("var", float, size=1)[0] * 4,  # ParamObj
+    ],
+)
+def test_numpy_compat(obj):
+    # The parametrized object should stay parametrized
+    # and not turned into a numpy array
+    assert isinstance(obj, Parametrized)
+
+    arr = np.arange(4)
+
+    obj = np.abs(arr * obj**arr - arr // obj + arr / obj)
+    assert isinstance(obj, ParamObj)
+
+    with pytest.raises(TypeError):
+        # Only ufunc.__call__ is supported
+        np.add.reduce(arr, obj)
+
+    # Unsupported ufuncs fail too
+    with pytest.raises(TypeError):
+        np.divmod(arr, obj)
