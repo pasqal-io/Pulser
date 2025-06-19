@@ -27,6 +27,9 @@
         "amp_sigma": {
           "type": "number"
         },
+        "detuning_sigma": {
+          "type": "number"
+        },
         "dephasing_rate": {
           "type": "number"
         },
@@ -119,6 +122,7 @@
         "temperature",
         "laser_waist",
         "amp_sigma",
+        "detuning_sigma",
         "relaxation_rate",
         "dephasing_rate",
         "hyperfine_dephasing_rate",
@@ -131,6 +135,7 @@
       "enum": [
         "doppler",
         "amplitude",
+        "detuning",
         "SPAM",
         "relaxation",
         "dephasing",

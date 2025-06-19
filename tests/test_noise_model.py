@@ -67,6 +67,7 @@ class TestNoiseModel:
                 {"laser_waist", "hyperfine_dephasing_rate"},
                 {"amplitude", "dephasing"},
             ),
+            ({"detuning_sigma", "runs", "samples_per_run"}, {"detuning"}),
         ],
     )
     def test_init(self, params, noise_types):
@@ -117,11 +118,14 @@ class TestNoiseModel:
             ("relaxation_rate", "relaxation"),
             ("depolarizing_rate", "depolarizing"),
             ("temperature", "doppler"),
+            ("detuning_sigma", "detuning"),
         ],
     )
     def test_init_rate_like(self, param, noise, value):
         kwargs = {param: value}
-        if param == "temperature" and value != 0:
+        if (
+            param == "temperature" or param == "detuning_sigma"
+        ) and value != 0:
             kwargs.update(dict(runs=1, samples_per_run=1))
         if value < 0:
             with pytest.raises(
@@ -317,6 +321,9 @@ class TestNoiseModel:
         assert NoiseModel._find_relevant_params(
             {"eff_noise", "leakage"}, 0.0, 0.0, None
         ) == {"eff_noise_rates", "eff_noise_opers", "with_leakage"}
+        assert NoiseModel._find_relevant_params(
+            {"detuning"}, 0.0, 0.0, None
+        ) == {"detuning_sigma", "runs", "samples_per_run"}
 
     def test_repr(self):
         assert repr(NoiseModel()) == "NoiseModel(noise_types=())"

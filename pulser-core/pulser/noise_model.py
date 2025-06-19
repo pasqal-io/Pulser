@@ -33,6 +33,7 @@ NoiseTypes = Literal[
     "leakage",
     "doppler",
     "amplitude",
+    "detuning",
     "SPAM",
     "dephasing",
     "relaxation",
@@ -44,6 +45,7 @@ _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "leakage": ("with_leakage",),
     "doppler": ("temperature",),
     "amplitude": ("laser_waist", "amp_sigma"),
+    "detuning": ("detuning_sigma",),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
     "dephasing": ("dephasing_rate", "hyperfine_dephasing_rate"),
     "relaxation": ("relaxation_rate",),
@@ -65,6 +67,7 @@ _POSITIVE = {
     "relaxation_rate",
     "depolarizing_rate",
     "temperature",
+    "detuning_sigma",
 }
 _STRICT_POSITIVE = {
     "runs",
@@ -128,6 +131,8 @@ class NoiseModel:
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
+    - **detuning**: Detuning fluctuations, parametrized by
+      ``detuning_sigma``.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
 
@@ -150,6 +155,11 @@ class NoiseModel:
             run to run as a standard deviation of a normal distribution
             centered in 1. Assumed to be the same for all channels (though
             each channel has its own randomly sampled value in each run).
+        detuning_sigma: Dictates the fluctuation in detuning (in rad/µs)
+            of a channel from run to run as a standard deviation of a normal
+            distribution centered in 0. Assumed to be the same for all
+            channels (though each channel has its own randomly sampled
+            value in each run). This noise is additive.
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
@@ -176,6 +186,7 @@ class NoiseModel:
     temperature: float
     laser_waist: float | None
     amp_sigma: float
+    detuning_sigma: float
     relaxation_rate: float
     dephasing_rate: float
     hyperfine_dephasing_rate: float
@@ -194,6 +205,7 @@ class NoiseModel:
         temperature: float | None = None,
         laser_waist: float | None = None,
         amp_sigma: float | None = None,
+        detuning_sigma: float | None = None,
         relaxation_rate: float | None = None,
         dephasing_rate: float | None = None,
         hyperfine_dephasing_rate: float | None = None,
@@ -218,6 +230,7 @@ class NoiseModel:
             temperature=temperature,
             laser_waist=laser_waist,
             amp_sigma=amp_sigma,
+            detuning_sigma=detuning_sigma,
             relaxation_rate=relaxation_rate,
             dephasing_rate=dephasing_rate,
             hyperfine_dephasing_rate=hyperfine_dephasing_rate,
@@ -285,6 +298,7 @@ class NoiseModel:
             relevant_params.update(_NOISE_TYPE_PARAMS[nt_])
             if (
                 nt_ == "doppler"
+                or nt_ == "detuning"
                 or (nt_ == "amplitude" and amp_sigma != 0.0)
                 or (nt_ == "SPAM" and state_prep_error != 0.0)
             ):
