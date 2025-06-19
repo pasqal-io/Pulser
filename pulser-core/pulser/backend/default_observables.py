@@ -20,7 +20,6 @@ from collections import Counter
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Type
 
-import pulser.math as pm
 from pulser.backend.observable import Observable
 from pulser.backend.operator import Operator, OperatorType
 from pulser.backend.state import Eigenstate, State, StateType
@@ -412,13 +411,12 @@ class EnergyVariance(Observable):
         # This works for state vectors and density matrices and avoids
         # squaring the hamiltonian
         h_state = hamiltonian.apply_to(state)
-        result: pm.AbstractArray = pm.sqrt(
-            h_state.overlap(h_state).real
-        ) - state.overlap(h_state)
-        if not result.requires_grad:
-            return float(result)
-        # If the result requires_grad, return the AbstractArray
-        return result  # pragma: no cover
+        identity = hamiltonian.from_operator_repr(
+            eigenstates=state.eigenstates,
+            n_qudits=state.n_qudits,
+            operations=[(1.0, [])],
+        )
+        return identity.expect(h_state) - hamiltonian.expect(state) ** 2
 
 
 class EnergySecondMoment(Observable):
@@ -447,7 +445,9 @@ class EnergySecondMoment(Observable):
         # This works for state vectors and density matrices and avoids
         # squaring the hamiltonian
         h_state = hamiltonian.apply_to(state)
-        result = pm.sqrt(h_state.overlap(h_state).real)
-        if not result.requires_grad:
-            return float(result)
-        return result  # pragma: no cover
+        identity = hamiltonian.from_operator_repr(
+            eigenstates=state.eigenstates,
+            n_qudits=state.n_qudits,
+            operations=[(1.0, [])],
+        )
+        return identity.expect(h_state)
