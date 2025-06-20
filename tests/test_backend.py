@@ -371,7 +371,9 @@ def test_emulator_backend(sequence):
     class ConcreteEmulator(EmulatorBackend):
 
         default_config = EmulationConfig(
-            observables=(BitStrings(),), with_modulation=True
+            observables=(BitStrings(),),
+            with_modulation=True,
+            extra_param="foo",
         )
 
         def run(self):
@@ -389,7 +391,12 @@ def test_emulator_backend(sequence):
         ),
     )
     assert emu._config.default_evaluation_times == "Full"
+    # with_modulation is not True because EmulationConfig has it in the
+    # signature as `with_modulation=False``
     assert not emu._config.with_modulation
+    # But the parameter that's not in EmulationConfig's signature is still
+    # passed to the config
+    assert emu._config.extra_param == "foo"
 
     # Uses the default config
     assert ConcreteEmulator(sequence)._config.with_modulation
