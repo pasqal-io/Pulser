@@ -60,27 +60,5 @@ class QPUBackend(RemoteBackend):
             The results, which can be accessed once all sequences have been
             successfully executed.
         """
-        self.validate_job_params(
-            job_params or [], self._sequence.device.max_runs
-        )
+        self.validate_job_params(job_params, self._sequence.device.max_runs)
         return super().run(job_params, wait)
-
-    @staticmethod
-    def validate_job_params(
-        job_params: list[JobParams], max_runs: int | None
-    ) -> None:
-        """Validates a list of job parameters prior to submission."""
-        suffix = " when executing a sequence on a real QPU."
-        if not job_params:
-            raise ValueError("'job_params' must be specified" + suffix)
-        RemoteBackend._type_check_job_params(job_params)
-        for j in job_params:
-            if "runs" not in j:
-                raise ValueError(
-                    "All elements of 'job_params' must specify 'runs'" + suffix
-                )
-            if max_runs is not None and j["runs"] > max_runs:
-                raise ValueError(
-                    "All 'runs' must be below the maximum allowed by the "
-                    f"device ({max_runs})" + suffix
-                )
