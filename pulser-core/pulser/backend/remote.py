@@ -266,8 +266,9 @@ class RemoteConnection(ABC):
             available_devices = self.fetch_available_devices()
         except NotImplementedError:
             logging.warning(
-                "The selected connection doesn't give access to the latest device specs. "
-                "Execution might fail if the sequence is incompatible with the device."
+                "The selected connection doesn't give access to the latest "
+                "device specs. Execution might fail if the sequence is "
+                "incompatible with the device."
             )
             return sequence
         available_device_names = {
