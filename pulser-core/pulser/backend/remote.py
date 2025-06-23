@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import logging
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum, auto
@@ -261,7 +262,14 @@ class RemoteConnection(ABC):
         Returns:
             The Sequence, with the latest version for the targeted Device.
         """
-        available_devices = self.fetch_available_devices()
+        try:
+            available_devices = self.fetch_available_devices()
+        except NotImplementedError:
+            logging.warning(
+                "The selected connection doesn't give access to the latest device specs. "
+                "Execution might fail if the sequence is incompatible with the device."
+            )
+            return sequence
         available_device_names = {
             dev.name: key for key, dev in available_devices.items()
         }

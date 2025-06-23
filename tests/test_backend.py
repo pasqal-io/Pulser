@@ -233,6 +233,9 @@ def test_update_sequence_device(sequence):
     connection = _MockConnection()
     device = pulser.AnalogDevice
 
+    new_sequence = connection.update_sequence_device(sequence)
+    assert new_sequence == sequence
+
     def fetch_available_devices():
         return {device.name: device}
 

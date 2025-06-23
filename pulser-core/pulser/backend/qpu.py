@@ -60,7 +60,5 @@ class QPUBackend(RemoteBackend):
             The results, which can be accessed once all sequences have been
             successfully executed.
         """
-        self.validate_job_params(
-            job_params or [], self._sequence.device.max_runs
-        )
+        self.validate_job_params(job_params, self._sequence.device.max_runs)
         return super().run(job_params, wait)
