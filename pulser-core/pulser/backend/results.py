@@ -24,6 +24,7 @@ from typing import Any, TypeVar, overload
 from pulser.backend.observable import Observable
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
+from pulser.json.utils import stringify_qubit_ids
 
 
 @dataclass
@@ -147,7 +148,7 @@ class Results:
 
     def _to_abstract_repr(self) -> dict:
         d = {
-            "atom_order": self.atom_order,
+            "atom_order": stringify_qubit_ids(self.atom_order),
             "total_duration": self.total_duration,
         }
         d["tagmap"] = {key: str(value) for key, value in self._tagmap.items()}
