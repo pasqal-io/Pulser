@@ -79,14 +79,17 @@ class BaseRegister(ABC, CoordsCollection):
         )
         self._ids: tuple[QubitId, ...] = tuple(qubits.keys())
         if any(not isinstance(id, str) for id in self._ids):
-            warnings.warn(
-                "Usage of `int`s or any non-`str`types as `QubitId`s will be "
-                "deprecated. Define your `QubitId`s as `str`s, prefer setting "
-                "`prefix='q'` when using classmethods, as that will become the"
-                " new default once `int` qubit IDs become invalid.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings("always")
+                warnings.warn(
+                    "Usage of `int`s or any non-`str`types as `QubitId`s will "
+                    "be deprecated. Define your `QubitId`s as `str`s, prefer "
+                    "setting `prefix='q'` when using classmethods, as that "
+                    "will become the new default once `int` qubit IDs become "
+                    "invalid.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
         self._layout_info: Optional[_LayoutInfo] = None
         self._init_kwargs(**kwargs)
 
