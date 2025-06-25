@@ -82,16 +82,6 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    noise_model
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Emulation
-
-   tutorials/noisy_sim
-   tutorials/spam
-   tutorials/laser_noise
-   tutorials/effective_noise
-
-
-.. toctree::
    :maxdepth: 1
    :caption: Applications
 
