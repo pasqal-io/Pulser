@@ -79,6 +79,7 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    tutorials/slm_mask
    tutorials/xy_spin_chain
    tutorials/phase_shifts_vz_gates
+   noise_model
 
 .. toctree::
    :maxdepth: 2
