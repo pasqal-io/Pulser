@@ -98,6 +98,8 @@ _LEGACY_DEFAULTS = {
     "depolarizing_rate": 0.05,
 }
 
+OPTIONAL_IN_ABSTR_REPR = ("detuning_sigma",)
+
 
 @dataclass(init=False, repr=False, frozen=True)
 class NoiseModel:
@@ -253,8 +255,8 @@ class NoiseModel:
         )
 
         # Get rid of unnecessary None's
-        for p_ in _POSITIVE | _PROBABILITY_LIKE:
-            param_vals[p_] = param_vals[p_] or 0.0
+        for p_ in param_vals.keys():
+            param_vals[p_] = param_vals[p_] or self._get_default_value(p_)
 
         relevant_params = self._find_relevant_params(
             true_noise_types,
@@ -285,6 +287,12 @@ class NoiseModel:
                     f"are {non_zero_relevant_params}.",
                     stacklevel=2,
                 )
+
+    @staticmethod
+    def _get_default_value(arg: str) -> float | None:
+        if arg in _POSITIVE | _PROBABILITY_LIKE:
+            return 0.0
+        return None
 
     @staticmethod
     def _find_relevant_params(
@@ -419,6 +427,9 @@ class NoiseModel:
         eff_noise_rates = all_fields.pop("eff_noise_rates")
         eff_noise_opers = all_fields.pop("eff_noise_opers")
         all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
+        for p in OPTIONAL_IN_ABSTR_REPR:
+            if all_fields[p] == self._get_default_value(p):
+                all_fields.pop(p, None)
         return all_fields
 
     def __repr__(self) -> str:

@@ -122,7 +122,6 @@
         "temperature",
         "laser_waist",
         "amp_sigma",
-        "detuning_sigma",
         "relaxation_rate",
         "dephasing_rate",
         "hyperfine_dephasing_rate",
