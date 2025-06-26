@@ -96,6 +96,12 @@ def test_creation():
     ):
         Register(qubits, spacing=10, layout="square", trap_ids=(0, 1, 3))
 
+    with pytest.warns(
+        DeprecationWarning,
+        match="Usage of `int`s or any non-`str`types as `QubitId`s",
+    ):
+        Register.from_coordinates([(0, 0)])
+
 
 def test_repr():
     assert (
