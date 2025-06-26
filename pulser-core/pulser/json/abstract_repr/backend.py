@@ -16,8 +16,8 @@ from pulser.backend.default_observables import (
 )
 from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr.deserializer import (
-    _convert_complex,
     _deserialize_noise_model,
+    deserialize_complex,
 )
 
 if TYPE_CHECKING:
@@ -42,7 +42,7 @@ def _deserialize_state(
     """
     return state_type.from_state_amplitudes(
         eigenstates=ser_state["eigenstates"],
-        amplitudes=_convert_complex(ser_state["amplitudes"]),
+        amplitudes=deserialize_complex(ser_state["amplitudes"]),
     )
 
 
@@ -69,7 +69,7 @@ def _deserialize_operator(
     return op_type.from_operator_repr(
         eigenstates=ser_op["eigenstates"],
         n_qudits=ser_op["n_qudits"],
-        operations=_convert_complex(operations),
+        operations=deserialize_complex(operations),
     )
 
 
