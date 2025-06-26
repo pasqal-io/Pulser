@@ -244,7 +244,7 @@ def test_modulation_local(mod_device):
 
 @pytest.mark.parametrize("disable_eom", [True, False])
 def test_eom_modulation(mod_device, disable_eom):
-    seq = pulser.Sequence(pulser.Register.square(2), mod_device)
+    seq = pulser.Sequence(pulser.Register.square(2, prefix="q"), mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     seq.enable_eom_mode("ch0", amp_on=1, detuning_on=0.0)
     seq.add_eom_pulse("ch0", 100, 0.0)
@@ -321,7 +321,7 @@ def test_seq_with_DMM_and_map_reg():
 
 
 def seq_with_SLM(
-    ch_name: Literal["mw_global", "rydberg_global"]
+    ch_name: Literal["mw_global", "rydberg_global"],
 ) -> pulser.Sequence:
     q_dict = {
         "batman": np.array([-4.0, 0.0]),  # sometimes masked
@@ -517,7 +517,9 @@ def test_phase_modulation(off_center, with_diff):
         pulser.ConstantWaveform(full_phase.duration, 1), full_phase
     )
 
-    seq = pulser.Sequence(pulser.Register.square(1), pulser.MockDevice)
+    seq = pulser.Sequence(
+        pulser.Register.square(1, prefix="q"), pulser.MockDevice
+    )
     seq.declare_channel("rydberg_global", "rydberg_global")
     seq.add(pulse, "rydberg_global")
     seq_samples = sample(seq).channel_samples["rydberg_global"]

@@ -409,7 +409,7 @@ def test_results_xy(reg, pi_pulse):
 
 def test_false_positive():
     """Breaks for pulser version < v0.18."""
-    seq = Sequence(Register.square(2, 5), AnalogDevice)
+    seq = Sequence(Register.square(2, 5, prefix="q"), AnalogDevice)
     seq.declare_channel("ryd_glob", "rydberg_global")
     seq.add(
         Pulse.ConstantDetuning(

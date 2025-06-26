@@ -103,7 +103,9 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
     with pytest.raises(TypeError, match="sequence has to be a valid"):
         QutipEmulator.from_sequence(fake_sequence)
     with pytest.raises(TypeError, match="sequence has to be a valid"):
-        QutipEmulator(fake_sequence, Register.square(2), mod_device)
+        QutipEmulator(
+            fake_sequence, Register.square(2, prefix="q"), mod_device
+        )
     # Simulation cannot be run on a register not defining "control1"
     with pytest.raises(
         ValueError,
@@ -503,7 +505,7 @@ def test_get_hamiltonian():
 
 
 def test_single_atom_simulation():
-    one_reg = Register.from_coordinates([(0, 0)], "atom")
+    one_reg = Register.from_coordinates([(0, 0)], prefix="atom")
     one_seq = Sequence(one_reg, DigitalAnalogDevice)
     one_seq.declare_channel("ch0", "rydberg_global")
     one_seq.add(
@@ -518,7 +520,7 @@ def test_single_atom_simulation():
 
 
 def test_add_max_step_and_delays():
-    reg = Register.from_coordinates([(0, 0)])
+    reg = Register.from_coordinates([(0, 0)], prefix="q")
     seq = Sequence(reg, DigitalAnalogDevice)
     seq.declare_channel("ch", "rydberg_global")
     seq.delay(1500, "ch")
