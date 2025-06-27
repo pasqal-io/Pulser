@@ -233,6 +233,9 @@ def test_update_sequence_device(sequence):
     connection = _MockConnection()
     device = pulser.AnalogDevice
 
+    new_sequence = connection.update_sequence_device(sequence)
+    assert new_sequence == sequence
+
     def fetch_available_devices():
         return {device.name: device}
 
@@ -318,6 +321,13 @@ def test_qpu_backend(sequence):
         ),
     ):
         qpu_backend.run(job_params=[{"runs": 100000}])
+
+    device = pulser.AnalogDevice
+
+    def fetch_available_devices():
+        return {device.name: device}
+
+    connection.fetch_available_devices = fetch_available_devices
 
     remote_results = qpu_backend.run(job_params=[{"runs": 10}])
 
