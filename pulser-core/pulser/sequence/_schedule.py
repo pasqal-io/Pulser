@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterator
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from typing import Dict, NamedTuple, Optional, Union, cast, overload
 
 import numpy as np
@@ -533,6 +533,108 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         self[channel].slots.append(
             _TimeSlot("target", ti, tf, set(qubits_set))
         )
+
+    def truncate(self, duration: int) -> None:
+        for ch_name, ch_schedule in self.items():
+            all_slots = ch_schedule.slots
+            all_eom_blocks = ch_schedule.eom_blocks
+            # Channel duration is below the threshold, do nothing
+            if ch_schedule.get_duration() <= duration:
+                continue
+
+            # Make sure the duration is valid for the channel
+            threshold = ch_schedule.adjust_duration(duration)
+            if threshold > duration:
+                # The duration was rounded up, remove one clock period so it's
+                # rounded down instead
+                threshold -= ch_schedule.channel_obj.clock_period
+
+            # This should always be true because `duration` is previously
+            # validated to be >= min_duration
+            assert (
+                ch_schedule.channel_obj.min_duration <= threshold <= duration
+            )
+            # Find the slot where to truncate
+            for slot_ind, slot in enumerate(all_slots):
+                if slot.ti < threshold <= slot.tf:
+                    break
+
+            # Take care of the EOM blocks
+            for eom_ind, eom_block in enumerate(all_eom_blocks):
+                # Threshold falls within an EOM block
+                if (
+                    eom_block.ti < threshold <= (eom_block.tf or threshold)
+                ):  # tf can be None
+                    # This block becomes open again, as the EOM mode will be
+                    # enabled again
+                    new_eom_block = replace(eom_block, tf=None)
+                    ch_schedule.eom_blocks = all_eom_blocks[:eom_ind] + [
+                        new_eom_block
+                    ]
+                    break
+                # Threshold falls before the start of an EOM block
+                if threshold < eom_block.ti:
+                    # Remove that block and all blocks after it
+                    ch_schedule.eom_blocks = all_eom_blocks[:eom_ind]
+                    break
+
+            # If the slot terminates at the threshold, just return
+            # the schedule up to this slot (inclusivly)
+            if slot.tf == threshold:
+                ch_schedule.slots = ch_schedule.slots[: slot_ind + 1]
+                continue
+
+            # Remove all slots up to the threshold slot, including it
+            # If possible, a replacement slot is added further down
+            ch_schedule.slots = all_slots[:slot_ind]
+
+            if slot.type == "target":
+                warnings.warn(
+                    f"'target()' instruction on channel {ch_name!r} at "
+                    f"t = {threshold} ns was removed by "
+                    "`Sequence.truncate()` call.",
+                    stacklevel=3,
+                )
+                continue
+
+            new_slot_duration = threshold - slot.ti
+
+            if new_slot_duration < ch_schedule.channel_obj.min_duration:
+                # Remove the slot because it can't be truncated
+                continue
+
+            if not ch_schedule.in_eom_mode(slot) and ch_schedule.in_eom_mode(
+                ch_schedule.slots[slot_ind + 1]
+            ):
+                # EOM start buffer, so we just remove it since the associated
+                # EOM block has already been removed
+                continue
+            if not ch_schedule.in_eom_mode(slot) and ch_schedule.in_eom_mode(
+                ch_schedule.slots[slot_ind - 1]
+            ):
+                # EOM end buffer, so we remove it and reopen EOM mode
+                ch_schedule.eom_blocks[-1] = replace(
+                    ch_schedule.eom_blocks[-1], tf=None
+                )
+                continue
+
+            if slot.type == "delay":
+                # Add new delay, reduced by the truncation
+                self.add_delay(new_slot_duration, ch_name)
+                continue
+
+            assert isinstance(pulse := slot.type, Pulse)
+            new_pulse = Pulse(
+                amplitude=pulse.amplitude.truncated(new_slot_duration),
+                detuning=pulse.detuning.truncated(new_slot_duration),
+                phase=pulse.phase,
+                post_phase_shift=pulse.post_phase_shift,
+            )
+            ch_schedule.slots = ch_schedule.slots[:slot_ind]
+            # The pulse slot was already there, we are just replacing it
+            self.add_pulse(
+                new_pulse, ch_name, phase_barrier_ts=[0], protocol="no-delay"
+            )
 
     def wait_for_fall(self, channel: str) -> None:
         """Adds a delay to let the channel's amplitude ramp down."""
