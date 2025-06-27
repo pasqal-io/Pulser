@@ -294,8 +294,6 @@ class NoiseModel:
     def _get_default_value(arg: str) -> float | None:
         if arg in _POSITIVE | _PROBABILITY_LIKE:
             return 0.0
-        if "eff_noise" in arg:
-            return ()
         return None
 
     @staticmethod
