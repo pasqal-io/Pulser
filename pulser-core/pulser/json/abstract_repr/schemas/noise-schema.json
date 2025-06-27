@@ -27,13 +27,13 @@
         "amp_sigma": {
           "type": "number"
         },
-        "detuning_sigma": {
-          "type": "number"
-        },
         "dephasing_rate": {
           "type": "number"
         },
         "depolarizing_rate": {
+          "type": "number"
+        },
+        "detuning_sigma": {
           "type": "number"
         },
         "eff_noise": {
@@ -134,13 +134,13 @@
       "enum": [
         "doppler",
         "amplitude",
-        "detuning",
         "SPAM",
         "relaxation",
         "dephasing",
         "depolarizing",
         "leakage",
-        "eff_noise"
+        "eff_noise",
+        "detuning"
       ],
       "type": "string"
     }

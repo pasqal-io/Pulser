@@ -255,8 +255,10 @@ class NoiseModel:
         )
 
         # Get rid of unnecessary None's
-        for p_ in param_vals.keys():
-            param_vals[p_] = param_vals[p_] or self._get_default_value(p_)
+        for p_, val in param_vals.items():
+            param_vals[p_] = (
+                self._get_default_value(p_) if val is None else val
+            )
 
         relevant_params = self._find_relevant_params(
             true_noise_types,
@@ -292,6 +294,8 @@ class NoiseModel:
     def _get_default_value(arg: str) -> float | None:
         if arg in _POSITIVE | _PROBABILITY_LIKE:
             return 0.0
+        if "eff_noise" in arg:
+            return ()
         return None
 
     @staticmethod
