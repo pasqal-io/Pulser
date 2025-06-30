@@ -576,3 +576,17 @@ def test_result_serialization(test_torch: bool):
             obs
         )
     assert results.get_result_tags() == deserialized.get_result_tags()
+
+
+def test_result_atom_order_serialization():
+    with pytest.warns(UserWarning, match="converts all qubit ID's to strings"):
+        assert Results.from_abstract_repr(
+            Results(
+                atom_order=(0, 1, 2), total_duration=1000
+            ).to_abstract_repr()
+        ) == Results(atom_order=("0", "1", "2"), total_duration=1000)
+
+        with pytest.raises(
+            AbstractReprError, match="Name collisions encountered"
+        ):
+            Results(atom_order=(0, "0"), total_duration=10).to_abstract_repr()
