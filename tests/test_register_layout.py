@@ -148,7 +148,7 @@ def test_static_hash(layout):
 
 def test_eq(layout, layout3d):
     assert RegisterLayout([[0, 0], [1, 0]]) != Register.from_coordinates(
-        [[0, 0], [1, 0]]
+        [[0, 0], [1, 0]], prefix=""
     )
     assert layout != layout3d
     layout1 = RegisterLayout([[0, 0], [1, 0]])

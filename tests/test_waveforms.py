@@ -269,7 +269,8 @@ def test_interpolated():
 
     # Init an InterpolatedWaveform that always fails at build fails
     seq = pulser.Sequence(
-        pulser.Register.square(2, 5), device=pulser.DigitalAnalogDevice
+        pulser.Register.square(2, 5, prefix="q"),
+        device=pulser.DigitalAnalogDevice,
     )
 
     values = seq.declare_variable("values", size=5)  # a Variable
