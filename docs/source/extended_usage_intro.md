@@ -38,6 +38,7 @@ Let's follow the [step-by-step guide on how to create a quantum program using Pu
 
 - [Parametrized Sequences](./tutorials/paramseqs.nblink) enable the generation of multiple Sequences that vary only in a few parameters.
 - [Serialization/Deserialization](./tutorials/serialization.nblink) enable the import/export of Sequences between different locations.
+- [Noise Models](./noise_model.ipynb) enable the emulation of Sequences, taking into account the noises of neutral-atom Quantum Processing Units.
 
 ## Weighted Analog Quantum Computing
 
