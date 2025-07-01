@@ -527,9 +527,11 @@ def test_result_serialization(test_torch: bool):
     results._store(observable=energy, time=0.3, value=energy_val)
     if test_torch:
         torch = pytest.importorskip("torch")
-        occ_vec = torch.randn(6)
+        occ_vec = torch.randn(6).to(dtype=complex)
     else:
-        occ_vec = np.random.randn(6)
+        occ_vec = np.random.randn(6).astype(complex)
+    # Make first value complex to test complex number deserialization
+    occ_vec[0] = occ_vec[0] + 1j
     results._store(observable=occ, time=0.4, value=occ_vec)
 
     dict = results._to_abstract_repr()
@@ -568,6 +570,11 @@ def test_result_serialization(test_torch: bool):
     assert results.energy == deserialized.energy
     assert results.bitstrings == deserialized.bitstrings
     assert [x.tolist() for x in results.occupation] == deserialized.occupation
+    # The first value is complex, the rest are floats
+    assert isinstance(deserialized.occupation[0][0], complex)
+    assert all(
+        isinstance(val, float) for val in deserialized.occupation[0][1:]
+    )
     assert [
         x.tolist() for x in results.correlation_matrix
     ] == deserialized.correlation_matrix
@@ -576,3 +583,17 @@ def test_result_serialization(test_torch: bool):
             obs
         )
     assert results.get_result_tags() == deserialized.get_result_tags()
+
+
+def test_result_atom_order_serialization():
+    with pytest.warns(UserWarning, match="converts all qubit ID's to strings"):
+        assert Results.from_abstract_repr(
+            Results(
+                atom_order=(0, 1, 2), total_duration=1000
+            ).to_abstract_repr()
+        ) == Results(atom_order=("0", "1", "2"), total_duration=1000)
+
+        with pytest.raises(
+            AbstractReprError, match="Name collisions encountered"
+        ):
+            Results(atom_order=(0, "0"), total_duration=10).to_abstract_repr()
