@@ -536,8 +536,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
 
     def truncate(self, duration: int) -> None:
         for ch_name, ch_schedule in self.items():
-            all_slots = ch_schedule.slots
-            all_eom_blocks = ch_schedule.eom_blocks
+            all_slots = ch_schedule.slots.copy()
             # Channel duration is below the threshold, do nothing
             if ch_schedule.get_duration() <= duration:
                 continue
@@ -560,7 +559,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                     break
 
             # Take care of the EOM blocks
-            for eom_ind, eom_block in enumerate(all_eom_blocks):
+            for eom_ind, eom_block in enumerate(ch_schedule.eom_blocks):
                 # Threshold falls within an EOM block
                 if (
                     eom_block.ti < threshold <= (eom_block.tf or threshold)
@@ -568,14 +567,14 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                     # This block becomes open again, as the EOM mode will be
                     # enabled again
                     new_eom_block = replace(eom_block, tf=None)
-                    ch_schedule.eom_blocks = all_eom_blocks[:eom_ind] + [
-                        new_eom_block
-                    ]
+                    ch_schedule.eom_blocks = ch_schedule.eom_blocks[
+                        :eom_ind
+                    ] + [new_eom_block]
                     break
                 # Threshold falls before the start of an EOM block
                 if threshold < eom_block.ti:
                     # Remove that block and all blocks after it
-                    ch_schedule.eom_blocks = all_eom_blocks[:eom_ind]
+                    ch_schedule.eom_blocks = ch_schedule.eom_blocks[:eom_ind]
                     break
 
             # If the slot terminates at the threshold, just return
@@ -591,7 +590,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             if slot.type == "target":
                 warnings.warn(
                     f"'target()' instruction on channel {ch_name!r} at "
-                    f"t = {threshold} ns was removed by "
+                    f"t = {threshold} ns was removed by a "
                     "`Sequence.truncate()` call.",
                     stacklevel=3,
                 )
@@ -603,18 +602,32 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                 # Remove the slot because it can't be truncated
                 continue
 
-            if not ch_schedule.in_eom_mode(slot) and ch_schedule.in_eom_mode(
-                ch_schedule.slots[slot_ind + 1]
+            if (
+                not ch_schedule.in_eom_mode(slot)
+                and slot_ind < len(all_slots) - 1  # not the last slot
+                and ch_schedule.in_eom_mode(all_slots[slot_ind + 1])
             ):
+                warnings.warn(
+                    f"'enable_eom_mode()' instruction on channel {ch_name!r} "
+                    f"at t = {threshold} ns was removed by a "
+                    "`Sequence.truncate()` call.",
+                    stacklevel=3,
+                )
                 # EOM start buffer, so we just remove it since the associated
                 # EOM block has already been removed
                 continue
             if not ch_schedule.in_eom_mode(slot) and ch_schedule.in_eom_mode(
-                ch_schedule.slots[slot_ind - 1]
+                all_slots[slot_ind - 1]
             ):
                 # EOM end buffer, so we remove it and reopen EOM mode
                 ch_schedule.eom_blocks[-1] = replace(
                     ch_schedule.eom_blocks[-1], tf=None
+                )
+                warnings.warn(
+                    f"'disable_eom_mode()' instruction on channel {ch_name!r} "
+                    f"at t = {threshold} ns was removed by a "
+                    "`Sequence.truncate()` call.",
+                    stacklevel=3,
                 )
                 continue
 

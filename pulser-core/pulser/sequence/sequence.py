@@ -1518,12 +1518,16 @@ class Sequence(Generic[DeviceType]):
         if not isinstance(duration, Parametrized):
             for ch_obj in self.declared_channels.values():
                 # Just preemptive validation, no adjustment done here
-                ch_obj.validate_duration(duration, round_up=False)
+                duration_ = ch_obj.validate_duration(duration, round_up=False)
 
         if self.is_parametrized():
             return
 
-        self._schedule.truncate(cast(int, duration))
+        # Adjust the phase reference of all qubits
+        for basis_ref in self._basis_ref.values():
+            for qubit_ref in basis_ref.values():
+                qubit_ref.truncate(duration_)
+        self._schedule.truncate(duration_)
 
     @seq_decorators.store
     @seq_decorators.conditionally_block(if_parametrized_truncated=False)

@@ -30,6 +30,12 @@ class _QubitRef:
     def update_last_used(self, new_t: int) -> None:
         self.last_used = max(self.last_used, new_t)
 
+    def truncate(self, t: int) -> None:
+        self.phase.truncate(t)
+        self.last_used = (
+            self.phase.last_time if t < self.last_used else self.last_used
+        )
+
 
 class _PhaseTracker:
     """Tracks a phase reference over time."""
@@ -59,6 +65,17 @@ class _PhaseTracker:
         for i in range(start, end):
             change = self._phases[i] - self._phases[i - 1]
             yield (self._times[i] / time_scale, change)
+
+    def truncate(self, threshold: int) -> None:
+        new_times = []
+        new_phases = []
+        for t, ph in zip(self._times, self._phases):
+            if t > threshold:
+                break
+            new_times.append(t)
+            new_phases.append(ph)
+        self._times = new_times
+        self._phases = new_phases
 
     def _format(self, phi: float) -> float:
         return phi % (2 * np.pi)
