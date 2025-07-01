@@ -2765,3 +2765,24 @@ class TestDeserialization:
             ),
         ):
             Sequence.from_abstract_repr(s)
+
+
+@pytest.mark.parametrize("detuning_sigma", [0.0, 1.0])
+def test_noise_optional_params(detuning_sigma):
+    noise = pulser.noise_model.NoiseModel(
+        runs=1,  # TODO: connect this with MCArlo
+        samples_per_run=1,  # TODO: connect this with MCarlo or ignored
+        state_prep_error=0.1,
+        p_false_pos=0.1,
+        p_false_neg=0.15,
+        laser_waist=5,
+        amp_sigma=0.1,
+        detuning_sigma=detuning_sigma,
+        temperature=10.0,
+        with_leakage=True,
+        eff_noise_rates=(0.1,),
+        eff_noise_opers=(np.random.rand(3, 3),),
+        hyperfine_dephasing_rate=1.5,
+    )
+    repr = noise._to_abstract_repr()
+    assert ("detuning_sigma" in repr) == (detuning_sigma != 0.0)

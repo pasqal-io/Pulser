@@ -32,6 +32,7 @@ T = TypeVar("T", bound="SimConfig")
 SUPPORTED_NOISES: dict = {
     "ising": {
         "amplitude",
+        "detuning",
         "dephasing",
         "relaxation",
         "depolarizing",
@@ -103,6 +104,8 @@ class SimConfig:
             pulses.
         amp_sigma: Dictates the fluctuations in amplitude as a standard
             deviation of a normal distribution centered in 1.
+        detuning_sigma: Dictates the fluctuations in detuning as a standard
+            deviation of a normal distribution centered in 0.
         solver_options: Options for the qutip solver.
     """
 
@@ -112,6 +115,7 @@ class SimConfig:
     temperature: float = _LEGACY_DEFAULTS["temperature"]
     laser_waist: float = _LEGACY_DEFAULTS["laser_waist"]
     amp_sigma: float = _LEGACY_DEFAULTS["amp_sigma"]
+    detuning_sigma: float = 0.0
     eta: float = _LEGACY_DEFAULTS["state_prep_error"]
     epsilon: float = _LEGACY_DEFAULTS["p_false_pos"]
     epsilon_prime: float = _LEGACY_DEFAULTS["p_false_neg"]
