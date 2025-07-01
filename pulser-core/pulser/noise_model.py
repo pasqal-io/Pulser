@@ -105,13 +105,13 @@ OPTIONAL_IN_ABSTR_REPR = ("detuning_sigma",)
 class NoiseModel:
     """Specifies the noise model parameters for emulation.
 
-    Supported noise types:
+    **Supported noise types:**
 
     - **leakage**: Adds an error state 'x' to the computational
-        basis, that can interact with the other states via an
-        effective noise channel. Must be defined with an effective
-        noise channel, but is incompatible with dephasing and
-        depolarizing noise channels.
+      basis, that can interact with the other states via an
+      effective noise channel. Must be defined with an effective
+      noise channel, but is incompatible with dephasing and
+      depolarizing noise channels.
     - **relaxation**: Noise due to a decay from the Rydberg to
       the ground state (parametrized by ``relaxation_rate``),
       commonly characterized experimentally by the T1 time.
