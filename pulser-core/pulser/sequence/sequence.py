@@ -1502,15 +1502,17 @@ class Sequence(Generic[DeviceType]):
         channel involved. Note that the resulting sequence's duration might not
         exactly match the requested duration, particularly when:
 
-            - The 'duration' is not a multiple of a given channel's clock
-        period, in which case it is rounded down to its closest multiple.
-            - The resulting truncated instruction would have a length below the
-        `Channel.min_duration`, in which case it is ommited altogether.
-            - The instruction to truncate corresponds to a `target()`,
-        `enable_eom_mode()` or `disable_eom_mode()` call, in which case it is
-        ommited as well. When the sequence is parametrized, the presence of
-        one of these calls also forces `truncate()` to be the last instruction
-        in the `Sequence` before measurement.
+        - The 'duration' is not a multiple of a given channel's clock
+          period, in which case it is rounded down to its closest multiple.
+
+        - The resulting truncated instruction would have a length below the
+          `Channel.min_duration`, in which case it is ommited altogether.
+
+        - The instruction to truncate corresponds to a `target()`,
+          `enable_eom_mode()` or `disable_eom_mode()` call, in which case it is
+          ommited as well. When the sequence is parametrized, the presence of
+          one of these calls also forces `truncate()` to be the last
+          instruction in the `Sequence` before measurement.
 
         Warning:
             A truncated Pulse is assumed to be incomplete so its
