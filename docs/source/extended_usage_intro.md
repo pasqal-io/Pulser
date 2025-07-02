@@ -32,7 +32,7 @@ Let's follow the [step-by-step guide on how to create a quantum program using Pu
 
 ### 4. Add the Pulses
 
-- [Arbitrary Phase Waveforms](./apidoc/_autosummary/pulser.pulse.Pulse.rst#pulser.pulse.Pulse.ArbitraryPhase) enables the definition of a Pulse with an arbitrary phase.
+- {ref}`Arbitrary Phase Waveforms </apidoc/_autosummary/pulser.pulse.Pulse.rst#pulser.pulse.Pulse.ArbitraryPhase>` enables the definition of a Pulse with an arbitrary phase.
 
 ### Other extended usage
 
