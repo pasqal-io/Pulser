@@ -1424,7 +1424,7 @@ def test_delay(reg, device, at_rest):
 @pytest.mark.parametrize("at_rest", [True, False])
 @pytest.mark.parametrize("in_eom", [True, False])
 def test_delay_at_rest(in_eom, at_rest, delay_duration):
-    seq = Sequence(Register.square(2, 5), AnalogDevice)
+    seq = Sequence(Register.square(2, 5, prefix="q"), AnalogDevice)
     seq.declare_channel("ryd", "rydberg_global")
     assert (ch_obj := seq.declared_channels["ryd"]).mod_bandwidth is not None
     pulse = Pulse.ConstantPulse(100, 1, 0, 0)
@@ -1768,7 +1768,7 @@ def test_estimate_added_delay(eom, custom_phase_jump_time):
         custom_phase_jump_time=custom_phase_jump_time,
     )
     device = dataclasses.replace(AnalogDevice, channel_objects=(ryd_ch_obj,))
-    reg = Register.square(2, 5)
+    reg = Register.square(2, 5, prefix="q")
     seq = Sequence(reg, device)
     pulse_0 = Pulse.ConstantPulse(100, 1, 0, 0)
     pulse_pi_2 = Pulse.ConstantPulse(100, 1, 0, np.pi / 2)
@@ -1834,7 +1834,7 @@ def test_estimate_added_delay(eom, custom_phase_jump_time):
         seq.estimate_added_delay(Pulse.ConstantPulse(var, 1, 0, 0), "ising")
     # We shift the phase of just one qubit, which blocks addition
     # of new pulses on this basis
-    seq.phase_shift(1.0, 0, basis="ground-rydberg")
+    seq.phase_shift_index(1.0, 0, basis="ground-rydberg")
     with pytest.raises(
         ValueError,
         match="Cannot do a multiple-target pulse on qubits with different",
@@ -1845,9 +1845,9 @@ def test_estimate_added_delay(eom, custom_phase_jump_time):
 def test_estimate_added_delay_dmm():
     pulse_0 = Pulse.ConstantPulse(100, 1, 0, 0)
     det_pulse = Pulse.ConstantPulse(100, 0, -1, 0)
-    seq = Sequence(Register.square(2, 5), DigitalAnalogDevice)
+    seq = Sequence(Register.square(2, 5, prefix="q"), DigitalAnalogDevice)
     seq.declare_channel("ising", "rydberg_global")
-    seq.config_slm_mask([0, 1])
+    seq.config_slm_mask(["q0", "q1"])
     with pytest.raises(
         ValueError, match="You should add a Pulse to a Global Channel"
     ):
@@ -1868,8 +1868,14 @@ def test_estimate_added_delay_dmm():
 def test_config_slm_mask(qubit_ids, device, det_map):
     reg: Register | MappableRegister
     trap_ids = [(0, 0), (10, 10), (-10, -10)]
-    reg = Register(dict(zip(qubit_ids, trap_ids)))
     is_str_qubit_id = isinstance(qubit_ids[0], str)
+    context_manager = (
+        pytest.deprecated_call()
+        if not is_str_qubit_id
+        else contextlib.nullcontext()
+    )
+    with context_manager:
+        reg = Register(dict(zip(qubit_ids, trap_ids)))
     seq = Sequence(reg, device)
     with pytest.raises(ValueError, match="does not have an SLM mask."):
         seq_ = Sequence(reg, AnalogDevice)
@@ -2183,11 +2189,11 @@ def test_draw_register_det_maps(reg, ch_name, patch_plt_show):
     seq.draw(draw_register=True, draw_detuning_maps=True)
 
     # Draw 3d register from sequence
-    reg3d = Register3D.cubic(3, 8)
+    reg3d = Register3D.cubic(3, 8, prefix="q")
     seq3d = Sequence(reg3d, MockDevice)
     seq3d.declare_channel(ch_name, ch_name)
     seq3d.add(pulse, ch_name)
-    seq3d.config_slm_mask([6, 15])
+    seq3d.config_slm_mask(["q6", "q15"])
     seq3d.measure(basis="XY" if ch_name == "mw_global" else "ground-rydberg")
     seq3d.draw(draw_register=True)
     seq3d.draw(draw_detuning_maps=True)

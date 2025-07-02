@@ -33,6 +33,7 @@ NoiseTypes = Literal[
     "leakage",
     "doppler",
     "amplitude",
+    "detuning",
     "SPAM",
     "dephasing",
     "relaxation",
@@ -44,6 +45,7 @@ _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "leakage": ("with_leakage",),
     "doppler": ("temperature",),
     "amplitude": ("laser_waist", "amp_sigma"),
+    "detuning": ("detuning_sigma",),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
     "dephasing": ("dephasing_rate", "hyperfine_dephasing_rate"),
     "relaxation": ("relaxation_rate",),
@@ -65,6 +67,7 @@ _POSITIVE = {
     "relaxation_rate",
     "depolarizing_rate",
     "temperature",
+    "detuning_sigma",
 }
 _STRICT_POSITIVE = {
     "runs",
@@ -95,18 +98,20 @@ _LEGACY_DEFAULTS = {
     "depolarizing_rate": 0.05,
 }
 
+OPTIONAL_IN_ABSTR_REPR = ("detuning_sigma",)
+
 
 @dataclass(init=False, repr=False, frozen=True)
 class NoiseModel:
     """Specifies the noise model parameters for emulation.
 
-    Supported noise types:
+    **Supported noise types:**
 
     - **leakage**: Adds an error state 'x' to the computational
-        basis, that can interact with the other states via an
-        effective noise channel. Must be defined with an effective
-        noise channel, but is incompatible with dephasing and
-        depolarizing noise channels.
+      basis, that can interact with the other states via an
+      effective noise channel. Must be defined with an effective
+      noise channel, but is incompatible with dephasing and
+      depolarizing noise channels.
     - **relaxation**: Noise due to a decay from the Rydberg to
       the ground state (parametrized by ``relaxation_rate``),
       commonly characterized experimentally by the T1 time.
@@ -128,6 +133,8 @@ class NoiseModel:
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
+    - **detuning**: Detuning fluctuations, parametrized by
+      ``detuning_sigma``.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
 
@@ -150,6 +157,11 @@ class NoiseModel:
             run to run as a standard deviation of a normal distribution
             centered in 1. Assumed to be the same for all channels (though
             each channel has its own randomly sampled value in each run).
+        detuning_sigma: Dictates the fluctuation in detuning (in rad/µs)
+            of a channel from run to run as a standard deviation of a normal
+            distribution centered in 0. Assumed to be the same for all
+            channels (though each channel has its own randomly sampled
+            value in each run). This noise is additive.
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
@@ -176,6 +188,7 @@ class NoiseModel:
     temperature: float
     laser_waist: float | None
     amp_sigma: float
+    detuning_sigma: float
     relaxation_rate: float
     dephasing_rate: float
     hyperfine_dephasing_rate: float
@@ -194,6 +207,7 @@ class NoiseModel:
         temperature: float | None = None,
         laser_waist: float | None = None,
         amp_sigma: float | None = None,
+        detuning_sigma: float | None = None,
         relaxation_rate: float | None = None,
         dephasing_rate: float | None = None,
         hyperfine_dephasing_rate: float | None = None,
@@ -218,6 +232,7 @@ class NoiseModel:
             temperature=temperature,
             laser_waist=laser_waist,
             amp_sigma=amp_sigma,
+            detuning_sigma=detuning_sigma,
             relaxation_rate=relaxation_rate,
             dephasing_rate=dephasing_rate,
             hyperfine_dephasing_rate=hyperfine_dephasing_rate,
@@ -240,8 +255,10 @@ class NoiseModel:
         )
 
         # Get rid of unnecessary None's
-        for p_ in _POSITIVE | _PROBABILITY_LIKE:
-            param_vals[p_] = param_vals[p_] or 0.0
+        for p_, val in param_vals.items():
+            param_vals[p_] = (
+                self._get_default_value(p_) if val is None else val
+            )
 
         relevant_params = self._find_relevant_params(
             true_noise_types,
@@ -274,6 +291,12 @@ class NoiseModel:
                 )
 
     @staticmethod
+    def _get_default_value(arg: str) -> float | None:
+        if arg in _POSITIVE | _PROBABILITY_LIKE:
+            return 0.0
+        return None
+
+    @staticmethod
     def _find_relevant_params(
         noise_types: Collection[NoiseTypes],
         state_prep_error: float,
@@ -285,6 +308,7 @@ class NoiseModel:
             relevant_params.update(_NOISE_TYPE_PARAMS[nt_])
             if (
                 nt_ == "doppler"
+                or nt_ == "detuning"
                 or (nt_ == "amplitude" and amp_sigma != 0.0)
                 or (nt_ == "SPAM" and state_prep_error != 0.0)
             ):
@@ -405,6 +429,9 @@ class NoiseModel:
         eff_noise_rates = all_fields.pop("eff_noise_rates")
         eff_noise_opers = all_fields.pop("eff_noise_opers")
         all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
+        for p in OPTIONAL_IN_ABSTR_REPR:
+            if all_fields[p] == self._get_default_value(p):
+                all_fields.pop(p, None)
         return all_fields
 
     def __repr__(self) -> str:

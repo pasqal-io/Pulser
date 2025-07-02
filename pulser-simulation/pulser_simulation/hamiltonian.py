@@ -270,6 +270,7 @@ class Hamiltonian:
             samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
             is_global_pulse: bool,
             amp_fluctuation: float,
+            det_fluctuation: float,
             propagation_dir: tuple | None,
         ) -> None:
             """Builds hamiltonian coefficients.
@@ -294,6 +295,10 @@ class Hamiltonian:
                             self.config.laser_waist,
                         )
                     samples_dict[qid]["amp"][slot.ti : slot.tf] *= amp_fraction
+                if "detuning" in self.config.noise_types:
+                    samples_dict[qid]["det"][
+                        slot.ti : slot.tf
+                    ] += det_fluctuation
 
         if local_noises:
             for ch, ch_samples in self.samples_obj.channel_samples.items():
@@ -302,12 +307,18 @@ class Hamiltonian:
                 ch_amp_fluctuation = max(
                     0, np.random.normal(1.0, self.config.amp_sigma)
                 )
+                ch_det_fluctuation = (
+                    np.random.normal(0.0, self.config.detuning_sigma)
+                    if self.config.detuning_sigma
+                    else 0.0
+                )
                 for slot in ch_samples.slots:
                     add_noise(
                         slot,
                         samples_dict,
                         _ch_obj.addressing == "Global",
                         amp_fluctuation=ch_amp_fluctuation,
+                        det_fluctuation=ch_det_fluctuation,
                         propagation_dir=_ch_obj.propagation_dir,
                     )
             # Delete samples for badly prepared atoms

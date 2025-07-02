@@ -103,7 +103,9 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
     with pytest.raises(TypeError, match="sequence has to be a valid"):
         QutipEmulator.from_sequence(fake_sequence)
     with pytest.raises(TypeError, match="sequence has to be a valid"):
-        QutipEmulator(fake_sequence, Register.square(2), mod_device)
+        QutipEmulator(
+            fake_sequence, Register.square(2, prefix="q"), mod_device
+        )
     # Simulation cannot be run on a register not defining "control1"
     with pytest.raises(
         ValueError,
@@ -503,7 +505,7 @@ def test_get_hamiltonian():
 
 
 def test_single_atom_simulation():
-    one_reg = Register.from_coordinates([(0, 0)], "atom")
+    one_reg = Register.from_coordinates([(0, 0)], prefix="atom")
     one_seq = Sequence(one_reg, DigitalAnalogDevice)
     one_seq.declare_channel("ch0", "rydberg_global")
     one_seq.add(
@@ -518,7 +520,7 @@ def test_single_atom_simulation():
 
 
 def test_add_max_step_and_delays():
-    reg = Register.from_coordinates([(0, 0)])
+    reg = Register.from_coordinates([(0, 0)], prefix="q")
     seq = Sequence(reg, DigitalAnalogDevice)
     seq.declare_channel("ch", "rydberg_global")
     seq.delay(1500, "ch")
@@ -1777,4 +1779,47 @@ def test_amp_sigma_noise():
     expected_q1_dig_samples[-pulse1.duration - 1 :] *= amp_factors["ch1"]
     np.testing.assert_equal(
         expected_q1_dig_samples, dig_samples_dict["q1"]["amp"]
+    )
+
+
+def test_detuning_noise():
+    duration = 10
+    np.random.seed(1337)
+    reg = Register({"q0": (0, 0), "q1": (10, 10)})
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="q0")
+    seq.declare_channel("ch2", "raman_local", initial_target="q1")
+
+    pulse1 = Pulse.ConstantPulse(duration, 0, 0, 0)
+    # Added twice to check the fluctuation doesn't change from pulse to pulse
+    seq.add(pulse1, "ch0")
+    seq.add(pulse1, "ch0")
+    # The two local channels target alternating qubits on the same basis
+    seq.add(pulse1, "ch1", protocol="no-delay")
+    seq.add(pulse1, "ch2", protocol="no-delay")
+
+    config = SimConfig.from_noise_model(
+        NoiseModel(detuning_sigma=0.1, runs=1, samples_per_run=1)
+    )
+    sim = QutipEmulator.from_sequence(seq, config=config)
+    sim_samples = sim._hamiltonian.samples
+
+    rydberg_0 = sim_samples["Local"]["ground-rydberg"]["q0"]["det"]
+    rydberg_1 = sim_samples["Local"]["ground-rydberg"]["q1"]["det"]
+    digital_0 = sim_samples["Local"]["digital"]["q0"]["det"]
+    digital_1 = sim_samples["Local"]["digital"]["q1"]["det"]
+    np.all(np.isclose(rydberg_0, np.array([-0.04902824] * (2 * duration + 1))))
+    np.all(np.isclose(rydberg_1, np.array([-0.04902824] * (2 * duration + 1))))
+    np.all(
+        np.isclose(
+            digital_0,
+            np.array([-0.17550787] * (duration) + [0.0] * (duration + 1)),
+        )
+    )
+    np.all(
+        np.isclose(
+            digital_1,
+            np.array([-0.20112646] * (duration) + [0.0] * (duration + 1)),
+        )
     )

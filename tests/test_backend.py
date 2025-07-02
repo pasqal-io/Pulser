@@ -233,6 +233,9 @@ def test_update_sequence_device(sequence):
     connection = _MockConnection()
     device = pulser.AnalogDevice
 
+    new_sequence = connection.update_sequence_device(sequence)
+    assert new_sequence == sequence
+
     def fetch_available_devices():
         return {device.name: device}
 
@@ -319,6 +322,13 @@ def test_qpu_backend(sequence):
     ):
         qpu_backend.run(job_params=[{"runs": 100000}])
 
+    device = pulser.AnalogDevice
+
+    def fetch_available_devices():
+        return {device.name: device}
+
+    connection.fetch_available_devices = fetch_available_devices
+
     remote_results = qpu_backend.run(job_params=[{"runs": 10}])
 
     with pytest.raises(AttributeError, match="no attribute 'result'"):
@@ -371,7 +381,9 @@ def test_emulator_backend(sequence):
     class ConcreteEmulator(EmulatorBackend):
 
         default_config = EmulationConfig(
-            observables=(BitStrings(),), with_modulation=True
+            observables=(BitStrings(),),
+            with_modulation=True,
+            extra_param="foo",
         )
 
         def run(self):
@@ -389,7 +401,12 @@ def test_emulator_backend(sequence):
         ),
     )
     assert emu._config.default_evaluation_times == "Full"
+    # with_modulation is not True because EmulationConfig has it in the
+    # signature as `with_modulation=False``
     assert not emu._config.with_modulation
+    # But the parameter that's not in EmulationConfig's signature is still
+    # passed to the config
+    assert emu._config.extra_param == "foo"
 
     # Uses the default config
     assert ConcreteEmulator(sequence)._config.with_modulation

@@ -210,3 +210,33 @@ def test_qutip_backend_v2_stochastic_noise():
     )[0][indices]
 
     assert np.max(np.abs(occupation - occupation_old_api)) < 0.03
+
+
+def test_qutip_backend_v2_eval_times_rounding():
+
+    # This was originally used to reproduce a bug where the legacy evaluation
+    # times went above the maximum duration due to a rounding error
+
+    n_points = 100
+
+    # Sweeping duration values in multiples of the clock period
+    # In each case, trying to get 100 evaluation points
+    for duration in range(400, 600, 4):
+        reg = pulser.Register({"q0": (-5, 0), "q1": (5, 0)})
+        seq = pulser.Sequence(reg, pulser.AnalogDevice)
+        seq.declare_channel("rydberg_global", "rydberg_global")
+
+        amp_wf = pulser.ConstantWaveform(duration, np.pi)
+        det_wf = pulser.ConstantWaveform(duration, 0.0)
+        seq.add(pulser.Pulse(amp_wf, det_wf, 0), "rydberg_global")
+
+        evaluation_times = np.linspace(0, 1, n_points).tolist()
+
+        obs = [pulser.backend.StateResult(evaluation_times=evaluation_times)]
+        config = pulser.backend.EmulationConfig(observables=obs)
+
+        backend = QutipBackendV2(seq, config=config)
+
+        result = backend.run().state
+
+        assert len(result) == n_points
