@@ -1512,6 +1512,10 @@ class Sequence(Generic[DeviceType]):
         one of these calls also forces `truncate()` to be the last instruction
         in the `Sequence` before measurement.
 
+        Warning:
+            A truncated Pulse is assumed to be incomplete so its
+            `post_phase_shift` value is always set to zero.
+
         Args:
             duration: The duration (in ns) to truncate to.
         """

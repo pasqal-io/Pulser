@@ -15,7 +15,6 @@
 
 from __future__ import annotations
 
-import copy
 import functools
 import inspect
 import itertools
@@ -189,7 +188,8 @@ class Waveform(ABC):
             The truncated waveform (if applicable).
         """
         if new_duration >= self.duration:
-            return copy.deepcopy(self)
+            # Basically an identical copy
+            return self * 1.0
         return CustomWaveform(
             self.samples[: _cast_check(int, new_duration, "new_duration")]
         )
