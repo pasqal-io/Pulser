@@ -563,3 +563,19 @@ def test_waveform_diff(
     wf._to_dict()
     wf._to_abstract_repr()
     assert isinstance(wf.integral, float)
+
+
+@pytest.mark.parametrize(
+    "wf", [blackman, composite, custom, kaiser, ramp, interp]
+)
+def test_truncate(wf):
+    assert wf.truncated(wf.duration + 1) == wf
+    assert wf.truncated(wf.duration - 10) == CustomWaveform(wf.samples[:-10])
+
+
+def test_truncate_constant():
+    # Special case for constant waveform
+    assert constant.truncated(constant.duration + 1) == constant
+    assert constant.truncated(constant.duration // 2) == ConstantWaveform(
+        constant.duration // 2, constant[0]
+    )
