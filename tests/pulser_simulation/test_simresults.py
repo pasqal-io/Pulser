@@ -19,14 +19,14 @@ import pytest
 import qutip
 from qutip.piqs.piqs import isdiagonal
 
-from pulser import AnalogDevice, Pulse, Register, Sequence
+from pulser import AnalogDevice, Pulse, NoiseModel, Register, Sequence
 from pulser.devices import DigitalAnalogDevice, MockDevice
 from pulser.waveforms import (
     BlackmanWaveform,
     CompositeWaveform,
     ConstantWaveform,
 )
-from pulser_simulation import QutipEmulator, SimConfig
+from pulser_simulation import QutipEmulator
 from pulser_simulation.simresults import CoherentResults, NoisyResults
 
 
@@ -60,11 +60,21 @@ def sim(seq_no_meas):
 
 
 @pytest.fixture
-def results_noisy(sim):
-    sim.add_config(
-        SimConfig(noise=("SPAM", "doppler", "amplitude"), amp_sigma=1e-3)
+def results_noisy(seq_no_meas):
+    np.random.seed(123)
+    sim = QutipEmulator.from_sequence(
+        seq_no_meas,
+        noise_model=NoiseModel(
+            runs=15,
+            samples_per_run=5,
+            temperature=50.0,
+            state_prep_error=0.005,
+            p_false_pos=0.01,
+            p_false_neg=0.05,
+            amp_sigma=1e-3,
+            laser_waist=175.0,
+        ),
     )
-    assert sim.config.amp_sigma == 1e-3
     return sim.run()
 
 
@@ -139,10 +149,15 @@ def test_init_noisy(basis, exp_basis):
 
 @pytest.mark.parametrize("noisychannel", [True, False])
 def test_get_final_state(
-    noisychannel, sim: QutipEmulator, results, reg, pi_pulse
+    noisychannel, seq_no_meas, sim: QutipEmulator, results, reg, pi_pulse
 ):
     if noisychannel:
-        sim.add_config(SimConfig(noise="dephasing", dephasing_rate=0.01))
+        sim = QutipEmulator(
+            sim.samples_obj,
+            register=seq_no_meas.register,
+            device=seq_no_meas.device,
+            noise_model=NoiseModel(dephasing_rate=0.01),
+        )
     _results = sim.run()
     assert isinstance(_results, CoherentResults)
     final_state = _results.get_final_state()
@@ -210,8 +225,17 @@ def test_get_final_state_noisy(reg, pi_pulse):
     seq_ = Sequence(reg, DigitalAnalogDevice)
     seq_.declare_channel("ram", "raman_local", initial_target="A")
     seq_.add(pi_pulse, "ram")
-    noisy_config = SimConfig(noise=("SPAM", "doppler"))
-    sim_noisy = QutipEmulator.from_sequence(seq_, config=noisy_config)
+    sim_noisy = QutipEmulator.from_sequence(
+        seq_,
+        noise_model=NoiseModel(
+            runs=15,
+            samples_per_run=5,
+            temperature=50.0,
+            state_prep_error=0.005,
+            p_false_pos=0.01,
+            p_false_neg=0.05,
+        ),
+    )
     res3 = sim_noisy.run()
     res3._meas_basis = "digital"
     final_state = res3.get_final_state()
@@ -260,24 +284,28 @@ def test_expect(results, pi_pulse, reg):
         np.array([[1, 0], [0, 0]]),
     )
 
-    config = SimConfig(noise="SPAM", eta=0)
-    sim_single.set_config(config)
+    noise_model = NoiseModel(p_false_pos=0.01, p_false_neg=0.05)
+    sim_single = QutipEmulator.from_sequence(
+        seq_single, noise_model=noise_model
+    )
     sim_single.set_evaluation_times("Minimal")
     results_single = sim_single.run()
     exp = results_single.expect(op)[0]
     assert len(exp) == 2
     assert isinstance(results_single, CoherentResults)
     assert results_single._meas_errors == {
-        "epsilon": config.epsilon,
-        "epsilon_prime": config.epsilon_prime,
+        "epsilon": noise_model.p_false_pos,
+        "epsilon_prime": noise_model.p_false_neg,
     }
     # Probability of measuring 1 = probability of false positive
-    assert np.isclose(exp[0], config.epsilon)
+    assert np.isclose(exp[0], noise_model.p_false_pos)
     # Probability of measuring 1 = 1 - probability of false negative
-    assert np.isclose(exp[-1], 1 - config.epsilon_prime)
+    assert np.isclose(exp[-1], 1 - noise_model.p_false_neg)
     np.testing.assert_almost_equal(
         results_single._calc_pseudo_density(-1).full(),
-        np.array([[1 - config.epsilon_prime, 0], [0, config.epsilon_prime]]),
+        np.array(
+            [[1 - noise_model.p_false_neg, 0], [0, noise_model.p_false_neg]]
+        ),
     )
     seq3dim = Sequence(reg, DigitalAnalogDevice)
     seq3dim.declare_channel("ryd", "rydberg_global")
@@ -309,13 +337,10 @@ def test_plot(results_noisy, results):
 
 def test_sim_without_measurement(seq_no_meas):
     assert not seq_no_meas.is_measured()
-    sim_no_meas = QutipEmulator.from_sequence(
-        seq_no_meas, config=SimConfig(runs=1)
-    )
+    sim_no_meas = QutipEmulator.from_sequence(seq_no_meas)
     results_no_meas = sim_no_meas.run()
-    assert results_no_meas.sample_final_state() == Counter(
-        {"11": 592, "10": 163, "01": 162, "00": 83}
-    )
+    np.random.seed(123)
+    assert results_no_meas.sample_final_state(1) == Counter({"11": 1})
 
 
 def test_sample_final_state(results):
@@ -349,7 +374,15 @@ def test_sample_final_state_noisy(seq_no_meas, results_noisy):
         {"11": 588, "10": 250, "01": 270, "00": 126}
     )
     res_3level = QutipEmulator.from_sequence(
-        seq_no_meas, config=SimConfig(noise=("SPAM", "doppler"), runs=10)
+        seq_no_meas,
+        noise_model=NoiseModel(
+            runs=10,
+            samples_per_run=5,
+            temperature=50.0,
+            state_prep_error=0.005,
+            p_false_pos=0.01,
+            p_false_neg=0.05,
+        ),
     )
     final_state = res_3level.run().states[-1]
     assert np.isclose(

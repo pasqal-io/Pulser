@@ -155,14 +155,16 @@ class Hamiltonian:
             local_collapse_ops.append(coeff * pauli_2d["z"])
 
         if "eff_noise" in config.noise_types:
-            for id, rate in enumerate(config.eff_noise_rates):
-                op = np.array(config.eff_noise_opers[id])
+            for id_, rate in enumerate(config.eff_noise_rates):
+                # This supports the case where the operators are given as Qobj
+                # (even though they shouldn't per the NoiseModel signature)
+                op = qutip.Qobj(config.eff_noise_opers[id_]).full()
                 basis_dim = len(eigenbasis)
                 op_shape = (basis_dim, basis_dim)
                 if op.shape != op_shape:
                     raise ValueError(
                         "Incompatible shape for effective noise operator n°"
-                        f"{id}. Operator {op} should be of shape {op_shape}."
+                        f"{id_}. Operator {op} should be of shape {op_shape}."
                     )
                 local_collapse_ops.append(np.sqrt(rate) * op)
         # Building collapse operators

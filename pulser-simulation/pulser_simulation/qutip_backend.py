@@ -28,7 +28,6 @@ from pulser.noise_model import NoiseModel
 from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
-from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import CoherentResults, SimulationResults
 from pulser_simulation.simulation import QutipEmulator
 
@@ -63,13 +62,10 @@ class QutipBackend(Backend):
         noise_model: None | NoiseModel = None
         if self._config.prefer_device_noise_model:
             noise_model = sequence.device.default_noise_model
-        simconfig = SimConfig.from_noise_model(
-            noise_model or self._config.noise_model
-        )
         self._sim_obj = QutipEmulator.from_sequence(
             sequence,
             sampling_rate=self._config.sampling_rate,
-            config=simconfig,
+            noise_model=noise_model or self._config.noise_model,
             evaluation_times=self._config.evaluation_times,
             with_modulation=self._config.with_modulation,
         )
@@ -129,11 +125,10 @@ class QutipBackendV2(EmulatorBackend):
         if self._config.prefer_device_noise_model:
             noise_model = sequence.device.default_noise_model
         noise_model = noise_model or self._config.noise_model
-        simconfig = SimConfig.from_noise_model(noise_model)
         self._sim_obj = QutipEmulator.from_sequence(
             sequence,
             sampling_rate=self._config.sampling_rate,
-            config=simconfig,
+            noise_model=noise_model,
             with_modulation=self._config.with_modulation,
         )
         self._sim_obj.set_evaluation_times(
@@ -155,14 +150,14 @@ class QutipBackendV2(EmulatorBackend):
         eigenstates = self._sim_obj.samples_obj.eigenbasis
 
         if (
-            ("doppler" not in self._sim_obj.config.noise)
+            ("doppler" not in self._sim_obj.noise_model.noise_types)
             and (
-                "amplitude" not in self._sim_obj.config.noise
-                or self._sim_obj.config.amp_sigma == 0.0
+                "amplitude" not in self._sim_obj.noise_model.noise_types
+                or self._sim_obj.noise_model.amp_sigma == 0.0
             )
             and (
-                "SPAM" not in self._sim_obj.config.noise
-                or self._sim_obj.config.eta == 0
+                "SPAM" not in self._sim_obj.noise_model.noise_types
+                or self._sim_obj.noise_model.state_prep_error == 0
             )
         ):
             # A single run is needed, regardless of self.config.runs

@@ -18,6 +18,10 @@ from qutip import Qobj, qeye, sigmax, sigmaz
 from pulser.noise_model import NoiseModel
 from pulser_simulation.simconfig import SimConfig, doppler_sigma
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:'SimConfig' has been deprecated:DeprecationWarning"
+)
+
 
 @pytest.fixture
 def matrices():
