@@ -26,7 +26,6 @@ from pulser.backend.observable import Callback
 from pulser_simulation.qutip_backend import QutipBackendV2
 from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.qutip_state import QutipState
-from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simulation import QutipEmulator
 
 
@@ -191,10 +190,9 @@ def test_qutip_backend_v2_stochastic_noise():
     results = backend.run()
 
     # Same run with old API
-    sim_config = SimConfig.from_noise_model(
-        get_noise_model(samples_per_run=100)
+    qutip_emulator = QutipEmulator.from_sequence(
+        seq, noise_model=get_noise_model(samples_per_run=100)
     )
-    qutip_emulator = QutipEmulator.from_sequence(seq, config=sim_config)
     results_old_api = qutip_emulator.run()
 
     times = results.get_result_times("occupation")
