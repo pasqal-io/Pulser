@@ -58,7 +58,7 @@ class QutipEmulator:
         sampling_rate: The fraction of samples that we wish to extract from
             the samples to simulate. Has to be a value between 0.05 and 1.0.
         config: Configuration to be used for this simulation. *Deprecated
-            since v1.6, use 'noise_model' instead.*
+            since v1.6, please use ``noise_model`` instead.*
         evaluation_times: Choose between:
 
             - "Full": The times are set to be the ones used to define the
@@ -239,10 +239,10 @@ class QutipEmulator:
     def set_config(self, cfg: SimConfig) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
-        Warns:
-            DeprecationWarning: This method has been deprecated since v1.6.
-                Please prefer instantiating a new `QutipEmulator` with a
-                'noise_model' instead.
+        Warning:
+            This method has been deprecated since v1.6.
+            Please prefer instantiating a new ``QutipEmulator`` with a custom
+            ``noise_model`` instead.
 
         Args:
             cfg: New configuration.
@@ -288,16 +288,16 @@ class QutipEmulator:
     def add_config(self, config: SimConfig) -> None:
         """Updates the current configuration with parameters of another one.
 
+        Warning:
+            This method has been deprecated since v1.6.
+            Please prefer instantiating a new ``QutipEmulator`` with a custom
+            ``noise_model`` instead.
+
         Mostly useful when dealing with multiple noise types in different
         configurations and wanting to merge these configurations together.
         Adds simulation parameters to noises that weren't available in the
         former SimConfig. Noises specified in both SimConfigs will keep
         former noise parameters.
-
-        Warns:
-            DeprecationWarning: This method has been deprecated since v1.6.
-                Please prefer instantiating a new `QutipEmulator` with a
-                'noise_model' instead.
 
         Args:
             config: SimConfig to retrieve parameters from.

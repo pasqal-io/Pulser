@@ -67,9 +67,8 @@ def doppler_sigma(temperature: float) -> float:
 class SimConfig:
     """Specifies a simulation's configuration.
 
-    Warns:
-        DeprecationWarning: Deprecated in v1.6. `NoiseModel` should be used
-        instead.
+    Warning:
+        Deprecated in v1.6. ``NoiseModel`` should be used instead.
 
     Note:
         Being a frozen dataclass, the configuration chosen upon instantiation
