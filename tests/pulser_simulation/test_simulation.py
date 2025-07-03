@@ -22,7 +22,7 @@ import qutip
 
 from pulser import Pulse, Register, Sequence
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
-from pulser.noise_model import NoiseModel, _LEGACY_DEFAULTS
+from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
@@ -121,6 +121,14 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
                 }
             ),
             MockDevice,
+        )
+    with pytest.deprecated_call():
+        _config = SimConfig()
+    with pytest.raises(
+        ValueError, match="'noise_model' and 'config' cannot both be provided"
+    ):
+        QutipEmulator.from_sequence(
+            seq, config=_config, noise_model=NoiseModel()
         )
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.011)
     sampled_seq = sampler.sample(seq)
@@ -713,6 +721,9 @@ def test_eval_times(seq):
 
 
 @pytest.mark.filterwarnings(
+    "ignore:Supplying a 'SimConfig' to QutipEmulator:DeprecationWarning"
+)
+@pytest.mark.filterwarnings(
     "ignore:'SimConfig' has been deprecated:DeprecationWarning"
 )
 def test_config(matrices):
@@ -723,7 +734,11 @@ def test_config(matrices):
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
     seq.add(pulse, "ch0")
-    sim = QutipEmulator.from_sequence(seq, config=SimConfig(noise="SPAM"))
+    config = SimConfig(noise="SPAM")
+    with pytest.deprecated_call(
+        match="Supplying a 'SimConfig' to QutipEmulator"
+    ):
+        sim = QutipEmulator.from_sequence(seq, config=config)
     sim.reset_config()
     assert sim.config == SimConfig()
     sim.show_config()
@@ -731,7 +746,10 @@ def test_config(matrices):
         sim.set_config("bad_config")
     clean_ham = sim.get_hamiltonian(123)
     new_cfg = SimConfig(noise="doppler", temperature=10000)
-    sim.set_config(new_cfg)
+    with pytest.deprecated_call(
+        match="Supplying a 'SimConfig' to QutipEmulator"
+    ):
+        sim.set_config(new_cfg)
     assert sim.config == new_cfg
     noisy_ham = sim.get_hamiltonian(123)
     assert (
@@ -814,13 +832,14 @@ def test_noise_with_zero_epsilons(seq, matrices):
     np.random.seed(3)
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
 
-    sim2 = QutipEmulator.from_sequence(
-        seq,
-        sampling_rate=0.01,
-        config=SimConfig(
-            noise=("SPAM"), eta=0.0, epsilon=0.0, epsilon_prime=0.0
-        ),
-    )
+    with pytest.deprecated_call():
+        sim2 = QutipEmulator.from_sequence(
+            seq,
+            sampling_rate=0.01,
+            config=SimConfig(
+                noise=("SPAM"), eta=0.0, epsilon=0.0, epsilon_prime=0.0
+            ),
+        )
     assert sim2.config.noise == ()
 
     assert sim.run().sample_final_state() == sim2.run().sample_final_state()
@@ -1129,6 +1148,9 @@ def test_noises_all(matrices, noise, result, n_collapse_ops, seq):
 
 
 @pytest.mark.filterwarnings(
+    "ignore:Supplying a 'SimConfig' to QutipEmulator:DeprecationWarning"
+)
+@pytest.mark.filterwarnings(
     "ignore:'SimConfig' has been deprecated:DeprecationWarning"
 )
 def test_add_config(matrices):
@@ -1153,7 +1175,10 @@ def test_add_config(matrices):
         eff_noise_rates=[0.4, 0.6],
         temperature=20000,
     )
-    sim.add_config(config)
+    with pytest.deprecated_call(
+        match="Supplying a 'SimConfig' to QutipEmulator"
+    ):
+        sim.add_config(config)
     assert (
         "doppler" in sim.config.noise
         and "SPAM" in sim.config.noise
@@ -1365,6 +1390,22 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
         QutipEmulator.from_sequence(
             seq,
             noise_model=NoiseModel(runs=1, samples_per_run=1, amp_sigma=0.1),
+        )
+    with pytest.deprecated_call(), pytest.raises(
+        NotImplementedError, match="mode 'XY' does not support simulation of"
+    ):
+        sim.set_config(
+            SimConfig.from_noise_model(
+                NoiseModel(runs=1, samples_per_run=1, temperature=50)
+            )
+        )
+    with pytest.deprecated_call(), pytest.raises(
+        NotImplementedError, match="mode 'XY' does not support simulation of"
+    ):
+        sim.add_config(
+            SimConfig.from_noise_model(
+                NoiseModel(runs=1, samples_per_run=1, temperature=50)
+            )
         )
 
     # SPAM simulation is implemented:

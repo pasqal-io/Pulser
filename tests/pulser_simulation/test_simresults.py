@@ -19,7 +19,7 @@ import pytest
 import qutip
 from qutip.piqs.piqs import isdiagonal
 
-from pulser import AnalogDevice, Pulse, NoiseModel, Register, Sequence
+from pulser import AnalogDevice, NoiseModel, Pulse, Register, Sequence
 from pulser.devices import DigitalAnalogDevice, MockDevice
 from pulser.waveforms import (
     BlackmanWaveform,

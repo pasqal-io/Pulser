@@ -158,7 +158,12 @@ class QutipEmulator:
                 "'QutipEmulator'. Please provide just a 'noise_model'."
             )
         if config is not None:
-            # TODO: Deprecate
+            warnings.warn(
+                "Supplying a 'SimConfig' to QutipEmulator has been deprecated."
+                " Please instantiate with a 'NoiseModel' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             noise_model = config.to_noise_model()
 
         self._hamiltonian = Hamiltonian(
@@ -234,10 +239,20 @@ class QutipEmulator:
     def set_config(self, cfg: SimConfig) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
+        Warns:
+            DeprecationWarning: This method has been deprecated since v1.6.
+                Please prefer instantiating a new `QutipEmulator` with a
+                'noise_model' instead.
+
         Args:
             cfg: New configuration.
         """
-        # TODO: Deprecate
+        warnings.warn(
+            "Supplying a 'SimConfig' to QutipEmulator has been deprecated."
+            " Please instantiate with a 'NoiseModel' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if not isinstance(cfg, SimConfig):
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
         not_supported = (
@@ -279,10 +294,20 @@ class QutipEmulator:
         former SimConfig. Noises specified in both SimConfigs will keep
         former noise parameters.
 
+        Warns:
+            DeprecationWarning: This method has been deprecated since v1.6.
+                Please prefer instantiating a new `QutipEmulator` with a
+                'noise_model' instead.
+
         Args:
             config: SimConfig to retrieve parameters from.
         """
-        # TODO: Deprecate
+        warnings.warn(
+            "Supplying a 'SimConfig' to QutipEmulator has been deprecated."
+            " Please instantiate with a 'NoiseModel' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if not isinstance(config, SimConfig):
             raise ValueError(f"Object {config} is not a valid `SimConfig`")
 
@@ -691,13 +716,17 @@ class QutipEmulator:
             total_count += np.array(
                 [
                     cleanres_noisyseq.sample_state(
-                        t, n_samples=self.noise_model.samples_per_run * reps
+                        t,
+                        n_samples=cast(int, self.noise_model.samples_per_run)
+                        * reps,
                     )
                     for t in self._eval_times_array
                 ]
             )
 
-        n_measures = self.noise_model.runs * self.noise_model.samples_per_run
+        n_measures = cast(int, self.noise_model.runs) * cast(
+            int, self.noise_model.samples_per_run
+        )
         results = [
             SampledResult(
                 tuple(self._hamiltonian._qdict),
@@ -722,7 +751,7 @@ class QutipEmulator:
             "amplitude" in self.noise_model.noise_types
             and self.noise_model.amp_sigma != 0.0
         ):
-            loop_runs = self.noise_model.runs
+            loop_runs = cast(int, self.noise_model.runs)
             update_ham = True
         else:
             # Only state preparation noise for monte-carlo:
@@ -742,7 +771,7 @@ class QutipEmulator:
                     .astype(int)
                     .astype(str)  # Turns bool->int->str
                 )
-                for _ in range(self.noise_model.runs)
+                for _ in range(cast(int, self.noise_model.runs))
             ).most_common()
             loop_runs = len(initial_configs)
             update_ham = False
