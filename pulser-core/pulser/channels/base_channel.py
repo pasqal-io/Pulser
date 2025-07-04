@@ -417,11 +417,13 @@ class Channel(ABC):
             )
         return cls("Global", max_abs_detuning, max_amp, **kwargs)
 
-    def validate_duration(self, duration: int) -> int:
+    def validate_duration(self, duration: int, round_up: bool = True) -> int:
         """Validates and adapts the duration of an instruction on this channel.
 
         Args:
             duration: The duration to validate.
+            round_up: Whether to return the duration rounded up to the
+                channel's clock period.
 
         Returns:
             The duration, potentially adapted to the channels specs.
@@ -444,7 +446,7 @@ class Channel(ABC):
                 "duration can be at most " + f"{self.max_duration} ns."
             )
 
-        if duration % self.clock_period != 0:
+        if round_up and duration % self.clock_period != 0:
             _duration += self.clock_period - _duration % self.clock_period
             warnings.warn(
                 f"A duration of {duration} ns is not a multiple of "

@@ -108,16 +108,51 @@ def mark_non_empty(func: F) -> F:
     return cast(F, wrapper)
 
 
-def block_if_measured(func: F) -> F:
-    """Blocks the call if the sequence has been measured."""
+def conditionally_block(
+    if_measured: bool = True, if_parametrized_truncated: bool = True
+) -> Callable[[F], F]:
+    """Blocks the call if the sequence does not accept more instructions."""
 
-    @wraps(func)
-    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
-        if self.is_measured():
-            raise RuntimeError(
-                "The sequence has been measured, no further "
-                "changes are allowed."
-            )
-        func(self, *args, **kwargs)
+    def decorator(func: F) -> F:
+        @wraps(func)
+        def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
+            if self.is_measured() and if_measured:
+                raise RuntimeError(
+                    "The sequence has been measured, no further "
+                    "changes are allowed."
+                )
+            if self.is_parametrized() and if_parametrized_truncated:
+                to_build_call_names = [
+                    call.name for call in self._to_build_calls
+                ]
+                call_names = [call.name for call in self._calls]
+                blocker_calls = (
+                    "target",
+                    "enable_eom_mode",
+                    "disable_eom_mode",
+                )
+                if (
+                    # If truncate is a parametrized call and one of the blocker
+                    # calls is before it, no more instructions are accepted
+                    "truncate" in to_build_call_names
+                    and (
+                        set(blocker_calls)
+                        & set(
+                            call_names
+                            + to_build_call_names[
+                                : to_build_call_names.index("truncate")
+                            ]
+                        )
+                    )
+                ):
+                    raise RuntimeError(
+                        "The sequence can only be measured. This is because it"
+                        f"is parametrized and one or more of {blocker_calls} "
+                        "was called before a `truncate()` call."
+                    )
 
-    return cast(F, wrapper)
+            return func(self, *args, **kwargs)
+
+        return cast(F, wrapper)
+
+    return decorator

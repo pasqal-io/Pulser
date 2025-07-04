@@ -621,7 +621,7 @@ class Sequence(Generic[DeviceType]):
         self._slm_mask_targets = targets
 
     @seq_decorators.store
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def config_detuning_map(
         self,
         detuning_map: DetuningMap,
@@ -750,7 +750,7 @@ class Sequence(Generic[DeviceType]):
         """
         return switch_device(self, new_device, strict)
 
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def declare_channel(
         self,
         name: str,
@@ -921,7 +921,7 @@ class Sequence(Generic[DeviceType]):
             return var
 
     @seq_decorators.verify_parametrization
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def enable_eom_mode(
         self,
         channel: str,
@@ -1030,7 +1030,7 @@ class Sequence(Generic[DeviceType]):
         )
 
     @seq_decorators.store
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def disable_eom_mode(
         self, channel: str, correct_phase_drift: bool = False
     ) -> None:
@@ -1076,7 +1076,7 @@ class Sequence(Generic[DeviceType]):
                 )
 
     @seq_decorators.verify_parametrization
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def modify_eom_setpoint(
         self,
         channel: str,
@@ -1173,7 +1173,7 @@ class Sequence(Generic[DeviceType]):
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def add_eom_pulse(
         self,
         channel: str,
@@ -1257,7 +1257,7 @@ class Sequence(Generic[DeviceType]):
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def add(
         self,
         pulse: Union[Pulse, Parametrized],
@@ -1303,7 +1303,7 @@ class Sequence(Generic[DeviceType]):
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def add_dmm_detuning(
         self,
         waveform: Union[Waveform, Parametrized],
@@ -1494,7 +1494,49 @@ class Sequence(Generic[DeviceType]):
         return next_time_slot.ti - last.tf
 
     @seq_decorators.store
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
+    def truncate(self, duration: int | Parametrized) -> None:
+        """Truncate a sequence's contents to (at most) the given duration.
+
+        As in other instructions, the given duration must be valid for every
+        channel involved. Note that the resulting sequence's duration might not
+        exactly match the requested duration, particularly when:
+
+        - The 'duration' is not a multiple of a given channel's clock
+          period, in which case it is rounded down to its closest multiple.
+
+        - The resulting truncated instruction would have a length below the
+          `Channel.min_duration`, in which case it is ommited altogether.
+
+        - The instruction to truncate corresponds to a `target()`,
+          `enable_eom_mode()` or `disable_eom_mode()` call, in which case it is
+          ommited as well. When the sequence is parametrized, the presence of
+          one of these calls also forces `truncate()` to be the last
+          instruction in the `Sequence` before measurement.
+
+        Warning:
+            A truncated Pulse is assumed to be incomplete so its
+            `post_phase_shift` value is always set to zero.
+
+        Args:
+            duration: The duration (in ns) to truncate to.
+        """
+        if not isinstance(duration, Parametrized):
+            for ch_obj in self.declared_channels.values():
+                # Just preemptive validation, no adjustment done here
+                duration_ = ch_obj.validate_duration(duration, round_up=False)
+
+        if self.is_parametrized():
+            return
+
+        # Adjust the phase reference of all qubits
+        for basis_ref in self._basis_ref.values():
+            for qubit_ref in basis_ref.values():
+                qubit_ref.truncate(duration_)
+        self._schedule.truncate(duration_)
+
+    @seq_decorators.store
+    @seq_decorators.conditionally_block(if_parametrized_truncated=False)
     def measure(self, basis: str = "ground-rydberg") -> None:
         """Measures in a valid basis.
 
@@ -1589,7 +1631,7 @@ class Sequence(Generic[DeviceType]):
         self._phase_shift(phi, *specific_targets, basis=basis, _index=True)
 
     @seq_decorators.store
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def align(self, *channels: str, at_rest: bool = True) -> None:
         """Aligns multiple channels in time.
 
@@ -2077,7 +2119,7 @@ class Sequence(Generic[DeviceType]):
                 np.max(pulse.amplitude.samples),
             )
 
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def _target(
         self,
         qubits: Union[Collection[QubitId | int], QubitId | int, Parametrized],
@@ -2162,7 +2204,7 @@ class Sequence(Generic[DeviceType]):
             )
         return ids
 
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def _delay(
         self,
         duration: Union[int, Parametrized],
