@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import math
+import warnings
 from dataclasses import dataclass, field, fields
 from typing import Any, Tuple, Type, TypeVar, Union, cast
 
@@ -65,6 +66,9 @@ def doppler_sigma(temperature: float) -> float:
 @dataclass(frozen=True)
 class SimConfig:
     """Specifies a simulation's configuration.
+
+    Warning:
+        Deprecated in v1.6. ``NoiseModel`` should be used instead.
 
     Note:
         Being a frozen dataclass, the configuration chosen upon instantiation
@@ -177,6 +181,12 @@ class SimConfig:
         return NoiseModel(**kwargs)
 
     def __post_init__(self) -> None:
+        warnings.warn(
+            "'SimConfig' has been deprecated, please use `NoiseModel` "
+            "instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         # only one noise was given as argument : convert it to a tuple
         if isinstance(self.noise, str):
             self._change_attribute("noise", (self.noise,))

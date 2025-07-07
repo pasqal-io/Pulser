@@ -23,7 +23,6 @@ import pulser
 from pulser.devices import MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.waveforms import BlackmanWaveform
-from pulser_simulation import SimConfig
 from pulser_simulation.qutip_backend import QutipBackend
 from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simresults import CoherentResults, NoisyResults
@@ -42,9 +41,8 @@ def sequence():
 
 
 def test_qutip_backend(sequence):
-    sim_config = SimConfig()
     with pytest.raises(TypeError, match="must be of type 'EmulatorConfig'"):
-        QutipBackend(sequence, sim_config)
+        QutipBackend(sequence, pulser.NoiseModel())
 
     qutip_backend = QutipBackend(sequence)
     results = qutip_backend.run()
@@ -86,14 +84,15 @@ def test_with_default_noise(sequence):
     )
     new_results = backend.run()
     assert isinstance(new_results, NoisyResults)
-    assert backend._sim_obj.config == SimConfig.from_noise_model(spam_noise)
+    assert backend._sim_obj.noise_model == spam_noise
 
 
 proj = [[0, 0], [0, 1]]
 
 
 @pytest.mark.parametrize(
-    "collapse_op", [qutip.sigmax(), qutip.Qobj(proj), np.array(proj), proj]
+    "collapse_op",
+    [qutip.sigmax(), qutip.Qobj(proj), np.array(proj), proj],
 )
 def test_collapse_op(sequence, collapse_op):
     noise_model = pulser.NoiseModel(
