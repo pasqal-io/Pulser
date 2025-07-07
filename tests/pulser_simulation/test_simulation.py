@@ -1160,9 +1160,12 @@ def test_add_config(matrices):
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
     seq.add(pulse, "ch0")
-    sim = QutipEmulator.from_sequence(
-        seq, sampling_rate=0.01, config=SimConfig(noise="SPAM", eta=0.5)
-    )
+    with pytest.deprecated_call(
+        match="Supplying a 'SimConfig' to QutipEmulator"
+    ):
+        sim = QutipEmulator.from_sequence(
+            seq, sampling_rate=0.01, config=SimConfig(noise="SPAM", eta=0.5)
+        )
     with pytest.raises(ValueError, match="is not a valid"):
         sim.add_config("bad_cfg")
     config = SimConfig(

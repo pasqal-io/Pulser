@@ -158,12 +158,15 @@ class QutipEmulator:
                 "'QutipEmulator'. Please provide just a 'noise_model'."
             )
         if config is not None:
-            warnings.warn(
-                "Supplying a 'SimConfig' to QutipEmulator has been deprecated."
-                " Please instantiate with a 'NoiseModel' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
+            with warnings.catch_warnings():
+                warnings.simplefilter("once")
+                warnings.warn(
+                    "Supplying a 'SimConfig' to QutipEmulator has been "
+                    "deprecated. Please instantiate with a 'NoiseModel' "
+                    "instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
             noise_model = config.to_noise_model()
 
         self._hamiltonian = Hamiltonian(
