@@ -48,14 +48,18 @@ def test_samples_per_run():
         match="The number of samples per run .* is ignored "
         "when using QutipBackendV2.",
     ):
-        QutipConfig(
-            observables=[
-                StateResult(evaluation_times=[1.0]),
-            ],
-            noise_model=NoiseModel(
-                temperature=45, runs=100, samples_per_run=5
-            ),
-        )
+        with pytest.warns(
+            DeprecationWarning,
+            match="Setting samples_per_run different to 1 is",
+        ):
+            QutipConfig(
+                observables=[
+                    StateResult(evaluation_times=[1.0]),
+                ],
+                noise_model=NoiseModel(
+                    temperature=45, runs=100, samples_per_run=5
+                ),
+            )
 
 
 def test_initial_state():

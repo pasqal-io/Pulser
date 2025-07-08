@@ -37,16 +37,19 @@ def matrices():
 
 def test_init():
     with pytest.deprecated_call(match="'SimConfig' has been deprecated"):
-        config = SimConfig(
-            noise=(
-                "SPAM",
-                "doppler",
-                "dephasing",
-                "amplitude",
-            ),
-            temperature=1000.0,
-            runs=100,
-        )
+        with pytest.deprecated_call(
+            match="Setting samples_per_run different to 1 is"
+        ):
+            config = SimConfig(
+                noise=(
+                    "SPAM",
+                    "doppler",
+                    "dephasing",
+                    "amplitude",
+                ),
+                temperature=1000.0,
+                runs=100,
+            )
     assert config.temperature == 1e-3  # in K
     str_config = config.__str__(True)
     assert "SPAM, doppler, dephasing, amplitude" in str_config

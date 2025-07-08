@@ -428,12 +428,12 @@ class NoiseModel:
                     warnings.filterwarnings("always")
                     warnings.warn(
                         "Setting samples_per_run different to 1 is "
-                        "deprecated since pulser v1.6. Please use only"
+                        "deprecated since pulser v1.6. Please use only "
                         "`runs` to define the number of noisy simulations "
                         "to perform.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         all_fields = asdict(self)

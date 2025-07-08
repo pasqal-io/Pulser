@@ -97,7 +97,13 @@ class TestNoiseModel:
                 f"defined parameters are {[noise_param]}"
             ),
         ):
-            NoiseModel(**{unused_param: 100, noise_param: 1.0})
+            if unused_param == "samples_per_run":
+                with pytest.deprecated_call(
+                    match="Setting samples_per_run different to 1 is"
+                ):
+                    NoiseModel(**{unused_param: 100, noise_param: 1.0})
+            else:
+                NoiseModel(**{unused_param: 100, noise_param: 1.0})
 
     @pytest.mark.parametrize(
         "param",

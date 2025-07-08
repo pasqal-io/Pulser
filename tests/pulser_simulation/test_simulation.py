@@ -738,7 +738,10 @@ def test_config(matrices):
     with pytest.deprecated_call(
         match="Supplying a 'SimConfig' to QutipEmulator"
     ):
-        sim = QutipEmulator.from_sequence(seq, config=config)
+        with pytest.deprecated_call(
+            match="Setting samples_per_run different to 1 is"
+        ):
+            sim = QutipEmulator.from_sequence(seq, config=config)
     sim.reset_config()
     assert sim.config == SimConfig()
     sim.show_config()
@@ -749,7 +752,10 @@ def test_config(matrices):
     with pytest.deprecated_call(
         match="Supplying a 'SimConfig' to QutipEmulator"
     ):
-        sim.set_config(new_cfg)
+        with pytest.deprecated_call(
+            match="Setting samples_per_run different to 1 is"
+        ):
+            sim.set_config(new_cfg)
     assert sim.config == new_cfg
     noisy_ham = sim.get_hamiltonian(123)
     assert (
@@ -782,7 +788,10 @@ def test_config(matrices):
         UserWarning,
         match="Current initial state's dimension does not match new dim",
     ):
-        sim.set_config(SimConfig(noise="SPAM", eta=0.5))
+        with pytest.deprecated_call(
+            match="Setting samples_per_run different to 1 is"
+        ):
+            sim.set_config(SimConfig(noise="SPAM", eta=0.5))
     assert sim._initial_state == qutip.tensor(
         [qutip.basis(2, 1) for _ in range(2)]
     )
@@ -1163,9 +1172,14 @@ def test_add_config(matrices):
     with pytest.deprecated_call(
         match="Supplying a 'SimConfig' to QutipEmulator"
     ):
-        sim = QutipEmulator.from_sequence(
-            seq, sampling_rate=0.01, config=SimConfig(noise="SPAM", eta=0.5)
-        )
+        with pytest.deprecated_call(
+            match="Setting samples_per_run different to 1 is"
+        ):
+            sim = QutipEmulator.from_sequence(
+                seq,
+                sampling_rate=0.01,
+                config=SimConfig(noise="SPAM", eta=0.5),
+            )
     with pytest.raises(ValueError, match="is not a valid"):
         sim.add_config("bad_cfg")
     config = SimConfig(
@@ -1181,7 +1195,10 @@ def test_add_config(matrices):
     with pytest.deprecated_call(
         match="Supplying a 'SimConfig' to QutipEmulator"
     ):
-        sim.add_config(config)
+        with pytest.deprecated_call(
+            match="Setting samples_per_run different to 1 is"
+        ):
+            sim.add_config(config)
     assert (
         "doppler" in sim.config.noise
         and "SPAM" in sim.config.noise
@@ -1224,13 +1241,16 @@ def test_add_config(matrices):
         UserWarning,
         match="Current initial state's dimension does not match new dim",
     ):
-        sim.add_config(
-            SimConfig(
-                noise=("leakage", "eff_noise"),
-                eff_noise_opers=[matrices["Z3"]],
-                eff_noise_rates=[0.1],
+        with pytest.deprecated_call(
+            match="Setting samples_per_run different to 1 is"
+        ):
+            sim.add_config(
+                SimConfig(
+                    noise=("leakage", "eff_noise"),
+                    eff_noise_opers=[matrices["Z3"]],
+                    eff_noise_rates=[0.1],
+                )
             )
-        )
     assert sim._initial_state == qutip.basis(3, 1)
 
 
