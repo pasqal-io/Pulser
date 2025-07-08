@@ -145,7 +145,8 @@ class NoiseModel:
             bitstring distribution is sampled when calculating bitstring
             counts.
         samples_per_run: Number of samples per noisy Hamiltonian. Useful
-            for cutting down on computing time, but unrealistic.
+            for cutting down on computing time, but unrealistic. *Deprecated
+            since v1.6, use only `runs`.*
         state_prep_error: The state preparation error probability.
         p_false_pos: Probability of measuring a false positive.
         p_false_neg: Probability of measuring a false negative.
@@ -422,6 +423,17 @@ class NoiseModel:
                 comp = "a boolean"
             if not is_valid:
                 raise ValueError(f"'{param}' must be {comp}, not {value}.")
+            if param == "samples_per_run" and value != 1:
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("always")
+                    warnings.warn(
+                        "Setting samples_per_run different to 1 is "
+                        "deprecated since pulser v1.6. Please use only"
+                        "`runs` to define the number of noisy simulations "
+                        "to perform.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         all_fields = asdict(self)
