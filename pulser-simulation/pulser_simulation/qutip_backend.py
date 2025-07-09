@@ -53,12 +53,14 @@ class QutipBackend(Backend):
         mimic_qpu: bool = False,
     ):
         """Initializes a new QutipBackend."""
-        warnings.warn(
-            "'QutipBackend' is deprecated. Please use "
-            "'pulser_simulation.QutipBackendV2' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("once")
+            warnings.warn(
+                "'QutipBackend' is deprecated. Please use "
+                "'pulser_simulation.QutipBackendV2' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         super().__init__(sequence, mimic_qpu=mimic_qpu)
         if not isinstance(config, EmulatorConfig):
             raise TypeError(
