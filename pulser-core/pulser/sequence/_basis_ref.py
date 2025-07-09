@@ -75,7 +75,7 @@ class _PhaseTracker:
         new_phases = []
         for t, ph in zip(self._times, self._phases):
             if t > threshold:
-                break
+                continue
             new_times.append(t)
             new_phases.append(ph)
         self._times = new_times

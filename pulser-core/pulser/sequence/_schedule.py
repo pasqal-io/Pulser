@@ -580,7 +580,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                     break
 
             # If the slot terminates at the threshold, just return
-            # the schedule up to this slot (inclusivly)
+            # the schedule up to this slot (inclusively)
             if slot.tf == threshold:
                 adjust_eom_blocks(threshold, ch_schedule)
                 ch_schedule.slots = ch_schedule.slots[: slot_ind + 1]
