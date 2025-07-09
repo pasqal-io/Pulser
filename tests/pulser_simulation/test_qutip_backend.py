@@ -27,6 +27,10 @@ from pulser_simulation.qutip_backend import QutipBackend
 from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simresults import CoherentResults, NoisyResults
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:'QutipBackend' is deprecated:DeprecationWarning"
+)
+
 
 @pytest.fixture
 def sequence():
