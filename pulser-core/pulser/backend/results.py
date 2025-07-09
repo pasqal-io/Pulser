@@ -19,16 +19,14 @@ import json
 import typing
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
+from typing import Any, TypeVar, cast, overload
 
 from pulser.backend.observable import Observable
+from pulser.backend.state import State
 from pulser.json.abstract_repr.deserializer import deserialize_complex
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import stringify_qubit_ids
-
-if TYPE_CHECKING:
-    from pulser.backend import State
 
 
 @dataclass
