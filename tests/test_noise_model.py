@@ -115,7 +115,7 @@ class TestNoiseModel:
         ):
             NoiseModel(**{param: 0})
 
-    @pytest.mark.parametrize("value", [-1e-9, 0.0, 0.2, 1.0001])
+    @pytest.mark.parametrize("value", [None, -1e-9, 0.0, 0.2, 1.0001])
     @pytest.mark.parametrize(
         "param, noise",
         [
@@ -133,7 +133,12 @@ class TestNoiseModel:
             param == "temperature" or param == "detuning_sigma"
         ) and value != 0:
             kwargs.update(dict(runs=1, samples_per_run=1))
-        if value < 0:
+        if value is None:
+            with pytest.raises(
+                TypeError, match=f"Value for {param} should be positive"
+            ):
+                NoiseModel(**kwargs)
+        elif value < 0:
             with pytest.raises(
                 ValueError,
                 match=f"'{param}' must be greater than "
