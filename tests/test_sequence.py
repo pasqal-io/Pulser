@@ -31,6 +31,7 @@ from pulser.channels.dmm import DMM
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.devices._device_datacls import Device, VirtualDevice
+from pulser.exceptions.sequence import SwitchDeviceError
 from pulser.register.base_register import BaseRegister
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
@@ -665,7 +666,7 @@ def test_switch_register(
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
 def test_switch_device_down(
-    reg, det_map, devices, pulses, mappable_reg, parametrized
+    helpers, reg, det_map, devices, pulses, mappable_reg, parametrized
 ):
     phys_Chadoq2 = dataclasses.replace(
         DigitalAnalogDevice,
@@ -691,6 +692,18 @@ def test_switch_device_down(
         + " returns the sequence unchanged.",
     ):
         seq.switch_device(phys_Chadoq2)
+
+    assert phys_Chadoq2.min_layout_traps == 1
+    # Fails when the register/layout is not valid for the new device
+    with pytest.raises(
+        SwitchDeviceError,
+        match="existing register is incompatible with the new device",
+    ):
+        seq.switch_device(
+            dataclasses.replace(
+                phys_Chadoq2, min_layout_traps=reg.layout.number_of_traps + 1
+            )
+        )
 
     # From sequence reusing channels to Device without reusable channels
     seq = init_seq(
@@ -720,9 +733,9 @@ def test_switch_device_down(
         # Can't find a match for the 2nd raman_local
         seq.switch_device(phys_Chadoq2, strict=True)
 
-    with pytest.raises(
-        ValueError,
-        match="No match for channel raman_1 with the" " same clock_period.",
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError],
+        match="No match for channel raman_1 with the same clock_period.",
     ):
         # Can't find a match for the 2nd rydberg_local
         seq.switch_device(
@@ -818,12 +831,14 @@ def test_switch_device_down(
         "new device that does not modify the samples of the Sequence. "
         "Here is a list of matchings tested and their associated errors: "
         "{(('global', 'rydberg_global'), ('dmm_0', 'dmm_0'), ('dmm_0_1', "
-        "'dmm_1')): ('The detunings on some atoms go below the local bottom "
-        "detuning of the DMM (-10 rad/µs).',), (('global', 'rydberg_global'), "
-        "('dmm_0', 'dmm_1'), ('dmm_0_1', 'dmm_0')): ('The detunings on some "
-        "atoms go below the local bottom detuning of the DMM (-10 rad/µs).',)}"
+        "'dmm_1')): 'The detunings on some atoms go below the local bottom "
+        "detuning of the DMM (-10 rad/µs).', (('global', 'rydberg_global'), "
+        "('dmm_0', 'dmm_1'), ('dmm_0_1', 'dmm_0')): 'The detunings on some "
+        "atoms go below the local bottom detuning of the DMM (-10 rad/µs).'}"
     )
-    with pytest.raises(ValueError, match=re.escape(error_msg)):
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError], match=re.escape(error_msg)
+    ):
         seq.switch_device(
             dataclasses.replace(
                 phys_Chadoq2, dmm_objects=(dmm_down, dmm_down)
@@ -842,7 +857,9 @@ def test_switch_device_down(
         ),
         strict=True,
     )
-    with pytest.raises(ValueError, match=re.escape(error_msg)):
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError], match=re.escape(error_msg)
+    ):
         seq.switch_device(
             dataclasses.replace(
                 phys_Chadoq2, dmm_objects=(dmm_down, dmm_down)
@@ -875,8 +892,8 @@ def test_switch_device_down(
         (seq_ising, "Rydberg level"),
         (seq_xy, "XY interaction coefficient"),
     ]:
-        with pytest.raises(
-            ValueError,
+        with helpers.raises_all(
+            [ValueError, SwitchDeviceError],
             match="Strict device match failed because the devices"
             f" have different {msg}s.",
         ):
@@ -919,8 +936,8 @@ def test_switch_device_down(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    with pytest.raises(
-        ValueError,
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError],
         match="No match for channel ising with the same clock_period.",
     ):
         seq.switch_device(devices[1], True)
@@ -935,14 +952,14 @@ def test_switch_device_down(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    with pytest.raises(
-        ValueError,
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError],
         match="No match for channel digital with the same mod_bandwidth.",
     ):
         seq.switch_device(devices[0], True)
 
-    with pytest.raises(
-        ValueError,
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError],
         match="No match for channel digital"
         + " with the same fixed_retarget_t.",
     ):
@@ -958,8 +975,8 @@ def test_switch_device_down(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    with pytest.raises(
-        ValueError,
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError],
         match="No match for channel digital"
         + " with the same min_retarget_interval.",
     ):
@@ -1120,7 +1137,13 @@ extended_eom_device = dataclasses.replace(
     "extension_arg", ["amp", "control", "2control", "buffer_time"]
 )
 def test_switch_device_eom(
-    reg, device, mappable_reg, parametrized, extension_arg, patch_plt_show
+    helpers,
+    reg,
+    device,
+    mappable_reg,
+    parametrized,
+    extension_arg,
+    patch_plt_show,
 ):
     # Sequence with EOM blocks
     seq = init_seq(
@@ -1259,16 +1282,16 @@ def test_switch_device_eom(
             and device == AnalogDevice
         )
     ):
-        with pytest.raises(
-            ValueError,
+        with helpers.raises_all(
+            [ValueError, SwitchDeviceError],
             match=err_base + "with the same EOM configuration.",
         ):
             seq.switch_device(up_analog, strict=True)
         return
     if device == extended_eom_device:
         if extension_arg in ["control", "2control"]:
-            with pytest.raises(
-                ValueError,
+            with helpers.raises_all(
+                [ValueError, SwitchDeviceError],
                 match="No match for channel rydberg with an EOM configuration",
             ):
                 seq.switch_device(up_analog, strict=True)
@@ -1313,18 +1336,20 @@ def test_switch_device_eom(
         "No matching found between declared channels and channels in "
         "the new device that does not modify the samples of the "
         "Sequence. Here is a list of matchings tested and their "
-        "associated errors: {(('rydberg', 'rydberg_global'),): ('No "
+        "associated errors: {(('rydberg', 'rydberg_global'),): 'No "
         "match for channel rydberg with an EOM configuration that "
         "does not change the samples."
     )
     if parametrized:
-        with pytest.raises(
-            ValueError,
+        with helpers.raises_all(
+            [ValueError, SwitchDeviceError],
             match=err_base + "with the same EOM configuration.",
         ):
             seq.switch_device(mod_analog, strict=True)
         return
-    with pytest.raises(ValueError, match=re.escape(err_msg)):
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError], match=re.escape(err_msg)
+    ):
         seq.switch_device(mod_analog, strict=True)
     mod_seq = seq.switch_device(mod_analog, strict=False)
     mod_eom_block = (
@@ -2959,3 +2984,192 @@ def test_sequence_is_empty(
     else:
         assert False
     assert not sequence.is_empty()
+
+
+def test_truncate_delay(reg, device):
+    seq = Sequence(reg, device)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.delay(1000, "ryd")
+    assert seq.get_duration() == 1000
+    seq.truncate(199)  # Not a multiple of 4, rounded down to 196
+    assert seq.get_duration() == 196
+    seq.truncate(197)  # Above current duration, nothing changes
+    assert seq.get_duration() == 196
+
+    with pytest.raises(ValueError, match="duration has to be at least 16 ns"):
+        seq.truncate(15)
+
+    # We add another delay and truncate such that it goes below the minimum
+    # duration. It should be deleted and we get the same sequence
+    seq.delay(204, "ryd")
+    # Also add a phase shift - since all we have done is delays, it should
+    # take effect from the start of the sequence and not be affected
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 0
+    seq.phase_shift(1, "q0", basis="ground-rydberg")
+    assert seq.get_duration() == 400
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 1
+    seq.truncate(200)
+    assert seq.get_duration() == 196
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 1
+
+
+def test_truncate_pulse(reg, device):
+    seq = Sequence(reg, device)
+    seq.declare_channel("ryd", "rydberg_global")
+    pulse = Pulse(
+        amplitude=BlackmanWaveform(1000, 1),
+        detuning=RampWaveform(1000, -5, 5),
+        phase=2,
+        post_phase_shift=1,
+    )
+    seq.add(pulse, "ryd")
+    assert seq.get_duration() == pulse.duration
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 1
+    full_samples = sample(seq).channel_samples["ryd"]
+
+    seq.truncate(199)  # Not a multiple of 4, rounded down to 196
+    assert seq.get_duration() == 196
+    trunc_samples = sample(seq).channel_samples["ryd"]
+    np.testing.assert_array_equal(full_samples.amp[:196], trunc_samples.amp)
+    np.testing.assert_array_equal(full_samples.det[:196], trunc_samples.det)
+    np.testing.assert_array_equal(
+        full_samples.phase[:196], trunc_samples.phase
+    )
+    # Phase ref gets reset because the pulse is now incomplete
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 0
+
+    seq.truncate(197)  # Above current duration, nothing changes
+    assert seq.get_duration() == 196
+
+    # We add another pulse and truncate such that it goes below the minimum
+    # duration. It should be deleted and we get the same sequence
+    seq.add(pulse, "ryd")
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 1
+    assert seq.get_duration() == 196 + pulse.duration
+    seq.truncate(200)
+    assert seq.get_duration() == 196
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 0
+    trunc_samples = sample(seq).channel_samples["ryd"]
+    np.testing.assert_array_equal(full_samples.amp[:196], trunc_samples.amp)
+    np.testing.assert_array_equal(full_samples.det[:196], trunc_samples.det)
+    np.testing.assert_array_equal(
+        full_samples.phase[:196], trunc_samples.phase
+    )
+
+    # Now add twice and truncate the second pulse
+    seq.add(pulse, "ryd")
+    seq.add(pulse, "ryd")
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 2
+    assert seq.get_duration() == 196 + pulse.duration * 2
+    new_duration = 196 + pulse.duration + 200
+    seq.truncate(new_duration)
+    assert seq.get_duration() == new_duration
+    # The first pulse is complete, the second is not
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 1
+    trunc_samples2 = sample(seq).channel_samples["ryd"]
+    expected_amp = np.concatenate(
+        [full_samples.amp[:196], full_samples.amp, full_samples.amp[:200]]
+    )
+    np.testing.assert_array_equal(trunc_samples2.amp, expected_amp)
+    expected_det = np.concatenate(
+        [full_samples.det[:196], full_samples.det, full_samples.det[:200]]
+    )
+    np.testing.assert_array_equal(trunc_samples2.det, expected_det)
+    expected_phase = np.repeat(pulse.phase, new_duration)
+    expected_phase[-200:] += pulse.post_phase_shift
+    np.testing.assert_array_equal(trunc_samples2.phase, expected_phase)
+
+
+def test_truncate_eom(reg):
+    seq = Sequence(reg, AnalogDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.delay(100, "ryd")  # So we have an EOM start buffer
+    seq.enable_eom_mode("ryd", 1, 0)
+    eom_mode_start = seq.get_duration()
+    seq.add_eom_pulse("ryd", 200, phase=1, post_phase_shift=1)
+    seq.delay(100, "ryd")
+    seq.add_eom_pulse("ryd", 200, phase=2, post_phase_shift=1)
+    eom_mode_end = seq.get_duration()
+    seq.disable_eom_mode("ryd")
+    eom_end_buffer_t = seq.get_duration()
+    seq.delay(100, "ryd")
+    t = seq.declare_variable("t", dtype=int)
+    seq.truncate(t)
+
+    # Test conditional block
+    with pytest.raises(
+        RuntimeError, match="The sequence can only be measured"
+    ):
+        seq.delay(100, "ryd")
+    # But we can still measure
+    seq.measure()
+
+    # 1. Truncate at the eom start buffer, see that it is removed
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "'enable_eom_mode()' instruction on channel 'ryd' at"
+            f" t = {eom_mode_start-4} ns was removed by a 'truncate()'"
+        ),
+    ):
+        built_seq = seq.build(t=eom_mode_start - 1)
+    assert not built_seq.is_in_eom_mode("ryd")
+    assert built_seq.get_duration() == 100
+    assert built_seq.is_measured()  # The sequence is still measured
+
+    # 2. Truncate at the EOM pulse
+    built_seq = seq.build(t=eom_mode_start + 101)
+    assert built_seq.is_in_eom_mode("ryd")
+    assert built_seq.get_duration() == eom_mode_start + 100
+
+    # 3. Truncate at the delay
+    built_seq = seq.build(t=eom_mode_start + 219)
+    assert built_seq.is_in_eom_mode("ryd")
+    assert built_seq.get_duration() == eom_mode_start + 216
+
+    # 4. Truncate at the eom end buffer, see that it is removed
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "'disable_eom_mode()' instruction on channel 'ryd' at"
+            f" t = {eom_end_buffer_t - 4} ns was removed by a 'truncate()'"
+        ),
+    ):
+        built_seq = seq.build(t=eom_end_buffer_t - 1)
+    assert built_seq.is_in_eom_mode("ryd")
+    assert built_seq.get_duration() == eom_mode_end
+
+    # 5. Truncate at the very end of eom end buffer, see that it is preserved
+    built_seq = seq.build(t=eom_end_buffer_t)
+    assert not built_seq.is_in_eom_mode("ryd")
+    assert built_seq.get_duration() == eom_end_buffer_t
+
+
+def test_truncate_target(reg, device):
+    seq = Sequence(reg, DigitalAnalogDevice)
+    seq.declare_channel("raman", "raman_local", initial_target="q0")
+    start_target_t = seq.get_duration()
+    seq.target("q1", "raman")
+    end_target_t = seq.get_duration()
+    assert end_target_t > start_target_t  # Check it's not instantaneous
+    t = seq.declare_variable("t", dtype=int)
+    seq.truncate(t)
+
+    # Test conditional block
+    with pytest.raises(
+        RuntimeError, match="The sequence can only be measured"
+    ):
+        seq.delay(100, "raman")
+    # But we can still measure
+    seq.measure(basis="digital")
+
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "'target()' instruction on channel 'raman' at"
+            f" t = {end_target_t - 4} ns was removed by a 'truncate()'"
+        ),
+    ):
+        built_seq = seq.build(t=end_target_t - 1)
+    assert built_seq.get_duration() == start_target_t
+    assert built_seq.is_measured()

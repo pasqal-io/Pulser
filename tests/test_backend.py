@@ -604,6 +604,49 @@ def test_results():
         res.get_result(obs, 0.912)
 
 
+def test_results_final_bistrings():
+    res = Results(atom_order=(), total_duration=0)
+    with pytest.raises(
+        RuntimeError, match="final bitstrings are not available"
+    ):
+        res.final_bitstrings
+
+    obs = BitStrings()
+    obs(
+        config=EmulationConfig(observables=(BitStrings(),)),
+        t=1.0,
+        state=QutipState.from_state_amplitudes(
+            eigenstates=("r", "g"), amplitudes={"rrr": 1.0}
+        ),
+        hamiltonian=QutipOperator.from_operator_repr(
+            eigenstates=("r", "g"), n_qudits=3, operations=[(1.0, [])]
+        ),
+        result=res,
+    )
+    assert res.final_bitstrings == res.get_result(obs, 1.0)
+
+
+def test_results_final_state():
+    res = Results(atom_order=(), total_duration=0)
+    with pytest.raises(RuntimeError, match="final state is not available"):
+        res.final_state
+
+    obs = StateResult()
+    state = QutipState.from_state_amplitudes(
+        eigenstates=("r", "g"), amplitudes={"rrr": 1.0}
+    )
+    obs(
+        config=EmulationConfig(observables=(obs,)),
+        t=1.0,
+        state=state,
+        hamiltonian=QutipOperator.from_operator_repr(
+            eigenstates=("r", "g"), n_qudits=3, operations=[(1.0, [])]
+        ),
+        result=res,
+    )
+    assert res.final_state == res.get_result(obs, 1.0) == state
+
+
 class TestObservables:
     @pytest.fixture
     def ghz_state(self):
