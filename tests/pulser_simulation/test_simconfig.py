@@ -35,21 +35,19 @@ def matrices():
     return pauli
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_init():
     with pytest.deprecated_call(match="'SimConfig' has been deprecated"):
-        with pytest.deprecated_call(
-            match="Setting samples_per_run different to 1 is"
-        ):
-            config = SimConfig(
-                noise=(
-                    "SPAM",
-                    "doppler",
-                    "dephasing",
-                    "amplitude",
-                ),
-                temperature=1000.0,
-                runs=100,
-            )
+        config = SimConfig(
+            noise=(
+                "SPAM",
+                "doppler",
+                "dephasing",
+                "amplitude",
+            ),
+            temperature=1000.0,
+            runs=100,
+        )
     assert config.temperature == 1e-3  # in K
     str_config = config.__str__(True)
     assert "SPAM, doppler, dephasing, amplitude" in str_config
@@ -92,6 +90,7 @@ def test_init():
         SimConfig(noise=("bad_noise",))
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_eff_noise_opers(matrices):
     # Some of these checks are repeated in the NoiseModel UTs
     with pytest.raises(ValueError, match="The operators list length"):

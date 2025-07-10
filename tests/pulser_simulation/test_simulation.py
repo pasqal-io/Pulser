@@ -1242,6 +1242,7 @@ def test_add_config(matrices):
     assert sim._initial_state == qutip.basis(3, 1)
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_concurrent_pulses():
     reg = Register({"q0": (0, 0)})
     seq = Sequence(reg, DigitalAnalogDevice)
@@ -1356,6 +1357,7 @@ res4 = {"0000": 907, "0100": 24, "1000": 20, "0010": 8, "0001": 41}
     reason="Random number generation doesn't produce the same results in numpy"
     " >v2",
 )
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 @pytest.mark.parametrize(
     "masked_qubit, noise, result, n_collapse_ops",
     [
@@ -1436,7 +1438,7 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
         sampling_rate=0.1,
         noise_model=NoiseModel(
             runs=15,
-            samples_per_run=1,
+            samples_per_run=5,
             with_leakage=with_leakage,
             state_prep_error=0.4,
             p_false_pos=0.01,
@@ -1679,6 +1681,7 @@ def test_effective_size_intersection():
         "raman_global",
     ],
 )
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_effective_size_disjoint(channel_type):
     simple_reg = Register.square(2, prefix="atom")
     amp = 1

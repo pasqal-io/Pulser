@@ -20,7 +20,6 @@ from collections.abc import Collection, Sequence
 from dataclasses import asdict, dataclass, fields
 from typing import Any, Literal, Union, cast, get_args
 
-import numbers
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -265,7 +264,9 @@ class NoiseModel:
                 val, (int, float)
             ):
                 raise TypeError(
-                    f"Value for {p_} should be positive, {'between 0 and 1, ' if p_ in _PROBABILITY_LIKE else ''}not {val}."
+                    f"Value for {p_} should be positive, "
+                    f"{'between 0 and 1, ' if p_ in _PROBABILITY_LIKE else ''}"
+                    f"not {val}."
                 )
 
         relevant_params = self._find_relevant_params(
