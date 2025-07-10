@@ -25,6 +25,7 @@ from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import _get_dmm_name
 from pulser.channels.eom import BaseEOM
 from pulser.devices._device_datacls import BaseDevice
+from pulser.exceptions.sequence import PulserValueError, SwitchDeviceError
 
 if TYPE_CHECKING:
     from pulser.sequence.sequence import Sequence
@@ -72,7 +73,7 @@ def switch_device(
         seq.device, interaction_param
     ):
         if strict:
-            raise ValueError(
+            raise SwitchDeviceError(
                 "Strict device match failed because the"
                 f" devices have different {name_in_msg}s."
             )
@@ -81,6 +82,14 @@ def switch_device(
             " check that the expected interactions still hold.",
             stacklevel=2,
         )
+
+    # Check register is still valid by initializing the new Sequence
+    try:
+        type(seq)(register=seq._register, device=new_device)
+    except PulserValueError as e:
+        raise SwitchDeviceError(
+            "The existing register is incompatible with the new device."
+        ) from e
 
     def check_retarget(ch_obj: Channel) -> bool:
         # Check the min_retarget_interval when it is is not
@@ -251,7 +260,7 @@ def switch_device(
                     )
         assert None in channel_match.values()
         if strict_error_message:
-            raise ValueError(strict_error_message)
+            raise SwitchDeviceError(strict_error_message)
         raise TypeError(ch_match_err)
 
     def build_sequence_from_matching(
@@ -330,7 +339,7 @@ def switch_device(
                         np.isclose(current_samples.phase, new_samples.phase)
                     )
                 ):
-                    raise ValueError(
+                    raise SwitchDeviceError(
                         f"No match for channel {eom_channel} with an"
                         " EOM configuration that does not change the"
                         " samples."
@@ -374,9 +383,9 @@ def switch_device(
                 new_device, channel_match, active_eom_channels, strict
             )
         except ValueError as e:
-            err_channel_match[tuple(channel_match.items())] = e.args
+            err_channel_match[tuple(channel_match.items())] = str(e)
             continue
-    raise ValueError(
+    raise SwitchDeviceError(
         "No matching found between declared channels and channels in the "
         "new device that does not modify the samples of the Sequence. "
         "Here is a list of matchings tested and their associated errors: "
