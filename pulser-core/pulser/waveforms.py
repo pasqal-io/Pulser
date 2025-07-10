@@ -175,6 +175,25 @@ class Waveform(ABC):
             " modifications to its duration."
         )
 
+    def truncated(self, new_duration: int) -> Waveform:
+        """Returns a new waveform, truncated to a new duration.
+
+        If the new duration is above this waveform's duration, a copy is
+        returned instead.
+
+        Args:
+            new_duration: The duration of the truncated waveform.
+
+        Returns:
+            The truncated waveform (if applicable).
+        """
+        if new_duration >= self.duration:
+            # Basically an identical copy
+            return self * 1.0
+        return CustomWaveform(
+            self.samples[: _cast_check(int, new_duration, "new_duration")]
+        )
+
     def modulated_samples(
         self, channel: Channel, eom: bool = False
     ) -> pm.AbstractArray:
@@ -542,6 +561,20 @@ class ConstantWaveform(Waveform):
             The new waveform with the given duration.
         """
         return ConstantWaveform(new_duration, self._value)
+
+    def truncated(self, new_duration: int) -> ConstantWaveform:
+        """Returns a new waveform, truncated to a new duration.
+
+        If the new duration is above this waveform's duration, a copy is
+        returned instead.
+
+        Args:
+            new_duration: The duration of the truncated waveform.
+
+        Returns:
+            The truncated waveform (if applicable).
+        """
+        return self.change_duration(min(new_duration, self.duration))
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._value)

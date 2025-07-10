@@ -2984,3 +2984,192 @@ def test_sequence_is_empty(
     else:
         assert False
     assert not sequence.is_empty()
+
+
+def test_truncate_delay(reg, device):
+    seq = Sequence(reg, device)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.delay(1000, "ryd")
+    assert seq.get_duration() == 1000
+    seq.truncate(199)  # Not a multiple of 4, rounded down to 196
+    assert seq.get_duration() == 196
+    seq.truncate(197)  # Above current duration, nothing changes
+    assert seq.get_duration() == 196
+
+    with pytest.raises(ValueError, match="duration has to be at least 16 ns"):
+        seq.truncate(15)
+
+    # We add another delay and truncate such that it goes below the minimum
+    # duration. It should be deleted and we get the same sequence
+    seq.delay(204, "ryd")
+    # Also add a phase shift - since all we have done is delays, it should
+    # take effect from the start of the sequence and not be affected
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 0
+    seq.phase_shift(1, "q0", basis="ground-rydberg")
+    assert seq.get_duration() == 400
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 1
+    seq.truncate(200)
+    assert seq.get_duration() == 196
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 1
+
+
+def test_truncate_pulse(reg, device):
+    seq = Sequence(reg, device)
+    seq.declare_channel("ryd", "rydberg_global")
+    pulse = Pulse(
+        amplitude=BlackmanWaveform(1000, 1),
+        detuning=RampWaveform(1000, -5, 5),
+        phase=2,
+        post_phase_shift=1,
+    )
+    seq.add(pulse, "ryd")
+    assert seq.get_duration() == pulse.duration
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 1
+    full_samples = sample(seq).channel_samples["ryd"]
+
+    seq.truncate(199)  # Not a multiple of 4, rounded down to 196
+    assert seq.get_duration() == 196
+    trunc_samples = sample(seq).channel_samples["ryd"]
+    np.testing.assert_array_equal(full_samples.amp[:196], trunc_samples.amp)
+    np.testing.assert_array_equal(full_samples.det[:196], trunc_samples.det)
+    np.testing.assert_array_equal(
+        full_samples.phase[:196], trunc_samples.phase
+    )
+    # Phase ref gets reset because the pulse is now incomplete
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 0
+
+    seq.truncate(197)  # Above current duration, nothing changes
+    assert seq.get_duration() == 196
+
+    # We add another pulse and truncate such that it goes below the minimum
+    # duration. It should be deleted and we get the same sequence
+    seq.add(pulse, "ryd")
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 1
+    assert seq.get_duration() == 196 + pulse.duration
+    seq.truncate(200)
+    assert seq.get_duration() == 196
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 0
+    trunc_samples = sample(seq).channel_samples["ryd"]
+    np.testing.assert_array_equal(full_samples.amp[:196], trunc_samples.amp)
+    np.testing.assert_array_equal(full_samples.det[:196], trunc_samples.det)
+    np.testing.assert_array_equal(
+        full_samples.phase[:196], trunc_samples.phase
+    )
+
+    # Now add twice and truncate the second pulse
+    seq.add(pulse, "ryd")
+    seq.add(pulse, "ryd")
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 2
+    assert seq.get_duration() == 196 + pulse.duration * 2
+    new_duration = 196 + pulse.duration + 200
+    seq.truncate(new_duration)
+    assert seq.get_duration() == new_duration
+    # The first pulse is complete, the second is not
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 1
+    trunc_samples2 = sample(seq).channel_samples["ryd"]
+    expected_amp = np.concatenate(
+        [full_samples.amp[:196], full_samples.amp, full_samples.amp[:200]]
+    )
+    np.testing.assert_array_equal(trunc_samples2.amp, expected_amp)
+    expected_det = np.concatenate(
+        [full_samples.det[:196], full_samples.det, full_samples.det[:200]]
+    )
+    np.testing.assert_array_equal(trunc_samples2.det, expected_det)
+    expected_phase = np.repeat(pulse.phase, new_duration)
+    expected_phase[-200:] += pulse.post_phase_shift
+    np.testing.assert_array_equal(trunc_samples2.phase, expected_phase)
+
+
+def test_truncate_eom(reg):
+    seq = Sequence(reg, AnalogDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.delay(100, "ryd")  # So we have an EOM start buffer
+    seq.enable_eom_mode("ryd", 1, 0)
+    eom_mode_start = seq.get_duration()
+    seq.add_eom_pulse("ryd", 200, phase=1, post_phase_shift=1)
+    seq.delay(100, "ryd")
+    seq.add_eom_pulse("ryd", 200, phase=2, post_phase_shift=1)
+    eom_mode_end = seq.get_duration()
+    seq.disable_eom_mode("ryd")
+    eom_end_buffer_t = seq.get_duration()
+    seq.delay(100, "ryd")
+    t = seq.declare_variable("t", dtype=int)
+    seq.truncate(t)
+
+    # Test conditional block
+    with pytest.raises(
+        RuntimeError, match="The sequence can only be measured"
+    ):
+        seq.delay(100, "ryd")
+    # But we can still measure
+    seq.measure()
+
+    # 1. Truncate at the eom start buffer, see that it is removed
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "'enable_eom_mode()' instruction on channel 'ryd' at"
+            f" t = {eom_mode_start-4} ns was removed by a 'truncate()'"
+        ),
+    ):
+        built_seq = seq.build(t=eom_mode_start - 1)
+    assert not built_seq.is_in_eom_mode("ryd")
+    assert built_seq.get_duration() == 100
+    assert built_seq.is_measured()  # The sequence is still measured
+
+    # 2. Truncate at the EOM pulse
+    built_seq = seq.build(t=eom_mode_start + 101)
+    assert built_seq.is_in_eom_mode("ryd")
+    assert built_seq.get_duration() == eom_mode_start + 100
+
+    # 3. Truncate at the delay
+    built_seq = seq.build(t=eom_mode_start + 219)
+    assert built_seq.is_in_eom_mode("ryd")
+    assert built_seq.get_duration() == eom_mode_start + 216
+
+    # 4. Truncate at the eom end buffer, see that it is removed
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "'disable_eom_mode()' instruction on channel 'ryd' at"
+            f" t = {eom_end_buffer_t - 4} ns was removed by a 'truncate()'"
+        ),
+    ):
+        built_seq = seq.build(t=eom_end_buffer_t - 1)
+    assert built_seq.is_in_eom_mode("ryd")
+    assert built_seq.get_duration() == eom_mode_end
+
+    # 5. Truncate at the very end of eom end buffer, see that it is preserved
+    built_seq = seq.build(t=eom_end_buffer_t)
+    assert not built_seq.is_in_eom_mode("ryd")
+    assert built_seq.get_duration() == eom_end_buffer_t
+
+
+def test_truncate_target(reg, device):
+    seq = Sequence(reg, DigitalAnalogDevice)
+    seq.declare_channel("raman", "raman_local", initial_target="q0")
+    start_target_t = seq.get_duration()
+    seq.target("q1", "raman")
+    end_target_t = seq.get_duration()
+    assert end_target_t > start_target_t  # Check it's not instantaneous
+    t = seq.declare_variable("t", dtype=int)
+    seq.truncate(t)
+
+    # Test conditional block
+    with pytest.raises(
+        RuntimeError, match="The sequence can only be measured"
+    ):
+        seq.delay(100, "raman")
+    # But we can still measure
+    seq.measure(basis="digital")
+
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "'target()' instruction on channel 'raman' at"
+            f" t = {end_target_t - 4} ns was removed by a 'truncate()'"
+        ),
+    ):
+        built_seq = seq.build(t=end_target_t - 1)
+    assert built_seq.get_duration() == start_target_t
+    assert built_seq.is_measured()
