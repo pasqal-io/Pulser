@@ -31,6 +31,7 @@ from pulser.channels.dmm import DMM
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.devices._device_datacls import Device, VirtualDevice
+from pulser.exceptions.sequence import SwitchDeviceError
 from pulser.register.base_register import BaseRegister
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
@@ -665,7 +666,7 @@ def test_switch_register(
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
 def test_switch_device_down(
-    reg, det_map, devices, pulses, mappable_reg, parametrized
+    helpers, reg, det_map, devices, pulses, mappable_reg, parametrized
 ):
     phys_Chadoq2 = dataclasses.replace(
         DigitalAnalogDevice,
@@ -691,6 +692,18 @@ def test_switch_device_down(
         + " returns the sequence unchanged.",
     ):
         seq.switch_device(phys_Chadoq2)
+
+    assert phys_Chadoq2.min_layout_traps == 1
+    # Fails when the register/layout is not valid for the new device
+    with pytest.raises(
+        SwitchDeviceError,
+        match="existing register is incompatible with the new device",
+    ):
+        seq.switch_device(
+            dataclasses.replace(
+                phys_Chadoq2, min_layout_traps=reg.layout.number_of_traps + 1
+            )
+        )
 
     # From sequence reusing channels to Device without reusable channels
     seq = init_seq(
@@ -720,9 +733,9 @@ def test_switch_device_down(
         # Can't find a match for the 2nd raman_local
         seq.switch_device(phys_Chadoq2, strict=True)
 
-    with pytest.raises(
-        ValueError,
-        match="No match for channel raman_1 with the" " same clock_period.",
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError],
+        match="No match for channel raman_1 with the same clock_period.",
     ):
         # Can't find a match for the 2nd rydberg_local
         seq.switch_device(
@@ -818,12 +831,14 @@ def test_switch_device_down(
         "new device that does not modify the samples of the Sequence. "
         "Here is a list of matchings tested and their associated errors: "
         "{(('global', 'rydberg_global'), ('dmm_0', 'dmm_0'), ('dmm_0_1', "
-        "'dmm_1')): ('The detunings on some atoms go below the local bottom "
-        "detuning of the DMM (-10 rad/µs).',), (('global', 'rydberg_global'), "
-        "('dmm_0', 'dmm_1'), ('dmm_0_1', 'dmm_0')): ('The detunings on some "
-        "atoms go below the local bottom detuning of the DMM (-10 rad/µs).',)}"
+        "'dmm_1')): 'The detunings on some atoms go below the local bottom "
+        "detuning of the DMM (-10 rad/µs).', (('global', 'rydberg_global'), "
+        "('dmm_0', 'dmm_1'), ('dmm_0_1', 'dmm_0')): 'The detunings on some "
+        "atoms go below the local bottom detuning of the DMM (-10 rad/µs).'}"
     )
-    with pytest.raises(ValueError, match=re.escape(error_msg)):
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError], match=re.escape(error_msg)
+    ):
         seq.switch_device(
             dataclasses.replace(
                 phys_Chadoq2, dmm_objects=(dmm_down, dmm_down)
@@ -842,7 +857,9 @@ def test_switch_device_down(
         ),
         strict=True,
     )
-    with pytest.raises(ValueError, match=re.escape(error_msg)):
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError], match=re.escape(error_msg)
+    ):
         seq.switch_device(
             dataclasses.replace(
                 phys_Chadoq2, dmm_objects=(dmm_down, dmm_down)
@@ -875,8 +892,8 @@ def test_switch_device_down(
         (seq_ising, "Rydberg level"),
         (seq_xy, "XY interaction coefficient"),
     ]:
-        with pytest.raises(
-            ValueError,
+        with helpers.raises_all(
+            [ValueError, SwitchDeviceError],
             match="Strict device match failed because the devices"
             f" have different {msg}s.",
         ):
@@ -919,8 +936,8 @@ def test_switch_device_down(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    with pytest.raises(
-        ValueError,
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError],
         match="No match for channel ising with the same clock_period.",
     ):
         seq.switch_device(devices[1], True)
@@ -935,14 +952,14 @@ def test_switch_device_down(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    with pytest.raises(
-        ValueError,
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError],
         match="No match for channel digital with the same mod_bandwidth.",
     ):
         seq.switch_device(devices[0], True)
 
-    with pytest.raises(
-        ValueError,
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError],
         match="No match for channel digital"
         + " with the same fixed_retarget_t.",
     ):
@@ -958,8 +975,8 @@ def test_switch_device_down(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    with pytest.raises(
-        ValueError,
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError],
         match="No match for channel digital"
         + " with the same min_retarget_interval.",
     ):
@@ -1120,7 +1137,13 @@ extended_eom_device = dataclasses.replace(
     "extension_arg", ["amp", "control", "2control", "buffer_time"]
 )
 def test_switch_device_eom(
-    reg, device, mappable_reg, parametrized, extension_arg, patch_plt_show
+    helpers,
+    reg,
+    device,
+    mappable_reg,
+    parametrized,
+    extension_arg,
+    patch_plt_show,
 ):
     # Sequence with EOM blocks
     seq = init_seq(
@@ -1259,16 +1282,16 @@ def test_switch_device_eom(
             and device == AnalogDevice
         )
     ):
-        with pytest.raises(
-            ValueError,
+        with helpers.raises_all(
+            [ValueError, SwitchDeviceError],
             match=err_base + "with the same EOM configuration.",
         ):
             seq.switch_device(up_analog, strict=True)
         return
     if device == extended_eom_device:
         if extension_arg in ["control", "2control"]:
-            with pytest.raises(
-                ValueError,
+            with helpers.raises_all(
+                [ValueError, SwitchDeviceError],
                 match="No match for channel rydberg with an EOM configuration",
             ):
                 seq.switch_device(up_analog, strict=True)
@@ -1313,18 +1336,20 @@ def test_switch_device_eom(
         "No matching found between declared channels and channels in "
         "the new device that does not modify the samples of the "
         "Sequence. Here is a list of matchings tested and their "
-        "associated errors: {(('rydberg', 'rydberg_global'),): ('No "
+        "associated errors: {(('rydberg', 'rydberg_global'),): 'No "
         "match for channel rydberg with an EOM configuration that "
         "does not change the samples."
     )
     if parametrized:
-        with pytest.raises(
-            ValueError,
+        with helpers.raises_all(
+            [ValueError, SwitchDeviceError],
             match=err_base + "with the same EOM configuration.",
         ):
             seq.switch_device(mod_analog, strict=True)
         return
-    with pytest.raises(ValueError, match=re.escape(err_msg)):
+    with helpers.raises_all(
+        [ValueError, SwitchDeviceError], match=re.escape(err_msg)
+    ):
         seq.switch_device(mod_analog, strict=True)
     mod_seq = seq.switch_device(mod_analog, strict=False)
     mod_eom_block = (
