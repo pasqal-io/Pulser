@@ -19,9 +19,10 @@ import json
 import typing
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, TypeVar, overload
+from typing import Any, TypeVar, cast, overload
 
 from pulser.backend.observable import Observable
+from pulser.backend.state import State
 from pulser.json.abstract_repr.deserializer import deserialize_complex
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
@@ -83,6 +84,34 @@ class Results:
         if name in self._tagmap:
             return list(self._results[self._tagmap[name]])
         raise AttributeError(f"{name!r} is not in the results.")
+
+    @property
+    def final_bitstrings(self) -> dict[str, int]:
+        """Returns the bitstrings at the end of the sequence, if available."""
+        try:
+            return cast(
+                typing.Dict[str, int], self.get_result("bitstrings", time=1.0)
+            )
+        except ValueError:
+            raise RuntimeError(
+                "The final bitstrings are not available. Please make sure "
+                "'BitStrings()' at relative time t=1.0 is included in the "
+                "observables of your emulator backend's configuration (when"
+                " possible)."
+            )
+
+    @property
+    def final_state(self) -> State:
+        """Returns the state at the end of the sequence, if available."""
+        try:
+            return cast(State, self.get_result("state", time=1.0))
+        except ValueError:
+            raise RuntimeError(
+                "The final state is not available. Please make sure "
+                "'StateResult()' at relative time t=1.0 is included in the "
+                "observables of your emulator backend's configuration (when"
+                " possible)."
+            )
 
     def get_result_tags(self) -> list[str]:
         """Get a list of results tags present in this object."""

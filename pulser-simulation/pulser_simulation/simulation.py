@@ -57,7 +57,8 @@ class QutipEmulator:
             samples have to satisfy its constraints.
         sampling_rate: The fraction of samples that we wish to extract from
             the samples to simulate. Has to be a value between 0.05 and 1.0.
-        config: Configuration to be used for this simulation.
+        config: Configuration to be used for this simulation. *Deprecated
+            since v1.6, please use ``noise_model`` instead.*
         evaluation_times: Choose between:
 
             - "Full": The times are set to be the ones used to define the
@@ -70,6 +71,8 @@ class QutipEmulator:
               those specific times.
 
             - A float to act as a sampling rate for the resulting state.
+        noise_model: The noise model for the simulation. Replaces and should
+            be preferred over 'config'.
     """
 
     def __init__(
@@ -80,6 +83,7 @@ class QutipEmulator:
         sampling_rate: float = 1.0,
         config: Optional[SimConfig] = None,
         evaluation_times: Union[float, str, ArrayLike] = "Full",
+        noise_model: NoiseModel | None = None,
     ) -> None:
         """Instantiates a QutipEmulator object."""
         # Initializing the samples obj
@@ -147,16 +151,30 @@ class QutipEmulator:
             raise ValueError(
                 "`sampling_rate` is too small, less than 4 data points."
             )
-        # Sets the config as well as builds the hamiltonian
-        noise_model: NoiseModel = (
-            config.to_noise_model() if config else SimConfig().to_noise_model()
-        )
+
+        if noise_model is not None and config is not None:
+            raise ValueError(
+                "'noise_model' and 'config' cannot both be provided to "
+                "'QutipEmulator'. Please provide just a 'noise_model'."
+            )
+        if config is not None:
+            with warnings.catch_warnings():
+                warnings.simplefilter("once")
+                warnings.warn(
+                    "Supplying a 'SimConfig' to QutipEmulator has been "
+                    "deprecated. Please instantiate with a 'NoiseModel' "
+                    "instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+            noise_model = config.to_noise_model()
+
         self._hamiltonian = Hamiltonian(
             self.samples_obj,
             self._register.qubits,
             device,
             sampling_rate,
-            noise_model,
+            noise_model or NoiseModel(),
         )
         # Initializing evaluation times
         self._eval_times_array: np.ndarray
@@ -207,6 +225,11 @@ class QutipEmulator:
         return self._hamiltonian.basis
 
     @property
+    def noise_model(self) -> NoiseModel:
+        """The current NoiseModel being used."""
+        return self._hamiltonian.config
+
+    @property
     def config(self) -> SimConfig:
         """The current configuration, as a SimConfig instance."""
         return SimConfig.from_noise_model(self._hamiltonian.config)
@@ -219,9 +242,20 @@ class QutipEmulator:
     def set_config(self, cfg: SimConfig) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
+        Warning:
+            This method has been deprecated since v1.6.
+            Please prefer instantiating a new ``QutipEmulator`` with a custom
+            ``noise_model`` instead.
+
         Args:
             cfg: New configuration.
         """
+        warnings.warn(
+            "Supplying a 'SimConfig' to QutipEmulator has been deprecated."
+            " Please instantiate with a 'NoiseModel' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if not isinstance(cfg, SimConfig):
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
         not_supported = (
@@ -257,6 +291,11 @@ class QutipEmulator:
     def add_config(self, config: SimConfig) -> None:
         """Updates the current configuration with parameters of another one.
 
+        Warning:
+            This method has been deprecated since v1.6.
+            Please prefer instantiating a new ``QutipEmulator`` with a custom
+            ``noise_model`` instead.
+
         Mostly useful when dealing with multiple noise types in different
         configurations and wanting to merge these configurations together.
         Adds simulation parameters to noises that weren't available in the
@@ -266,6 +305,12 @@ class QutipEmulator:
         Args:
             config: SimConfig to retrieve parameters from.
         """
+        warnings.warn(
+            "Supplying a 'SimConfig' to QutipEmulator has been deprecated."
+            " Please instantiate with a 'NoiseModel' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if not isinstance(config, SimConfig):
             raise ValueError(f"Object {config} is not a valid `SimConfig`")
 
@@ -542,10 +587,10 @@ class QutipEmulator:
 
         if (
             # TODO: Check that the relevant dephasing parameter is > 0.
-            "dephasing" in self.config.noise
-            or "relaxation" in self.config.noise
-            or "depolarizing" in self.config.noise
-            or "eff_noise" in self.config.noise
+            "dephasing" in self.noise_model.noise_types
+            or "relaxation" in self.noise_model.noise_types
+            or "depolarizing" in self.noise_model.noise_types
+            or "eff_noise" in self.noise_model.noise_types
         ):
             result = qutip.mesolve(
                 self._hamiltonian._hamiltonian,
@@ -577,8 +622,11 @@ class QutipEmulator:
         ]
 
         meas_errors = (
-            {k: self.config.spam_dict[k] for k in ("epsilon", "epsilon_prime")}
-            if "SPAM" in self.config.noise
+            {
+                "epsilon": self.noise_model.p_false_pos,
+                "epsilon_prime": self.noise_model.p_false_neg,
+            }
+            if "SPAM" in self.noise_model.noise_types
             else None
         )
 
@@ -605,14 +653,22 @@ class QutipEmulator:
             "nsteps", max(1000, self._tot_duration // options["max_step"])
         )
 
-        if "SPAM" in self.config.noise:
-            if self.config.eta > 0 and self.initial_state != qutip.tensor(
-                [
-                    self._hamiltonian.basis[
-                        "u" if self._hamiltonian._interaction == "XY" else "g"
+        if "SPAM" in self.noise_model.noise_types:
+            if (
+                self.noise_model.state_prep_error > 0
+                and self.initial_state
+                != qutip.tensor(
+                    [
+                        self._hamiltonian.basis[
+                            (
+                                "u"
+                                if self._hamiltonian._interaction == "XY"
+                                else "g"
+                            )
+                        ]
+                        for _ in range(self._hamiltonian._size)
                     ]
-                    for _ in range(self._hamiltonian._size)
-                ]
+                )
             ):
                 raise NotImplementedError(
                     "Can't combine state preparation errors with an initial "
@@ -645,9 +701,12 @@ class QutipEmulator:
         self._validate_options(options)
 
         if (
-            "amplitude" not in self.config.noise
-            or self.config.amp_sigma == 0.0
-        ) and ("SPAM" not in self.config.noise or self.config.eta == 0):
+            "amplitude" not in self.noise_model.noise_types
+            or self.noise_model.amp_sigma == 0.0
+        ) and (
+            "SPAM" not in self.noise_model.noise_types
+            or self.noise_model.state_prep_error == 0
+        ):
             # A single run is needed, regardless of self.config.runs
             return self._run_solver(progress_bar, **options)
 
@@ -660,13 +719,17 @@ class QutipEmulator:
             total_count += np.array(
                 [
                     cleanres_noisyseq.sample_state(
-                        t, n_samples=self.config.samples_per_run * reps
+                        t,
+                        n_samples=cast(int, self.noise_model.samples_per_run)
+                        * reps,
                     )
                     for t in self._eval_times_array
                 ]
             )
 
-        n_measures = self.config.runs * self.config.samples_per_run
+        n_measures = cast(int, self.noise_model.runs) * cast(
+            int, self.noise_model.samples_per_run
+        )
         results = [
             SampledResult(
                 tuple(self._hamiltonian._qdict),
@@ -687,17 +750,18 @@ class QutipEmulator:
     def _noisy_runs(
         self, progress_bar: bool, **options: Any
     ) -> Iterator[tuple[SimulationResults, int]]:
-        if "doppler" in self.config.noise or (
-            "amplitude" in self.config.noise and self.config.amp_sigma != 0.0
+        if "doppler" in self.noise_model.noise_types or (
+            "amplitude" in self.noise_model.noise_types
+            and self.noise_model.amp_sigma != 0.0
         ):
-            loop_runs = self.config.runs
+            loop_runs = cast(int, self.noise_model.runs)
             update_ham = True
         else:
             # Only state preparation noise for monte-carlo:
             # a single run is needed
             # for all identical sets of random dark qubits.
 
-            assert self.config.eta != 0
+            assert self.noise_model.state_prep_error != 0
 
             initial_configs = Counter(
                 "".join(
@@ -705,12 +769,12 @@ class QutipEmulator:
                         np.random.uniform(
                             size=len(self._hamiltonian._qid_index)
                         )
-                        < self.config.eta
+                        < self.noise_model.state_prep_error
                     )
                     .astype(int)
                     .astype(str)  # Turns bool->int->str
                 )
-                for _ in range(self.config.runs)
+                for _ in range(cast(int, self.noise_model.runs))
             ).most_common()
             loop_runs = len(initial_configs)
             update_ham = False
@@ -778,6 +842,7 @@ class QutipEmulator:
         config: Optional[SimConfig] = None,
         evaluation_times: Union[float, str, ArrayLike] = "Full",
         with_modulation: bool = False,
+        noise_model: NoiseModel | None = None,
     ) -> QutipEmulator:
         r"""Simulation of a pulse sequence using QuTiP.
 
@@ -787,7 +852,8 @@ class QutipEmulator:
             sampling_rate: The fraction of samples that we wish to
                 extract from the pulse sequence to simulate. Has to be a
                 value between 0.05 and 1.0.
-            config: Configuration to be used for this simulation.
+            config: Configuration to be used for this simulation. *Deprecated
+                since v1.6, use 'noise_model' instead.*
             evaluation_times: Choose between:
 
                 - "Full": The times are set to be the ones used to define the
@@ -802,6 +868,8 @@ class QutipEmulator:
                 - A float to act as a sampling rate for the resulting state.
             with_modulation: Whether to simulate the sequence with the
                 programmed input or the expected output.
+            noise_model: The noise model for the simulation. Replaces and
+                should be preferred over 'config'.
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
@@ -840,4 +908,5 @@ class QutipEmulator:
             sampling_rate,
             config,
             evaluation_times,
+            noise_model=noise_model,
         )
