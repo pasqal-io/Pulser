@@ -20,6 +20,7 @@ from collections.abc import Collection, Sequence
 from dataclasses import asdict, dataclass, fields
 from typing import Any, Literal, Union, cast, get_args
 
+import numbers
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -147,11 +148,13 @@ class NoiseModel:
         samples_per_run: Number of samples per noisy Hamiltonian. Useful
             for cutting down on computing time, but unrealistic. *Deprecated
             since v1.6, use only `runs`.*
-        state_prep_error: The state preparation error probability.
-        p_false_pos: Probability of measuring a false positive.
-        p_false_neg: Probability of measuring a false negative.
+        state_prep_error: The state preparation error probability. Defaults
+            to 0.
+        p_false_pos: Probability of measuring a false positive. Defaults to 0.
+        p_false_neg: Probability of measuring a false negative. Defaults to 0.
         temperature: Temperature, set in µK, of the atoms in the array.
             Also sets the standard deviation of the speed of the atoms.
+            Defaults to 0.
         laser_waist: Waist of the gaussian lasers, set in µm, for global
             pulses. Assumed to be the same for all global channels.
         amp_sigma: Dictates the fluctuation in amplitude of a channel from
@@ -162,20 +165,21 @@ class NoiseModel:
             of a channel from run to run as a standard deviation of a normal
             distribution centered in 0. Assumed to be the same for all
             channels (though each channel has its own randomly sampled
-            value in each run). This noise is additive.
+            value in each run). This noise is additive. Defaults to 0.
         relaxation_rate: The rate of relaxation from the Rydberg to the
-            ground state (in 1/µs). Corresponds to 1/T1.
+            ground state (in 1/µs). Corresponds to 1/T1. Defaults to 0.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
             Rydberg state superpostion. Only used if a Rydberg state is
-            involved. Corresponds to 1/T2*.
+            involved. Corresponds to 1/T2*. Defaults to 0.
         hyperfine_dephasing_rate: The rate of dephasing occuring (in 1/µs)
             between hyperfine ground states. Only used if the hyperfine
-            state is involved.
+            state is involved. Defaults to 0.
         depolarizing_rate: The rate (in 1/µs) at which a depolarizing
-            error occurs.
+            error occurs. Defaults to 0.
         eff_noise_rates: The rate associated to each effective noise operator
-            (in 1/µs).
+            (in 1/µs). Defaults to 0.
         eff_noise_opers: The operators for the effective noise model.
+            Defaults to 0.
         with_leakage: Whether or not to include an error state in the
             computations (default to False).
     """
@@ -201,18 +205,18 @@ class NoiseModel:
     def __init__(
         self,
         runs: int | None = None,
-        samples_per_run: int | None = None,
-        state_prep_error: float | None = None,
-        p_false_pos: float | None = None,
-        p_false_neg: float | None = None,
-        temperature: float | None = None,
+        samples_per_run: int = 1,
+        state_prep_error: float = 0.0,
+        p_false_pos: float = 0.0,
+        p_false_neg: float = 0.0,
+        temperature: float = 0.0,
         laser_waist: float | None = None,
-        amp_sigma: float | None = None,
-        detuning_sigma: float | None = None,
-        relaxation_rate: float | None = None,
-        dephasing_rate: float | None = None,
-        hyperfine_dephasing_rate: float | None = None,
-        depolarizing_rate: float | None = None,
+        amp_sigma: float = 0.0,
+        detuning_sigma: float = 0.0,
+        relaxation_rate: float = 0.0,
+        dephasing_rate: float = 0.0,
+        hyperfine_dephasing_rate: float = 0.0,
+        depolarizing_rate: float = 0.0,
         eff_noise_rates: tuple[float, ...] = (),
         eff_noise_opers: tuple[ArrayLike, ...] = (),
         with_leakage: bool = False,
@@ -257,9 +261,12 @@ class NoiseModel:
 
         # Get rid of unnecessary None's
         for p_, val in param_vals.items():
-            param_vals[p_] = (
-                self._get_default_value(p_) if val is None else val
-            )
+            if p_ in _PROBABILITY_LIKE | _POSITIVE and not isinstance(
+                val, (int, float)
+            ):
+                raise TypeError(
+                    f"Value for {p_} should be positive, {'between 0 and 1, ' if p_ in _PROBABILITY_LIKE else ''}not {val}."
+                )
 
         relevant_params = self._find_relevant_params(
             true_noise_types,
@@ -283,19 +290,15 @@ class NoiseModel:
         ]
         for param_, val_ in param_vals.items():
             object.__setattr__(self, param_, val_)
-            if val_ and param_ not in relevant_params:
+            if param_ not in relevant_params and (
+                val_ if param_ != "samples_per_run" else val_ != 1
+            ):
                 warnings.warn(
                     f"{param_!r} is not used by any active noise type "
                     f"in {self.noise_types} when the only defined parameters "
                     f"are {non_zero_relevant_params}.",
                     stacklevel=2,
                 )
-
-    @staticmethod
-    def _get_default_value(arg: str) -> float | None:
-        if arg in _POSITIVE | _PROBABILITY_LIKE:
-            return 0.0
-        return None
 
     @staticmethod
     def _find_relevant_params(
@@ -424,16 +427,14 @@ class NoiseModel:
             if not is_valid:
                 raise ValueError(f"'{param}' must be {comp}, not {value}.")
             if param == "samples_per_run" and value != 1:
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("always")
-                    warnings.warn(
-                        "Setting samples_per_run different to 1 is "
-                        "deprecated since pulser v1.6. Please use only "
-                        "`runs` to define the number of noisy simulations "
-                        "to perform.",
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
+                warnings.warn(
+                    "Setting samples_per_run different to 1 is "
+                    "deprecated since pulser v1.6. Please use only "
+                    "`runs` to define the number of noisy simulations "
+                    "to perform.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         all_fields = asdict(self)
@@ -442,7 +443,9 @@ class NoiseModel:
         eff_noise_opers = all_fields.pop("eff_noise_opers")
         all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
         for p in OPTIONAL_IN_ABSTR_REPR:
-            if all_fields[p] == self._get_default_value(p):
+            if (
+                p in _POSITIVE | _PROBABILITY_LIKE and all_fields[p] == 0
+            ) or all_fields[p] is None:
                 all_fields.pop(p, None)
         return all_fields
 
