@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import warnings
 from collections.abc import Collection, Sequence
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, fields, field
 from typing import Any, Literal, Union, cast, get_args
 
 import numpy as np
@@ -101,7 +101,7 @@ _LEGACY_DEFAULTS = {
 OPTIONAL_IN_ABSTR_REPR = ("detuning_sigma",)
 
 
-@dataclass(init=False, repr=False, frozen=True)
+@dataclass(init=True, repr=False, frozen=True)
 class NoiseModel:
     """Specifies the noise model parameters for emulation.
 
@@ -183,43 +183,25 @@ class NoiseModel:
             computations (default to False).
     """
 
-    noise_types: tuple[NoiseTypes, ...]
-    runs: int | None
-    samples_per_run: int | None
-    state_prep_error: float
-    p_false_pos: float
-    p_false_neg: float
-    temperature: float
-    laser_waist: float | None
-    amp_sigma: float
-    detuning_sigma: float
-    relaxation_rate: float
-    dephasing_rate: float
-    hyperfine_dephasing_rate: float
-    depolarizing_rate: float
-    eff_noise_rates: tuple[float, ...]
-    eff_noise_opers: tuple[ArrayLike, ...]
-    with_leakage: bool
+    noise_types: tuple[NoiseTypes, ...] = field(init=False)
+    runs: int | None = None
+    samples_per_run: int = 1
+    state_prep_error: float = 0.0
+    p_false_pos: float = 0.0
+    p_false_neg: float = 0.0
+    temperature: float = 0.0
+    laser_waist: float | None = None
+    amp_sigma: float = 0.0
+    detuning_sigma: float = 0.0
+    relaxation_rate: float = 0.0
+    dephasing_rate: float = 0.0
+    hyperfine_dephasing_rate: float = 0.0
+    depolarizing_rate: float = 0.0
+    eff_noise_rates: tuple[float, ...] = ()
+    eff_noise_opers: tuple[ArrayLike, ...] = ()
+    with_leakage: bool = False
 
-    def __init__(
-        self,
-        runs: int | None = None,
-        samples_per_run: int = 1,
-        state_prep_error: float = 0.0,
-        p_false_pos: float = 0.0,
-        p_false_neg: float = 0.0,
-        temperature: float = 0.0,
-        laser_waist: float | None = None,
-        amp_sigma: float = 0.0,
-        detuning_sigma: float = 0.0,
-        relaxation_rate: float = 0.0,
-        dephasing_rate: float = 0.0,
-        hyperfine_dephasing_rate: float = 0.0,
-        depolarizing_rate: float = 0.0,
-        eff_noise_rates: tuple[float, ...] = (),
-        eff_noise_opers: tuple[ArrayLike, ...] = (),
-        with_leakage: bool = False,
-    ) -> None:
+    def __post_init__(self) -> None:
         """Initializes a noise model."""
 
         def to_tuple(obj: tuple) -> tuple:
@@ -227,24 +209,23 @@ class NoiseModel:
                 obj = tuple(to_tuple(el) for el in obj)
             return obj
 
-        param_vals = dict(
-            runs=runs,
-            samples_per_run=samples_per_run,
-            state_prep_error=state_prep_error,
-            p_false_neg=p_false_neg,
-            p_false_pos=p_false_pos,
-            temperature=temperature,
-            laser_waist=laser_waist,
-            amp_sigma=amp_sigma,
-            detuning_sigma=detuning_sigma,
-            relaxation_rate=relaxation_rate,
-            dephasing_rate=dephasing_rate,
-            hyperfine_dephasing_rate=hyperfine_dephasing_rate,
-            depolarizing_rate=depolarizing_rate,
-            eff_noise_rates=to_tuple(eff_noise_rates),
-            eff_noise_opers=to_tuple(eff_noise_opers),
-            with_leakage=with_leakage,
-        )
+        param_vals = {
+            field.name: getattr(self, field.name)
+            for field in fields(self)
+            if field.init
+        }
+        param_vals["eff_noise_rates"] = to_tuple(self.eff_noise_rates)
+        param_vals["eff_noise_opers"] = to_tuple(self.eff_noise_opers)
+
+        # Checking the type of provided positive and probability parameters
+        for p_, val in param_vals.items():
+            if p_ in _PROBABILITY_LIKE | _POSITIVE and not isinstance(
+                val, (int, float)
+            ):
+                raise TypeError(
+                    f"Type for {p_} should be a float or int, not {type(val)}"
+                )
+
         true_noise_types: set[NoiseTypes] = {
             _PARAM_TO_NOISE_TYPE[p_]
             for p_ in param_vals
@@ -257,17 +238,6 @@ class NoiseModel:
             "eff_noise" in true_noise_types,
             with_leakage=cast(bool, param_vals["with_leakage"]),
         )
-
-        # Get rid of unnecessary None's
-        for p_, val in param_vals.items():
-            if p_ in _PROBABILITY_LIKE | _POSITIVE and not isinstance(
-                val, (int, float)
-            ):
-                raise TypeError(
-                    f"Value for {p_} should be positive, "
-                    f"{'between 0 and 1, ' if p_ in _PROBABILITY_LIKE else ''}"
-                    f"not {val}."
-                )
 
         relevant_params = self._find_relevant_params(
             true_noise_types,

@@ -135,7 +135,8 @@ class TestNoiseModel:
             kwargs.update(dict(runs=1, samples_per_run=1))
         if value is None:
             with pytest.raises(
-                TypeError, match=f"Value for {param} should be positive"
+                TypeError,
+                match=f"Type for {param} should be a float or int, not",
             ):
                 NoiseModel(**kwargs)
         elif value < 0:
