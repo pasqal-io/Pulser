@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import warnings
 from collections.abc import Collection, Sequence
-from dataclasses import asdict, dataclass, fields, field
+from dataclasses import asdict, dataclass, field, fields
 from typing import Any, Literal, Union, cast, get_args
 
 import numpy as np
