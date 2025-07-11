@@ -14,6 +14,7 @@
 """Defines the QutipBackend class."""
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 import numpy as np
@@ -22,7 +23,7 @@ import qutip
 import pulser
 from pulser.backend.abc import Backend, EmulatorBackend
 from pulser.backend.config import EmulationConfig, EmulatorConfig
-from pulser.backend.default_observables import StateResult
+from pulser.backend.default_observables import BitStrings, StateResult
 from pulser.backend.results import Results
 from pulser.noise_model import NoiseModel
 from pulser_simulation.qutip_config import QutipConfig
@@ -36,7 +37,7 @@ class QutipBackend(Backend):
     """A backend for emulating the sequences using qutip.
 
     Warning:
-        Soon to be deprecated, please use ``QutipBackendV2``.
+        Deprecated in v1.6, please use ``pulser_simulation.QutipBackendV2``.
 
     Args:
         sequence: The sequence to emulate.
@@ -52,6 +53,14 @@ class QutipBackend(Backend):
         mimic_qpu: bool = False,
     ):
         """Initializes a new QutipBackend."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("once")
+            warnings.warn(
+                "'QutipBackend' is deprecated. Please use "
+                "'pulser_simulation.QutipBackendV2' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         super().__init__(sequence, mimic_qpu=mimic_qpu)
         if not isinstance(config, EmulatorConfig):
             raise TypeError(
@@ -109,7 +118,9 @@ class QutipBackendV2(EmulatorBackend):
             execution on a QPU.
     """
 
-    default_config = QutipConfig(observables=[StateResult()])
+    default_config = QutipConfig(
+        observables=[BitStrings(evaluation_times=[1.0]), StateResult()]
+    )
     _config: QutipConfig
 
     def __init__(

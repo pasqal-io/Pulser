@@ -20,11 +20,12 @@ instances defined within it should be importable via this module, like so::
     import pulser.backends as backends
 
     backends.QPUBackend  # Same as pulser.QPUBackend
-    backends.QutipBackend  # Same as pulser_simulation.QutipBackend
+    backends.QutipBackendV2  # Same as pulser_simulation.QutipBackendV2
 
 Attributes:
     QPUBackend: See :py:class:`pulser.backend.QPUBackend`.
     QutipBackend: See :py:class:`pulser_simulation.QutipBackend`.
+    QutipBackendV2: See :py:class:`pulser_simulation.QutipBackendV2`.
     EmuFreeBackend: See :py:class:`pulser_pasqal.EmuFreeBackend`.
     EmuTNBackend: See :py:class:`pulser_pasqal.EmuTNBackend`.
 
@@ -37,7 +38,7 @@ from typing import TYPE_CHECKING, Type
 if TYPE_CHECKING:
     from pulser.backend import QPUBackend as QPUBackend
     from pulser.backend.abc import Backend
-    from pulser_simulation import QutipBackend as QutipBackend
+    from pulser_simulation import QutipBackendV2 as QutipBackendV2
 
 _BACKENDS = {
     "QPUBackend": "pulser.backend",
