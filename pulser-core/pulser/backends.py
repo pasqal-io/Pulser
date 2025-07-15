@@ -51,10 +51,7 @@ if TYPE_CHECKING:
     from pulser.backend import QPUBackend as QPUBackend
     from pulser.backend.abc import Backend
     from pulser_simulation import QutipBackendV2 as QutipBackendV2
-    from pulser_pasqal import EmuFreeBackend  # type: ignore[import]
-    from pulser_pasqal import EmuMPSBackend  # type: ignore[import]
-    from emu_mps import MPSBackend           # type: ignore[import]
-    from emu_sv import SVBackend             # type: ignore[import]
+    
 
 
 _BACKENDS = {
