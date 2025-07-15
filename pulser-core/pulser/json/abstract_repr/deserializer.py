@@ -333,6 +333,8 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
             detuning_map=_deserialize_det_map(op["detuning_map"]),
             dmm_id=op["dmm_id"],
         )
+    elif op["op"] == "truncate":
+        seq.truncate(duration=_deserialize_parameter(op["duration"], vars))
 
 
 def _deserialize_channel(obj: dict[str, Any]) -> Channel:
