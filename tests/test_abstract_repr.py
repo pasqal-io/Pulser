@@ -682,6 +682,7 @@ class TestSerialization:
 
         seq.delay(100, "digital")
         seq.add(pm_pulse, "digital")
+        seq.truncate(duration * 10)
         seq.measure("digital")
         return seq
 
@@ -731,7 +732,7 @@ class TestSerialization:
             "amps": {"type": "float", "value": [np.pi, 2 * np.pi]},
             "duration": {"type": "int", "value": [200]},
         }
-        assert len(abstract["operations"]) == 12
+        assert len(abstract["operations"]) == 13
         assert abstract["operations"][0] == {
             "op": "target",
             "channel": "digital",
@@ -831,6 +832,19 @@ class TestSerialization:
             },
             "post_phase_shift": 0.0,
             "protocol": "min-delay",
+        }
+
+        assert abstract["operations"][12] == {
+            "op": "truncate",
+            "duration": {
+                "expression": "mul",
+                "lhs": {
+                    "expression": "index",
+                    "lhs": {"variable": "duration"},
+                    "rhs": 0,
+                },
+                "rhs": 10,
+            },
         }
 
         assert abstract["measurement"] == "digital"
@@ -1815,6 +1829,7 @@ class TestDeserialization:
                     "stop": 5,
                 },
             },
+            {"op": "truncate", "duration": 1000},
         ],
         ids=_get_op,
     )
@@ -1866,6 +1881,9 @@ class TestDeserialization:
             assert pulse.post_phase_shift == op["post_phase_shift"]
             assert isinstance(pulse.amplitude, Waveform)
             assert isinstance(pulse.detuning, Waveform)
+        elif op["op"] == "truncate":
+            assert c.name == "truncate"
+            assert c.kwargs["duration"] == op["duration"]
         else:
             assert False, f"operation type \"{op['op']}\" is not valid"
 
@@ -2065,6 +2083,7 @@ class TestDeserialization:
                     "stop": 0,
                 },
             },
+            {"op": "truncate", "duration": var2},
         ],
         ids=_get_op,
     )
@@ -2136,6 +2155,9 @@ class TestDeserialization:
             assert issubclass(pulse.kwargs["amplitude"].cls, Waveform)
             assert isinstance(pulse.kwargs[time_domain_mod], ParamObj)
             assert issubclass(pulse.kwargs[time_domain_mod].cls, Waveform)
+        elif op["op"] == "truncate":
+            assert c.name == "truncate"
+            assert isinstance(c.kwargs["duration"], VariableItem)
         else:
             assert False, f"operation type \"{op['op']}\" is not valid"
 
