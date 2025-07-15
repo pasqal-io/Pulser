@@ -889,6 +889,24 @@
       ],
       "type": "object"
     },
+    "OpTruncate": {
+      "additionalProperties": false,
+      "properties": {
+        "duration": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The duration (in ns) to truncate to."
+        },
+        "op": {
+          "const": "truncate",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "duration"
+      ],
+      "type": "object"
+    },
     "Operation": {
       "anyOf": [
         {
@@ -929,6 +947,9 @@
         },
         {
           "$ref": "#/definitions/OpAddDmmDet"
+        },
+        {
+          "$ref": "#/definitions/OpTruncate"
         }
       ],
       "description": "Sequence operation. All operations are performed in specified order."
