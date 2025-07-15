@@ -36,9 +36,23 @@ import importlib
 from typing import TYPE_CHECKING, Type
 
 if TYPE_CHECKING:
+    from emu_mps import (
+        MPSBackend as MPSBackend,  # type: ignore[import]
+    )
+    from emu_sv import (
+        SVBackend as SVBackend,  # type: ignore[import]
+    )
+    from pulser_pasqal import (
+        EmuFreeBackend as EmuFreeBackend,  # type: ignore[import]
+    )
+    from pulser_pasqal import (
+        EmuMPSBackend as EmuMPSBackend,  # type: ignore[import]
+    )
     from pulser.backend import QPUBackend as QPUBackend
     from pulser.backend.abc import Backend
     from pulser_simulation import QutipBackendV2 as QutipBackendV2
+    
+
 
 _BACKENDS = {
     "QPUBackend": "pulser.backend",
@@ -46,6 +60,9 @@ _BACKENDS = {
     "QutipBackendV2": "pulser_simulation",
     "EmuFreeBackend": "pulser_pasqal",
     "EmuTNBackend": "pulser_pasqal",
+    "EmuMPSBackend": "pulser_pasqal",
+    "MPSBackend": "emu_mps",
+    "SVBackend": "emu_sv",
 }
 
 
