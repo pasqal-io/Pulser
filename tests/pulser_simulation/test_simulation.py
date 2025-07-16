@@ -744,11 +744,6 @@ def test_config(matrices):
     )
 
 
-@pytest.mark.skipif(
-    np.lib.NumpyVersion(np.__version__) >= "2.0.0",
-    reason="Random number generation doesn't produce the same results in numpy"
-    " >v2",
-)
 def test_noise(seq, matrices):
     np.random.seed(3)
     sim2 = QutipEmulator.from_sequence(
@@ -1234,11 +1229,6 @@ res3 = {"0000": 907, "0100": 24, "1000": 20, "0010": 8, "0001": 41}
 res4 = {"0000": 907, "0100": 24, "1000": 20, "0010": 8, "0001": 41}
 
 
-@pytest.mark.skipif(
-    np.lib.NumpyVersion(np.__version__) >= "2.0.0",
-    reason="Random number generation doesn't produce the same results in numpy"
-    " >v2",
-)
 @pytest.mark.parametrize(
     "masked_qubit, noise, result, n_collapse_ops",
     [
