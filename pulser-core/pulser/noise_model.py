@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import warnings
 from collections.abc import Collection, Sequence
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import dataclass, field, fields
 from typing import Any, Literal, Union, cast, get_args
 
 import numpy as np
@@ -219,12 +219,14 @@ class NoiseModel:
 
         # Checking the type of provided positive and probability parameters
         for p_, val in param_vals.items():
-            if p_ in _PROBABILITY_LIKE | _POSITIVE and not isinstance(
-                val, (int, float)
-            ):
-                raise TypeError(
-                    f"Type for {p_} should be a float or int, not {type(val)}"
-                )
+            if p_ in _PROBABILITY_LIKE | _POSITIVE:
+                try:
+                    param_vals[p_] = float(val)
+                except Exception:
+                    raise TypeError(
+                        f"Type for {p_} should be castable to float, not"
+                        f" {type(val)}."
+                    )
 
         true_noise_types: set[NoiseTypes] = {
             _PARAM_TO_NOISE_TYPE[p_]
@@ -408,16 +410,16 @@ class NoiseModel:
                 )
 
     def _to_abstract_repr(self) -> dict[str, Any]:
-        all_fields = asdict(self)
+        all_fields = {}
+        for f in fields(self):
+            value = getattr(self, f.name)
+            if f.name in OPTIONAL_IN_ABSTR_REPR and f.default == value:
+                continue
+            all_fields[f.name] = value
         all_fields.pop("with_leakage")
         eff_noise_rates = all_fields.pop("eff_noise_rates")
         eff_noise_opers = all_fields.pop("eff_noise_opers")
         all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
-        for p in OPTIONAL_IN_ABSTR_REPR:
-            if (
-                p in _POSITIVE | _PROBABILITY_LIKE and all_fields[p] == 0
-            ) or all_fields[p] is None:
-                all_fields.pop(p, None)
         return all_fields
 
     def __repr__(self) -> str:
