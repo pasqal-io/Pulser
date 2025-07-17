@@ -24,9 +24,9 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.json.abstract_repr as pulser_abstract_repr
-from pulser.json.utils import get_dataclass_defaults
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
+from pulser.json.utils import get_dataclass_defaults
 
 __all__ = ["NoiseModel"]
 
