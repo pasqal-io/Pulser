@@ -24,6 +24,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.json.abstract_repr as pulser_abstract_repr
+from pulser.json.utils import get_dataclass_defaults
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 
@@ -222,9 +223,9 @@ class NoiseModel:
             if p_ in _PROBABILITY_LIKE | _POSITIVE:
                 try:
                     param_vals[p_] = float(val)
-                except Exception:
+                except (TypeError, ValueError):
                     raise TypeError(
-                        f"Type for {p_} should be castable to float, not"
+                        f"{p_} should be castable to float, not of type"
                         f" {type(val)}."
                     )
 
@@ -413,7 +414,10 @@ class NoiseModel:
         all_fields = {}
         for f in fields(self):
             value = getattr(self, f.name)
-            if f.name in OPTIONAL_IN_ABSTR_REPR and f.default == value:
+            if (
+                f.name in OPTIONAL_IN_ABSTR_REPR
+                and get_dataclass_defaults((f,))[f.name] == value
+            ):
                 continue
             all_fields[f.name] = value
         all_fields.pop("with_leakage")

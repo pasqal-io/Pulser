@@ -136,7 +136,7 @@ class TestNoiseModel:
         if value is None:
             with pytest.raises(
                 TypeError,
-                match=f"Type for {param} should be castable to float, not",
+                match=f"{param} should be castable to float, not",
             ):
                 NoiseModel(**kwargs)
         elif value < 0:
