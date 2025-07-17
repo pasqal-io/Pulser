@@ -788,7 +788,9 @@ class QutipEmulator:
                 self._hamiltonian._bad_atoms = dict(
                     zip(
                         self._hamiltonian._qid_index,
-                        np.array(list(initial_state)).astype(bool),
+                        # "0110..." -> array([0, 1, 1, 0, ...])
+                        # -> array([False, True, True, False, ...])
+                        np.array(list(initial_state), dtype=int).astype(bool),
                     )
                 )
             # At each run, new random noise: new Hamiltonian
