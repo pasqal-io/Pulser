@@ -401,6 +401,9 @@ def serialize_abstract_sequence(
         elif call.name == "add_dmm_detuning":
             data = get_all_args(("waveform", "dmm_name", "protocol"), call)
             operations.append({"op": "add_dmm_detuning", **data})
+        elif call.name == "truncate":
+            data = get_all_args(("duration",), call)
+            operations.append({"op": "truncate", **data})
         else:
             raise AbstractReprError(f"Unknown call '{call.name}'.")
 

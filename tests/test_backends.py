@@ -40,7 +40,9 @@ def test_missing_backend():
         pulser.backends.SpecialBackend
 
 
-@pytest.mark.parametrize("backend_name", ["QPUBackend", "QutipBackend"])
+@pytest.mark.parametrize(
+    "backend_name", ["QPUBackend", "QutipBackend", "QutipBackendV2"]
+)
 def test_succesful_imports(backend_name):
     backend = getattr(pulser.backends, backend_name)
     assert issubclass(backend, Backend)
