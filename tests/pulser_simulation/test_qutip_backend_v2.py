@@ -190,9 +190,12 @@ def test_qutip_backend_v2_stochastic_noise():
     results = backend.run()
 
     # Same run with old API
-    qutip_emulator = QutipEmulator.from_sequence(
-        seq, noise_model=get_noise_model(samples_per_run=100)
-    )
+    with pytest.warns(
+        DeprecationWarning, match="Setting samples_per_run different to 1 is"
+    ):
+        qutip_emulator = QutipEmulator.from_sequence(
+            seq, noise_model=get_noise_model(samples_per_run=100)
+        )
     results_old_api = qutip_emulator.run()
 
     times = results.get_result_times("occupation")

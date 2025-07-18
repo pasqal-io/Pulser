@@ -35,6 +35,7 @@ def matrices():
     return pauli
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_init():
     with pytest.deprecated_call(match="'SimConfig' has been deprecated"):
         config = SimConfig(
@@ -89,6 +90,7 @@ def test_init():
         SimConfig(noise=("bad_noise",))
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_eff_noise_opers(matrices):
     # Some of these checks are repeated in the NoiseModel UTs
     with pytest.raises(ValueError, match="The operators list length"):

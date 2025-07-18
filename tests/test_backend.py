@@ -753,10 +753,10 @@ class TestObservables:
         obs = StateResult()
         assert obs.apply(state=ghz_state) == ghz_state
 
-    @pytest.mark.parametrize("p_false_pos", [None, 0.4])
-    @pytest.mark.parametrize("p_false_neg", [None, 0.3])
-    @pytest.mark.parametrize("one_state", [None, "g"])
-    @pytest.mark.parametrize("num_shots", [None, 100])
+    @pytest.mark.parametrize("p_false_pos", [0, 0.4])
+    @pytest.mark.parametrize("p_false_neg", [0, 0.3])
+    @pytest.mark.parametrize("one_state", [0, "g"])
+    @pytest.mark.parametrize("num_shots", [0, 100])
     def test_bitstrings(
         self,
         config: EmulationConfig,
