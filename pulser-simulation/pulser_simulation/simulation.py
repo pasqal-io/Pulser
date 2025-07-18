@@ -720,15 +720,14 @@ class QutipEmulator:
                 [
                     cleanres_noisyseq.sample_state(
                         t,
-                        n_samples=cast(int, self.noise_model.samples_per_run)
-                        * reps,
+                        n_samples=self.noise_model.samples_per_run * reps,
                     )
                     for t in self._eval_times_array
                 ]
             )
 
-        n_measures = cast(int, self.noise_model.runs) * cast(
-            int, self.noise_model.samples_per_run
+        n_measures = (
+            cast(int, self.noise_model.runs) * self.noise_model.samples_per_run
         )
         results = [
             SampledResult(

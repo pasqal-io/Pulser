@@ -62,19 +62,22 @@ def sim(seq_no_meas):
 @pytest.fixture
 def results_noisy(seq_no_meas):
     np.random.seed(123)
-    sim = QutipEmulator.from_sequence(
-        seq_no_meas,
-        noise_model=NoiseModel(
-            runs=15,
-            samples_per_run=5,
-            temperature=50.0,
-            state_prep_error=0.005,
-            p_false_pos=0.01,
-            p_false_neg=0.05,
-            amp_sigma=1e-3,
-            laser_waist=175.0,
-        ),
-    )
+    with pytest.warns(
+        DeprecationWarning, match="Setting samples_per_run different to 1 is"
+    ):
+        sim = QutipEmulator.from_sequence(
+            seq_no_meas,
+            noise_model=NoiseModel(
+                runs=15,
+                samples_per_run=5,
+                temperature=50.0,
+                state_prep_error=0.005,
+                p_false_pos=0.01,
+                p_false_neg=0.05,
+                amp_sigma=1e-3,
+                laser_waist=175.0,
+            ),
+        )
     return sim.run()
 
 
@@ -220,6 +223,7 @@ def test_get_final_state(
     )
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_get_final_state_noisy(reg, pi_pulse):
     np.random.seed(123)
     seq_ = Sequence(reg, DigitalAnalogDevice)
@@ -328,6 +332,7 @@ def test_expect_noisy(results_noisy):
     assert np.isclose(results_noisy.expect([op])[0][-1], 0.72)
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_plot(results_noisy, results):
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
     results_noisy.plot(op)
@@ -368,6 +373,7 @@ def test_sample_final_state_three_level(seq_no_meas, pi_pulse):
     assert len(sampling_three_levelB) == 4
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_sample_final_state_noisy(seq_no_meas, results_noisy):
     np.random.seed(123)
     assert results_noisy.sample_final_state(N_samples=1234) == Counter(

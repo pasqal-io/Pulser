@@ -726,6 +726,7 @@ def test_eval_times(seq):
 @pytest.mark.filterwarnings(
     "ignore:'SimConfig' has been deprecated:DeprecationWarning"
 )
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_config(matrices):
     np.random.seed(123)
     reg = Register.from_coordinates([(0, 0), (0, 5)], prefix="q")
@@ -788,6 +789,7 @@ def test_config(matrices):
     )
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_noise(seq, matrices):
     np.random.seed(3)
     sim2 = QutipEmulator.from_sequence(
@@ -823,18 +825,18 @@ def test_noise(seq, matrices):
 @pytest.mark.filterwarnings(
     "ignore:'SimConfig' has been deprecated:DeprecationWarning"
 )
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_noise_with_zero_epsilons(seq, matrices):
     np.random.seed(3)
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
 
-    with pytest.deprecated_call():
-        sim2 = QutipEmulator.from_sequence(
-            seq,
-            sampling_rate=0.01,
-            config=SimConfig(
-                noise=("SPAM"), eta=0.0, epsilon=0.0, epsilon_prime=0.0
-            ),
-        )
+    sim2 = QutipEmulator.from_sequence(
+        seq,
+        sampling_rate=0.01,
+        config=SimConfig(
+            noise=("SPAM"), eta=0.0, epsilon=0.0, epsilon_prime=0.0
+        ),
+    )
     assert sim2.config.noise == ()
 
     assert sim.run().sample_final_state() == sim2.run().sample_final_state()
@@ -1148,6 +1150,7 @@ def test_noises_all(matrices, noise, result, n_collapse_ops, seq):
 @pytest.mark.filterwarnings(
     "ignore:'SimConfig' has been deprecated:DeprecationWarning"
 )
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_add_config(matrices):
     reg = Register.from_coordinates([(0, 0)], prefix="q")
     seq = Sequence(reg, DigitalAnalogDevice)
@@ -1159,7 +1162,9 @@ def test_add_config(matrices):
         match="Supplying a 'SimConfig' to QutipEmulator"
     ):
         sim = QutipEmulator.from_sequence(
-            seq, sampling_rate=0.01, config=SimConfig(noise="SPAM", eta=0.5)
+            seq,
+            sampling_rate=0.01,
+            config=SimConfig(noise="SPAM", eta=0.5),
         )
     with pytest.raises(ValueError, match="is not a valid"):
         sim.add_config("bad_cfg")
@@ -1219,16 +1224,20 @@ def test_add_config(matrices):
         UserWarning,
         match="Current initial state's dimension does not match new dim",
     ):
-        sim.add_config(
-            SimConfig(
-                noise=("leakage", "eff_noise"),
-                eff_noise_opers=[matrices["Z3"]],
-                eff_noise_rates=[0.1],
+        with pytest.deprecated_call(
+            match="Setting samples_per_run different to 1 is"
+        ):
+            sim.add_config(
+                SimConfig(
+                    noise=("leakage", "eff_noise"),
+                    eff_noise_opers=[matrices["Z3"]],
+                    eff_noise_rates=[0.1],
+                )
             )
-        )
     assert sim._initial_state == qutip.basis(3, 1)
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_concurrent_pulses():
     reg = Register({"q0": (0, 0)})
     seq = Sequence(reg, DigitalAnalogDevice)
@@ -1338,6 +1347,7 @@ res3 = {"0000": 907, "0100": 24, "1000": 20, "0010": 8, "0001": 41}
 res4 = {"0000": 907, "0100": 24, "1000": 20, "0010": 8, "0001": 41}
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 @pytest.mark.parametrize(
     "masked_qubit, noise, result, n_collapse_ops",
     [
@@ -1636,7 +1646,7 @@ def test_effective_size_intersection():
             sampling_rate=0.01,
             noise_model=NoiseModel(
                 runs=15,
-                samples_per_run=5,
+                samples_per_run=1,
                 state_prep_error=0.4,
                 p_false_pos=0.01,
                 p_false_neg=0.05,
@@ -1661,6 +1671,7 @@ def test_effective_size_intersection():
         "raman_global",
     ],
 )
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_effective_size_disjoint(channel_type):
     simple_reg = Register.square(2, prefix="atom")
     amp = 1
