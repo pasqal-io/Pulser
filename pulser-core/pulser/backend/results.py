@@ -16,12 +16,14 @@ from __future__ import annotations
 
 import collections.abc
 import json
+import logging
 import typing
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, TypeVar, cast, overload
+from typing import Any, Callable, TypeVar, cast, overload
 
-from pulser.backend.observable import Observable
+from pulser.backend.aggregators import aggregation_type_definitions
+from pulser.backend.observable import AggregationType, Observable
 from pulser.backend.state import State
 from pulser.json.abstract_repr.deserializer import deserialize_complex
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
@@ -42,15 +44,25 @@ class Results:
     total_duration: int
     _results: dict[uuid.UUID, list[Any]] = field(init=False)
     _times: dict[uuid.UUID, list[float]] = field(init=False)
+    _aggregation_types: dict[uuid.UUID, AggregationType | None] = field(
+        init=False
+    )
     _tagmap: dict[str, uuid.UUID] = field(init=False)
 
     def __post_init__(self) -> None:
         self._results = {}
         self._times = {}
         self._tagmap = {}
+        self._aggregation_types = {}
 
     def _store_raw(
-        self, *, uuid: uuid.UUID, tag: str, time: float, value: Any
+        self,
+        *,
+        uuid: uuid.UUID,
+        tag: str,
+        time: float,
+        value: Any,
+        aggregation_type: AggregationType | None,
     ) -> None:
         _times = self._times.setdefault(uuid, [])
         if time in _times:
@@ -64,6 +76,7 @@ class Results:
         ), "Evaluation times are not sorted."
         _times.append(time)
         self._results.setdefault(uuid, []).append(value)
+        self._aggregation_types[uuid] = aggregation_type
         assert len(_times) == len(self._results[uuid])
 
     def _store(
@@ -77,7 +90,11 @@ class Results:
             value: The value of the observable.
         """
         self._store_raw(
-            uuid=observable.uuid, tag=observable.tag, time=time, value=value
+            uuid=observable.uuid,
+            tag=observable.tag,
+            time=time,
+            value=value,
+            aggregation_type=observable.default_aggregation_type,
         )
 
     def __getattr__(self, name: str) -> list[Any]:
@@ -232,6 +249,82 @@ class Results:
         validate_abstract_repr(repr, "results")
         d = json.loads(repr)
         return cls._from_abstract_repr(d)
+
+    @classmethod
+    def aggregate(
+        cls,
+        results_to_aggregate: typing.Sequence[Results],
+        **aggregation_functions: Callable[[Any], Any],
+    ) -> Results:
+        if len(results_to_aggregate) == 0:
+            raise ValueError("no results to aggregate")
+        result_0 = results_to_aggregate[0]
+        if len(results_to_aggregate) == 1:
+            return result_0
+        stored_callbacks = set(result_0.get_result_tags())
+        if not all(
+            set(results.get_result_tags()) == stored_callbacks
+            for results in results_to_aggregate
+        ):
+            raise ValueError(
+                "You're trying to aggregate incompatible results: "
+                "they do not all contain the same observables"
+            )
+        if not all(
+            results._aggregation_types == result_0._aggregation_types
+            for results in results_to_aggregate
+        ):
+            raise ValueError(
+                "You're trying to aggregate incompatible results: "
+                "they do not all contain the same aggregation functions"
+            )
+        aggregated = Results(
+            atom_order=result_0.atom_order,
+            total_duration=result_0.total_duration,
+        )
+        for tag in stored_callbacks:
+            aggregation_type = aggregation_functions.get(
+                tag,
+                result_0._aggregation_types[result_0._tagmap[tag]],
+            )
+            if aggregation_type is None:
+                logging.warning(f"Skipping aggregation of `{tag}`")
+                continue
+            aggregation_function: Any = (
+                aggregation_type
+                if callable(aggregation_type)
+                else aggregation_type_definitions[aggregation_type]
+            )
+            evaluation_times = results_to_aggregate[0].get_result_times(tag)
+            if not all(
+                results.get_result_times(tag) == evaluation_times
+                for results in results_to_aggregate
+            ):
+                raise ValueError(
+                    "Monte-Carlo results seem to provide from incompatible simulations: "
+                    "the callbacks are not stored at the same times"
+                )
+            uid = uuid.uuid4()
+
+            for t in result_0.get_result_times(tag):
+                aggregation_type = result_0._aggregation_types[
+                    result_0._find_uuid(tag)
+                ]
+                v = aggregation_function(
+                    [
+                        result.get_result(tag, t)
+                        for result in results_to_aggregate
+                    ]
+                )
+                aggregated._store_raw(
+                    uuid=uid,
+                    tag=tag,
+                    time=t,
+                    value=v,
+                    aggregation_type=aggregation_type,
+                )
+
+        return aggregated
 
 
 ResultsType = TypeVar("ResultsType", bound=Results)

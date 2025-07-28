@@ -17,7 +17,8 @@ from __future__ import annotations
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from enum import Enum, auto
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -67,6 +68,15 @@ class Callback(ABC):
             result: The Results object to store the result in.
         """
         pass
+
+
+class AggregationType(Enum):
+    """
+    Defines how to combine multiple values from different simulation results.
+    """
+
+    MEAN = auto()  # statistics.fmean or list/matrix-wise equivalent
+    BAG_UNION = auto()  # Counter.__add__
 
 
 class Observable(Callback):
@@ -204,3 +214,11 @@ class Observable(Callback):
                 f"Instead, got {evaluation_times!r}."
             )
         return eval_times_arr
+
+    @property
+    def default_aggregation_type(self) -> Optional[AggregationType]:
+        """
+        Defines how to combine by default multiple values from different simulation results.
+        None means no default, therefore aggregator function is always user-provided.
+        """
+        return None

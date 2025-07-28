@@ -14,10 +14,12 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 import re
 import typing
 import uuid
 from collections import Counter
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -49,7 +51,7 @@ from pulser.backend.remote import (
     RemoteResultsError,
     _OpenBatchContextManager,
 )
-from pulser.backend.results import Results
+from pulser.backend.results import AggregationType, Results
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
@@ -551,6 +553,163 @@ def test_emulation_config():
     finally:
         # Just to ensure subsequent tests are not affected
         EmulationConfig._enforce_expected_kwargs = False
+
+
+def test_results_aggregation():
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    uid = uuid.uuid4()
+    agg_type = AggregationType.MEAN
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_type=agg_type,
+    )
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.2,
+        value=2.0,
+        aggregation_type=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_type=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.2,
+        value=4.0,
+        aggregation_type=agg_type,
+    )
+    i = 0
+
+    def aggregator(values):
+        nonlocal i
+        i = i + 1
+        return sum(values) / len(values)
+
+    with patch(
+        "pulser.backend.results.aggregation_type_definitions"
+    ) as mock_aggregator:
+        mock_aggregator.__getitem__.return_value = aggregator
+        agg = Results.aggregate([results1, results2])
+        mock_aggregator.__getitem__.assert_called_once_with(agg_type)
+    agg2 = Results.aggregate([results1, results2], dummy_result=aggregator)
+    assert (
+        i == 4
+    )  # twice in agg, twice in agg2, once each for the 2 results added above.
+    for ag in [agg, agg2]:
+        ag_uuid = ag._find_uuid("dummy_result")
+        assert ag_uuid != uid
+        assert ag._aggregation_types[ag_uuid] == agg_type
+        assert ag.dummy_result == [2.0, 3.0]
+
+    assert Results.aggregate([results1]) is results1
+
+
+def test_results_aggregation_errors(caplog):
+    uid = uuid.uuid4()
+    agg_type = AggregationType.MEAN
+
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([])
+    assert str(ex.value) == "no results to aggregate"
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_type=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.2,
+        value=3.0,
+        aggregation_type=agg_type,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "Monte-Carlo results seem to provide from incompatible simulations: "
+        "the callbacks are not stored at the same times"
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_type=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result2",
+        time=0.1,
+        value=3.0,
+        aggregation_type=agg_type,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate incompatible results: "
+        "they do not all contain the same observables"
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_type=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_type=AggregationType.BAG_UNION,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate incompatible results: "
+        "they do not all contain the same aggregation functions"
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_type=None,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_type=None,
+    )
+    logging.captureWarnings(True)
+    Results.aggregate([results1, results2])
+    assert "Skipping aggregation of `dummy_result`" in caplog.text
 
 
 def test_results():

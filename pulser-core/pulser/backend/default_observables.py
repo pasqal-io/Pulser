@@ -20,7 +20,7 @@ from collections import Counter
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Type
 
-from pulser.backend.observable import Observable
+from pulser.backend.observable import AggregationType, Observable
 from pulser.backend.operator import Operator, OperatorType
 from pulser.backend.state import Eigenstate, State, StateType
 from pulser.exceptions.serialization import AbstractReprError
@@ -124,6 +124,8 @@ class BitStrings(Observable):
             p_false_neg=config.noise_model.p_false_neg,
         )
 
+    default_aggregation_type = AggregationType.BAG_UNION
+
 
 class Fidelity(Observable):
     """Stores the fidelity with a pure state at the evaluation times.
@@ -174,6 +176,8 @@ class Fidelity(Observable):
         """Calculates the observable to store in the Results."""
         return self.state.overlap(state)
 
+    default_aggregation_type = AggregationType.MEAN
+
 
 class Expectation(Observable):
     """Stores the expectation of the given operator on the current state.
@@ -219,6 +223,8 @@ class Expectation(Observable):
     def apply(self, *, state: State, **kwargs: Any) -> Any:
         """Calculates the observable to store in the Results."""
         return self.operator.expect(state)
+
+    default_aggregation_type = AggregationType.MEAN
 
 
 class CorrelationMatrix(Observable):
@@ -301,6 +307,8 @@ class CorrelationMatrix(Observable):
             for i in range(state.n_qudits)
         ]
 
+    default_aggregation_type = AggregationType.MEAN
+
 
 class Occupation(Observable):
     """Stores the occupation number of an eigenstate on each qudit.
@@ -357,6 +365,8 @@ class Occupation(Observable):
             for i in range(state.n_qudits)
         ]
 
+    default_aggregation_type = AggregationType.MEAN
+
 
 class Energy(Observable):
     """Stores the energy of the system at the evaluation times.
@@ -382,6 +392,8 @@ class Energy(Observable):
     ) -> Any:
         """Calculates the observable to store in the Results."""
         return hamiltonian.expect(state)
+
+    default_aggregation_type = AggregationType.MEAN
 
 
 class EnergyVariance(Observable):
@@ -451,3 +463,5 @@ class EnergySecondMoment(Observable):
             operations=[(1.0, [])],
         )
         return identity.expect(h_state)
+
+    default_aggregation_type = AggregationType.MEAN
