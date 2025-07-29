@@ -6,6 +6,7 @@ import pytest
 from pytest import mark
 
 from pulser.backend import (
+    AggregationType,
     BitStrings,
     CorrelationMatrix,
     EmulationConfig,
@@ -561,6 +562,13 @@ def test_result_serialization(test_torch: bool):
         str(occ.uuid): [0.4],
     }
 
+    assert dict["aggregation_types"] == {
+        str(bitstrings.uuid): AggregationType.BAG_UNION,
+        str(corr.uuid): AggregationType.MEAN,
+        str(energy.uuid): AggregationType.MEAN,
+        str(occ.uuid): AggregationType.MEAN,
+    }
+
     abstract_repr = results.to_abstract_repr()
 
     assert abstract_repr == json.dumps(dict, cls=AbstractReprEncoder)
@@ -583,6 +591,7 @@ def test_result_serialization(test_torch: bool):
             obs
         )
     assert results.get_result_tags() == deserialized.get_result_tags()
+    assert results._aggregation_types == deserialized._aggregation_types
 
 
 def test_result_atom_order_serialization():

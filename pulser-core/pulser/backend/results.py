@@ -203,6 +203,9 @@ class Results:
             str(key): value for key, value in self._results.items()
         }
         d["times"] = {str(key): value for key, value in self._times.items()}
+        d["aggregation_types"] = {
+            str(key): value for key, value in self._aggregation_types.items()
+        }
         return d
 
     @classmethod
@@ -217,6 +220,8 @@ class Results:
             results._results[uuid.UUID(key)] = deserialize_complex(value)
         for key, value in dict["times"].items():
             results._times[uuid.UUID(key)] = value
+        for key, value in dict["aggregation_types"].items():
+            results._aggregation_types[uuid.UUID(key)] = AggregationType(value)
         return results
 
     def to_abstract_repr(self, skip_validation: bool = False) -> str:
@@ -256,6 +261,22 @@ class Results:
         results_to_aggregate: typing.Sequence[Results],
         **aggregation_functions: Callable[[Any], Any],
     ) -> Results:
+        """
+        Aggregate a Sequence of Results objects into a single Results
+
+        This is meant to accumulate the results of several runs with
+        different noise trajectories into a single averaged Results.
+        By default, results are averaged, with the exception of BitStrings,
+        where the counters are joined. StateResult is not supported by default.
+
+        Args:
+            results_to_aggregate: The list of Results to aggregate
+            **aggregation_functions: Overrides for the default aggregator.
+                The argument name should be the tag of the Observable,
+                the value is a Callable that takes a list
+        Returns:
+            The averaged Results object
+        """
         if len(results_to_aggregate) == 0:
             raise ValueError("no results to aggregate")
         result_0 = results_to_aggregate[0]
@@ -301,7 +322,8 @@ class Results:
                 for results in results_to_aggregate
             ):
                 raise ValueError(
-                    "Monte-Carlo results seem to provide from incompatible simulations: "
+                    "Monte-Carlo results seem to provide from "
+                    "incompatible simulations: "
                     "the callbacks are not stored at the same times"
                 )
             uid = uuid.uuid4()

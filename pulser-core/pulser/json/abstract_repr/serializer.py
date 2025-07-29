@@ -17,6 +17,7 @@ from __future__ import annotations
 import inspect
 import json
 from collections.abc import Collection
+from enum import Enum
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Union, cast
 
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
     from pulser.register.base_register import QubitId
     from pulser.sequence import Sequence
     from pulser.sequence._call import _Call
+
 import pulser.math as pm
 
 
@@ -54,6 +56,8 @@ class AbstractReprEncoder(json.JSONEncoder):
                 # Try to return a real number when possible
                 return o.real
             return dict(real=o.real, imag=o.imag)
+        elif isinstance(o, Enum):
+            return o.value
         elif pm.AbstractArray.has_torch() and isinstance(o, pm.torch.Tensor):
             return o.tolist()
         else:  # pragma: no cover
