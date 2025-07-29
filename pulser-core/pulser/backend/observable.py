@@ -73,8 +73,8 @@ class Callback(ABC):
 class AggregationType(IntEnum):
     """Defines how to combine values from multiple results."""
 
-    MEAN = auto()  # statistics.fmean or list/matrix-wise equivalent
-    BAG_UNION = auto()  # Counter.__add__
+    MEAN = auto()
+    BAG_UNION = auto()
 
 
 class Observable(Callback):
