@@ -1,7 +1,8 @@
 import collections
-import statistics
+from numbers import Number
 from typing import Any, Callable
 
+import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.math as pm
@@ -13,21 +14,15 @@ _NUMERIC_TYPES = {int, float, complex}
 def mean_aggregator(
     values: list[Any],
 ) -> (
-    complex
-    | float
-    | list[complex]
-    | list[float]
-    | list[list[complex]]
-    | list[list[float]]
-    | ArrayLike
+    Number | list[Number] | list[list[Number]] | ArrayLike
 ):  # FIXME: support tuples?
     if values == []:
         raise ValueError("Cannot average 0 samples")
 
     element_type = type(values[0])
 
-    if element_type in _NUMERIC_TYPES:
-        return statistics.fmean(values)
+    if isinstance(values[0], Number):
+        return np.mean(values)
 
     if pm.AbstractArray.has_torch() and element_type == pm.torch.Tensor:
         acc = pm.torch.zeros_like(values[0])
@@ -35,38 +30,38 @@ def mean_aggregator(
             acc += ten
         return acc / len(values)
 
+    if element_type == np.ndarray:
+        acc = np.zeros_like(values[0])
+        for ar in values:
+            acc += ar
+        return acc / len(values)
     if element_type != list:
-        raise NotImplementedError("Cannot average this type of data")
+        raise ValueError("Cannot average this type of data")
 
     if values[0] == []:
         raise ValueError("Cannot average list of empty lists")
 
     sub_element_type = type(values[0][0])
 
-    if sub_element_type in _NUMERIC_TYPES:
+    if isinstance(values[0][0], Number):
         dim = len(values[0])
-        return [
-            statistics.fmean(value[i] for value in values) for i in range(dim)
-        ]
+        return [np.mean([value[i] for value in values]) for i in range(dim)]
 
     if sub_element_type != list:  # FIXME: ABC.Iterable? Collection? subclass?
         raise ValueError(f"Cannot average list of lists of {sub_element_type}")
 
     if values[0][0] == []:
-        raise ValueError("Cannot average list of matrices with no columns")
+        raise ValueError("Cannot average list of matrices with empty columns")
 
-    if (sub_sub_element_type := type(values[0][0][0])) not in _NUMERIC_TYPES:
+    if not isinstance(values[0][0][0], Number):
         raise ValueError(
-            f"Cannot average list of matrices of {sub_sub_element_type}"
+            f"Cannot average list of matrices of {type(values[0][0][0])}"
         )
 
     dim1 = len(values[0])
     dim2 = len(values[0][0])
     return [
-        [
-            statistics.fmean(value[i][j] for value in values)
-            for j in range(dim2)
-        ]
+        [np.mean([value[i][j] for value in values]) for j in range(dim2)]
         for i in range(dim1)
     ]
 
