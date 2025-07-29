@@ -19,6 +19,7 @@ import re
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import replace
+from enum import IntEnum
 from typing import Any, Type, cast
 from unittest.mock import patch
 
@@ -109,6 +110,13 @@ def test_abstract_repr_encoder_non_torch():
     assert result == [1, 2, 3, 4]
     result = encoder.default(1.0 + 2.0j)
     assert result == dict(real=1.0, imag=2.0)
+
+    class DummyEnum(IntEnum):
+        A = 5
+        B = 6
+
+    result = encoder.default(DummyEnum.A)
+    assert result == 5
 
 
 def test_abstract_repr_encoder_torch():
