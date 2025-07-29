@@ -17,7 +17,7 @@ from __future__ import annotations
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from enum import Enum, auto
+from enum import IntEnum, auto
 from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
@@ -70,7 +70,7 @@ class Callback(ABC):
         pass
 
 
-class AggregationType(Enum):
+class AggregationType(IntEnum):
     """Defines how to combine values from multiple results."""
 
     MEAN = auto()  # statistics.fmean or list/matrix-wise equivalent
