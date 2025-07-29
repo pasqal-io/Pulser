@@ -261,8 +261,7 @@ class Results:
         results_to_aggregate: typing.Sequence[Results],
         **aggregation_functions: Callable[[Any], Any],
     ) -> Results:
-        """
-        Aggregate a Sequence of Results objects into a single Results
+        """Aggregate a Sequence of Results objects into a single Results.
 
         This is meant to accumulate the results of several runs with
         different noise trajectories into a single averaged Results.

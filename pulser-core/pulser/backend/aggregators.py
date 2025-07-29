@@ -1,6 +1,22 @@
+# Copyright 2025 Pulser Development Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Defines aggregation functions for use in `Results.aggregate`."""
+
 import collections
 from numbers import Number
-from typing import Any, Callable
+from typing import Any, Callable, List
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -12,17 +28,20 @@ _NUMERIC_TYPES = {int, float, complex}
 
 
 def mean_aggregator(
-    values: list[Any],
-) -> (
-    Number | list[Number] | list[list[Number]] | ArrayLike
-):  # FIXME: support tuples?
+    values: List[Any],
+) -> Number | List[Number] | List[List[Number]] | ArrayLike:
+    """Take the mean of the given Results.
+
+    Supported are numeric values, lists of numeric values
+    lists of lists of numeric values, torch Tensors and numpy arrays.
+    """
     if values == []:
         raise ValueError("Cannot average 0 samples")
 
     element_type = type(values[0])
 
     if isinstance(values[0], Number):
-        return np.mean(values)
+        return np.mean(values)  # type: ignore[no-any-return]
 
     if pm.AbstractArray.has_torch() and element_type == pm.torch.Tensor:
         acc = pm.torch.zeros_like(values[0])
@@ -69,6 +88,7 @@ def mean_aggregator(
 def bag_union_aggregator(
     values: list[collections.Counter],
 ) -> collections.Counter:
+    """Join a list of Counter objects."""
     return sum(values, start=collections.Counter())
 
 

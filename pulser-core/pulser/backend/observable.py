@@ -71,9 +71,7 @@ class Callback(ABC):
 
 
 class AggregationType(Enum):
-    """
-    Defines how to combine multiple values from different simulation results.
-    """
+    """Defines how to combine values from multiple results."""
 
     MEAN = auto()  # statistics.fmean or list/matrix-wise equivalent
     BAG_UNION = auto()  # Counter.__add__
@@ -217,8 +215,9 @@ class Observable(Callback):
 
     @property
     def default_aggregation_type(self) -> Optional[AggregationType]:
-        """
-        Defines how to combine by default multiple values from different simulation results.
-        None means no default, therefore aggregator function is always user-provided.
+        """Defines how to combine values from multiple results.
+
+        This is used by `Results.aggregate`.
+        None means no default, therefore an aggregator must be user-provided.
         """
         return None
