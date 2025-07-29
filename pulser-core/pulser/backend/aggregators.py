@@ -16,7 +16,7 @@
 
 import collections
 from numbers import Number
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -28,8 +28,8 @@ _NUMERIC_TYPES = {int, float, complex}
 
 
 def mean_aggregator(
-    values: List[Any],
-) -> Number | List[Number] | List[List[Number]] | ArrayLike:
+    values: list[Any],
+) -> Union[Number, List[Number], List[List[Number]], ArrayLike]:
     """Take the mean of the given Results.
 
     Supported are numeric values, lists of numeric values
