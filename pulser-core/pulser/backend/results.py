@@ -303,9 +303,11 @@ class Results:
             total_duration=result_0.total_duration,
         )
         for tag in stored_callbacks:
+            default_aggregation_type = result_0._aggregation_types[
+                result_0._tagmap[tag]
+            ]
             aggregation_type = aggregation_functions.get(
-                tag,
-                result_0._aggregation_types[result_0._tagmap[tag]],
+                tag, default_aggregation_type
             )
             if aggregation_type is None:
                 logging.warning(f"Skipping aggregation of `{tag}`")
@@ -328,21 +330,19 @@ class Results:
             uid = uuid.uuid4()
 
             for t in result_0.get_result_times(tag):
-                aggregation_type = result_0._aggregation_types[
-                    result_0._find_uuid(tag)
-                ]
                 v = aggregation_function(
                     [
                         result.get_result(tag, t)
                         for result in results_to_aggregate
                     ]
                 )
+
                 aggregated._store_raw(
                     uuid=uid,
                     tag=tag,
                     time=t,
                     value=v,
-                    aggregation_type=aggregation_type,
+                    aggregation_type=default_aggregation_type,
                 )
 
         return aggregated

@@ -24,8 +24,6 @@ from numpy.typing import ArrayLike
 import pulser.math as pm
 from pulser.backend.observable import AggregationType
 
-_NUMERIC_TYPES = {int, float, complex}
-
 
 def mean_aggregator(
     values: list[Any],
@@ -38,47 +36,42 @@ def mean_aggregator(
     if values == []:
         raise ValueError("Cannot average 0 samples")
 
-    element_type = type(values[0])
+    elt = values[0]
 
-    if isinstance(values[0], Number):
+    if pm.AbstractArray.has_torch() and isinstance(elt, pm.torch.Tensor):
+        return pm.torch.stack(values).mean(dim=0)
+
+    if isinstance(elt, np.ndarray):
+        return np.stack(values).mean(axis=0)  # type: ignore[no-any-return]
+
+    if isinstance(elt, Number):
         return np.mean(values)  # type: ignore[no-any-return]
 
-    if pm.AbstractArray.has_torch() and element_type == pm.torch.Tensor:
-        acc = pm.torch.zeros_like(values[0])
-        for ten in values:
-            acc += ten
-        return acc / len(values)
-
-    if element_type == np.ndarray:
-        acc = np.zeros_like(values[0])
-        for ar in values:
-            acc += ar
-        return acc / len(values)
-    if element_type != list:
+    if not isinstance(elt, list):
         raise ValueError("Cannot average this type of data")
 
     if values[0] == []:
         raise ValueError("Cannot average list of empty lists")
 
-    sub_element_type = type(values[0][0])
+    sub_element_type = type(elt[0])
 
-    if isinstance(values[0][0], Number):
-        dim = len(values[0])
+    if isinstance(elt[0], Number):
+        dim = len(elt)
         return [np.mean([value[i] for value in values]) for i in range(dim)]
 
     if sub_element_type != list:  # FIXME: ABC.Iterable? Collection? subclass?
         raise ValueError(f"Cannot average list of lists of {sub_element_type}")
 
-    if values[0][0] == []:
+    if elt[0] == []:
         raise ValueError("Cannot average list of matrices with empty columns")
 
-    if not isinstance(values[0][0][0], Number):
+    if not isinstance(elt[0][0], Number):
         raise ValueError(
-            f"Cannot average list of matrices of {type(values[0][0][0])}"
+            f"Cannot average list of matrices of {type(elt[0][0])}"
         )
 
-    dim1 = len(values[0])
-    dim2 = len(values[0][0])
+    dim1 = len(elt)
+    dim2 = len(elt[0])
     return [
         [np.mean([value[i][j] for value in values]) for j in range(dim2)]
         for i in range(dim1)
