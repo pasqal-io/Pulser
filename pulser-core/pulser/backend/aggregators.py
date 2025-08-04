@@ -16,23 +16,31 @@
 
 import collections
 from numbers import Number
-from typing import Any, Callable, List, Union
+from typing import Any, Callable, Sequence, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.math as pm
-from pulser.backend.observable import AggregationType
+from pulser.backend.observable import AggregationMethod
 
 
-def mean_aggregator(
+def _mean_aggregator(
     values: list[Any],
-) -> Union[Number, List[Number], List[List[Number]], ArrayLike]:
-    """Take the mean of the given Results.
+) -> Union[Number, ArrayLike]:
+    """Take the mean of the given results.
 
-    Supported are numeric values, lists of numeric values
-    lists of lists of numeric values, torch Tensors and numpy arrays.
+    Argument:
+        values: The results to average. Supported are lists of:
+        numeric values, lists of numeric values,
+        lists of lists of numeric values, torch Tensors and numpy arrays.
+
+    Returns:
+        The average over the first dimension of the provided results.
     """
+    assert isinstance(
+        values, list
+    ), "Need to supply a list of values to average."
     if values == []:
         raise ValueError("Cannot average 0 samples")
 
@@ -47,45 +55,36 @@ def mean_aggregator(
     if isinstance(elt, Number):
         return np.mean(values)  # type: ignore[no-any-return]
 
-    if not isinstance(elt, list):
+    if not isinstance(elt, Sequence):
         raise ValueError("Cannot average this type of data")
 
     if values[0] == []:
         raise ValueError("Cannot average list of empty lists")
 
-    sub_element_type = type(elt[0])
-
     if isinstance(elt[0], Number):
-        dim = len(elt)
-        return [np.mean([value[i] for value in values]) for i in range(dim)]
+        return np.mean(values, axis=0).tolist()  # type: ignore[no-any-return]
 
-    if sub_element_type != list:  # FIXME: ABC.Iterable? Collection? subclass?
-        raise ValueError(f"Cannot average list of lists of {sub_element_type}")
+    if not isinstance(elt[0], list):
+        raise ValueError(f"Cannot average list of lists of {type(elt[0])}")
 
-    if elt[0] == []:
+    if len(elt[0]) == 0:
         raise ValueError("Cannot average list of matrices with empty columns")
 
     if not isinstance(elt[0][0], Number):
         raise ValueError(
             f"Cannot average list of matrices of {type(elt[0][0])}"
         )
-
-    dim1 = len(elt)
-    dim2 = len(elt[0])
-    return [
-        [np.mean([value[i][j] for value in values]) for j in range(dim2)]
-        for i in range(dim1)
-    ]
+    return np.mean(values, axis=0).tolist()  # type: ignore[no-any-return]
 
 
-def bag_union_aggregator(
+def _bag_union_aggregator(
     values: list[collections.Counter],
 ) -> collections.Counter:
     """Join a list of Counter objects."""
     return sum(values, start=collections.Counter())
 
 
-aggregation_type_definitions: dict[AggregationType, Callable] = {
-    AggregationType.MEAN: mean_aggregator,
-    AggregationType.BAG_UNION: bag_union_aggregator,
+AGGREGATOR_MAPPING: dict[AggregationMethod, Callable] = {
+    AggregationMethod.MEAN: _mean_aggregator,
+    AggregationMethod.BAG_UNION: _bag_union_aggregator,
 }

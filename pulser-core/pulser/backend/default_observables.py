@@ -20,7 +20,7 @@ from collections import Counter
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Type
 
-from pulser.backend.observable import AggregationType, Observable
+from pulser.backend.observable import AggregationMethod, Observable
 from pulser.backend.operator import Operator, OperatorType
 from pulser.backend.state import Eigenstate, State, StateType
 from pulser.exceptions.serialization import AbstractReprError
@@ -56,6 +56,8 @@ class StateResult(Observable):
     def apply(self, *, state: StateType, **kwargs: Any) -> StateType:
         """Calculates the observable to store in the Results."""
         return copy.deepcopy(state)
+
+    default_aggregation_method = AggregationMethod.SKIP_WARN
 
 
 class BitStrings(Observable):
@@ -124,7 +126,7 @@ class BitStrings(Observable):
             p_false_neg=config.noise_model.p_false_neg,
         )
 
-    default_aggregation_type = AggregationType.BAG_UNION
+    default_aggregation_method = AggregationMethod.BAG_UNION
 
 
 class Fidelity(Observable):
@@ -176,7 +178,7 @@ class Fidelity(Observable):
         """Calculates the observable to store in the Results."""
         return self.state.overlap(state)
 
-    default_aggregation_type = AggregationType.MEAN
+    default_aggregation_method = AggregationMethod.MEAN
 
 
 class Expectation(Observable):
@@ -224,7 +226,7 @@ class Expectation(Observable):
         """Calculates the observable to store in the Results."""
         return self.operator.expect(state)
 
-    default_aggregation_type = AggregationType.MEAN
+    default_aggregation_method = AggregationMethod.MEAN
 
 
 class CorrelationMatrix(Observable):
@@ -307,7 +309,7 @@ class CorrelationMatrix(Observable):
             for i in range(state.n_qudits)
         ]
 
-    default_aggregation_type = AggregationType.MEAN
+    default_aggregation_method = AggregationMethod.MEAN
 
 
 class Occupation(Observable):
@@ -365,7 +367,7 @@ class Occupation(Observable):
             for i in range(state.n_qudits)
         ]
 
-    default_aggregation_type = AggregationType.MEAN
+    default_aggregation_method = AggregationMethod.MEAN
 
 
 class Energy(Observable):
@@ -393,7 +395,7 @@ class Energy(Observable):
         """Calculates the observable to store in the Results."""
         return hamiltonian.expect(state)
 
-    default_aggregation_type = AggregationType.MEAN
+    default_aggregation_method = AggregationMethod.MEAN
 
 
 class EnergyVariance(Observable):
@@ -430,6 +432,8 @@ class EnergyVariance(Observable):
         )
         return identity.expect(h_state) - hamiltonian.expect(state) ** 2
 
+    default_aggregation_method = AggregationMethod.SKIP_WARN
+
 
 class EnergySecondMoment(Observable):
     """Stores the expectation value of ``H(t)^2`` at the evaluation times.
@@ -464,4 +468,4 @@ class EnergySecondMoment(Observable):
         )
         return identity.expect(h_state)
 
-    default_aggregation_type = AggregationType.MEAN
+    default_aggregation_method = AggregationMethod.MEAN

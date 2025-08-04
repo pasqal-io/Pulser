@@ -14,7 +14,6 @@
 """Classes for backend execution."""
 
 import pulser.noise_model as noise_model  # For backwards compat
-from pulser.backend.aggregators import aggregation_type_definitions
 from pulser.backend.abc import Backend, EmulatorBackend
 from pulser.backend.config import EmulatorConfig, EmulationConfig
 from pulser.noise_model import NoiseModel as NoiseModel  # For backwards compat
@@ -22,7 +21,7 @@ from pulser.backend.qpu import QPUBackend
 from pulser.backend.results import Results
 from pulser.backend.state import State
 from pulser.backend.operator import Operator
-from pulser.backend.observable import Callback, Observable, AggregationType
+from pulser.backend.observable import Callback, Observable, AggregationMethod
 from pulser.backend.default_observables import (
     BitStrings,
     CorrelationMatrix,
@@ -36,8 +35,7 @@ from pulser.backend.default_observables import (
 )
 
 __all__ = [
-    "aggregation_type_definitions",
-    "AggregationType",
+    "AggregationMethod",
     "Backend",
     "QPUBackend",
     "EmulatorBackend",

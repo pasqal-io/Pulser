@@ -16,14 +16,14 @@ from __future__ import annotations
 
 import collections.abc
 import json
-import logging
 import typing
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable, TypeVar, cast, overload
+from warnings import warn
 
-from pulser.backend.aggregators import aggregation_type_definitions
-from pulser.backend.observable import AggregationType, Observable
+from pulser.backend.aggregators import AGGREGATOR_MAPPING
+from pulser.backend.observable import AggregationMethod, Observable
 from pulser.backend.state import State
 from pulser.json.abstract_repr.deserializer import deserialize_complex
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
@@ -44,7 +44,7 @@ class Results:
     total_duration: int
     _results: dict[uuid.UUID, list[Any]] = field(init=False)
     _times: dict[uuid.UUID, list[float]] = field(init=False)
-    _aggregation_types: dict[uuid.UUID, AggregationType | None] = field(
+    _aggregation_methods: dict[uuid.UUID, AggregationMethod] = field(
         init=False
     )
     _tagmap: dict[str, uuid.UUID] = field(init=False)
@@ -53,7 +53,7 @@ class Results:
         self._results = {}
         self._times = {}
         self._tagmap = {}
-        self._aggregation_types = {}
+        self._aggregation_methods = {}
 
     def _store_raw(
         self,
@@ -62,7 +62,7 @@ class Results:
         tag: str,
         time: float,
         value: Any,
-        aggregation_type: AggregationType | None,
+        aggregation_type: AggregationMethod,
     ) -> None:
         _times = self._times.setdefault(uuid, [])
         if time in _times:
@@ -76,7 +76,7 @@ class Results:
         ), "Evaluation times are not sorted."
         _times.append(time)
         self._results.setdefault(uuid, []).append(value)
-        self._aggregation_types[uuid] = aggregation_type
+        self._aggregation_methods[uuid] = aggregation_type
         assert len(_times) == len(self._results[uuid])
 
     def _store(
@@ -94,7 +94,7 @@ class Results:
             tag=observable.tag,
             time=time,
             value=value,
-            aggregation_type=observable.default_aggregation_type,
+            aggregation_type=observable.default_aggregation_method,
         )
 
     def __getattr__(self, name: str) -> list[Any]:
@@ -204,7 +204,7 @@ class Results:
         }
         d["times"] = {str(key): value for key, value in self._times.items()}
         d["aggregation_types"] = {
-            str(key): value for key, value in self._aggregation_types.items()
+            str(key): value for key, value in self._aggregation_methods.items()
         }
         return d
 
@@ -221,7 +221,9 @@ class Results:
         for key, value in dict["times"].items():
             results._times[uuid.UUID(key)] = value
         for key, value in dict["aggregation_types"].items():
-            results._aggregation_types[uuid.UUID(key)] = AggregationType(value)
+            results._aggregation_methods[uuid.UUID(key)] = AggregationMethod(
+                value
+            )
         return results
 
     def to_abstract_repr(self, skip_validation: bool = False) -> str:
@@ -266,13 +268,16 @@ class Results:
         This is meant to accumulate the results of several runs with
         different noise trajectories into a single averaged Results.
         By default, results are averaged, with the exception of BitStrings,
-        where the counters are joined. StateResult is not supported by default.
+        where the counters are joined.
+        StateResult and EnergyVariance are not supported by default.
 
         Args:
             results_to_aggregate: The list of Results to aggregate
-            **aggregation_functions: Overrides for the default aggregator.
-                The argument name should be the tag of the Observable,
-                the value is a Callable that takes a list
+
+        Keyword Args:
+            observable_tag: Overrides the default aggregator.
+            The argument name should be the tag of the Observable.
+            The value is a Callable taking a list of the type to aggregate.
         Returns:
             The averaged Results object
         """
@@ -291,7 +296,7 @@ class Results:
                 "they do not all contain the same observables"
             )
         if not all(
-            results._aggregation_types == result_0._aggregation_types
+            results._aggregation_methods == result_0._aggregation_methods
             for results in results_to_aggregate
         ):
             raise ValueError(
@@ -303,19 +308,23 @@ class Results:
             total_duration=result_0.total_duration,
         )
         for tag in stored_callbacks:
-            default_aggregation_type = result_0._aggregation_types[
+            default_aggregation_method = result_0._aggregation_methods[
                 result_0._tagmap[tag]
             ]
             aggregation_type = aggregation_functions.get(
-                tag, default_aggregation_type
+                tag, default_aggregation_method
             )
-            if aggregation_type is None:
-                logging.warning(f"Skipping aggregation of `{tag}`")
+            if (
+                aggregation_type is AggregationMethod.SKIP
+                or aggregation_type is AggregationMethod.SKIP_WARN
+            ):
+                if aggregation_type is AggregationMethod.SKIP_WARN:
+                    warn(f"Skipping aggregation of `{tag}`")
                 continue
             aggregation_function: Any = (
                 aggregation_type
                 if callable(aggregation_type)
-                else aggregation_type_definitions[aggregation_type]
+                else AGGREGATOR_MAPPING[aggregation_type]
             )
             evaluation_times = results_to_aggregate[0].get_result_times(tag)
             if not all(
@@ -342,7 +351,7 @@ class Results:
                     tag=tag,
                     time=t,
                     value=v,
-                    aggregation_type=default_aggregation_type,
+                    aggregation_type=default_aggregation_method,
                 )
 
         return aggregated

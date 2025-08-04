@@ -17,8 +17,8 @@ from __future__ import annotations
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from enum import IntEnum, auto
-from typing import TYPE_CHECKING, Any, Optional
+from enum import IntEnum
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -70,11 +70,13 @@ class Callback(ABC):
         pass
 
 
-class AggregationType(IntEnum):
+class AggregationMethod(IntEnum):
     """Defines how to combine values from multiple results."""
 
-    MEAN = auto()
-    BAG_UNION = auto()
+    SKIP = 0
+    SKIP_WARN = 1
+    MEAN = 2
+    BAG_UNION = 3
 
 
 class Observable(Callback):
@@ -213,11 +215,4 @@ class Observable(Callback):
             )
         return eval_times_arr
 
-    @property
-    def default_aggregation_type(self) -> Optional[AggregationType]:
-        """Defines how to combine values from multiple results.
-
-        This is used by `Results.aggregate`.
-        None means no default, therefore an aggregator must be user-provided.
-        """
-        return None
+    default_aggregation_method = AggregationMethod.SKIP

@@ -14,7 +14,6 @@
 from __future__ import annotations
 
 import dataclasses
-import logging
 import re
 import typing
 import uuid
@@ -51,7 +50,7 @@ from pulser.backend.remote import (
     RemoteResultsError,
     _OpenBatchContextManager,
 )
-from pulser.backend.results import AggregationType, Results
+from pulser.backend.results import AggregationMethod, Results
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
@@ -559,7 +558,7 @@ def test_results_aggregation():
     results1 = Results(atom_order=[0, 1], total_duration=100)
     results2 = Results(atom_order=[0, 1], total_duration=100)
     uid = uuid.uuid4()
-    agg_type = AggregationType.MEAN
+    agg_type = AggregationMethod.MEAN
     results1._store_raw(
         uuid=uid,
         tag="dummy_result",
@@ -595,9 +594,7 @@ def test_results_aggregation():
         i = i + 1
         return sum(values) / len(values)
 
-    with patch(
-        "pulser.backend.results.aggregation_type_definitions"
-    ) as mock_aggregator:
+    with patch("pulser.backend.results.AGGREGATOR_MAPPING") as mock_aggregator:
         mock_aggregator.__getitem__.return_value = aggregator
         agg = Results.aggregate([results1, results2])
         mock_aggregator.__getitem__.assert_called_once_with(agg_type)
@@ -608,7 +605,7 @@ def test_results_aggregation():
     for ag in [agg, agg2]:
         ag_uuid = ag._find_uuid("dummy_result")
         assert ag_uuid != uid
-        assert ag._aggregation_types[ag_uuid] == agg_type
+        assert ag._aggregation_methods[ag_uuid] == agg_type
         assert ag.dummy_result == [2.0, 3.0]
 
     assert Results.aggregate([results1]) is results1
@@ -616,7 +613,7 @@ def test_results_aggregation():
 
 def test_results_aggregation_errors(caplog):
     uid = uuid.uuid4()
-    agg_type = AggregationType.MEAN
+    agg_type = AggregationMethod.MEAN
 
     with pytest.raises(ValueError) as ex:
         Results.aggregate([])
@@ -682,7 +679,7 @@ def test_results_aggregation_errors(caplog):
         tag="dummy_result",
         time=0.1,
         value=3.0,
-        aggregation_type=AggregationType.BAG_UNION,
+        aggregation_type=AggregationMethod.BAG_UNION,
     )
     with pytest.raises(ValueError) as ex:
         Results.aggregate([results1, results2])
@@ -698,18 +695,19 @@ def test_results_aggregation_errors(caplog):
         tag="dummy_result",
         time=0.1,
         value=1.0,
-        aggregation_type=None,
+        aggregation_type=AggregationMethod.SKIP_WARN,
     )
     results2._store_raw(
         uuid=uid,
         tag="dummy_result",
         time=0.1,
         value=3.0,
-        aggregation_type=None,
+        aggregation_type=AggregationMethod.SKIP_WARN,
     )
-    logging.captureWarnings(True)
-    Results.aggregate([results1, results2])
-    assert "Skipping aggregation of `dummy_result`" in caplog.text
+    with pytest.warns(
+        UserWarning, match="Skipping aggregation of `dummy_result`"
+    ):
+        Results.aggregate([results1, results2])
 
 
 def test_results():
