@@ -278,6 +278,7 @@ class Results:
             observable_tag: Overrides the default aggregator.
             The argument name should be the tag of the Observable.
             The value is a Callable taking a list of the type to aggregate.
+
         Returns:
             The averaged Results object
         """
