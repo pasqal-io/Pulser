@@ -19,6 +19,7 @@ import functools
 import itertools
 from collections import defaultdict
 from collections.abc import Mapping
+
 from typing import Union, cast
 
 import numpy as np
@@ -30,7 +31,12 @@ from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
-from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
+from pulser_simulation.simconfig import (
+    SUPPORTED_NOISES,
+    doppler_sigma,
+    register_sigma_xy_z,
+    noisy_register,
+)
 
 
 class Hamiltonian:
@@ -57,6 +63,7 @@ class Hamiltonian:
         """Instantiates a Hamiltonian object."""
         self.samples_obj = samples_obj
         self._qdict = {k: v.as_array(detach=True) for k, v in qdict.items()}
+
         self._device = device
         self._sampling_rate = sampling_rate
 
@@ -286,6 +293,7 @@ class Hamiltonian:
                     samples_dict[qid]["det"][slot.ti : slot.tf] += noise_det
                 # Gaussian beam loss in amplitude for global pulses only
                 # Noise is drawn at random for each pulse
+
                 if "amplitude" in self.config.noise_types:
                     amp_fraction = amp_fluctuation
                     if self.config.laser_waist is not None and is_global_pulse:
@@ -429,11 +437,21 @@ class Hamiltonian:
             )
             self._bad_atoms = dict(zip(self._qid_index, dist))
         if "doppler" in self.config.noise_types:
-            temp = self.config.temperature * 1e-6
+            temp = self.config.temperature * 1e-6  # Convert to K
             detune = np.random.normal(
                 0, doppler_sigma(temp), size=len(self._qid_index)
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
+
+        if "register" in self.config.noise_types:
+            # Register noise is applied to the coordinates of the atoms
+            xy_sigma, z_sigma = register_sigma_xy_z(
+                self.config.temperature,  # temperature in micro-Kelvin
+                self.config.trap_waist,
+                self.config.trap_depth,  # trap depth in micro-Kelvin
+            )
+            print("register noise:", xy_sigma, z_sigma)
+            self._qdict = noisy_register(self._qdict, xy_sigma, z_sigma)
 
     def _get_basis_name(self, with_leakage: bool) -> str:
         if len(self.samples_obj.used_bases) == 0:
@@ -478,7 +496,8 @@ class Hamiltonian:
 
         Warning:
             The refreshed noise parameters (when update=True) are only those
-            that change from shot to shot (ie doppler and state preparation).
+            that change from shot to shot (ie doppler, state preparation,
+            and register).
             Amplitude fluctuations change from pulse to pulse and are always
             applied in `_extract_samples()`.
 
@@ -486,9 +505,13 @@ class Hamiltonian:
             update: Whether to update the noise parameters.
         """
         if update:
+            print("update call")
             self._update_noise()
         self._extract_samples()
+        print("after extract samples:")
 
+        # add register noise use the _qdict to modify the register positions
+        # how to determine the register plane,
         def make_vdw_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
 
@@ -531,6 +554,7 @@ class Hamiltonian:
             )
 
         def make_interaction_term(masked: bool = False) -> qutip.Qobj:
+            print("interactioncall:", self._qdict)
             if masked:
                 # Calculate the total number of good, unmasked qubits
                 effective_size = self._size - sum(self._bad_atoms.values())

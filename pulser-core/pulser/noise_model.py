@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import math
 import warnings
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field, fields
@@ -28,6 +29,7 @@ from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults
 
+
 __all__ = ["NoiseModel"]
 
 NoiseTypes = Literal[
@@ -35,6 +37,7 @@ NoiseTypes = Literal[
     "doppler",
     "amplitude",
     "detuning",
+    "register",
     "SPAM",
     "dephasing",
     "relaxation",
@@ -45,6 +48,7 @@ NoiseTypes = Literal[
 _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "leakage": ("with_leakage",),
     "doppler": ("temperature",),
+    "register": ("trap_waist", "trap_depth"), # this need the temperature also
     "amplitude": ("laser_waist", "amp_sigma"),
     "detuning": ("detuning_sigma",),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
@@ -60,7 +64,6 @@ _PARAM_TO_NOISE_TYPE: dict[str, NoiseTypes] = {
     for param in params
 }
 
-# Parameter characterization
 
 _POSITIVE = {
     "dephasing_rate",
@@ -69,6 +72,8 @@ _POSITIVE = {
     "depolarizing_rate",
     "temperature",
     "detuning_sigma",
+    "trap_waist",
+    "trap_depth",
 }
 _STRICT_POSITIVE = {
     "runs",
@@ -84,6 +89,7 @@ _PROBABILITY_LIKE = {
 
 _BOOLEAN = {"with_leakage"}
 
+# legacy confing
 _LEGACY_DEFAULTS = {
     "runs": 15,
     "samples_per_run": 5,
@@ -99,7 +105,11 @@ _LEGACY_DEFAULTS = {
     "depolarizing_rate": 0.05,
 }
 
-OPTIONAL_IN_ABSTR_REPR = ("detuning_sigma",)
+OPTIONAL_IN_ABSTR_REPR = (
+    "detuning_sigma",
+    "trap_waist",
+    "trap_depth",
+)
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -131,6 +141,9 @@ class NoiseModel:
     - **doppler**: Local atom detuning due to termal motion of the
       atoms and Doppler effect with respect to laser frequency.
       Parametrized by the ``temperature`` field.
+    - **register**: thermal fluctuations in the
+      register positions, parametrized by ``temperature``, ``trap_waist``
+      and, ``trap_depth``.
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
@@ -166,6 +179,10 @@ class NoiseModel:
             distribution centered in 0. Assumed to be the same for all
             channels (though each channel has its own randomly sampled
             value in each run). This noise is additive. Defaults to 0.
+        trap_waist: Refers to the radius of the trapping laser beam at the
+            focus point (in µm). Defaults to 0.
+        trap_depth: The potential energy well depth that confines the atoms
+            (in µK). Defaults to 0.
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1. Defaults to 0.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
@@ -196,6 +213,8 @@ class NoiseModel:
     detuning_sigma: float = 0.0
     relaxation_rate: float = 0.0
     dephasing_rate: float = 0.0
+    trap_waist: float = 0.0
+    trap_depth: float = 0.0
     hyperfine_dephasing_rate: float = 0.0
     depolarizing_rate: float = 0.0
     eff_noise_rates: tuple[float, ...] = ()
@@ -289,6 +308,7 @@ class NoiseModel:
                 or nt_ == "detuning"
                 or (nt_ == "amplitude" and amp_sigma != 0.0)
                 or (nt_ == "SPAM" and state_prep_error != 0.0)
+                or nt_ == "register"
             ):
                 relevant_params.update(("runs", "samples_per_run"))
         # Disregard laser_waist when not defined
@@ -410,6 +430,7 @@ class NoiseModel:
                     stacklevel=2,
                 )
 
+    # check noise_register, regsiter noise is optinal in the abstract repr
     def _to_abstract_repr(self) -> dict[str, Any]:
         all_fields = {}
         for f in fields(self):

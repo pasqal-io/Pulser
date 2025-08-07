@@ -20,6 +20,7 @@ import warnings
 from dataclasses import dataclass, field, fields
 from typing import Any, Tuple, Type, TypeVar, Union, cast
 
+import numpy as np
 import qutip
 
 from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, NoiseTypes
@@ -27,6 +28,7 @@ from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, NoiseTypes
 MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
 KEFF = 8.7  # µm^-1
+WAVELENGH = 0.85  # µm
 
 T = TypeVar("T", bound="SimConfig")
 
@@ -41,8 +43,16 @@ SUPPORTED_NOISES: dict = {
         "eff_noise",
         "SPAM",
         "leakage",
+        "register",
     },
-    "XY": {"dephasing", "depolarizing", "eff_noise", "SPAM", "leakage"},
+    "XY": {
+        "dephasing",
+        "depolarizing",
+        "eff_noise",
+        "SPAM",
+        "leakage",
+        "register",
+    },
 }
 
 # Maps the noise model parameters with a different name in SimConfig
@@ -60,7 +70,36 @@ def doppler_sigma(temperature: float) -> float:
     Arg:
         temperature: The temperature in K.
     """
-    return KEFF * math.sqrt(KB * temperature / MASS)
+    return KEFF * math.sqrt(KB * temperature / MASS)    
+
+
+def register_sigma_xy_z(
+    temperature: float, trap_waist: float, trap_depth: float
+)-> tuple[float, float]:
+    """
+    Calculates the standar deviation for fluctions in atom position in the trap.
+    - 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperaturae, w is the trap waist
+        and Uₜᵣₐₚ is the trap depth.
+    - 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, 𝜆 is the wavelenght with a constant value of 0.85 µm
+
+    Parameters:
+    temperature (float): Temperature of the atoms in the trap (in Kelvin).
+    trap_depth (float): Depth of the trap (same units as temperature).
+    trap_waist (float): Waist of the trap (in µmeters).
+
+
+    Returns:
+    tuple: The standard deviations of the spatial position fluctuations
+    in the xy-plane (register_sigma_xy) and along the z-axis (register_sigma_z).
+    """
+
+    register_sigma_xy = math.sqrt(
+        temperature * trap_waist**2 / (4 * trap_depth)
+    )
+    register_sigma_z = (
+        math.pi / WAVELENGH * math.sqrt(2) * trap_waist * register_sigma_xy
+    )
+    return register_sigma_xy, register_sigma_z
 
 
 @dataclass(frozen=True)
@@ -91,6 +130,9 @@ class SimConfig:
               corresponding rates **eff_noise_rates** (in rad/µs).
             - "doppler": Local atom detuning due to finite speed of the
               atoms and Doppler effect with respect to laser frequency.
+            - register: Simulates the relation between fluctuations in the
+              position of the atoms in the trap, the temperature, and
+              trap parameters.
             - "amplitude": Gaussian damping due to finite laser waist
             - "SPAM": SPAM errors. Defined by **eta**, **epsilon** and
               **epsilon_prime**.
@@ -102,8 +144,12 @@ class SimConfig:
             noise.
         samples_per_run: Number of samples per noisy run.
             Useful for cutting down on computing time, but unrealistic.
-        temperature: Temperature, set in µK, of the Rydberg array.
+        temperature: Temperature, set in K, of the Rydberg array.
             Also sets the standard deviation of the speed of the atoms.
+        trap_depth: energy depth of the trap, set in the same units as
+            temperature (K). Used to calculate the register fluctuations.
+        trap_waist: Radius of the trapping laser beam at the focus point,
+            set in µm. Used to calculate the register fluctuations.
         laser_waist: Waist of the gaussian laser, set in µm, in global
             pulses.
         amp_sigma: Dictates the fluctuations in amplitude as a standard
@@ -120,6 +166,8 @@ class SimConfig:
     laser_waist: float = _LEGACY_DEFAULTS["laser_waist"]
     amp_sigma: float = _LEGACY_DEFAULTS["amp_sigma"]
     detuning_sigma: float = 0.0
+    trap_depth: float = 0.0
+    trap_waist: float = 0.0
     eta: float = _LEGACY_DEFAULTS["state_prep_error"]
     epsilon: float = _LEGACY_DEFAULTS["p_false_pos"]
     epsilon_prime: float = _LEGACY_DEFAULTS["p_false_neg"]
@@ -196,7 +244,15 @@ class SimConfig:
             raise TypeError(
                 f"'temperature' must be a float, not {type(self.temperature)}."
             )
+            
         self._change_attribute("temperature", self.temperature / 1e6)
+
+        if not isinstance(self.trap_depth, (int, float)):
+            raise TypeError(
+                f"'trap_depth' must be a float, not {type(self.trap_depth)}."
+            )
+        
+        #self._change_attribute("trap_depth", self.trap_depth / 1e6)
 
         NoiseModel._check_noise_types(cast(Tuple[NoiseTypes], self.noise))
         self._check_spam_dict()
@@ -223,6 +279,15 @@ class SimConfig:
     def doppler_sigma(self) -> float:
         """Standard deviation for Doppler shifting due to thermal motion."""
         return doppler_sigma(self.temperature)
+    
+    @property
+    def register_sigma_xy_z(self) -> tuple[float, float]:
+        """Standard deviation for fluctuations in the xy and z plane."""
+        register_sigma = register_sigma_xy_z(
+            self.temperature, self.trap_waist, self.trap_depth
+        )
+        return register_sigma[0],register_sigma[1]
+    
 
     def __str__(self, solver_options: bool = False) -> str:
         lines = [
@@ -244,6 +309,10 @@ class SimConfig:
             )
         if "doppler" in self.noise:
             lines.append(f"Temperature:           {self.temperature*1.e6}µK")
+        if "register" in self.noise:
+            lines.append(f"Temperature:          {self.temperature*1.e6}µK")
+            lines.append(f"Trap waist:           {self.trap_waist}µm")
+            lines.append(f"Trap depth:           {self.trap_depth}µK")
         if "amplitude" in self.noise:
             lines.append(f"Laser waist:           {self.laser_waist}μm")
             lines.append(f"Amplitude standard dev.:  {self.amp_sigma}")
@@ -294,3 +363,20 @@ class SimConfig:
     def supported_noises(self) -> dict:
         """Return the noises implemented on pulser."""
         return SUPPORTED_NOISES
+
+def noisy_register(q_dict: dict, register_sigma_xy, register_sigma_z):
+    "Add Gaussian noise to the positions of the register"
+    atoms = list(q_dict.keys())
+    num_atoms = len(list(atoms))
+    positions = list(q_dict.values())
+
+    if len(positions[0]) == 2:
+        positions = np.array(
+            [np.append(p, 0.0) for p in positions]
+        )  # Convert 2D positions to 3D
+
+    noise_xy = np.random.normal(0, register_sigma_xy, (num_atoms, 2))
+    noise_z = np.random.normal(0, register_sigma_z, num_atoms)
+    noise = np.column_stack((noise_xy, noise_z))
+    positions += noise
+    return {k: pos for (k, pos) in zip(atoms, positions)}
