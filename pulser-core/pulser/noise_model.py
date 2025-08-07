@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import json
-import math
 import warnings
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field, fields
@@ -28,7 +27,6 @@ import pulser.json.abstract_repr as pulser_abstract_repr
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults
-
 
 __all__ = ["NoiseModel"]
 
@@ -48,7 +46,7 @@ NoiseTypes = Literal[
 _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "leakage": ("with_leakage",),
     "doppler": ("temperature",),
-    "register": ("trap_waist", "trap_depth"), # this need the temperature also
+    "register": ("trap_waist", "trap_depth"),  # this need the temperature also
     "amplitude": ("laser_waist", "amp_sigma"),
     "detuning": ("detuning_sigma",),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),

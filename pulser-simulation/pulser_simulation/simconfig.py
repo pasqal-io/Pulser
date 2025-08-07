@@ -70,14 +70,14 @@ def doppler_sigma(temperature: float) -> float:
     Arg:
         temperature: The temperature in K.
     """
-    return KEFF * math.sqrt(KB * temperature / MASS)    
+    return KEFF * math.sqrt(KB * temperature / MASS)
 
 
 def register_sigma_xy_z(
     temperature: float, trap_waist: float, trap_depth: float
-)-> tuple[float, float]:
+) -> tuple[float, float]:
     """
-    Calculates the standar deviation for fluctions in atom position in the trap.
+    Calculates the standar deviation for fluctions in atom position in the trap
     - 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperaturae, w is the trap waist
         and Uₜᵣₐₚ is the trap depth.
     - 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, 𝜆 is the wavelenght with a constant value of 0.85 µm
@@ -90,7 +90,7 @@ def register_sigma_xy_z(
 
     Returns:
     tuple: The standard deviations of the spatial position fluctuations
-    in the xy-plane (register_sigma_xy) and along the z-axis (register_sigma_z).
+    in the xy-plane (register_sigma_xy) and along the z-axis (register_sigma_z)
     """
 
     register_sigma_xy = math.sqrt(
@@ -244,15 +244,15 @@ class SimConfig:
             raise TypeError(
                 f"'temperature' must be a float, not {type(self.temperature)}."
             )
-            
+
         self._change_attribute("temperature", self.temperature / 1e6)
 
         if not isinstance(self.trap_depth, (int, float)):
             raise TypeError(
                 f"'trap_depth' must be a float, not {type(self.trap_depth)}."
             )
-        
-        #self._change_attribute("trap_depth", self.trap_depth / 1e6)
+
+        # self._change_attribute("trap_depth", self.trap_depth / 1e6)
 
         NoiseModel._check_noise_types(cast(Tuple[NoiseTypes], self.noise))
         self._check_spam_dict()
@@ -279,15 +279,14 @@ class SimConfig:
     def doppler_sigma(self) -> float:
         """Standard deviation for Doppler shifting due to thermal motion."""
         return doppler_sigma(self.temperature)
-    
+
     @property
     def register_sigma_xy_z(self) -> tuple[float, float]:
         """Standard deviation for fluctuations in the xy and z plane."""
         register_sigma = register_sigma_xy_z(
             self.temperature, self.trap_waist, self.trap_depth
         )
-        return register_sigma[0],register_sigma[1]
-    
+        return register_sigma[0], register_sigma[1]
 
     def __str__(self, solver_options: bool = False) -> str:
         lines = [
@@ -363,6 +362,7 @@ class SimConfig:
     def supported_noises(self) -> dict:
         """Return the noises implemented on pulser."""
         return SUPPORTED_NOISES
+
 
 def noisy_register(q_dict: dict, register_sigma_xy, register_sigma_z):
     "Add Gaussian noise to the positions of the register"

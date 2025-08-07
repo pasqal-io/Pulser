@@ -74,7 +74,7 @@ class TestNoiseModel:
         noise_model = NoiseModel(**{p: 1.0 for p in params})
         assert set(noise_model.noise_types) == noise_types
         relevant_params = NoiseModel._find_relevant_params(
-            noise_types,NoiseModel
+            noise_types,
             noise_model.state_prep_error,
             noise_model.amp_sigma,
             noise_model.laser_waist,

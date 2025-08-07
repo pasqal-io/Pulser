@@ -19,7 +19,6 @@ import functools
 import itertools
 from collections import defaultdict
 from collections.abc import Mapping
-
 from typing import Union, cast
 
 import numpy as np
@@ -34,8 +33,8 @@ from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser_simulation.simconfig import (
     SUPPORTED_NOISES,
     doppler_sigma,
-    register_sigma_xy_z,
     noisy_register,
+    register_sigma_xy_z,
 )
 
 

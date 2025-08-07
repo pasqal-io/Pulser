@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import patch
+
 import numpy as np
 import pytest
-from unittest.mock import patch
 from qutip import Qobj, qeye, sigmax, sigmaz
 
 from pulser.noise_model import NoiseModel
 from pulser_simulation.simconfig import (
     SimConfig,
     doppler_sigma,
-    register_sigma_xy_z,
     noisy_register,
+    register_sigma_xy_z,
 )
 
 pytestmark = pytest.mark.filterwarnings(
@@ -61,6 +62,7 @@ def test_init():
     expected_temperature = 1000.0
     expected_waist = 1.0
     expected_depth = 100.0
+    runs = 100
 
     assert config.temperature == expected_temperature * 1e-6  # in K
     str_config = config.__str__(True)
@@ -69,7 +71,7 @@ def test_init():
         f"{expected_temperature}µK" in str_config
         and f"{expected_waist}µm" in str_config
         and f"{expected_depth}µK" in str_config
-        and f"100" in str_config
+        and f"{runs}" in str_config
         and "Solver Options" in str_config
     )
     assert config.to_noise_model().temperature == expected_temperature
