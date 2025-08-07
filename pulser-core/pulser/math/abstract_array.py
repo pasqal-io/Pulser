@@ -169,7 +169,7 @@ class AbstractArray:
         return int(self._array)
 
     def __float__(self) -> float:
-        return float(self._array)
+        return float(self.as_array(detach=True))
 
     def __bool__(self) -> bool:
         return bool(self._array)
