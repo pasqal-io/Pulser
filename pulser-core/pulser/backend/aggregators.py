@@ -30,7 +30,7 @@ T = TypeVar(
     complex,
     list[complex],
     list[list[complex]],
-    pm.torch.Tensor,
+    "pm.torch.Tensor",
     np.ndarray,
 )
 
@@ -61,8 +61,12 @@ def _mean_aggregator(
     if isinstance(elt, np.ndarray):
         return cast(np.ndarray, np.stack(values).mean(axis=0))
 
-    if isinstance(elt, float | complex):
-        return np.mean(values)
+    if isinstance(elt, float):
+        return cast(float, np.mean(values))  # this would have type np.floating
+    if isinstance(elt, complex):
+        return cast(
+            complex, np.mean(values)
+        )  # this would have type np.complexfloating
 
     if not isinstance(elt, Sequence):
         raise ValueError("Cannot average this type of data")
