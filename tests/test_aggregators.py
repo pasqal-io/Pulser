@@ -59,7 +59,7 @@ def test__mean_aggregator_errors():
         _mean_aggregator([[], []])
     assert str(ex.value) == "Cannot average list of empty lists"
 
-    with pytest.raises(AssertionError) as ex:
+    with pytest.raises(ValueError) as ex:
         _mean_aggregator("abcd")
     assert str(ex.value) == "Need to supply a list of values to average."
 

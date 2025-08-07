@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     from pulser.register.base_register import QubitId
     from pulser.sequence import Sequence
     from pulser.sequence._call import _Call
-
 import pulser.math as pm
 
 

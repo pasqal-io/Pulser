@@ -209,18 +209,18 @@ class Results:
         return d
 
     @classmethod
-    def _from_abstract_repr(cls, dict: dict) -> Results:
+    def _from_abstract_repr(cls, obj: dict) -> Results:
         results = cls(
-            atom_order=tuple(dict["atom_order"]),
-            total_duration=dict["total_duration"],
+            atom_order=tuple(obj["atom_order"]),
+            total_duration=obj["total_duration"],
         )
-        for key, value in dict["tagmap"].items():
+        for key, value in obj["tagmap"].items():
             results._tagmap[key] = uuid.UUID(value)
-        for key, value in dict["results"].items():
+        for key, value in obj["results"].items():
             results._results[uuid.UUID(key)] = deserialize_complex(value)
-        for key, value in dict["times"].items():
+        for key, value in obj["times"].items():
             results._times[uuid.UUID(key)] = value
-        for key, value in dict["aggregation_types"].items():
+        for key, value in obj["aggregation_types"].items():
             results._aggregation_methods[uuid.UUID(key)] = AggregationMethod(
                 value
             )
@@ -276,8 +276,8 @@ class Results:
 
         Keyword Args:
             observable_tag: Overrides the default aggregator.
-            The argument name should be the tag of the Observable.
-            The value is a Callable taking a list of the type to aggregate.
+                The argument name should be the tag of the Observable.
+                The value is a Callable taking a list of the type to aggregate.
 
         Returns:
             The averaged Results object

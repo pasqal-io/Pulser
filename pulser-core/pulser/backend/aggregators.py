@@ -15,32 +15,41 @@
 """Defines aggregation functions for use in `Results.aggregate`."""
 
 import collections
-from numbers import Number
-from typing import Any, Callable, Sequence, Union
+from typing import Callable, Sequence, TypeVar, cast
 
 import numpy as np
-from numpy.typing import ArrayLike
 
 import pulser.math as pm
 from pulser.backend.observable import AggregationMethod
 
+T = TypeVar(
+    "T",
+    float,
+    list[float],
+    list[list[float]],
+    complex,
+    list[complex],
+    list[list[complex]],
+    pm.torch.Tensor,
+    np.ndarray,
+)
+
 
 def _mean_aggregator(
-    values: list[Any],
-) -> Union[Number, ArrayLike]:
+    values: list[T],
+) -> T:
     """Take the mean of the given results.
 
     Argument:
         values: The results to average. Supported are lists of:
-        numeric values, lists of numeric values,
-        lists of lists of numeric values, torch Tensors and numpy arrays.
+            numeric values, lists of numeric values,
+            lists of lists of numeric values, torch Tensors and numpy arrays.
 
     Returns:
         The average over the first dimension of the provided results.
     """
-    assert isinstance(
-        values, list
-    ), "Need to supply a list of values to average."
+    if not isinstance(values, list):
+        raise ValueError("Need to supply a list of values to average.")
     if values == []:
         raise ValueError("Cannot average 0 samples")
 
@@ -50,10 +59,10 @@ def _mean_aggregator(
         return pm.torch.stack(values).mean(dim=0)
 
     if isinstance(elt, np.ndarray):
-        return np.stack(values).mean(axis=0)  # type: ignore[no-any-return]
+        return cast(np.ndarray, np.stack(values).mean(axis=0))
 
-    if isinstance(elt, Number):
-        return np.mean(values)  # type: ignore[no-any-return]
+    if isinstance(elt, float | complex):
+        return np.mean(values)
 
     if not isinstance(elt, Sequence):
         raise ValueError("Cannot average this type of data")
@@ -61,7 +70,7 @@ def _mean_aggregator(
     if values[0] == []:
         raise ValueError("Cannot average list of empty lists")
 
-    if isinstance(elt[0], Number):
+    if isinstance(elt[0], float | complex):
         return np.mean(values, axis=0).tolist()  # type: ignore[no-any-return]
 
     if not isinstance(elt[0], list):
@@ -70,7 +79,7 @@ def _mean_aggregator(
     if len(elt[0]) == 0:
         raise ValueError("Cannot average list of matrices with empty columns")
 
-    if not isinstance(elt[0][0], Number):
+    if not isinstance(elt[0][0], float | complex):
         raise ValueError(
             f"Cannot average list of matrices of {type(elt[0][0])}"
         )
