@@ -74,7 +74,7 @@ def _mean_aggregator(
     if values[0] == []:
         raise ValueError("Cannot average list of empty lists")
 
-    if isinstance(elt[0], float | complex):
+    if isinstance(elt[0], (float, complex)):
         return np.mean(values, axis=0).tolist()  # type: ignore[no-any-return]
 
     if not isinstance(elt[0], list):
@@ -83,7 +83,7 @@ def _mean_aggregator(
     if len(elt[0]) == 0:
         raise ValueError("Cannot average list of matrices with empty columns")
 
-    if not isinstance(elt[0][0], float | complex):
+    if not isinstance(elt[0][0], (float, complex)):
         raise ValueError(
             f"Cannot average list of matrices of {type(elt[0][0])}"
         )
