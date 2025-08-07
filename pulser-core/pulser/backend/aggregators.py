@@ -75,7 +75,7 @@ def _mean_aggregator(
         raise ValueError("Cannot average list of empty lists")
 
     if isinstance(elt[0], (float, complex)):
-        return np.mean(values, axis=0).tolist()  # type: ignore[no-any-return]
+        return list(np.mean(values, axis=0).tolist())
 
     if not isinstance(elt[0], list):
         raise ValueError(f"Cannot average list of lists of {type(elt[0])}")
@@ -87,7 +87,7 @@ def _mean_aggregator(
         raise ValueError(
             f"Cannot average list of matrices of {type(elt[0][0])}"
         )
-    return np.mean(values, axis=0).tolist()  # type: ignore[no-any-return]
+    return list(np.mean(values, axis=0).tolist())
 
 
 def _bag_union_aggregator(

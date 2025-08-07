@@ -18,9 +18,9 @@ import collections.abc
 import json
 import typing
 import uuid
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Callable, TypeVar, cast, overload
-from warnings import warn
 
 from pulser.backend.aggregators import AGGREGATOR_MAPPING
 from pulser.backend.observable import AggregationMethod, Observable
@@ -62,7 +62,7 @@ class Results:
         tag: str,
         time: float,
         value: Any,
-        aggregation_type: AggregationMethod,
+        aggregation_method: AggregationMethod,
     ) -> None:
         _times = self._times.setdefault(uuid, [])
         if time in _times:
@@ -76,7 +76,7 @@ class Results:
         ), "Evaluation times are not sorted."
         _times.append(time)
         self._results.setdefault(uuid, []).append(value)
-        self._aggregation_methods[uuid] = aggregation_type
+        self._aggregation_methods[uuid] = aggregation_method
         assert len(_times) == len(self._results[uuid])
 
     def _store(
@@ -94,7 +94,7 @@ class Results:
             tag=observable.tag,
             time=time,
             value=value,
-            aggregation_type=observable.default_aggregation_method,
+            aggregation_method=observable.default_aggregation_method,
         )
 
     def __getattr__(self, name: str) -> list[Any]:
@@ -203,7 +203,7 @@ class Results:
             str(key): value for key, value in self._results.items()
         }
         d["times"] = {str(key): value for key, value in self._times.items()}
-        d["aggregation_types"] = {
+        d["aggregation_methods"] = {
             str(key): value for key, value in self._aggregation_methods.items()
         }
         return d
@@ -220,7 +220,7 @@ class Results:
             results._results[uuid.UUID(key)] = deserialize_complex(value)
         for key, value in obj["times"].items():
             results._times[uuid.UUID(key)] = value
-        for key, value in obj["aggregation_types"].items():
+        for key, value in obj["aggregation_methods"].items():
             results._aggregation_methods[uuid.UUID(key)] = AggregationMethod(
                 value
             )
@@ -278,12 +278,14 @@ class Results:
             observable_tag: Overrides the default aggregator.
                 The argument name should be the tag of the Observable.
                 The value is a Callable taking a list of the type to aggregate.
+                Note that this does not override the default aggregation
+                behaviour of the aggregated results.
 
         Returns:
             The averaged Results object
         """
         if len(results_to_aggregate) == 0:
-            raise ValueError("no results to aggregate")
+            raise ValueError("no results to aggregate.")
         result_0 = results_to_aggregate[0]
         if len(results_to_aggregate) == 1:
             return result_0
@@ -294,7 +296,7 @@ class Results:
         ):
             raise ValueError(
                 "You're trying to aggregate incompatible results: "
-                "they do not all contain the same observables"
+                "they do not all contain the same observables."
             )
         if not all(
             results._aggregation_methods == result_0._aggregation_methods
@@ -302,7 +304,23 @@ class Results:
         ):
             raise ValueError(
                 "You're trying to aggregate incompatible results: "
-                "they do not all contain the same aggregation functions"
+                "they do not all contain the same aggregation functions."
+            )
+        if not all(
+            results.atom_order == result_0.atom_order
+            for results in results_to_aggregate
+        ):
+            raise ValueError(
+                "You're trying to aggregate incompatible results: "
+                "they do not all have the same atom order."
+            )
+        if not all(
+            results.total_duration == result_0.total_duration
+            for results in results_to_aggregate
+        ):
+            raise ValueError(
+                "You're trying to aggregate incompatible results: "
+                "they do not all have the same sequence duration."
             )
         aggregated = Results(
             atom_order=result_0.atom_order,
@@ -312,20 +330,22 @@ class Results:
             default_aggregation_method = result_0._aggregation_methods[
                 result_0._tagmap[tag]
             ]
-            aggregation_type = aggregation_functions.get(
+            aggregation_method = aggregation_functions.get(
                 tag, default_aggregation_method
             )
             if (
-                aggregation_type is AggregationMethod.SKIP
-                or aggregation_type is AggregationMethod.SKIP_WARN
+                aggregation_method is AggregationMethod.SKIP
+                or aggregation_method is AggregationMethod.SKIP_WARN
             ):
-                if aggregation_type is AggregationMethod.SKIP_WARN:
-                    warn(f"Skipping aggregation of `{tag}`")
+                if aggregation_method is AggregationMethod.SKIP_WARN:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("once")
+                        warnings.warn(f"Skipping aggregation of `{tag}`.")
                 continue
             aggregation_function: Any = (
-                aggregation_type
-                if callable(aggregation_type)
-                else AGGREGATOR_MAPPING[aggregation_type]
+                AGGREGATOR_MAPPING[aggregation_method]
+                if isinstance(aggregation_method, AggregationMethod)
+                else aggregation_method
             )
             evaluation_times = results_to_aggregate[0].get_result_times(tag)
             if not all(
@@ -335,7 +355,7 @@ class Results:
                 raise ValueError(
                     "Monte-Carlo results seem to provide from "
                     "incompatible simulations: "
-                    "the callbacks are not stored at the same times"
+                    f"the times for `{tag}` are not all the same."
                 )
             uid = uuid.uuid4()
 
@@ -352,7 +372,7 @@ class Results:
                     tag=tag,
                     time=t,
                     value=v,
-                    aggregation_type=default_aggregation_method,
+                    aggregation_method=default_aggregation_method,
                 )
 
         return aggregated

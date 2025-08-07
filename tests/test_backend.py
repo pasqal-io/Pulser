@@ -564,28 +564,28 @@ def test_results_aggregation():
         tag="dummy_result",
         time=0.1,
         value=1.0,
-        aggregation_type=agg_type,
+        aggregation_method=agg_type,
     )
     results1._store_raw(
         uuid=uid,
         tag="dummy_result",
         time=0.2,
         value=2.0,
-        aggregation_type=agg_type,
+        aggregation_method=agg_type,
     )
     results2._store_raw(
         uuid=uid,
         tag="dummy_result",
         time=0.1,
         value=3.0,
-        aggregation_type=agg_type,
+        aggregation_method=agg_type,
     )
     results2._store_raw(
         uuid=uid,
         tag="dummy_result",
         time=0.2,
         value=4.0,
-        aggregation_type=agg_type,
+        aggregation_method=agg_type,
     )
     i = 0
 
@@ -617,7 +617,7 @@ def test_results_aggregation_errors(caplog):
 
     with pytest.raises(ValueError) as ex:
         Results.aggregate([])
-    assert str(ex.value) == "no results to aggregate"
+    assert str(ex.value) == "no results to aggregate."
 
     results1 = Results(atom_order=[0, 1], total_duration=100)
     results2 = Results(atom_order=[0, 1], total_duration=100)
@@ -626,20 +626,20 @@ def test_results_aggregation_errors(caplog):
         tag="dummy_result",
         time=0.1,
         value=1.0,
-        aggregation_type=agg_type,
+        aggregation_method=agg_type,
     )
     results2._store_raw(
         uuid=uid,
         tag="dummy_result",
         time=0.2,
         value=3.0,
-        aggregation_type=agg_type,
+        aggregation_method=agg_type,
     )
     with pytest.raises(ValueError) as ex:
         Results.aggregate([results1, results2])
     assert str(ex.value) == (
         "Monte-Carlo results seem to provide from incompatible simulations: "
-        "the callbacks are not stored at the same times"
+        "the times for `dummy_result` are not all the same."
     )
 
     results1 = Results(atom_order=[0, 1], total_duration=100)
@@ -649,20 +649,66 @@ def test_results_aggregation_errors(caplog):
         tag="dummy_result",
         time=0.1,
         value=1.0,
-        aggregation_type=agg_type,
+        aggregation_method=agg_type,
     )
     results2._store_raw(
         uuid=uid,
         tag="dummy_result2",
         time=0.1,
         value=3.0,
-        aggregation_type=agg_type,
+        aggregation_method=agg_type,
     )
     with pytest.raises(ValueError) as ex:
         Results.aggregate([results1, results2])
     assert str(ex.value) == (
         "You're trying to aggregate incompatible results: "
-        "they do not all contain the same observables"
+        "they do not all contain the same observables."
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 2], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_method=agg_type,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate incompatible results: "
+        "they do not all have the same atom order."
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=200)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_method=agg_type,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate incompatible results: "
+        "they do not all have the same sequence duration."
     )
 
     results1 = Results(atom_order=[0, 1], total_duration=100)
@@ -672,20 +718,20 @@ def test_results_aggregation_errors(caplog):
         tag="dummy_result",
         time=0.1,
         value=1.0,
-        aggregation_type=agg_type,
+        aggregation_method=agg_type,
     )
     results2._store_raw(
         uuid=uid,
-        tag="dummy_result",
+        tag="dummy_result2",
         time=0.1,
         value=3.0,
-        aggregation_type=AggregationMethod.BAG_UNION,
+        aggregation_method=agg_type,
     )
     with pytest.raises(ValueError) as ex:
         Results.aggregate([results1, results2])
     assert str(ex.value) == (
         "You're trying to aggregate incompatible results: "
-        "they do not all contain the same aggregation functions"
+        "they do not all contain the same observables."
     )
 
     results1 = Results(atom_order=[0, 1], total_duration=100)
@@ -695,17 +741,40 @@ def test_results_aggregation_errors(caplog):
         tag="dummy_result",
         time=0.1,
         value=1.0,
-        aggregation_type=AggregationMethod.SKIP_WARN,
+        aggregation_method=agg_type,
     )
     results2._store_raw(
         uuid=uid,
         tag="dummy_result",
         time=0.1,
         value=3.0,
-        aggregation_type=AggregationMethod.SKIP_WARN,
+        aggregation_method=AggregationMethod.BAG_UNION,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate incompatible results: "
+        "they do not all contain the same aggregation functions."
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=AggregationMethod.SKIP_WARN,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_method=AggregationMethod.SKIP_WARN,
     )
     with pytest.warns(
-        UserWarning, match="Skipping aggregation of `dummy_result`"
+        UserWarning, match="Skipping aggregation of `dummy_result`."
     ):
         Results.aggregate([results1, results2])
 

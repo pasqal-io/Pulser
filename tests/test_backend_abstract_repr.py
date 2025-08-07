@@ -562,7 +562,7 @@ def test_result_serialization(test_torch: bool):
         str(occ.uuid): [0.4],
     }
 
-    assert dict["aggregation_types"] == {
+    assert dict["aggregation_methods"] == {
         str(bitstrings.uuid): AggregationMethod.BAG_UNION,
         str(corr.uuid): AggregationMethod.MEAN,
         str(energy.uuid): AggregationMethod.MEAN,
