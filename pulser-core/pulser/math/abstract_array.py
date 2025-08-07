@@ -166,13 +166,13 @@ class AbstractArray:
         return str(self._array.__repr__())
 
     def __int__(self) -> int:
-        return int(self.as_array(detach=True))
+        return int(self._array)
 
     def __float__(self) -> float:
         return float(self.as_array(detach=True))
 
     def __bool__(self) -> bool:
-        return bool(self.as_array(detach=True))
+        return bool(self._array)
 
     # Unary operators
     def __neg__(self) -> AbstractArray:
