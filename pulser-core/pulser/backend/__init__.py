@@ -21,7 +21,7 @@ from pulser.backend.qpu import QPUBackend
 from pulser.backend.results import Results
 from pulser.backend.state import State
 from pulser.backend.operator import Operator
-from pulser.backend.observable import Callback, Observable
+from pulser.backend.observable import Callback, Observable, AggregationMethod
 from pulser.backend.default_observables import (
     BitStrings,
     CorrelationMatrix,
@@ -35,6 +35,7 @@ from pulser.backend.default_observables import (
 )
 
 __all__ = [
+    "AggregationMethod",
     "Backend",
     "QPUBackend",
     "EmulatorBackend",
