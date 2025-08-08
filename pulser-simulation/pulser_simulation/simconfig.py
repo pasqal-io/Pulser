@@ -22,11 +22,12 @@ from typing import Any, Tuple, Type, TypeVar, Union, cast
 
 import qutip
 
-from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, NoiseTypes
-
-MASS = 1.45e-25  # kg
-KB = 1.38e-23  # J/K
-KEFF = 8.7  # µm^-1
+from pulser.noise_model import (
+    _LEGACY_DEFAULTS,
+    NoiseModel,
+    NoiseTypes,
+    doppler_sigma,
+)
 
 T = TypeVar("T", bound="SimConfig")
 
@@ -52,15 +53,6 @@ _DIFF_NOISE_PARAMS = {
     "p_false_pos": "epsilon",
     "p_false_neg": "epsilon_prime",
 }
-
-
-def doppler_sigma(temperature: float) -> float:
-    """Standard deviation for Doppler shifting due to thermal motion.
-
-    Arg:
-        temperature: The temperature in K.
-    """
-    return KEFF * math.sqrt(KB * temperature / MASS)
 
 
 @dataclass(frozen=True)
