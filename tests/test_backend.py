@@ -557,35 +557,49 @@ def test_emulation_config():
 def test_results_aggregation():
     results1 = Results(atom_order=[0, 1], total_duration=100)
     results2 = Results(atom_order=[0, 1], total_duration=100)
-    uid = uuid.uuid4()
+    uids = [uuid.uuid4() for _ in range(4)]
     agg_type = AggregationMethod.MEAN
     results1._store_raw(
-        uuid=uid,
+        uuid=uids[0],
         tag="dummy_result",
         time=0.1,
         value=1.0,
         aggregation_method=agg_type,
     )
     results1._store_raw(
-        uuid=uid,
+        uuid=uids[0],
         tag="dummy_result",
         time=0.2,
         value=2.0,
         aggregation_method=agg_type,
     )
+    results1._store_raw(
+        uuid=uids[1],
+        tag="dummy_result2",
+        time=0.7,
+        value=2.0,
+        aggregation_method=AggregationMethod.SKIP,
+    )
     results2._store_raw(
-        uuid=uid,
+        uuid=uids[2],
         tag="dummy_result",
         time=0.1,
         value=3.0,
         aggregation_method=agg_type,
     )
     results2._store_raw(
-        uuid=uid,
+        uuid=uids[2],
         tag="dummy_result",
         time=0.2,
         value=4.0,
         aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uids[3],
+        tag="dummy_result3",
+        time=0.5,
+        value=2.0,
+        aggregation_method=AggregationMethod.SKIP_WARN,
     )
     i = 0
 
@@ -604,7 +618,8 @@ def test_results_aggregation():
     )  # twice in agg, twice in agg2, once each for the 2 results added above.
     for ag in [agg, agg2]:
         ag_uuid = ag._find_uuid("dummy_result")
-        assert ag_uuid != uid
+        for uid in uids:
+            assert ag_uuid != uid
         assert ag._aggregation_methods[ag_uuid] == agg_type
         assert ag.dummy_result == [2.0, 3.0]
 
@@ -662,7 +677,8 @@ def test_results_aggregation_errors(caplog):
         Results.aggregate([results1, results2])
     assert str(ex.value) == (
         "You're trying to aggregate incompatible results: "
-        "they do not all contain the same observables."
+        "result `dummy_result` is not present in all results, "
+        "but it's not marked to be skipped."
     )
 
     results1 = Results(atom_order=[0, 1], total_duration=100)
@@ -709,29 +725,6 @@ def test_results_aggregation_errors(caplog):
     assert str(ex.value) == (
         "You're trying to aggregate incompatible results: "
         "they do not all have the same sequence duration."
-    )
-
-    results1 = Results(atom_order=[0, 1], total_duration=100)
-    results2 = Results(atom_order=[0, 1], total_duration=100)
-    results1._store_raw(
-        uuid=uid,
-        tag="dummy_result",
-        time=0.1,
-        value=1.0,
-        aggregation_method=agg_type,
-    )
-    results2._store_raw(
-        uuid=uid,
-        tag="dummy_result2",
-        time=0.1,
-        value=3.0,
-        aggregation_method=agg_type,
-    )
-    with pytest.raises(ValueError) as ex:
-        Results.aggregate([results1, results2])
-    assert str(ex.value) == (
-        "You're trying to aggregate incompatible results: "
-        "they do not all contain the same observables."
     )
 
     results1 = Results(atom_order=[0, 1], total_duration=100)

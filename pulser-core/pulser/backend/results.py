@@ -289,17 +289,33 @@ class Results:
         result_0 = results_to_aggregate[0]
         if len(results_to_aggregate) == 1:
             return result_0
-        stored_callbacks = set(result_0.get_result_tags())
+
+        all_tags = set().union(
+            *[set(x.get_result_tags()) for x in results_to_aggregate]
+        )
+        common_tags = all_tags.intersection(
+            *[set(x.get_result_tags()) for x in results_to_aggregate]
+        )
+
+        for results in results_to_aggregate:
+            for tag, uid in results._tagmap.items():
+                if tag not in common_tags and not (
+                    results._aggregation_methods[uid].value < 2
+                ):
+                    raise ValueError(
+                        "You're trying to aggregate incompatible results: "
+                        f"result `{tag}` is not present in all results, "
+                        "but it's not marked to be skipped."
+                    )
         if not all(
-            set(results.get_result_tags()) == stored_callbacks
-            for results in results_to_aggregate
-        ):
-            raise ValueError(
-                "You're trying to aggregate incompatible results: "
-                "they do not all contain the same observables."
-            )
-        if not all(
-            results._aggregation_methods == result_0._aggregation_methods
+            {
+                tag: results._aggregation_methods[results._find_uuid(tag)]
+                for tag in common_tags
+            }
+            == {
+                tag: result_0._aggregation_methods[result_0._find_uuid(tag)]
+                for tag in common_tags
+            }
             for results in results_to_aggregate
         ):
             raise ValueError(
@@ -326,7 +342,7 @@ class Results:
             atom_order=result_0.atom_order,
             total_duration=result_0.total_duration,
         )
-        for tag in stored_callbacks:
+        for tag in common_tags:
             default_aggregation_method = result_0._aggregation_methods[
                 result_0._tagmap[tag]
             ]
