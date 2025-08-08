@@ -617,7 +617,7 @@ def test_results_aggregation_errors(caplog):
 
     with pytest.raises(ValueError) as ex:
         Results.aggregate([])
-    assert str(ex.value) == "no results to aggregate."
+    assert str(ex.value) == "No results to aggregate."
 
     results1 = Results(atom_order=[0, 1], total_duration=100)
     results2 = Results(atom_order=[0, 1], total_duration=100)
@@ -638,7 +638,7 @@ def test_results_aggregation_errors(caplog):
     with pytest.raises(ValueError) as ex:
         Results.aggregate([results1, results2])
     assert str(ex.value) == (
-        "Monte-Carlo results seem to provide from incompatible simulations: "
+        "The Results come from incompatible simulations: "
         "the times for `dummy_result` are not all the same."
     )
 

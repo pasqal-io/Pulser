@@ -51,7 +51,7 @@ def _mean_aggregator(
     if not isinstance(values, list):
         raise ValueError("Need to supply a list of values to average.")
     if values == []:
-        raise ValueError("Cannot average 0 samples")
+        raise ValueError("Cannot average 0 samples.")
 
     elt = values[0]
 
@@ -69,23 +69,23 @@ def _mean_aggregator(
         )  # this would have type np.complexfloating
 
     if not isinstance(elt, Sequence):
-        raise ValueError("Cannot average this type of data")
+        raise ValueError("Cannot average this type of data.")
 
     if values[0] == []:
-        raise ValueError("Cannot average list of empty lists")
+        raise ValueError("Cannot average list of empty lists.")
 
     if isinstance(elt[0], (float, complex)):
         return list(np.mean(values, axis=0).tolist())
 
     if not isinstance(elt[0], list):
-        raise ValueError(f"Cannot average list of lists of {type(elt[0])}")
+        raise ValueError(f"Cannot average list of lists of {type(elt[0])}.")
 
     if len(elt[0]) == 0:
-        raise ValueError("Cannot average list of matrices with empty columns")
+        raise ValueError("Cannot average list of matrices with empty columns.")
 
     if not isinstance(elt[0][0], (float, complex)):
         raise ValueError(
-            f"Cannot average list of matrices of {type(elt[0][0])}"
+            f"Cannot average list of matrices of {type(elt[0][0])}."
         )
     return list(np.mean(values, axis=0).tolist())
 

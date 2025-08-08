@@ -285,7 +285,7 @@ class Results:
             The averaged Results object
         """
         if len(results_to_aggregate) == 0:
-            raise ValueError("no results to aggregate.")
+            raise ValueError("No results to aggregate.")
         result_0 = results_to_aggregate[0]
         if len(results_to_aggregate) == 1:
             return result_0
@@ -353,7 +353,7 @@ class Results:
                 for results in results_to_aggregate
             ):
                 raise ValueError(
-                    "Monte-Carlo results seem to provide from "
+                    "The Results come from "
                     "incompatible simulations: "
                     f"the times for `{tag}` are not all the same."
                 )

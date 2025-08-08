@@ -53,11 +53,11 @@ def test__mean_aggregator(test_torch: bool):
 def test__mean_aggregator_errors():
     with pytest.raises(ValueError) as ex:
         _mean_aggregator([])
-    assert str(ex.value) == "Cannot average 0 samples"
+    assert str(ex.value) == "Cannot average 0 samples."
 
     with pytest.raises(ValueError) as ex:
         _mean_aggregator([[], []])
-    assert str(ex.value) == "Cannot average list of empty lists"
+    assert str(ex.value) == "Cannot average list of empty lists."
 
     with pytest.raises(ValueError) as ex:
         _mean_aggregator("abcd")
@@ -65,18 +65,18 @@ def test__mean_aggregator_errors():
 
     with pytest.raises(ValueError) as ex:
         _mean_aggregator([{}, {}])
-    assert str(ex.value) == "Cannot average this type of data"
+    assert str(ex.value) == "Cannot average this type of data."
 
     with pytest.raises(ValueError) as ex:
         _mean_aggregator([[{}], [{}]])
-    assert str(ex.value) == f"Cannot average list of lists of {type({})}"
+    assert str(ex.value) == f"Cannot average list of lists of {type({})}."
 
     with pytest.raises(ValueError) as ex:
         _mean_aggregator([[["abcd"]], [["efgh"]]])
-    assert str(ex.value) == f"Cannot average list of matrices of {type('a')}"
+    assert str(ex.value) == f"Cannot average list of matrices of {type('a')}."
 
     with pytest.raises(ValueError) as ex:
         _mean_aggregator([[[]], [[]]])
     assert (
-        str(ex.value) == "Cannot average list of matrices with empty columns"
+        str(ex.value) == "Cannot average list of matrices with empty columns."
     )
