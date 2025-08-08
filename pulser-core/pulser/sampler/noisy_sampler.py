@@ -19,11 +19,13 @@ import functools
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import replace
-from typing import Union
+from typing import cast, Union, Literal
 
 import numpy as np
+from scipy.spatial.distance import cdist
 
 from pulser.channels.base_channel import STATES_RANK, States
+from pulser.devices._device_datacls import COORD_PRECISION, BaseDevice
 from pulser.noise_model import NoiseModel, doppler_sigma
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler import sampler
@@ -31,22 +33,22 @@ from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser.sequence import Sequence
 
 
-class AbstractHamiltonian:
+class BaseHamiltonian:
     r"""Information that can be used to generate an Hamiltonian.
 
     Args:
         samples_obj: A sampled sequence whose ChannelSamples have same
             duration.
-        qdict: A dictionary associating coordinates to qubit ids.
-        sampling_rate: The fraction of samples that we wish to extract from
-            the samples to simulate. Has to be a value between 0.05 and 1.0.
-        config: Configuration to be used for this simulation.
+        device: The device specifications.
+        register: A Register associating coordinates to qubit ids.
+        config: NoiseModel to be used to generate noise.
     """
 
     def __init__(
         self,
         samples_obj: SequenceSamples,
         register: BaseRegister,
+        device: BaseDevice,
         config: NoiseModel,
     ) -> None:
         """Instantiates a Hamiltonian object."""
@@ -58,11 +60,24 @@ class AbstractHamiltonian:
             )
         if samples_obj.max_duration == 0:
             raise ValueError("SequenceSamples is empty.")
-        # Check correct definition of qdict
+        # Check compatibility of register and device
+        if not isinstance(device, BaseDevice):
+            raise TypeError("The device must be a Device or BaseDevice.")
+        self._device = device
+        self.device.validate_register(register)
         self._register = register
-        self._qdict = register.qubits
+        _qdict = register.qubits
+        # Check compatibility of samples and device:
+        if samples_obj._slm_mask.end > 0 and not self.device.supports_slm_mask:
+            raise ValueError(
+                "Samples use SLM mask but device does not have one."
+            )
+        if not samples_obj.used_bases <= self.device.supported_bases:
+            raise ValueError(
+                "Bases used in samples should be supported by device."
+            )
         # Check compatibility of masked samples and register
-        if not samples_obj._slm_mask.targets <= set(self._qdict.keys()):
+        if not samples_obj._slm_mask.targets <= set(_qdict.keys()):
             raise ValueError(
                 "The ids of qubits targeted in SLM mask"
                 " should be defined in register."
@@ -74,7 +89,7 @@ class AbstractHamiltonian:
                 # in register
                 if not set().union(
                     *(slot.targets for slot in ch_samples.slots)
-                ) <= set(self._qdict.keys()):
+                ) <= set(_qdict.keys()):
                     raise ValueError(
                         "The ids of qubits targeted in Local channels"
                         " should be defined in register."
@@ -93,9 +108,7 @@ class AbstractHamiltonian:
                 )
         self._samples_obj = replace(samples_obj, samples_list=samples_list)
 
-        self._qdict = {
-            k: v.as_array(detach=True) for k, v in self._qdict.items()
-        }
+        self._qdict = {k: v.as_array(detach=True) for k, v in _qdict.items()}
 
         # Type hints for attributes defined outside of __init__
         self.basis_name: str
@@ -104,6 +117,9 @@ class AbstractHamiltonian:
         self.dim: int
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
+
+        # Define interaction
+        self._interaction = "XY" if self.samples_obj._in_xy else "ising"
 
         # Initializing qubit infos
         self._size = len(self._qdict)
@@ -120,7 +136,7 @@ class AbstractHamiltonian:
         sequence: Sequence,
         with_modulation: bool = False,
         noise_model: NoiseModel | None = None,
-    ) -> AbstractHamiltonian:
+    ) -> BaseHamiltonian:
         r"""Simulation of a pulse sequence using QuTiP.
 
         Args:
@@ -163,6 +179,7 @@ class AbstractHamiltonian:
                     include_fall_time=with_modulation
                 ),
             ),
+            sequence.device,
             sequence.register.qubits,
             noise_model=noise_model or NoiseModel(),
         )
@@ -175,11 +192,22 @@ class AbstractHamiltonian:
     @property
     def noisy_samples(self) -> dict:
         """The latest samples generated with noise, as a nested dict."""
-        return self._samples_obj
+        return self.samples
+
+    @property
+    def noisy_samples_obj(self) -> SequenceSamples:
+        """The latest samples generated with noise, as a SequenceSamples."""
+        raise NotImplementedError  # TODO: nested_dict -> SequenceSamples
 
     @property
     def register(self) -> BaseRegister:
+        """The register used."""
         return self._register
+
+    @property
+    def device(self) -> BaseDevice:
+        """The device used."""
+        return self._device
 
     @property
     def noise_model(self) -> NoiseModel:
@@ -188,13 +216,46 @@ class AbstractHamiltonian:
 
     @property
     def local_collapse_operators(self) -> list[str | np.ndarray]:
+        """The 1-qudit collapse operators, as string or array."""
         return self._local_collapse_ops
 
     @property
+    def interaction_type(self) -> Literal["XY", "ising"]:
+        """The interaction associated with the used samples."""
+        return self._interaction
+
+    @property
     def bad_atoms(self) -> dict[Union[str, int], bool]:
+        """The badly prepared atoms at the beginning of the run."""
         return self._bad_atoms
 
-    def _build_collapse_operators(
+    @property
+    def distances(self) -> np.ndarray:
+        r"""Distances between each qubits (in :math:`\mu m`)."""
+        positions = np.array(list(self._qdict.values()))
+        return np.round(
+            cast(np.ndarray, cdist(positions, positions, metric="euclidean")),
+            COORD_PRECISION,
+        )
+
+    @property
+    def interaction_matrix(self) -> np.ndarray:
+        r"""C6/C3 Interactions between the qubits (in :math:`rad/\mu s`)."""
+        interactions = np.zeros((self.nbqubits, self.nbqubits))
+        same_atom = np.eye(self.nbqubits, dtype=bool)
+        interactions[~same_atom] = (
+            self.device.interaction_coeff
+            if self.interaction_type == "ising"
+            else self.device.interaction_coeff_xy
+        ) / self.distances[~same_atom] ** (
+            6 if self.interaction_type == "ising" else 3
+        )
+        return interactions
+
+    # TODO: Include masked qubits in XY + bad atoms in the interaction
+    # TODO: Include magnetic field interaction matrix
+
+    def _build_local_collapse_operators(
         self,
         config: NoiseModel,
         basis_name: str,
@@ -240,7 +301,8 @@ class AbstractHamiltonian:
                 (1, f"sigma_{b}{a}"),
                 (1j, f"sigma_{a}{b}"),
                 (-1j, f"sigma_{b}{a}"),
-                (1, f"sigma_{b}{b}")(-1, f"sigma_{a}{a}"),
+                (1, f"sigma_{b}{b}"),
+                (-1, f"sigma_{a}{a}"),
             ]
             coeff = np.sqrt(config.depolarizing_rate / 4)
             for pauli_coeff, pauli_op in pauli_2d:
@@ -278,12 +340,12 @@ class AbstractHamiltonian:
             raise ValueError(f"Object {cfg} is not a valid `NoiseModel`.")
         if not hasattr(self, "_config") or (
             hasattr(self, "_config")
-            and self.config.with_leakage != cfg.with_leakage
+            and self.noise_model.with_leakage != cfg.with_leakage
         ):
             basis_name = self._get_basis_name(cfg.with_leakage)
             eigenbasis = self._get_eigenbasis(cfg.with_leakage)
             op_matrix = self._get_projectors(eigenbasis)
-            self._build_collapse_operators(
+            self._build_local_collapse_operators(
                 cfg, basis_name, eigenbasis, op_matrix
             )
             self.basis_name = basis_name
@@ -294,19 +356,19 @@ class AbstractHamiltonian:
                 addr: defaultdict(dict) for addr in ["Global", "Local"]
             }
         else:
-            self._build_collapse_operators(
+            self._build_local_collapse_operators(
                 cfg, self.basis_name, self.eigenbasis, self.op_matrix_names
             )
         self._config = cfg
         if not (
-            "SPAM" in self.config.noise_types
-            and self.config.state_prep_error > 0
+            "SPAM" in self.noise_model.noise_types
+            and self.noise_model.state_prep_error > 0
         ):
             self._bad_atoms = {qid: False for qid in self._qid_index}
-        if "doppler" not in self.config.noise_types:
+        if "doppler" not in self.noise_model.noise_types:
             self._doppler_detune = {qid: 0.0 for qid in self._qid_index}
         # Noise, samples and Hamiltonian update routine
-        self._construct_hamiltonian()
+        self._construct_samples()
 
     @staticmethod
     @functools.cache
@@ -335,7 +397,7 @@ class AbstractHamiltonian:
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
         local_noises = True
-        if set(self.config.noise_types).issubset(
+        if set(self.noise_model.noise_types).issubset(
             {
                 "dephasing",
                 "relaxation",
@@ -346,8 +408,8 @@ class AbstractHamiltonian:
             }
         ):
             local_noises = (
-                "SPAM" in self.config.noise_types
-                and self.config.state_prep_error > 0
+                "SPAM" in self.noise_model.noise_types
+                and self.noise_model.state_prep_error > 0
             )
         samples = self._samples_obj.to_nested_dict(all_local=local_noises)
 
@@ -365,23 +427,26 @@ class AbstractHamiltonian:
             and depend on the qubit's id qid.
             """
             for qid in slot.targets:
-                if "doppler" in self.config.noise_types:
+                if "doppler" in self.noise_model.noise_types:
                     noise_det = self._doppler_detune[qid]
                     samples_dict[qid]["det"][slot.ti : slot.tf] += noise_det
                 # Gaussian beam loss in amplitude for global pulses only
                 # Noise is drawn at random for each pulse
-                if "amplitude" in self.config.noise_types:
+                if "amplitude" in self.noise_model.noise_types:
                     amp_fraction = amp_fluctuation
-                    if self.config.laser_waist is not None and is_global_pulse:
+                    if (
+                        self.noise_model.laser_waist is not None
+                        and is_global_pulse
+                    ):
                         # Default to an optical axis along y
                         prop_dir = propagation_dir or (0.0, 1.0, 0.0)
                         amp_fraction *= self._finite_waist_amp_fraction(
                             tuple(self._qdict[qid]),
                             tuple(prop_dir),
-                            self.config.laser_waist,
+                            self.noise_model.laser_waist,
                         )
                     samples_dict[qid]["amp"][slot.ti : slot.tf] *= amp_fraction
-                if "detuning" in self.config.noise_types:
+                if "detuning" in self.noise_model.noise_types:
                     samples_dict[qid]["det"][
                         slot.ti : slot.tf
                     ] += det_fluctuation
@@ -391,11 +456,11 @@ class AbstractHamiltonian:
                 _ch_obj = self._samples_obj._ch_objs[ch]
                 samples_dict = samples["Local"][_ch_obj.basis]
                 ch_amp_fluctuation = max(
-                    0, np.random.normal(1.0, self.config.amp_sigma)
+                    0, np.random.normal(1.0, self.noise_model.amp_sigma)
                 )
                 ch_det_fluctuation = (
-                    np.random.normal(0.0, self.config.detuning_sigma)
-                    if self.config.detuning_sigma
+                    np.random.normal(0.0, self.noise_model.detuning_sigma)
+                    if self.noise_model.detuning_sigma
                     else 0.0
                 )
                 for slot in ch_samples.slots:
@@ -422,16 +487,16 @@ class AbstractHamiltonian:
         atoms are set to be correctly prepared.
         """
         if (
-            "SPAM" in self.config.noise_types
-            and self.config.state_prep_error > 0
+            "SPAM" in self.noise_model.noise_types
+            and self.noise_model.state_prep_error > 0
         ):
             dist = (
                 np.random.uniform(size=len(self._qid_index))
-                < self.config.state_prep_error
+                < self.noise_model.state_prep_error
             )
             self._bad_atoms = dict(zip(self._qid_index, dist))
-        if "doppler" in self.config.noise_types:
-            temp = self.config.temperature * 1e-6
+        if "doppler" in self.noise_model.noise_types:
+            temp = self.noise_model.temperature * 1e-6
             detune = np.random.normal(
                 0, doppler_sigma(temp), size=len(self._qid_index)
             )
@@ -461,7 +526,7 @@ class AbstractHamiltonian:
     def _get_projectors(
         eigenbasis: list[States],
     ) -> list[str]:
-        """Determine basis and projector operators."""
+        """Determine projector operators."""
         op_matrix_names = ["I"]
         for proj0 in eigenbasis:
             for proj1 in eigenbasis:
@@ -469,11 +534,10 @@ class AbstractHamiltonian:
                 op_matrix_names.append(proj_name)
         return op_matrix_names
 
-    def _construct_hamiltonian(self, update: bool = True) -> None:
-        """Constructs the hamiltonian from the sampled Sequence and noise.
+    def _construct_samples(self, update: bool = True) -> None:
+        """Constructs the noisy samples.
 
-        Also builds qutip.Qobjs related to the Sequence if not built already,
-        and refreshes potential noise parameters by drawing new at random.
+        Refreshes potential noise parameters by drawing new at random.
 
         Warning:
             The refreshed noise parameters (when update=True) are only those
