@@ -17,29 +17,28 @@ from __future__ import annotations
 
 import functools
 import itertools
-from collections import defaultdict
 from collections.abc import Mapping
 from typing import Union, cast
 
 import numpy as np
 import qutip
 
-import pulser.math as pm
 from pulser.channels.base_channel import STATES_RANK, States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
-from pulser.register.base_register import QubitId
+from pulser.register.base_register import QubitId, BaseRegister
+from pulser.sampler.noisy_sampler import BaseHamiltonian
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
 
 
-class Hamiltonian:
+class Hamiltonian(BaseHamiltonian):
     r"""Generates Hamiltonian from a sampled sequence and noise.
 
     Args:
         samples_obj: A sampled sequence whose ChannelSamples have same
             duration.
-        qdict: A dictionary associating coordinates to qubit ids.
+        register: A Register associating coordinates to qubit ids.
         device: The device specifications.
         sampling_rate: The fraction of samples that we wish to extract from
             the samples to simulate. Has to be a value between 0.05 and 1.0.
@@ -49,32 +48,20 @@ class Hamiltonian:
     def __init__(
         self,
         samples_obj: SequenceSamples,
-        qdict: dict[QubitId, pm.AbstractArray],
+        register: BaseRegister,
         device: BaseDevice,
         sampling_rate: float,
         config: NoiseModel,
     ) -> None:
         """Instantiates a Hamiltonian object."""
-        self.samples_obj = samples_obj
-        self._qdict = {k: v.as_array(detach=True) for k, v in qdict.items()}
-        self._device = device
+        super().__init__(
+            samples_obj, register, device, config, assign_config=False
+        )
         self._sampling_rate = sampling_rate
 
         # Type hints for attributes defined outside of __init__
-        self.basis_name: str
-        self._config: NoiseModel
         self.op_matrix: dict[str, qutip.Qobj]
         self.basis: dict[States, qutip.Qobj]
-        self.dim: int
-        self._bad_atoms: dict[Union[str, int], bool] = {}
-        self._doppler_detune: dict[Union[str, int], float] = {}
-
-        # Define interaction
-        self._interaction = "XY" if self.samples_obj._in_xy else "ising"
-
-        # Initializing qubit infos
-        self._size = len(self._qdict)
-        self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
 
         # Compute sampling times
         self._duration = self.samples_obj.max_duration
@@ -106,72 +93,37 @@ class Hamiltonian:
 
     def _build_collapse_operators(
         self,
-        config: NoiseModel,
-        basis_name: str,
-        eigenbasis: list[States],
-        op_matrix: dict[str, qutip.Qobj],
     ) -> None:
-
-        local_collapse_ops = []
-        if "dephasing" in config.noise_types:
-            dephasing_rates = {
-                "d": config.dephasing_rate,
-                "r": config.dephasing_rate,
-                "h": config.hyperfine_dephasing_rate,
-            }
-            for state in eigenbasis:
-                if state in dephasing_rates:
-                    coeff = np.sqrt(2 * dephasing_rates[state])
-                    op = op_matrix[f"sigma_{state}{state}"]
-                    local_collapse_ops.append(coeff * op)
-
-        if "relaxation" in config.noise_types:
-            coeff = np.sqrt(config.relaxation_rate)
-            try:
-                local_collapse_ops.append(coeff * op_matrix["sigma_gr"])
-            except KeyError:
-                raise ValueError(
-                    "'relaxation' noise requires addressing of the"
-                    " 'ground-rydberg' basis."
-                )
-
-        if "depolarizing" in config.noise_types:
-            if "all" in basis_name:
-                # Go back to previous config
-                raise NotImplementedError(
-                    "Cannot include depolarizing noise in all-basis."
-                )
-            # NOTE: These operators only make sense when basis != "all"
-            b, a = eigenbasis[:2]
-            pauli_2d = {
-                "x": op_matrix[f"sigma_{a}{b}"] + op_matrix[f"sigma_{b}{a}"],
-                "y": 1j * op_matrix[f"sigma_{a}{b}"]
-                - 1j * op_matrix[f"sigma_{b}{a}"],
-                "z": op_matrix[f"sigma_{b}{b}"] - op_matrix[f"sigma_{a}{a}"],
-            }
-            coeff = np.sqrt(config.depolarizing_rate / 4)
-            local_collapse_ops.append(coeff * pauli_2d["x"])
-            local_collapse_ops.append(coeff * pauli_2d["y"])
-            local_collapse_ops.append(coeff * pauli_2d["z"])
-
-        if "eff_noise" in config.noise_types:
-            for id_, rate in enumerate(config.eff_noise_rates):
-                # This supports the case where the operators are given as Qobj
-                # (even though they shouldn't per the NoiseModel signature)
-                op = qutip.Qobj(config.eff_noise_opers[id_]).full()
-                basis_dim = len(eigenbasis)
-                op_shape = (basis_dim, basis_dim)
-                if op.shape != op_shape:
-                    raise ValueError(
-                        "Incompatible shape for effective noise operator n°"
-                        f"{id_}. Operator {op} should be of shape {op_shape}."
-                    )
-                local_collapse_ops.append(np.sqrt(rate) * op)
-        # Building collapse operators
+        """Build the multi-qudit collapse operators."""
         self._collapse_ops = []
-        for operator in local_collapse_ops:
+        for coeff, collapse_op in self.local_collapse_operators:
+            if isinstance(collapse_op, str):
+                if collapse_op not in self.op_matrix:
+                    self._depolarizing_pauli_2ds[collapse_op]
+
+                try:
+                    operator = coeff * self.op_matrix[collapse_op]
+                except KeyError as e1:
+                    try:
+                        operator = sum(
+                            [
+                                coeff * proj_coeff * self.op_matrix[proj_op]
+                                for (
+                                    proj_coeff,
+                                    proj_op,
+                                ) in self._depolarizing_pauli_2ds[collapse_op]
+                            ]
+                        )
+                    except KeyError as e2:
+                        raise KeyError(
+                            f"Invalid local collapse operator {collapse_op}."
+                        ) from (e1, e2)
+
+            else:
+                assert isinstance(collapse_op, np.ndarray)
+                operator = coeff * qutip.Qobj(collapse_op).full()
             self._collapse_ops += [
-                self._build_operator([(operator, [qid])], op_matrix)
+                self._build_operator([(operator, [qid])], self.op_matrix)
                 for qid in self._qid_index
             ]
 
@@ -181,46 +133,23 @@ class Hamiltonian:
         Args:
             cfg: New configuration.
         """
-        if not isinstance(cfg, NoiseModel):
-            raise ValueError(f"Object {cfg} is not a valid `NoiseModel`.")
+        self._check_config(cfg)
         not_supported = (
-            set(cfg.noise_types) - SUPPORTED_NOISES[self._interaction]
+            set(cfg.noise_types) - SUPPORTED_NOISES[self.interaction_type]
         )
         if not_supported:
             raise NotImplementedError(
-                f"Interaction mode '{self._interaction}' does not support "
+                f"Interaction mode '{self.interaction_type}' does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
-        if not hasattr(self, "_config") or (
-            hasattr(self, "_config")
-            and self.config.with_leakage != cfg.with_leakage
-        ):
-            basis_name = self._get_basis_name(cfg.with_leakage)
-            eigenbasis = self._get_eigenbasis(cfg.with_leakage)
-            basis, op_matrix = self._get_basis_op_matrices(eigenbasis)
-            self._build_collapse_operators(
-                cfg, basis_name, eigenbasis, op_matrix
-            )
-            self.basis_name = basis_name
-            self.eigenbasis = eigenbasis
+        update_basis = self._update_basis(cfg)
+        super().set_config(cfg, construct_hamiltonian=False)
+        if update_basis:
+            basis, op_matrix = self._get_basis_op_matrices(self.eigenbasis)
             self.basis = basis
             self.op_matrix = op_matrix
-            self.dim = len(eigenbasis)
-            self.operators: dict[str, defaultdict[str, dict]] = {
-                addr: defaultdict(dict) for addr in ["Global", "Local"]
-            }
-        else:
-            self._build_collapse_operators(
-                cfg, self.basis_name, self.eigenbasis, self.op_matrix
-            )
-        self._config = cfg
-        if not (
-            "SPAM" in self.config.noise_types
-            and self.config.state_prep_error > 0
-        ):
-            self._bad_atoms = {qid: False for qid in self._qid_index}
-        if "doppler" not in self.config.noise_types:
-            self._doppler_detune = {qid: 0.0 for qid in self._qid_index}
+            assert set(self.op_matrix_names) == set(self.op_matrix.keys())
+        self._build_collapse_operators()
         # Noise, samples and Hamiltonian update routine
         self._construct_hamiltonian()
 
@@ -434,20 +363,6 @@ class Hamiltonian:
                 0, doppler_sigma(temp), size=len(self._qid_index)
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
-
-    def _get_basis_name(self, with_leakage: bool) -> str:
-        if len(self.samples_obj.used_bases) == 0:
-            if self.samples_obj._in_xy:
-                basis_name = "XY"
-            else:
-                basis_name = "ground-rydberg"
-        elif len(self.samples_obj.used_bases) == 1:
-            basis_name = list(self.samples_obj.used_bases)[0]
-        else:
-            basis_name = "all"  # All three rydberg states
-        if with_leakage:
-            basis_name += "_with_error"
-        return basis_name
 
     def _get_eigenbasis(self, with_leakage: bool) -> list[States]:
         eigenbasis = self.samples_obj.eigenbasis

@@ -19,6 +19,7 @@ import functools
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import replace
+from numbers import Number
 from typing import cast, Union, Literal
 
 import numpy as np
@@ -42,6 +43,10 @@ class BaseHamiltonian:
         device: The device specifications.
         register: A Register associating coordinates to qubit ids.
         config: NoiseModel to be used to generate noise.
+
+    Keyword Args:
+        assign_config: Whether to assign a configuration at initialization
+            (defaults to True).
     """
 
     def __init__(
@@ -50,6 +55,7 @@ class BaseHamiltonian:
         register: BaseRegister,
         device: BaseDevice,
         config: NoiseModel,
+        **kwargs,
     ) -> None:
         """Instantiates a Hamiltonian object."""
         # Initializing the samples obj
@@ -101,7 +107,7 @@ class BaseHamiltonian:
                     replace(
                         ch_samples,
                         slots=[
-                            replace(slot, targets=set(self._qdict.keys()))
+                            replace(slot, targets=set(_qdict.keys()))
                             for slot in ch_samples.slots
                         ],
                     )
@@ -126,9 +132,11 @@ class BaseHamiltonian:
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
 
         # Stores the qutip operators used in building the Hamiltonian
-        self._local_collapse_ops: list[str | np.ndarray] = []
+        self._local_collapse_ops: list[tuple[Number, str] | np.ndarray] = []
+        self._depolarizing_pauli_2ds: dict[str | tuple[Number, str]] = {}
 
-        self.set_config(config)
+        if kwargs.get("assign_config", True):
+            self.set_config(config)
 
     @classmethod
     def from_sequence(
@@ -296,17 +304,21 @@ class BaseHamiltonian:
                 )
             # NOTE: These operators only make sense when basis != "all"
             b, a = eigenbasis[:2]
-            pauli_2d = [
+            self._depolarizing_pauli_2ds["x"] = [
                 (1, f"sigma_{a}{b}"),
                 (1, f"sigma_{b}{a}"),
+            ]
+            self._depolarizing_pauli_2ds["y"] = [
                 (1j, f"sigma_{a}{b}"),
                 (-1j, f"sigma_{b}{a}"),
+            ]
+            self._depolarizing_pauli_2ds["z"] = [
                 (1, f"sigma_{b}{b}"),
                 (-1, f"sigma_{a}{a}"),
             ]
             coeff = np.sqrt(config.depolarizing_rate / 4)
-            for pauli_coeff, pauli_op in pauli_2d:
-                local_collapse_ops.append((pauli_coeff * coeff, pauli_op))
+            for pauli_label, _ in self._depolarizing_pauli_2ds.items():
+                local_collapse_ops.append((coeff, pauli_label))
 
         if "eff_noise" in config.noise_types:
             for id_, rate in enumerate(config.eff_noise_rates):
@@ -330,27 +342,39 @@ class BaseHamiltonian:
         # Building collapse operators
         self._local_collapse_ops = local_collapse_ops
 
-    def set_config(self, cfg: NoiseModel) -> None:
+    def _update_basis(self, cfg: NoiseModel) -> bool:
+        """Whether or not the basis should be updated."""
+        return not hasattr(self, "_config") or (
+            hasattr(self, "_config")
+            and self.noise_model.with_leakage != cfg.with_leakage
+        )
+
+    @staticmethod
+    def _check_config(cfg: NoiseModel) -> None:
+        """Checks that the provided config is a NoiseModel."""
+        if not isinstance(cfg, NoiseModel):
+            raise ValueError(f"Object {cfg} is not a valid `NoiseModel`.")
+
+    def set_config(self, cfg: NoiseModel, **kwargs) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
         Args:
             cfg: New configuration.
+
+        Keyword Args:
+            construct_hamiltonian: Whether or not to update noisy values.
         """
-        if not isinstance(cfg, NoiseModel):
-            raise ValueError(f"Object {cfg} is not a valid `NoiseModel`.")
-        if not hasattr(self, "_config") or (
-            hasattr(self, "_config")
-            and self.noise_model.with_leakage != cfg.with_leakage
-        ):
+        self._check_config(cfg)
+        if self._update_basis:
             basis_name = self._get_basis_name(cfg.with_leakage)
             eigenbasis = self._get_eigenbasis(cfg.with_leakage)
-            op_matrix = self._get_projectors(eigenbasis)
+            op_matrix_names = self._get_projectors(eigenbasis)
             self._build_local_collapse_operators(
-                cfg, basis_name, eigenbasis, op_matrix
+                cfg, basis_name, eigenbasis, op_matrix_names
             )
             self.basis_name = basis_name
             self.eigenbasis = eigenbasis
-            self.op_matrix_names = op_matrix
+            self.op_matrix_names = op_matrix_names
             self.dim = len(eigenbasis)
             self.operators: dict[str, defaultdict[str, dict]] = {
                 addr: defaultdict(dict) for addr in ["Global", "Local"]
@@ -368,7 +392,8 @@ class BaseHamiltonian:
         if "doppler" not in self.noise_model.noise_types:
             self._doppler_detune = {qid: 0.0 for qid in self._qid_index}
         # Noise, samples and Hamiltonian update routine
-        self._construct_samples()
+        if kwargs.get("construct_hamiltonian", True):
+            self.construct_hamiltonian()
 
     @staticmethod
     @functools.cache
@@ -534,7 +559,7 @@ class BaseHamiltonian:
                 op_matrix_names.append(proj_name)
         return op_matrix_names
 
-    def _construct_samples(self, update: bool = True) -> None:
+    def construct_hamiltonian(self, update: bool = True) -> None:
         """Constructs the noisy samples.
 
         Refreshes potential noise parameters by drawing new at random.
