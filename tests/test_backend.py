@@ -655,7 +655,7 @@ def test_results_aggregation_errors(caplog):
         "The Results come from incompatible simulations: "
         "the times for `dummy_result` are not all the same."
     )
-    del results1._aggregation_methods
+    results1._aggregation_methods = {}
     with pytest.raises(NotImplementedError) as ex:
         Results.aggregate([results1, results2])
     assert str(ex.value) == (

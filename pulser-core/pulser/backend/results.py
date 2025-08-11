@@ -220,10 +220,13 @@ class Results:
             results._results[uuid.UUID(key)] = deserialize_complex(value)
         for key, value in obj["times"].items():
             results._times[uuid.UUID(key)] = value
-        for key, value in obj["aggregation_methods"].items():
-            results._aggregation_methods[uuid.UUID(key)] = AggregationMethod(
-                value
-            )
+        if (
+            "aggregation_methods" in obj
+        ):  # optional for backwards compatibility
+            for key, value in obj["aggregation_methods"].items():
+                results._aggregation_methods[uuid.UUID(key)] = (
+                    AggregationMethod(value)
+                )
         return results
 
     def to_abstract_repr(self, skip_validation: bool = False) -> str:
@@ -298,7 +301,7 @@ class Results:
         )
 
         for results in results_to_aggregate:
-            if not hasattr(results, "_aggregation_methods"):
+            if results._results and (not results._aggregation_methods):
                 raise NotImplementedError(
                     (
                         "You're trying to aggregate results from pulser<1.6,"
