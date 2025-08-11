@@ -36,6 +36,15 @@
         "detuning_sigma": {
           "type": "number"
         },
+        "detuning_high_freq": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "type": "number" }
+          }
+        },
         "eff_noise": {
           "items": {
             "items": [
