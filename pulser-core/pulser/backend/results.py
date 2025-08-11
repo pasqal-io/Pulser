@@ -298,9 +298,17 @@ class Results:
         )
 
         for results in results_to_aggregate:
+            if not hasattr(results, "_aggregation_methods"):
+                raise NotImplementedError(
+                    (
+                        "You're trying to aggregate results from pulser<1.6,"
+                        "aggregation is not supported in this case."
+                    )
+                )
             for tag, uid in results._tagmap.items():
                 if tag not in common_tags and not (
-                    results._aggregation_methods[uid].value < 2
+                    results._aggregation_methods[uid].value
+                    in (AggregationMethod.SKIP, AggregationMethod.SKIP_WARN)
                 ):
                     raise ValueError(
                         "You're trying to aggregate incompatible results: "
