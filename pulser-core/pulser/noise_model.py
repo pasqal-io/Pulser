@@ -46,13 +46,14 @@ _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "leakage": ("with_leakage",),
     "doppler": ("temperature",),
     "amplitude": ("laser_waist", "amp_sigma"),
-    "detuning": ("detuning_sigma",),
+    "detuning": ("detuning_sigma", "detuning_high_freq"),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
     "dephasing": ("dephasing_rate", "hyperfine_dephasing_rate"),
     "relaxation": ("relaxation_rate",),
     "depolarizing": ("depolarizing_rate",),
     "eff_noise": ("eff_noise_rates", "eff_noise_opers"),
 }
+
 
 _PARAM_TO_NOISE_TYPE: dict[str, NoiseTypes] = {
     param: noise_type
@@ -99,7 +100,7 @@ _LEGACY_DEFAULTS = {
     "depolarizing_rate": 0.05,
 }
 
-OPTIONAL_IN_ABSTR_REPR = ("detuning_sigma",)
+OPTIONAL_IN_ABSTR_REPR = ("detuning_sigma", "detuning_high_freq")
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -134,8 +135,12 @@ class NoiseModel:
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
-    - **detuning**: Detuning fluctuations, parametrized by
-      ``detuning_sigma``.
+    - **detuning**: Detuning fluctuations consisting of two
+      components:
+      (1) a constant offset (zero-frequency), parameterized by
+      ``detuning_sigma``;
+      (2) high-frequency fluctuations, defined by the power spectral
+      density ``psd`` over the specified ``frequencies`` range.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
 
@@ -166,6 +171,8 @@ class NoiseModel:
             distribution centered in 0. Assumed to be the same for all
             channels (though each channel has its own randomly sampled
             value in each run). This noise is additive. Defaults to 0.
+        psd: power spectral density
+        frequencies: domain where psd is defined
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1. Defaults to 0.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
@@ -194,6 +201,8 @@ class NoiseModel:
     laser_waist: float | None = None
     amp_sigma: float = 0.0
     detuning_sigma: float = 0.0
+    power_spectral_density: ArrayLike | None = None
+    frequencies: ArrayLike | None = None
     relaxation_rate: float = 0.0
     dephasing_rate: float = 0.0
     hyperfine_dephasing_rate: float = 0.0
@@ -241,6 +250,7 @@ class NoiseModel:
             "eff_noise" in true_noise_types,
             with_leakage=cast(bool, param_vals["with_leakage"]),
         )
+        self._check_high_frequency_noise()
 
         relevant_params = self._find_relevant_params(
             true_noise_types,
@@ -377,6 +387,10 @@ class NoiseModel:
                     f"shape must be {possible_shapes[0]}, "
                     f"not {operator.shape}."
                 )
+
+    @staticmethod
+    def _check_high_frequency_noise() -> None:
+        pass
 
     @staticmethod
     def _validate_parameters(param_vals: dict[str, Any]) -> None:
