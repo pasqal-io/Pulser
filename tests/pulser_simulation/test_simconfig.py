@@ -199,7 +199,6 @@ def test_noise_model_conversion():
 )
 def test_noisy_register(register2D: bool) -> None:
     """Testing noisy_register function."""
-
     if register2D:
         qdict = {
             "q0": np.array([-15.0, 0.0]),

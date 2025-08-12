@@ -28,7 +28,7 @@ from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, NoiseTypes
 MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
 KEFF = 8.7  # µm^-1
-WAVELENGH = 0.85  # µm
+WAVELENGTH = 0.85  # µm
 
 T = TypeVar("T", bound="SimConfig")
 
@@ -76,28 +76,26 @@ def doppler_sigma(temperature: float) -> float:
 def register_sigma_xy_z(
     temperature: float, trap_waist: float, trap_depth: float
 ) -> tuple[float, float]:
-    """
-    Calculates the standar deviation for fluctions in atom position in the trap
+    """Standar deviation for fluctions in atom position in the trap.
+
     - 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperaturae, w is the trap waist
         and Uₜᵣₐₚ is the trap depth.
     - 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, 𝜆 is the wavelenght with a constant value of 0.85 µm
 
-    Parameters:
+    Args:
     temperature (float): Temperature of the atoms in the trap (in Kelvin).
     trap_depth (float): Depth of the trap (same units as temperature).
     trap_waist (float): Waist of the trap (in µmeters).
 
-
-    Returns:
+    Outputs:
     tuple: The standard deviations of the spatial position fluctuations
     in the xy-plane (register_sigma_xy) and along the z-axis (register_sigma_z)
     """
-
     register_sigma_xy = math.sqrt(
         temperature * trap_waist**2 / (4 * trap_depth)
     )
     register_sigma_z = (
-        math.pi / WAVELENGH * math.sqrt(2) * trap_waist * register_sigma_xy
+        math.pi / WAVELENGTH * math.sqrt(2) * trap_waist * register_sigma_xy
     )
     return register_sigma_xy, register_sigma_z
 
@@ -367,7 +365,7 @@ class SimConfig:
 def noisy_register(
     q_dict: dict, register_sigma_xy: float, register_sigma_z: float
 ) -> dict:
-    "Add Gaussian noise to the positions of the register"
+    """Add Gaussian noise to the positions of the register."""
     atoms = list(q_dict.keys())
     num_atoms = len(list(atoms))
     positions = np.array(list(q_dict.values()))
