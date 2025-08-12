@@ -201,8 +201,9 @@ class NoiseModel:
     laser_waist: float | None = None
     amp_sigma: float = 0.0
     detuning_sigma: float = 0.0
-    power_spectral_density: ArrayLike | None = None
-    frequencies: ArrayLike | None = None
+    detuning_high_freq : tuple[ArrayLike, ...] = ()
+    #power_spectral_density: ArrayLike | None = None
+    #frequencies: ArrayLike | None = None
     relaxation_rate: float = 0.0
     dephasing_rate: float = 0.0
     hyperfine_dephasing_rate: float = 0.0
@@ -244,13 +245,15 @@ class NoiseModel:
             if param_vals[p_] and p_ in _PARAM_TO_NOISE_TYPE
         }
         self._check_leakage_noise(true_noise_types)
+        self._check_detuning_high_frequency_noise(
+            param_vals["detuning_high_freq"]
+        )
         self._check_eff_noise(
             cast(tuple, param_vals["eff_noise_rates"]),
             cast(tuple, param_vals["eff_noise_opers"]),
             "eff_noise" in true_noise_types,
             with_leakage=cast(bool, param_vals["with_leakage"]),
         )
-        self._check_high_frequency_noise()
 
         relevant_params = self._find_relevant_params(
             true_noise_types,
@@ -328,6 +331,14 @@ class NoiseModel:
                 )
 
     @staticmethod
+    def _check_detuning_high_frequency_noise(
+        detuning_hf: Sequence[ArrayLike]
+    ) -> None:
+        assert len(detuning_hf) == 2 or len(detuning_hf) == 0
+        if len(detuning_hf) == 2:
+            assert len(detuning_hf[0]) == len(detuning_hf[1])
+
+    @staticmethod
     def _check_eff_noise(
         eff_noise_rates: Sequence[float],
         eff_noise_opers: Sequence[ArrayLike],
@@ -387,10 +398,6 @@ class NoiseModel:
                     f"shape must be {possible_shapes[0]}, "
                     f"not {operator.shape}."
                 )
-
-    @staticmethod
-    def _check_high_frequency_noise() -> None:
-        pass
 
     @staticmethod
     def _validate_parameters(param_vals: dict[str, Any]) -> None:
