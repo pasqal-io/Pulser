@@ -55,7 +55,7 @@ class BaseHamiltonian:
         register: BaseRegister,
         device: BaseDevice,
         config: NoiseModel,
-        **kwargs,
+        **kwargs: bool,
     ) -> None:
         """Instantiates a Hamiltonian object."""
         # Initializing the samples obj
@@ -125,15 +125,19 @@ class BaseHamiltonian:
         self._doppler_detune: dict[Union[str, int], float] = {}
 
         # Define interaction
-        self._interaction = "XY" if self.samples_obj._in_xy else "ising"
+        self._interaction: Literal["XY", "ising"] = (
+            "XY" if self.samples_obj._in_xy else "ising"
+        )
 
         # Initializing qubit infos
         self._size = len(self._qdict)
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
 
         # Stores the qutip operators used in building the Hamiltonian
-        self._local_collapse_ops: list[tuple[Number, str] | np.ndarray] = []
-        self._depolarizing_pauli_2ds: dict[str | tuple[Number, str]] = {}
+        self._local_collapse_ops: list[
+            tuple[int | float | complex, str | np.ndarray]
+        ] = []
+        self._depolarizing_pauli_2ds: dict[str, list[tuple[Number, str]]] = {}
 
         if kwargs.get("assign_config", True):
             self.set_config(config)
@@ -187,9 +191,9 @@ class BaseHamiltonian:
                     include_fall_time=with_modulation
                 ),
             ),
+            sequence.register,
             sequence.device,
-            sequence.register.qubits,
-            noise_model=noise_model or NoiseModel(),
+            noise_model or NoiseModel(),
         )
 
     @property
@@ -223,7 +227,9 @@ class BaseHamiltonian:
         return self._config
 
     @property
-    def local_collapse_operators(self) -> list[str | np.ndarray]:
+    def local_collapse_operators(
+        self,
+    ) -> list[tuple[int | float | complex, str | np.ndarray]]:
         """The 1-qudit collapse operators, as string or array."""
         return self._local_collapse_ops
 
@@ -246,15 +252,20 @@ class BaseHamiltonian:
             COORD_PRECISION,
         )
 
+    @functools.cached_property
+    def nbqudits(self) -> int:
+        """Number of qudits in the Register."""
+        return len(self.register.qubit_ids)
+
     @property
     def interaction_matrix(self) -> np.ndarray:
         r"""C6/C3 Interactions between the qubits (in :math:`rad/\mu s`)."""
-        interactions = np.zeros((self.nbqubits, self.nbqubits))
-        same_atom = np.eye(self.nbqubits, dtype=bool)
+        interactions = np.zeros((self.nbqudits, self.nbqudits))
+        same_atom = np.eye(self.nbqudits, dtype=bool)
         interactions[~same_atom] = (
             self.device.interaction_coeff
             if self.interaction_type == "ising"
-            else self.device.interaction_coeff_xy
+            else cast(float, self.device.interaction_coeff_xy)
         ) / self.distances[~same_atom] ** (
             6 if self.interaction_type == "ising" else 3
         )
@@ -271,7 +282,9 @@ class BaseHamiltonian:
         op_matrix: list[str],
     ) -> None:
 
-        local_collapse_ops = []
+        local_collapse_ops: list[
+            tuple[int | float | complex, str | np.ndarray]
+        ] = []
         if "dephasing" in config.noise_types:
             dephasing_rates = {
                 "d": config.dephasing_rate,
@@ -322,23 +335,24 @@ class BaseHamiltonian:
 
         if "eff_noise" in config.noise_types:
             for id_, rate in enumerate(config.eff_noise_rates):
-                op = config.eff_noise_opers[id_]
+                operator = config.eff_noise_opers[id_]
                 # This supports the case where the operators are given as Qobj
                 # (even though they shouldn't per the NoiseModel signature)
                 try:
-                    op = op.full()
+                    operator = operator.full()  # type: ignore
                 except AttributeError:
                     pass
-                op = np.array(op)
+                operator = np.array(operator)
 
                 basis_dim = len(eigenbasis)
                 op_shape = (basis_dim, basis_dim)
-                if op.shape != op_shape:
+                if operator.shape != op_shape:
                     raise ValueError(
                         "Incompatible shape for effective noise operator n°"
-                        f"{id_}. Operator {op} should be of shape {op_shape}."
+                        f"{id_}. Operator {operator} should be of shape "
+                        f"{op_shape}."
                     )
-                local_collapse_ops.append((np.sqrt(rate), op))
+                local_collapse_ops.append((np.sqrt(rate), operator))
         # Building collapse operators
         self._local_collapse_ops = local_collapse_ops
 
@@ -355,7 +369,7 @@ class BaseHamiltonian:
         if not isinstance(cfg, NoiseModel):
             raise ValueError(f"Object {cfg} is not a valid `NoiseModel`.")
 
-    def set_config(self, cfg: NoiseModel, **kwargs) -> None:
+    def set_config(self, cfg: NoiseModel, **kwargs: bool) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
         Args:
@@ -365,7 +379,7 @@ class BaseHamiltonian:
             construct_hamiltonian: Whether or not to update noisy values.
         """
         self._check_config(cfg)
-        if self._update_basis:
+        if self._update_basis(cfg):
             basis_name = self._get_basis_name(cfg.with_leakage)
             eigenbasis = self._get_eigenbasis(cfg.with_leakage)
             op_matrix_names = self._get_projectors(eigenbasis)

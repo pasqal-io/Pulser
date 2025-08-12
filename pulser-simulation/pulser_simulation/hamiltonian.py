@@ -26,7 +26,7 @@ import qutip
 from pulser.channels.base_channel import STATES_RANK, States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
-from pulser.register.base_register import QubitId, BaseRegister
+from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler.noisy_sampler import BaseHamiltonian
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
@@ -117,7 +117,7 @@ class Hamiltonian(BaseHamiltonian):
                     except KeyError as e2:
                         raise KeyError(
                             f"Invalid local collapse operator {collapse_op}."
-                        ) from (e1, e2)
+                        ) from ExceptionGroup("Got KeyErrors:", (e1, e2))
 
             else:
                 assert isinstance(collapse_op, np.ndarray)
@@ -127,11 +127,14 @@ class Hamiltonian(BaseHamiltonian):
                 for qid in self._qid_index
             ]
 
-    def set_config(self, cfg: NoiseModel) -> None:
+    def set_config(self, cfg: NoiseModel, **kwargs: bool) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
         Args:
             cfg: New configuration.
+
+        Keyword Args:
+            construct_hamiltonian: Whether or not to update noisy values.
         """
         self._check_config(cfg)
         not_supported = (
@@ -151,7 +154,8 @@ class Hamiltonian(BaseHamiltonian):
             assert set(self.op_matrix_names) == set(self.op_matrix.keys())
         self._build_collapse_operators()
         # Noise, samples and Hamiltonian update routine
-        self._construct_hamiltonian()
+        if kwargs.get("construct_hamiltonian", True):
+            self._construct_hamiltonian()
 
     @staticmethod
     @functools.cache
