@@ -220,13 +220,10 @@ class Results:
             results._results[uuid.UUID(key)] = deserialize_complex(value)
         for key, value in obj["times"].items():
             results._times[uuid.UUID(key)] = value
-        if (
-            "aggregation_methods" in obj
-        ):  # optional for backwards compatibility
-            for key, value in obj["aggregation_methods"].items():
-                results._aggregation_methods[uuid.UUID(key)] = (
-                    AggregationMethod(value)
-                )
+        for key, value in obj.get("aggregation_methods", {}).items():
+            results._aggregation_methods[uuid.UUID(key)] = AggregationMethod(
+                value
+            )
         return results
 
     def to_abstract_repr(self, skip_validation: bool = False) -> str:
