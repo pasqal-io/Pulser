@@ -386,7 +386,7 @@ class Waveform(ABC):
             # Adds zero on both ends to show rise and fall
             samples = np.pad(samples, 1)
             # Repeats the times on the edges once
-            ts = np.pad(ts, 1, mode="edge")  # type: ignore[assignment]
+            ts = np.pad(ts, 1, mode="edge")
 
         color_dict: dict[str, Any]
         if color:
