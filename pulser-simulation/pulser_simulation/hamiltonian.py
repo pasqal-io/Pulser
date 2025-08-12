@@ -503,10 +503,8 @@ class Hamiltonian:
             update: Whether to update the noise parameters.
         """
         if update:
-            print("update call")
             self._update_noise()
         self._extract_samples()
-        print("after extract samples:")
 
         # add register noise use the _qdict to modify the register positions
         # how to determine the register plane,
@@ -552,7 +550,6 @@ class Hamiltonian:
             )
 
         def make_interaction_term(masked: bool = False) -> qutip.Qobj:
-            print("interactioncall:", self._qdict)
             if masked:
                 # Calculate the total number of good, unmasked qubits
                 effective_size = self._size - sum(self._bad_atoms.values())

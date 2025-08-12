@@ -46,7 +46,7 @@ NoiseTypes = Literal[
 _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "leakage": ("with_leakage",),
     "doppler": ("temperature",),
-    "register": ("trap_waist", "trap_depth"),  # this need the temperature also
+    "register": ("trap_waist", "trap_depth"),  # temperature is also needed
     "amplitude": ("laser_waist", "amp_sigma"),
     "detuning": ("detuning_sigma",),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),

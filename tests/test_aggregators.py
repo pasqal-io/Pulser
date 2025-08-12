@@ -11,7 +11,6 @@ def test_bag_union():
     counter2 = Counter({"1010": 3, "0101": 9, "1111": 4})
 
     union = _bag_union_aggregator([counter1, counter2])
-    print(union)
     assert union == {"1010": 8, "0101": 16, "0000": 2, "1111": 4}
 
 

@@ -308,9 +308,17 @@ class TestNoiseModel:
         }
 
         assert NoiseModel._find_relevant_params(
+            {"register"}, 0.0, 0.0, None
+        ) == {
+            "trap_waist",
+            "trap_depth",
+            "runs",
+            "samples_per_run",
+        }
+
+        assert NoiseModel._find_relevant_params(
             {"doppler"}, 0.0, 0.0, None
         ) == {"temperature", "runs", "samples_per_run"}
-
         assert NoiseModel._find_relevant_params(
             {"amplitude"}, 0.0, 1.0, None
         ) == {"amp_sigma", "runs", "samples_per_run"}
@@ -320,7 +328,6 @@ class TestNoiseModel:
         assert NoiseModel._find_relevant_params(
             {"amplitude"}, 0.0, 0.5, 100.0
         ) == {"amp_sigma", "laser_waist", "runs", "samples_per_run"}
-
         assert NoiseModel._find_relevant_params(
             {"dephasing", "leakage"}, 0.0, 0.0, None
         ) == {"dephasing_rate", "hyperfine_dephasing_rate", "with_leakage"}

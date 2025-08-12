@@ -78,10 +78,11 @@ def register_sigma_xy_z(
 ) -> tuple[float, float]:
     """Standar deviation for fluctions in atom position in the trap.
 
-    - 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperaturae, w is the trap waist
-        and Uₜᵣₐₚ is the trap depth.
+    - 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,
+      w is the trap waist and Uₜᵣₐₚ is the trap depth.
     - 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, 𝜆 is the wavelenght with a constant value of 0.85 µm
-
+    Note: a k_B factor is absorbed in the trap depth (Uₜᵣₐₚ), so the units
+    of temperature and trap depth are the same.
     Args:
     temperature (float): Temperature (T) of the atoms in the trap (in Kelvin).
     trap_depth (float): Depth of the trap (Uₜᵣₐₚ) (same units as temperature).
