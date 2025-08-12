@@ -443,13 +443,12 @@ class Hamiltonian:
             self._doppler_detune = dict(zip(self._qid_index, detune))
 
         if "register" in self.config.noise_types:
-            # Register noise is applied to the coordinates of the atoms
+            # should be applied before the Hamiltonian is built
             xy_sigma, z_sigma = register_sigma_xy_z(
                 self.config.temperature,  # temperature in micro-Kelvin
                 self.config.trap_waist,
-                self.config.trap_depth,  # trap depth in micro-Kelvin
+                self.config.trap_depth,  # same units as temperature
             )
-            print("register noise:", xy_sigma, z_sigma)
             self._qdict = noisy_register(self._qdict, xy_sigma, z_sigma)
 
     def _get_basis_name(self, with_leakage: bool) -> str:

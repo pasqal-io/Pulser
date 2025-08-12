@@ -83,9 +83,9 @@ def register_sigma_xy_z(
     - 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, 𝜆 is the wavelenght with a constant value of 0.85 µm
 
     Args:
-    temperature (float): Temperature of the atoms in the trap (in Kelvin).
-    trap_depth (float): Depth of the trap (same units as temperature).
-    trap_waist (float): Waist of the trap (in µmeters).
+    temperature (float): Temperature (T) of the atoms in the trap (in Kelvin).
+    trap_depth (float): Depth of the trap (Uₜᵣₐₚ) (same units as temperature).
+    trap_waist (float): Waist of the trap (w) (in µmeters).
 
     Outputs:
     tuple: The standard deviations of the spatial position fluctuations
@@ -244,13 +244,6 @@ class SimConfig:
             )
 
         self._change_attribute("temperature", self.temperature / 1e6)
-
-        if not isinstance(self.trap_depth, (int, float)):
-            raise TypeError(
-                f"'trap_depth' must be a float, not {type(self.trap_depth)}."
-            )
-
-        # self._change_attribute("trap_depth", self.trap_depth / 1e6)
 
         NoiseModel._check_noise_types(cast(Tuple[NoiseTypes], self.noise))
         self._check_spam_dict()
