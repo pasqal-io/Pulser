@@ -268,7 +268,7 @@ class RegisterLayout(Traps, RegDrawer):
         )
 
     def _to_abstract_repr(self) -> dict[str, list[list[float]]]:
-        d = {"coordinates": self.coords.tolist()}
+        d: dict = {"coordinates": self.coords.tolist()}
         if self.slug is not None:
             d["slug"] = self.slug
         return d

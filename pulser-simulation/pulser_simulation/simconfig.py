@@ -364,11 +364,13 @@ class SimConfig:
         return SUPPORTED_NOISES
 
 
-def noisy_register(q_dict: dict, register_sigma_xy, register_sigma_z):
+def noisy_register(
+    q_dict: dict, register_sigma_xy: float, register_sigma_z: float
+) -> dict:
     "Add Gaussian noise to the positions of the register"
     atoms = list(q_dict.keys())
     num_atoms = len(list(atoms))
-    positions = list(q_dict.values())
+    positions = np.array(list(q_dict.values()))
 
     if len(positions[0]) == 2:
         positions = np.array(
