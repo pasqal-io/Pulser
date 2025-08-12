@@ -19,8 +19,7 @@ import functools
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import replace
-from numbers import Number
-from typing import cast, Union, Literal
+from typing import Literal, Union, cast
 
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -137,7 +136,9 @@ class BaseHamiltonian:
         self._local_collapse_ops: list[
             tuple[int | float | complex, str | np.ndarray]
         ] = []
-        self._depolarizing_pauli_2ds: dict[str, list[tuple[Number, str]]] = {}
+        self._depolarizing_pauli_2ds: dict[
+            str, list[tuple[int | complex, str]]
+        ] = {}
 
         if kwargs.get("assign_config", True):
             self.set_config(config)
@@ -246,6 +247,7 @@ class BaseHamiltonian:
     @property
     def distances(self) -> np.ndarray:
         r"""Distances between each qubits (in :math:`\mu m`)."""
+        # TODO: Handle torch arrays
         positions = np.array(list(self._qdict.values()))
         return np.round(
             cast(np.ndarray, cdist(positions, positions, metric="euclidean")),
@@ -260,6 +262,10 @@ class BaseHamiltonian:
     @property
     def interaction_matrix(self) -> np.ndarray:
         r"""C6/C3 Interactions between the qubits (in :math:`rad/\mu s`)."""
+        # TODO: Should be the U matrix in Hamiltonian._construct_hamiltonian
+        # TODO: Include masked qubits in XY + bad atoms in the interaction
+        # TODO: Include magnetic field interaction matrix
+        # TODO: Handle torch
         interactions = np.zeros((self.nbqudits, self.nbqudits))
         same_atom = np.eye(self.nbqudits, dtype=bool)
         interactions[~same_atom] = (
@@ -270,9 +276,6 @@ class BaseHamiltonian:
             6 if self.interaction_type == "ising" else 3
         )
         return interactions
-
-    # TODO: Include masked qubits in XY + bad atoms in the interaction
-    # TODO: Include magnetic field interaction matrix
 
     def _build_local_collapse_operators(
         self,
