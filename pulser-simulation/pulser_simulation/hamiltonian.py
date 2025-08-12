@@ -86,11 +86,6 @@ class Hamiltonian(BaseHamiltonian):
         )
         return cast(np.ndarray, full_array[indices])
 
-    @property
-    def config(self) -> NoiseModel:
-        """The current configuration, as a NoiseModel instance."""
-        return self._config
-
     def _build_collapse_operators(
         self,
     ) -> None:
@@ -117,7 +112,7 @@ class Hamiltonian(BaseHamiltonian):
                     except KeyError as e2:
                         raise KeyError(
                             f"Invalid local collapse operator {collapse_op}."
-                        ) from ExceptionGroup("Got KeyErrors:", (e1, e2))
+                        ) from e1
 
             else:
                 assert isinstance(collapse_op, np.ndarray)
@@ -156,113 +151,6 @@ class Hamiltonian(BaseHamiltonian):
         # Noise, samples and Hamiltonian update routine
         if kwargs.get("construct_hamiltonian", True):
             self._construct_hamiltonian()
-
-    @staticmethod
-    @functools.cache
-    def _finite_waist_amp_fraction(
-        coords: tuple[float, ...],
-        propagation_dir: tuple[float, float, float],
-        laser_waist: float,
-    ) -> float:
-        pos_vec = np.zeros(3, dtype=float)
-        pos_vec[: len(coords)] = np.array(coords, dtype=float)
-        u_vec = np.array(propagation_dir, dtype=float)
-        u_vec = u_vec / np.linalg.norm(u_vec)
-        # Given a line crossing the origin with normalized direction vector
-        # u_vec, the closest point along said line and an arbitrary point
-        # pos_vec is at k*u_vec, where
-        k = np.dot(pos_vec, u_vec)
-        # The distance between pos_vec and the line is then given by
-        dist = np.linalg.norm(pos_vec - k * u_vec)
-        # We assume the Rayleigh length of the gaussian beam is very large,
-        # resulting in a negligble drop in amplitude along the propagation
-        # direction. Therefore, the drop in amplitude at a given position
-        # is dictated solely by its distance to the optical axis (as dictated
-        # by the propagation direction), ie
-        return float(np.exp(-((dist / laser_waist) ** 2)))
-
-    def _extract_samples(self) -> None:
-        """Populates samples dictionary with every pulse in the sequence."""
-        local_noises = True
-        if set(self.config.noise_types).issubset(
-            {
-                "dephasing",
-                "relaxation",
-                "SPAM",
-                "depolarizing",
-                "eff_noise",
-                "leakage",
-            }
-        ):
-            local_noises = (
-                "SPAM" in self.config.noise_types
-                and self.config.state_prep_error > 0
-            )
-        samples = self.samples_obj.to_nested_dict(all_local=local_noises)
-
-        def add_noise(
-            slot: _PulseTargetSlot,
-            samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
-            is_global_pulse: bool,
-            amp_fluctuation: float,
-            det_fluctuation: float,
-            propagation_dir: tuple | None,
-        ) -> None:
-            """Builds hamiltonian coefficients.
-
-            Taking into account, if necessary, noise effects, which are local
-            and depend on the qubit's id qid.
-            """
-            for qid in slot.targets:
-                if "doppler" in self.config.noise_types:
-                    noise_det = self._doppler_detune[qid]
-                    samples_dict[qid]["det"][slot.ti : slot.tf] += noise_det
-                # Gaussian beam loss in amplitude for global pulses only
-                # Noise is drawn at random for each pulse
-                if "amplitude" in self.config.noise_types:
-                    amp_fraction = amp_fluctuation
-                    if self.config.laser_waist is not None and is_global_pulse:
-                        # Default to an optical axis along y
-                        prop_dir = propagation_dir or (0.0, 1.0, 0.0)
-                        amp_fraction *= self._finite_waist_amp_fraction(
-                            tuple(self._qdict[qid]),
-                            tuple(prop_dir),
-                            self.config.laser_waist,
-                        )
-                    samples_dict[qid]["amp"][slot.ti : slot.tf] *= amp_fraction
-                if "detuning" in self.config.noise_types:
-                    samples_dict[qid]["det"][
-                        slot.ti : slot.tf
-                    ] += det_fluctuation
-
-        if local_noises:
-            for ch, ch_samples in self.samples_obj.channel_samples.items():
-                _ch_obj = self.samples_obj._ch_objs[ch]
-                samples_dict = samples["Local"][_ch_obj.basis]
-                ch_amp_fluctuation = max(
-                    0, np.random.normal(1.0, self.config.amp_sigma)
-                )
-                ch_det_fluctuation = (
-                    np.random.normal(0.0, self.config.detuning_sigma)
-                    if self.config.detuning_sigma
-                    else 0.0
-                )
-                for slot in ch_samples.slots:
-                    add_noise(
-                        slot,
-                        samples_dict,
-                        _ch_obj.addressing == "Global",
-                        amp_fluctuation=ch_amp_fluctuation,
-                        det_fluctuation=ch_det_fluctuation,
-                        propagation_dir=_ch_obj.propagation_dir,
-                    )
-            # Delete samples for badly prepared atoms
-            for basis in samples["Local"]:
-                for qid in samples["Local"][basis]:
-                    if self._bad_atoms[qid]:
-                        for qty in ("amp", "det", "phase"):
-                            samples["Local"][basis][qid][qty] = 0.0
-        self.samples = samples
 
     def _build_operator(
         self, operations: Union[list, tuple], op_matrix: dict[str, qutip.Qobj]
@@ -346,34 +234,6 @@ class Hamiltonian(BaseHamiltonian):
         """
         return self._build_operator(operations, self.op_matrix)
 
-    def _update_noise(self) -> None:
-        """Updates noise random parameters.
-
-        Used at the start of each run. If SPAM isn't in chosen noises, all
-        atoms are set to be correctly prepared.
-        """
-        if (
-            "SPAM" in self.config.noise_types
-            and self.config.state_prep_error > 0
-        ):
-            dist = (
-                np.random.uniform(size=len(self._qid_index))
-                < self.config.state_prep_error
-            )
-            self._bad_atoms = dict(zip(self._qid_index, dist))
-        if "doppler" in self.config.noise_types:
-            temp = self.config.temperature * 1e-6
-            detune = np.random.normal(
-                0, doppler_sigma(temp), size=len(self._qid_index)
-            )
-            self._doppler_detune = dict(zip(self._qid_index, detune))
-
-    def _get_eigenbasis(self, with_leakage: bool) -> list[States]:
-        eigenbasis = self.samples_obj.eigenbasis
-        if with_leakage:
-            eigenbasis.append("x")
-        return [state for state in STATES_RANK if state in eigenbasis]
-
     @staticmethod
     def _get_basis_op_matrices(
         eigenbasis: list[States],
@@ -404,9 +264,7 @@ class Hamiltonian(BaseHamiltonian):
         Args:
             update: Whether to update the noise parameters.
         """
-        if update:
-            self._update_noise()
-        self._extract_samples()
+        super().construct_hamiltonian(update)
 
         def make_vdw_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
