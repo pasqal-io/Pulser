@@ -148,10 +148,10 @@ class SimConfig:
             noise.
         samples_per_run: Number of samples per noisy run.
             Useful for cutting down on computing time, but unrealistic.
-        temperature: Temperature, set in K, of the Rydberg array.
+        temperature: Temperature, set in µK, of the Rydberg array.
             Also sets the standard deviation of the speed of the atoms.
         trap_depth: energy depth of the trap, set in the same units as
-            temperature (K). Used to calculate the register fluctuations.
+            temperature (µK). Used to calculate the register fluctuations.
         trap_waist: Radius of the trapping laser beam at the focus point,
             set in µm. Used to calculate the register fluctuations.
         laser_waist: Waist of the gaussian laser, set in µm, in global
