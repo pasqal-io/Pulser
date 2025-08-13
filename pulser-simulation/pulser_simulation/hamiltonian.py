@@ -309,11 +309,16 @@ class Hamiltonian:
                 ch_amp_fluctuation = max(
                     0, np.random.normal(1.0, self.config.amp_sigma)
                 )
-                ch_det_fluctuation = (
-                    np.random.normal(0.0, self.config.detuning_sigma)
-                    if self.config.detuning_sigma
-                    else 0.0
+                ch_det_fluctuation = self.config.generate_detuning_fluctuation(
+                    self.config.detuning_sigma,
+                    self.config.detuning_high_freq,
+                    1.0
                 )
+                #ch_det_fluctuation = (
+                #    np.random.normal(0.0, self.config.detuning_sigma)
+                #    if self.config.detuning_sigma
+                #    else 0.0
+                #)
                 for slot in ch_samples.slots:
                     add_noise(
                         slot,

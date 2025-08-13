@@ -2006,8 +2006,8 @@ def test_hf_detuning_noise():
     seq.add(pulse1, "ch1", protocol="no-delay")
     seq.add(pulse1, "ch2", protocol="no-delay")
 
-    psd = [1, 2, 3]
-    freq = [4, 5, 6]
+    psd = np.array([1, 2, 3]) # Just list doesn't work for the computational part
+    freq = np.array([4, 5, 6])
 
     noise_mod = NoiseModel(detuning_sigma=1.1,
                            detuning_high_freq = (psd, freq),

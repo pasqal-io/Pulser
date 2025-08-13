@@ -495,3 +495,32 @@ class NoiseModel:
                 obj_str
             )
         )
+
+    @staticmethod
+    def generate_detuning_fluctuation(
+        detuning_sigma: float,
+        detuning_high_freq : tuple[ArrayLike, ...],
+        curr_time: float
+    ) -> float:
+        """Computes detuning fluctuation.
+
+        Args:
+            detuning_sigma (float): determines standard deviation
+                in normal distribution ``N(0, detuning_sigma)`` term.
+            detuning_high_freq (tuple[ArrayLike, ...]):
+                contains power spectral density and frequency domains
+                for computing high frequency part.
+            curr_time (float): current time is required for computing
+                high frequency term.
+        """
+        detuning_fluct = 0.0
+        if detuning_sigma:
+            detuning_fluct += np.random.normal(0.0, detuning_sigma)
+        if detuning_high_freq :
+            psd = detuning_high_freq[0]
+            freq = detuning_high_freq[1]
+            df = np.diff(freq)
+            amp = 2.0 * np.sqrt( df * psd[:-1])
+            arg = curr_time * freq[:-1] + np.random.rand(df.size)
+            detuning_fluct += np.sum(amp * np.cos(2.0 * np.pi * arg))
+        return detuning_fluct
