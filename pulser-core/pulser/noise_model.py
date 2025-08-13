@@ -202,8 +202,6 @@ class NoiseModel:
     amp_sigma: float = 0.0
     detuning_sigma: float = 0.0
     detuning_high_freq : tuple[ArrayLike, ...] = ()
-    #power_spectral_density: ArrayLike | None = None
-    #frequencies: ArrayLike | None = None
     relaxation_rate: float = 0.0
     dephasing_rate: float = 0.0
     hyperfine_dephasing_rate: float = 0.0
@@ -334,9 +332,19 @@ class NoiseModel:
     def _check_detuning_high_frequency_noise(
         detuning_hf: Sequence[ArrayLike]
     ) -> None:
-        assert len(detuning_hf) == 2 or len(detuning_hf) == 0
         if len(detuning_hf) == 2:
-            assert len(detuning_hf[0]) == len(detuning_hf[1])
+            if len(detuning_hf[0]) != len(detuning_hf[1]):
+                raise ValueError(
+                    "Power Spectral Density and the frequency" \
+                    " domain arrays must be of the same size " \
+                    "for high-frequency detuning noise."
+                )
+        elif len(detuning_hf) != 0:
+            raise ValueError(
+                "High-frequency detuning noise must be either" \
+                " empty or contain two arrays: Power Spectral" \
+                " Density and the corresponding frequencies."
+            )
 
     @staticmethod
     def _check_eff_noise(

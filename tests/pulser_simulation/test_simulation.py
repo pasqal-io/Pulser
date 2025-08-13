@@ -2009,8 +2009,8 @@ def test_hf_detuning_noise():
     psd = [1, 2, 3]
     freq = [4, 5, 6]
 
-    noise_mod = NoiseModel(detuning_sigma=0.1,
-                           #detuning_high_freq = (psd, freq),
+    noise_mod = NoiseModel(detuning_sigma=1.1,
+                           detuning_high_freq = (psd, freq),
                            runs=1,samples_per_run=1)
     
 
