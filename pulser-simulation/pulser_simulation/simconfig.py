@@ -106,7 +106,6 @@ def register_sigma_xy_z(
     return register_sigma_xy, register_sigma_z
 
 
-
 @dataclass(frozen=True)
 class SimConfig:
     """Specifies a simulation's configuration.
