@@ -17,6 +17,7 @@ from __future__ import annotations
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from enum import IntEnum
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -67,6 +68,15 @@ class Callback(ABC):
             result: The Results object to store the result in.
         """
         pass
+
+
+class AggregationMethod(IntEnum):
+    """Defines how to combine values from multiple results."""
+
+    SKIP = 0
+    SKIP_WARN = 1
+    MEAN = 2
+    BAG_UNION = 3
 
 
 class Observable(Callback):
@@ -204,3 +214,5 @@ class Observable(Callback):
                 f"Instead, got {evaluation_times!r}."
             )
         return eval_times_arr
+
+    default_aggregation_method = AggregationMethod.SKIP

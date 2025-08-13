@@ -24,6 +24,12 @@
                        "$ref": "#/definitions/uuid"
                    }
                },
+               "aggregation_methods": {
+                   "type": "object",
+                   "additionalProperties": {
+                       "type": "integer"
+                   }
+               },
                "results": {
                    "type": "object",
                    "additionalProperties": {
@@ -48,7 +54,8 @@
                "tagmap",
                "results",
                "times"
-           ]           
+           ],
+           "additionalProperties": false           
         }
     }     
 }

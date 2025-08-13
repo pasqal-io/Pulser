@@ -18,6 +18,7 @@ import re
 import typing
 import uuid
 from collections import Counter
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -49,7 +50,7 @@ from pulser.backend.remote import (
     RemoteResultsError,
     _OpenBatchContextManager,
 )
-from pulser.backend.results import Results
+from pulser.backend.results import AggregationMethod, Results
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
@@ -551,6 +552,230 @@ def test_emulation_config():
     finally:
         # Just to ensure subsequent tests are not affected
         EmulationConfig._enforce_expected_kwargs = False
+
+
+def test_results_aggregation():
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    uids = [uuid.uuid4() for _ in range(4)]
+    agg_type = AggregationMethod.MEAN
+    results1._store_raw(
+        uuid=uids[0],
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results1._store_raw(
+        uuid=uids[0],
+        tag="dummy_result",
+        time=0.2,
+        value=2.0,
+        aggregation_method=agg_type,
+    )
+    results1._store_raw(
+        uuid=uids[1],
+        tag="dummy_result2",
+        time=0.7,
+        value=2.0,
+        aggregation_method=AggregationMethod.SKIP,
+    )
+    results2._store_raw(
+        uuid=uids[2],
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uids[2],
+        tag="dummy_result",
+        time=0.2,
+        value=4.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uids[3],
+        tag="dummy_result3",
+        time=0.5,
+        value=2.0,
+        aggregation_method=AggregationMethod.SKIP_WARN,
+    )
+    i = 0
+
+    def aggregator(values):
+        nonlocal i
+        i = i + 1
+        return sum(values) / len(values)
+
+    with patch("pulser.backend.results.AGGREGATOR_MAPPING") as mock_aggregator:
+        mock_aggregator.__getitem__.return_value = aggregator
+        agg = Results.aggregate([results1, results2])
+        mock_aggregator.__getitem__.assert_called_once_with(agg_type)
+    agg2 = Results.aggregate([results1, results2], dummy_result=aggregator)
+    assert (
+        i == 4
+    )  # twice in agg, twice in agg2, once each for the 2 results added above.
+    for ag in [agg, agg2]:
+        ag_uuid = ag._find_uuid("dummy_result")
+        for uid in uids:
+            assert ag_uuid != uid
+        assert ag._aggregation_methods[ag_uuid] == agg_type
+        assert ag.dummy_result == [2.0, 3.0]
+
+    assert Results.aggregate([results1]) is results1
+
+
+def test_results_aggregation_errors(caplog):
+    uid = uuid.uuid4()
+    agg_type = AggregationMethod.MEAN
+
+    with pytest.raises(ValueError, match="No results to aggregate.") as ex:
+        Results.aggregate([])
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.2,
+        value=3.0,
+        aggregation_method=agg_type,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "The Results come from incompatible simulations: "
+        "the times for `dummy_result` are not all the same."
+    )
+    results1._aggregation_methods = {}
+    with pytest.raises(NotImplementedError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate results from pulser<1.6,"
+        "aggregation is not supported in this case."
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result2",
+        time=0.1,
+        value=3.0,
+        aggregation_method=agg_type,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate incompatible results: "
+        "result `dummy_result` is not present in all results, "
+        "but it's not marked to be skipped."
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 2], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_method=agg_type,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate incompatible results: "
+        "they do not all have the same atom order."
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=200)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_method=agg_type,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate incompatible results: "
+        "they do not all have the same sequence duration."
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_method=AggregationMethod.BAG_UNION,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate incompatible results: "
+        "they do not all contain the same aggregation functions."
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=AggregationMethod.SKIP_WARN,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_method=AggregationMethod.SKIP_WARN,
+    )
+    with pytest.warns(
+        UserWarning, match="Skipping aggregation of `dummy_result`."
+    ):
+        Results.aggregate([results1, results2])
 
 
 def test_results():
