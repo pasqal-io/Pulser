@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import dataclasses
+import math
 from collections import Counter
 from unittest.mock import patch
 
@@ -1947,6 +1948,8 @@ def test_amp_sigma_noise():
 
 
 def test_detuning_noise():
+    # NOTE: changing values in detuning_sigma will not change the results :(
+    # is this expected?
     duration = 10
     np.random.seed(1337)
     reg = Register({"q0": (0, 0), "q1": (10, 10)})
@@ -1955,7 +1958,7 @@ def test_detuning_noise():
     seq.declare_channel("ch1", "raman_local", initial_target="q0")
     seq.declare_channel("ch2", "raman_local", initial_target="q1")
 
-    pulse1 = Pulse.ConstantPulse(duration, 0, 0, 0)
+    pulse1 = Pulse.ConstantPulse(duration, 0, 1.0, 0)
     # Added twice to check the fluctuation doesn't change from pulse to pulse
     seq.add(pulse1, "ch0")
     seq.add(pulse1, "ch0")
@@ -1965,7 +1968,7 @@ def test_detuning_noise():
 
     sim = QutipEmulator.from_sequence(
         seq,
-        noise_model=NoiseModel(detuning_sigma=0.1, runs=1, samples_per_run=1),
+        noise_model=NoiseModel(detuning_sigma=0.5, runs=1, samples_per_run=1),
     )
     sim_samples = sim._hamiltonian.samples
 
@@ -1986,4 +1989,42 @@ def test_detuning_noise():
             digital_1,
             np.array([-0.20112646] * (duration) + [0.0] * (duration + 1)),
         )
+    )
+
+
+def test_register_noise():
+    """End to end test with a noisy register."""
+    np.random.seed(123)
+    seq = Sequence(
+        Register({"q0": (-6, 0), "q1": (0, 0), "q2": (6, 0)}), AnalogDevice
+    )
+    seq.declare_channel("ising", "rydberg_global")
+    seq.add(
+        Pulse.ConstantPulse(1000, 2.0 * math.pi, 3.0 * math.pi, 0.0), "ising"
+    )
+    noise_model = NoiseModel(
+        runs=1,
+        samples_per_run=1,
+        temperature=50,
+        trap_depth=150.0,
+        trap_waist=1.0,
+    )
+    emulator = QutipEmulator.from_sequence(seq, noise_model=noise_model)
+    res = emulator.run()
+    final_state = res.get_final_state()
+    assert np.allclose(
+        final_state.full(),
+        np.array(
+            [
+                [-0.01495776 - 0.00737006j],
+                [0.26651217 - 0.18679359j],
+                [0.00547689 - 0.00477048j],
+                [0.49020253 + 0.21809502j],
+                [-0.18310545 + 0.10799198j],
+                [0.1644293 - 0.03790691j],
+                [-0.03275956 + 0.02433686j],
+                [0.72839219 + 0.0j],
+            ]
+        ),
+        1e-2,
     )
