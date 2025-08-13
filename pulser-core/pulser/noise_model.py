@@ -87,7 +87,6 @@ _PROBABILITY_LIKE = {
 
 _BOOLEAN = {"with_leakage"}
 
-# legacy confing
 _LEGACY_DEFAULTS = {
     "runs": 15,
     "samples_per_run": 5,
