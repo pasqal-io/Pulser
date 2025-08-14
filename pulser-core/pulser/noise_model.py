@@ -498,7 +498,6 @@ class NoiseModel:
 
     @staticmethod
     def generate_detuning_fluctuation(
-        detuning_sigma: float,
         detuning_high_freq : tuple[ArrayLike, ...],
         curr_time: float
     ) -> float:
@@ -513,14 +512,12 @@ class NoiseModel:
             curr_time (float): current time is required for computing
                 high frequency term.
         """
-        detuning_fluct = 0.0
-        if detuning_sigma:
-            detuning_fluct += np.random.normal(0.0, detuning_sigma)
+        hf_detuning_fluct = 0.0
         if detuning_high_freq :
             psd = detuning_high_freq[0]
             freq = detuning_high_freq[1]
             df = np.diff(freq)
             amp = 2.0 * np.sqrt( df * psd[:-1])
             arg = curr_time * freq[:-1] + np.random.rand(df.size)
-            detuning_fluct += np.sum(amp * np.cos(2.0 * np.pi * arg))
-        return detuning_fluct
+            hf_detuning_fluct = np.sum(amp * np.cos(2.0 * np.pi * arg))
+        return hf_detuning_fluct.item()

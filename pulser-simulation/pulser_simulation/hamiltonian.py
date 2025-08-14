@@ -302,6 +302,8 @@ class Hamiltonian:
                         slot.ti : slot.tf
                     ] += det_fluctuation
 
+        ### ENDS OF DEF ADD NOISE
+
         if local_noises:
             for ch, ch_samples in self.samples_obj.channel_samples.items():
                 _ch_obj = self.samples_obj._ch_objs[ch]
@@ -309,23 +311,26 @@ class Hamiltonian:
                 ch_amp_fluctuation = max(
                     0, np.random.normal(1.0, self.config.amp_sigma)
                 )
-                ch_det_fluctuation = self.config.generate_detuning_fluctuation(
-                    self.config.detuning_sigma,
-                    self.config.detuning_high_freq,
-                    1.0
+                # ch_det_fluctuation = self.config.generate_detuning_fluctuation(
+                #     self.config.detuning_sigma,
+                #     self.config.detuning_high_freq,
+                #     1.0
+                # )
+                ch_det_fluctuation = (
+                    np.random.normal(0.0, self.config.detuning_sigma)
+                    if self.config.detuning_sigma
+                    else 0.0
                 )
-                #ch_det_fluctuation = (
-                #    np.random.normal(0.0, self.config.detuning_sigma)
-                #    if self.config.detuning_sigma
-                #    else 0.0
-                #)
                 for slot in ch_samples.slots:
+                    hf = self.config.generate_detuning_fluctuation(
+                        self.config.detuning_high_freq,
+                        slot.ti)
                     add_noise(
                         slot,
                         samples_dict,
                         _ch_obj.addressing == "Global",
                         amp_fluctuation=ch_amp_fluctuation,
-                        det_fluctuation=ch_det_fluctuation,
+                        det_fluctuation=ch_det_fluctuation + hf,
                         propagation_dir=_ch_obj.propagation_dir,
                     )
             # Delete samples for badly prepared atoms
