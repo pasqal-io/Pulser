@@ -316,21 +316,22 @@ class Hamiltonian:
                 #     self.config.detuning_high_freq,
                 #     1.0
                 # )
-                ch_det_fluctuation = (
+                ch_det_sigma = (
                     np.random.normal(0.0, self.config.detuning_sigma)
                     if self.config.detuning_sigma
                     else 0.0
                 )
+                #ch_det_high_freq = generate_hf_detuning()
+                times = [slot.ti for slot in ch_samples.target_time_slots]
+                times2 = [slot.ti for slot in ch_samples.slots]
                 for slot in ch_samples.slots:
-                    hf = self.config.generate_detuning_fluctuation(
-                        self.config.detuning_high_freq,
-                        slot.ti)
+                    time_step = slot.ti
                     add_noise(
                         slot,
                         samples_dict,
                         _ch_obj.addressing == "Global",
                         amp_fluctuation=ch_amp_fluctuation,
-                        det_fluctuation=ch_det_fluctuation + hf,
+                        det_fluctuation=ch_det_sigma,
                         propagation_dir=_ch_obj.propagation_dir,
                     )
             # Delete samples for badly prepared atoms

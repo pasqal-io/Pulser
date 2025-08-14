@@ -1990,27 +1990,59 @@ def test_detuning_noise():
 
 
 def test_hf_detuning_noise():
-    duration = 10
+    #duration = 101
     np.random.seed(1337)
     reg = Register({"q0": (0, 0), "q1": (10, 10)})
     seq = Sequence(reg, MockDevice)
-    seq.declare_channel("ch0", "rydberg_global")
-    seq.declare_channel("ch1", "raman_local", initial_target="q0")
-    seq.declare_channel("ch2", "raman_local", initial_target="q1")
 
-    pulse1 = Pulse.ConstantPulse(duration, 0, 0, 0)
-    # Added twice to check the fluctuation doesn't change from pulse to pulse
-    seq.add(pulse1, "ch0")
-    seq.add(pulse1, "ch0")
-    # The two local channels target alternating qubits on the same basis
-    seq.add(pulse1, "ch1", protocol="no-delay")
-    seq.add(pulse1, "ch2", protocol="no-delay")
+    seq.declare_channel("rydberg_global", "rydberg_global")
 
+    import pulser
+    # Parameters in rad/µs
+    U = 2 * np.pi
+    Omega_max = 2.0 * U
+    delta_0 = -6 * U
+    delta_f = 2 * U
+
+    # Parameters in ns
+    t_rise = 100
+    t_sweep = 400
+    t_fall = 300
+
+    rise = pulser.Pulse.ConstantDetuning(
+        pulser.RampWaveform(t_rise, 0.0, Omega_max), delta_0, 0.0
+    )
+    sweep = pulser.Pulse.ConstantAmplitude(
+        Omega_max, pulser.RampWaveform(t_sweep, delta_0, delta_f), 0.0
+    )
+    fall = pulser.Pulse.ConstantDetuning(
+        pulser.RampWaveform(t_fall, Omega_max, 0.0), delta_f, 0.0
+    )
+    seq.add(rise, "rydberg_global")
+    seq.add(sweep, "rydberg_global")
+    seq.add(fall, "rydberg_global")
+
+
+
+    #seq.declare_channel("ch0", "rydberg_global")
+    #seq.declare_channel("ch1", "raman_local", initial_target="q0")
+    #seq.declare_channel("ch2", "raman_local", initial_target="q1")
+    #seq.declare_channel("ch3", "raman_local", initial_target="q2")
+#
+    #pulse1 = Pulse.ConstantPulse(duration, 0, 0, 0)
+    ## Added twice to check the fluctuation doesn't change from pulse to pulse
+    #seq.add(pulse1, "ch0")
+    #seq.add(pulse1, "ch0")
+    ## The two local channels target alternating qubits on the same basis
+    #seq.add(pulse1, "ch1", protocol="no-delay")
+    #seq.add(pulse1, "ch2", protocol="no-delay")
+    #seq.add(pulse1, "ch3", protocol="no-delay")
+#
     psd = np.array([1, 2, 3]) # Just list doesn't work for the computational part
     freq = np.array([4, 5, 6])
 
     noise_mod = NoiseModel(detuning_sigma=1.1,
-                           detuning_high_freq = (psd, freq),
+                           detuning_high_freq=(psd, freq),
                            runs=1,samples_per_run=1)
     
 
@@ -2018,7 +2050,9 @@ def test_hf_detuning_noise():
         seq,
         noise_model=noise_mod,
     )
-    # sim_samples = sim._hamiltonian.samples
+    h = sim._hamiltonian._hamiltonian
+
+    sim_samples = sim._hamiltonian.samples
 
     # rydberg_0 = sim_samples["Local"]["ground-rydberg"]["q0"]["det"]
     # rydberg_1 = sim_samples["Local"]["ground-rydberg"]["q1"]["det"]

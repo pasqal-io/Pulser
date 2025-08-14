@@ -339,6 +339,11 @@ class NoiseModel:
                     " domain arrays must be of the same size " \
                     "for high-frequency detuning noise."
                 )
+            if len(detuning_hf[0]) < 2:
+                raise ValueError(
+                    "Power Spectral Density and the frequency" \
+                    " must contain at least two elements."
+                )
         elif len(detuning_hf) != 0:
             raise ValueError(
                 "High-frequency detuning noise must be either" \
@@ -497,27 +502,45 @@ class NoiseModel:
         )
 
     @staticmethod
-    def generate_detuning_fluctuation(
-        detuning_high_freq : tuple[ArrayLike, ...],
-        curr_time: float
+    def generate_hf_detuning(
+        detuning_high_freq : tuple[ArrayLike, ArrayLike],
+        times: ArrayLike
     ) -> float:
-        """Computes detuning fluctuation.
+        """Computes δ_hf(t) hight frequency detuning fluctuation.
 
         Args:
-            detuning_sigma (float): determines standard deviation
-                in normal distribution ``N(0, detuning_sigma)`` term.
-            detuning_high_freq (tuple[ArrayLike, ...]):
-                contains power spectral density and frequency domains
-                for computing high frequency part.
-            curr_time (float): current time is required for computing
-                high frequency term.
+            detuning_high_freq (tuple[ArrayLike, ArrayLike]):
+                contains power spectral density `S` and corresponding
+                frequencies `freqs`.
+            curr_time (float): current time.
+
+        Notes
+        -----
+        Uses Gaussian stochastic noise with power spectral density S:
+            δ_hf(t) = Σ_k sqrt(2 * Δf_k * S_k) * cos(2π(f_k * t + φ_k))
+        where φ_k ~ U[0, 1) (uniform random phase),
+        Δf_k = freqs[k+1] - freqs[k],and S_k = psd[k].
+        The last (freqs[-1], psd[-1]) is unused.
         """
-        hf_detuning_fluct = 0.0
-        if detuning_high_freq :
-            psd = detuning_high_freq[0]
-            freq = detuning_high_freq[1]
-            df = np.diff(freq)
-            amp = 2.0 * np.sqrt( df * psd[:-1])
-            arg = curr_time * freq[:-1] + np.random.rand(df.size)
-            hf_detuning_fluct = np.sum(amp * np.cos(2.0 * np.pi * arg))
-        return hf_detuning_fluct.item()
+        rng = np.random.default_rng() if rng is None else rng
+
+        df = np.diff(detuning_high_freq[1])
+        f = (detuning_high_freq[1])[:-1]
+        S = (detuning_high_freq[0])[:-1]
+
+        scale = np.sqrt(2.0 * df * S)
+        phases = rng.random(size=len(df))
+        arg = 2.0 * np.pi * (np.outer(f, times) + phases[:, None])
+
+        r = (scale[:, None] * np.cos(arg)).sum(axis=0)
+
+        return r
+        #hf_detuning = 0.0
+        #if detuning_high_freq :
+        #    psd = detuning_high_freq[0]
+        #    freq = detuning_high_freq[1]
+        #    df = np.diff(freq)
+        #    amp = 2.0 * np.sqrt( df * psd[:-1])
+        #    arg = curr_time * freq[:-1] + np.random.rand(df.size)
+        #    hf_detuning = np.sum(amp * np.cos(2.0 * np.pi * arg))
+        #return hf_detuning.item()
