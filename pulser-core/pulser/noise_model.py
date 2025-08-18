@@ -22,6 +22,7 @@ from typing import Any, Literal, Union, cast, get_args
 
 import numpy as np
 from numpy.typing import ArrayLike
+from numpy.random import Generator
 
 import pulser.json.abstract_repr as pulser_abstract_repr
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
@@ -335,9 +336,11 @@ class NoiseModel:
         if len(detuning_hf) == 2:
             if len(detuning_hf[0]) != len(detuning_hf[1]):
                 raise ValueError(
+                    f"length of PSD {len(detuning_hf[0])} != " \
+                    f"length of freq {len(detuning_hf[1])} :\n" \
                     "Power Spectral Density and the frequency" \
-                    " domain arrays must be of the same size " \
-                    "for high-frequency detuning noise."
+                    " domain arrays must be of the same size" \
+                    " for high-frequency detuning noise."
                 )
             if len(detuning_hf[0]) < 2:
                 raise ValueError(
@@ -502,45 +505,47 @@ class NoiseModel:
         )
 
     @staticmethod
-    def generate_hf_detuning(
+    def generate_detuning(
+        detuning_sigma : float,
         detuning_high_freq : tuple[ArrayLike, ArrayLike],
-        times: ArrayLike
-    ) -> float:
-        """Computes δ_hf(t) hight frequency detuning fluctuation.
+        times: ArrayLike,
+        rng: Generator = np.random.default_rng()
+    ) -> ArrayLike:
+        """Computes δ_σ constant offset and δ_hf(t) hight frequency detuning fluctuations.
 
         Args:
+            detuning_sigma (float):
+                sigma parameter from normal distribution centered at 0
+                ~ N(0, σ).
             detuning_high_freq (tuple[ArrayLike, ArrayLike]):
-                contains power spectral density `S` and corresponding
+                contains power spectral density `psd` and corresponding
                 frequencies `freqs`.
-            curr_time (float): current time.
+            curr_time (ArrayLike): array of sample times.
 
         Notes
         -----
-        Uses Gaussian stochastic noise with power spectral density S:
+        Constant offset is sampled from normal distribution
+            δ_σ ~ N(0, σ).
+        High frequency term uses Gaussian stochastic noise with power
+            spectral density S:
             δ_hf(t) = Σ_k sqrt(2 * Δf_k * S_k) * cos(2π(f_k * t + φ_k))
-        where φ_k ~ U[0, 1) (uniform random phase),
-        Δf_k = freqs[k+1] - freqs[k],and S_k = psd[k].
-        The last (freqs[-1], psd[-1]) is unused.
+            where φ_k ~ U[0, 1) (uniform random phase),
+            Δf_k = freqs[k+1] - freqs[k],and S_k = psd[k].
+            The last (freqs[-1], psd[-1]) is unused.
         """
-        rng = np.random.default_rng() if rng is None else rng
+        det_cst_term = 0.0
+        det_hf = np.zeros_like(times)
 
-        df = np.diff(detuning_high_freq[1])
-        f = (detuning_high_freq[1])[:-1]
-        S = (detuning_high_freq[0])[:-1]
+        if detuning_sigma:
+            det_cst_term = rng.normal(0.0, detuning_sigma)
 
-        scale = np.sqrt(2.0 * df * S)
-        phases = rng.random(size=len(df))
-        arg = 2.0 * np.pi * (np.outer(f, times) + phases[:, None])
+        if detuning_high_freq:
+            psd = (detuning_high_freq[0])[:-1]
+            freqs = (detuning_high_freq[1])[:-1]
+            df = np.diff(detuning_high_freq[1])
+            scale = np.sqrt(2.0 * df * psd)
+            phases = rng.uniform(0.0, 1.0, size=len(freqs)-1)
+            arg = 2.0 * np.pi * (np.outer(freqs, times) + phases[:, None])
+            det_hf = (scale[:, None] * np.cos(arg)).sum(axis=0)
 
-        r = (scale[:, None] * np.cos(arg)).sum(axis=0)
-
-        return r
-        #hf_detuning = 0.0
-        #if detuning_high_freq :
-        #    psd = detuning_high_freq[0]
-        #    freq = detuning_high_freq[1]
-        #    df = np.diff(freq)
-        #    amp = 2.0 * np.sqrt( df * psd[:-1])
-        #    arg = curr_time * freq[:-1] + np.random.rand(df.size)
-        #    hf_detuning = np.sum(amp * np.cos(2.0 * np.pi * arg))
-        #return hf_detuning.item()
+        return det_cst_term + det_hf
