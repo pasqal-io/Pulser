@@ -427,7 +427,6 @@ class NoiseModel:
                     stacklevel=2,
                 )
 
-    # check noise_register, regsiter noise is optinal in the abstract repr
     def _to_abstract_repr(self) -> dict[str, Any]:
         all_fields = {}
         for f in fields(self):

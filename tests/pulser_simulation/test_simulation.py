@@ -1948,8 +1948,7 @@ def test_amp_sigma_noise():
 
 
 def test_detuning_noise():
-    # NOTE: changing values in detuning_sigma will not change the results :(
-    # is this expected?
+
     duration = 10
     np.random.seed(1337)
     reg = Register({"q0": (0, 0), "q1": (10, 10)})
@@ -1958,7 +1957,7 @@ def test_detuning_noise():
     seq.declare_channel("ch1", "raman_local", initial_target="q0")
     seq.declare_channel("ch2", "raman_local", initial_target="q1")
 
-    pulse1 = Pulse.ConstantPulse(duration, 0, 1.0, 0)
+    pulse1 = Pulse.ConstantPulse(duration, 0, 0, 0)
     # Added twice to check the fluctuation doesn't change from pulse to pulse
     seq.add(pulse1, "ch0")
     seq.add(pulse1, "ch0")
@@ -1968,7 +1967,7 @@ def test_detuning_noise():
 
     sim = QutipEmulator.from_sequence(
         seq,
-        noise_model=NoiseModel(detuning_sigma=0.5, runs=1, samples_per_run=1),
+        noise_model=NoiseModel(detuning_sigma=0.1, runs=1, samples_per_run=1),
     )
     sim_samples = sim._hamiltonian.samples
 
@@ -1976,15 +1975,20 @@ def test_detuning_noise():
     rydberg_1 = sim_samples["Local"]["ground-rydberg"]["q1"]["det"]
     digital_0 = sim_samples["Local"]["digital"]["q0"]["det"]
     digital_1 = sim_samples["Local"]["digital"]["q1"]["det"]
-    np.all(np.isclose(rydberg_0, np.array([-0.04902824] * (2 * duration + 1))))
-    np.all(np.isclose(rydberg_1, np.array([-0.04902824] * (2 * duration + 1))))
-    np.all(
+
+    assert np.all(
+        np.isclose(rydberg_0, np.array([-0.04902824] * (2 * duration) + [0.0]))
+    )
+    assert np.all(
+        np.isclose(rydberg_1, np.array([-0.04902824] * (2 * duration) + [0.0]))
+    )
+    assert np.all(
         np.isclose(
             digital_0,
             np.array([-0.17550787] * (duration) + [0.0] * (duration + 1)),
         )
     )
-    np.all(
+    assert np.all(
         np.isclose(
             digital_1,
             np.array([-0.20112646] * (duration) + [0.0] * (duration + 1)),

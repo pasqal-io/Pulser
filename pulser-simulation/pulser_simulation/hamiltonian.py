@@ -505,8 +505,6 @@ class Hamiltonian:
             self._update_noise()
         self._extract_samples()
 
-        # add register noise use the _qdict to modify the register positions
-        # how to determine the register plane,
         def make_vdw_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
 
