@@ -171,15 +171,16 @@ def test_bad_atoms():
         assert ham.bad_atoms[key]
 
 
-def test_interaction_matrix():
+@pytest.mark.parametrize("channel_type", ["rydberg_global", "mw_global"])
+def test_interaction_matrix(channel_type):
     q_dict = {
         "batman": [-4.0, 0.0],
         "superman": [4.0, 0.0],
     }
     reg = pulser.Register(q_dict)
-    seq = pulser.Sequence(reg, pulser.AnalogDevice)
+    seq = pulser.Sequence(reg, pulser.MockDevice)
 
-    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch0", channel_type)
 
     seq.add(
         pulser.Pulse.ConstantDetuning(
@@ -189,11 +190,20 @@ def test_interaction_matrix():
     )
     ham = BaseHamiltonian.from_sequence(seq)
 
-    interaction_size = ham._device.interaction_coeff / 8**6
-    assert np.allclose(
-        ham.interaction_matrix,
-        np.array([[0.0, interaction_size], [interaction_size, 0.0]]),
-    )
+    if channel_type == "rydberg_global":
+        interaction_size = ham._device.interaction_coeff / 8**6
+        assert np.allclose(
+            ham.interaction_matrix,
+            np.array([[0.0, interaction_size], [interaction_size, 0.0]]),
+        )
+    elif channel_type == "mw_global":
+        interaction_size = ham._device.interaction_coeff_xy / 8**3
+        assert np.allclose(
+            ham.interaction_matrix,
+            np.array([[0.0, interaction_size], [interaction_size, 0.0]]),
+        )
+    else:
+        assert False
 
 
 @pytest.mark.parametrize("channel_type", ["rydberg_global", "mw_global"])
@@ -259,3 +269,50 @@ def test_interaction_matrix_torch(channel_type):
         )
     else:
         assert False
+
+
+def test_noisy_interaction_matrix():
+    q_dict = {
+        "batman": [-4.0, 0.0],
+        "superman": [4.0, 0.0],
+    }
+    reg = pulser.Register(q_dict)
+    seq = pulser.Sequence(reg, pulser.AnalogDevice)
+
+    seq.declare_channel("ch0", "rydberg_global")
+
+    seq.add(
+        pulser.Pulse.ConstantDetuning(
+            pulser.BlackmanWaveform(200, np.pi / 5), 0.0, 0.0
+        ),
+        "ch0",
+    )
+    noise = pulser.NoiseModel(state_prep_error=1.0, runs=1)
+    ham = BaseHamiltonian.from_sequence(seq, noise_model=noise)
+    assert np.allclose(
+        ham.noisy_interaction_matrix, np.zeros_like(ham.interaction_matrix)
+    )
+
+
+def test_noisy_interaction_matrix_torch():
+    torch = pytest.importorskip("torch")
+    q_dict = {
+        "batman": torch.tensor([-4.0, 0.0], dtype=torch.float64),
+        "superman": torch.tensor([4.0, 0.0], dtype=torch.float64),
+    }
+    reg = pulser.Register(q_dict)
+    seq = pulser.Sequence(reg, pulser.AnalogDevice)
+
+    seq.declare_channel("ch0", "rydberg_global")
+
+    seq.add(
+        pulser.Pulse.ConstantDetuning(
+            pulser.BlackmanWaveform(200, np.pi / 5), 0.0, 0.0
+        ),
+        "ch0",
+    )
+    noise = pulser.NoiseModel(state_prep_error=1.0, runs=1)
+    ham = BaseHamiltonian.from_sequence(seq, noise_model=noise)
+    assert torch.allclose(
+        ham.noisy_interaction_matrix, torch.zeros_like(ham.interaction_matrix)
+    )

@@ -119,7 +119,7 @@ class BaseHamiltonian:
         self._config: NoiseModel
         self.op_matrix_names: list[str]
         self.dim: int
-        self._bad_atoms: dict[Union[str, int], bool] = {}
+        self._bad_atoms: dict[str, bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
 
         # Define interaction
@@ -240,7 +240,7 @@ class BaseHamiltonian:
         return self._interaction
 
     @property
-    def bad_atoms(self) -> dict[Union[str, int], bool]:
+    def bad_atoms(self) -> dict[str, bool]:
         """The badly prepared atoms at the beginning of the run."""
         return self._bad_atoms
 
@@ -310,6 +310,24 @@ class BaseHamiltonian:
                         / self.distances[i, j] ** 6
                     )
         return interactions
+
+    @functools.cached_property
+    def noisy_interaction_matrix(self) -> "pm.torch.Tensor" | np.ndarray:
+        mask = [False for _ in range(self.nbqudits)]
+        ids = self._register.find_indices(list(self.bad_atoms.keys()))
+        for ind, value in enumerate(self.bad_atoms.values()):
+            mask[ids[ind]] = True if value else False  # convert to python bool
+        if isinstance(self.interaction_matrix, np.ndarray):
+            mask2 = np.outer(mask, mask)
+            mat = self.interaction_matrix.copy()
+            mat[mask2] = 0.0
+            return mat
+        else:
+            ten = pm.torch.tensor(mask, dtype=pm.torch.bool)
+            mask3 = pm.torch.outer(ten, ten)
+            mat2 = self.interaction_matrix.clone()
+            mat2[mask3] = 0.0
+            return mat2
 
     def _build_local_collapse_operators(
         self,
