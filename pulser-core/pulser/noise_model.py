@@ -211,7 +211,7 @@ class NoiseModel:
     relaxation_rate: float = 0.0
     dephasing_rate: float = 0.0
     trap_waist: float = 0.0
-    trap_depth: float = 0.0
+    trap_depth: float | None = None
     hyperfine_dephasing_rate: float = 0.0
     depolarizing_rate: float = 0.0
     eff_noise_rates: tuple[float, ...] = ()
