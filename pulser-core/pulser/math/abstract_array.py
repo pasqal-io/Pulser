@@ -216,6 +216,13 @@ class AbstractArray:
     def __ne__(self, other: Any) -> AbstractArray:  # type: ignore[override]
         return AbstractArray(operator.ne(*self._binary_operands(other)))
 
+    # unary operators
+    def norm(self) -> AbstractArray:
+        if self.is_tensor:
+            return AbstractArray(torch.linalg.vector_norm(self._array))
+        else:
+            return AbstractArray(np.linalg.norm(self._array))
+
     # Binary operators
     def __add__(self, other: AbstractArrayLike, /) -> AbstractArray:
         return AbstractArray(operator.add(*self._binary_operands(other)))
@@ -320,6 +327,13 @@ class AbstractArray:
                 "A tensor that requires grad can't be serialized without"
                 " losing the computational graph information."
             ) from e
+
+    @staticmethod
+    def zeros_like(other: AbstractArray) -> AbstractArray:
+        if other.is_tensor:
+            return AbstractArray(torch.zeros_like(other._array))
+        else:
+            return AbstractArray(np.zeros_like(other._array))
 
 
 AbstractArrayLike = Union[AbstractArray, ArrayLike]

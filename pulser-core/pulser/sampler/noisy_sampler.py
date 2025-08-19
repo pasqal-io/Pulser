@@ -24,6 +24,7 @@ from typing import Literal, Union, cast
 import numpy as np
 from scipy.spatial.distance import cdist
 
+import pulser.math as pm
 from pulser.channels.base_channel import STATES_RANK, States
 from pulser.devices._device_datacls import COORD_PRECISION, BaseDevice
 from pulser.noise_model import NoiseModel, doppler_sigma
@@ -71,7 +72,7 @@ class BaseHamiltonian:
         self._device = device
         self.device.validate_register(register)
         self._register = register
-        _qdict = register.qubits
+        self._qdict = register.qubits
         # Check compatibility of samples and device:
         if samples_obj._slm_mask.end > 0 and not self.device.supports_slm_mask:
             raise ValueError(
@@ -82,7 +83,7 @@ class BaseHamiltonian:
                 "Bases used in samples should be supported by device."
             )
         # Check compatibility of masked samples and register
-        if not samples_obj._slm_mask.targets <= set(_qdict.keys()):
+        if not samples_obj._slm_mask.targets <= set(self._qdict.keys()):
             raise ValueError(
                 "The ids of qubits targeted in SLM mask"
                 " should be defined in register."
@@ -94,7 +95,7 @@ class BaseHamiltonian:
                 # in register
                 if not set().union(
                     *(slot.targets for slot in ch_samples.slots)
-                ) <= set(_qdict.keys()):
+                ) <= set(self._qdict.keys()):
                     raise ValueError(
                         "The ids of qubits targeted in Local channels"
                         " should be defined in register."
@@ -106,14 +107,12 @@ class BaseHamiltonian:
                     replace(
                         ch_samples,
                         slots=[
-                            replace(slot, targets=set(_qdict.keys()))
+                            replace(slot, targets=set(self._qdict.keys()))
                             for slot in ch_samples.slots
                         ],
                     )
                 )
         self._samples_obj = replace(samples_obj, samples_list=samples_list)
-
-        self._qdict = {k: v.as_array(detach=True) for k, v in _qdict.items()}
 
         # Type hints for attributes defined outside of __init__
         self.basis_name: str
@@ -147,6 +146,7 @@ class BaseHamiltonian:
     def from_sequence(
         cls,
         sequence: Sequence,
+        *,
         with_modulation: bool = False,
         noise_model: NoiseModel | None = None,
     ) -> BaseHamiltonian:
@@ -244,37 +244,71 @@ class BaseHamiltonian:
         """The badly prepared atoms at the beginning of the run."""
         return self._bad_atoms
 
-    @property
-    def distances(self) -> np.ndarray:
+    @functools.cached_property
+    def distances(self) -> "pm.torch.Tensor" | np.ndarray:
         r"""Distances between each qubits (in :math:`\mu m`)."""
+
         # TODO: Handle torch arrays
-        positions = np.array(list(self._qdict.values()))
-        return np.round(
-            cast(np.ndarray, cdist(positions, positions, metric="euclidean")),
-            COORD_PRECISION,
-        )
+        positions = list(self._qdict.values())
+        if not positions[0].is_tensor:
+            return np.round(
+                cast(
+                    np.ndarray, cdist(positions, positions, metric="euclidean")
+                ),
+                COORD_PRECISION,
+            )
+        else:
+            size = len(positions)
+            distances = pm.torch.zeros(
+                size, size, dtype=positions[0]._array.dtype
+            )
+            for i in range(size):
+                for j in range(i + 1, size):
+                    distances[[i, j], [j, i]] = pm.torch.linalg.vector_norm(
+                        positions[i]._array - positions[j]._array
+                    )
+            return distances
 
     @functools.cached_property
     def nbqudits(self) -> int:
         """Number of qudits in the Register."""
         return len(self.register.qubit_ids)
 
-    @property
-    def interaction_matrix(self) -> np.ndarray:
+    @functools.cached_property
+    def interaction_matrix(self) -> "pm.torch.Tensor" | np.ndarray:
         r"""C6/C3 Interactions between the qubits (in :math:`rad/\mu s`)."""
-        # TODO: Should be the U matrix in Hamiltonian._construct_hamiltonian
         # TODO: Include masked qubits in XY + bad atoms in the interaction
-        # TODO: Include magnetic field interaction matrix
-        # TODO: Handle torch
-        interactions = np.zeros((self.nbqudits, self.nbqudits))
-        same_atom = np.eye(self.nbqudits, dtype=bool)
-        interactions[~same_atom] = (
-            self.device.interaction_coeff
-            if self.interaction_type == "ising"
-            else cast(float, self.device.interaction_coeff_xy)
-        ) / self.distances[~same_atom] ** (
-            6 if self.interaction_type == "ising" else 3
-        )
+        d = pm.AbstractArray(self.distances)
+        interactions = pm.AbstractArray.zeros_like(d)._array
+        if self.interaction_type == "XY":
+            positions = list(self._qdict.values())
+            assert self.samples_obj._magnetic_field is not None
+            assert self._device.interaction_coeff_xy is not None
+            mag_arr = pm.AbstractArray(self.samples_obj._magnetic_field)
+            mag_norm = mag_arr.norm()
+            assert mag_norm > 0, "There must be a magnetic field in XY mode."
+            for i in range(self.nbqudits):
+                for j in range(i + 1, self.nbqudits):
+                    diff = positions[i] - positions[j]
+                    if len(diff) == 2:
+                        diff = pm.hstack(
+                            [diff, pm.AbstractArray(np.array(0.0))]
+                        )
+                    cosine = pm.dot(diff, mag_arr) / (
+                        diff.norm() * mag_arr.norm()
+                    )
+                    interactions[[i, j], [j, i]] = (
+                        self._device.interaction_coeff_xy  # type: ignore
+                        * (1 - 3 * cosine._array**2)
+                        / self.distances[i, j] ** 3
+                    )
+        else:
+            for i in range(self.nbqudits):
+                for j in range(i + 1, self.nbqudits):
+                    interactions[[i, j], [j, i]] = (
+                        self._device.interaction_coeff
+                        / self.distances[i, j] ** 6
+                    )
         return interactions
 
     def _build_local_collapse_operators(
@@ -333,7 +367,7 @@ class BaseHamiltonian:
                 (-1, f"sigma_{a}{a}"),
             ]
             coeff = np.sqrt(config.depolarizing_rate / 4)
-            for pauli_label, _ in self._depolarizing_pauli_2ds.items():
+            for pauli_label in self._depolarizing_pauli_2ds.keys():
                 local_collapse_ops.append((coeff, pauli_label))
 
         if "eff_noise" in config.noise_types:
@@ -483,7 +517,7 @@ class BaseHamiltonian:
                         # Default to an optical axis along y
                         prop_dir = propagation_dir or (0.0, 1.0, 0.0)
                         amp_fraction *= self._finite_waist_amp_fraction(
-                            tuple(self._qdict[qid]),
+                            tuple(self._qdict[qid].as_array()),
                             tuple(prop_dir),
                             self.noise_model.laser_waist,
                         )

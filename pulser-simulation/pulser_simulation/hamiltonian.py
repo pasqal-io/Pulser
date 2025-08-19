@@ -97,26 +97,17 @@ class Hamiltonian(BaseHamiltonian):
         for coeff, collapse_op in self.local_collapse_operators:
             if isinstance(collapse_op, str):
                 if collapse_op not in self.op_matrix:
-                    self._depolarizing_pauli_2ds[collapse_op]
-
-                try:
-                    operator = coeff * self.op_matrix[collapse_op]
-                except KeyError as e1:
-                    try:
-                        operator = sum(
-                            [
-                                coeff * proj_coeff * self.op_matrix[proj_op]
-                                for (
-                                    proj_coeff,
-                                    proj_op,
-                                ) in self._depolarizing_pauli_2ds[collapse_op]
-                            ]
-                        )
-                    except KeyError:
-                        raise KeyError(
-                            f"Invalid local collapse operator {collapse_op}."
-                        ) from e1
-
+                    operator = sum(
+                        [
+                            coeff * proj_coeff * self.op_matrix[proj_op]
+                            for (
+                                proj_coeff,
+                                proj_op,
+                            ) in self._depolarizing_pauli_2ds[collapse_op]
+                        ]
+                    )
+                else:
+                    operator = coeff * (self.op_matrix)[collapse_op]
             else:
                 assert isinstance(collapse_op, np.ndarray)
                 operator = coeff * qutip.Qobj(collapse_op).full()
@@ -277,8 +268,12 @@ class Hamiltonian(BaseHamiltonian):
             The units are given so that the coefficient includes a
             1/hbar factor.
             """
-            dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-            U = 0.5 * self._device.interaction_coeff / dist**6
+            U = (
+                0.5
+                * self.interaction_matrix[
+                    self._qid_index[q1], self._qid_index[q2]
+                ]
+            )
             return U * self.build_operator([("sigma_rr", [q1, q2])])
 
         def make_xy_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
@@ -289,23 +284,9 @@ class Hamiltonian(BaseHamiltonian):
             The units are given so that the coefficient
             includes a 1/hbar factor.
             """
-            diff_vector = np.zeros(3, dtype=float)
-            diff_vector[: len(self._qdict[q1])] = (
-                self._qdict[q1] - self._qdict[q2]
-            )
-            dist = np.linalg.norm(diff_vector)
-            mag_field = cast(np.ndarray, self.samples_obj._magnetic_field)
-            mag_norm = np.linalg.norm(mag_field)
-            assert mag_norm > 0, "There must be a magnetic field in XY mode."
-            cosine = np.dot(
-                diff_vector,
-                mag_field,
-            ) / (dist * mag_norm)
-            U = (
-                cast(float, self._device.interaction_coeff_xy)
-                * (1 - 3 * cosine**2)
-                / dist**3
-            )
+            U = self.interaction_matrix[
+                self._qid_index[q1], self._qid_index[q2]
+            ]
             return U * self.build_operator(
                 [("sigma_ud", [q1]), ("sigma_du", [q2])]
             )

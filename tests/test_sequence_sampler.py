@@ -74,14 +74,15 @@ def assert_nested_dict_equality(got: dict, want: dict) -> None:
 # Tests
 
 
-def test_init_error(seq_rydberg):
-    var = seq_rydberg.declare_variable("var")
-    seq_rydberg.delay(var, "ch0")
-    assert seq_rydberg.is_parametrized()
+def test_init_error():
+    seq = seq_rydberg()
+    var = seq.declare_variable("var")
+    seq.delay(var, "ch0")
+    assert seq.is_parametrized()
     with pytest.raises(
         NotImplementedError, match="Parametrized sequences can't be sampled."
     ):
-        sample(seq_rydberg)
+        sample(seq)
 
 
 @pytest.mark.parametrize("local_only", [True, False])
@@ -399,8 +400,8 @@ def test_SLM_against_simulation():
     assert_same_samples_as_sim(seq_with_SLM("rydberg_global"))
 
 
-def test_samples_repr(seq_rydberg):
-    samples = sample(seq_rydberg)
+def test_samples_repr():
+    samples = sample(seq_rydberg())
     assert repr(samples) == "\n\n".join(
         [
             f"ch0:\n{samples.samples_list[0]!r}",
@@ -410,8 +411,8 @@ def test_samples_repr(seq_rydberg):
 
 
 @pytest.mark.parametrize("with_custom_centered_phase", [False, True])
-def test_extend_duration(seq_rydberg, with_custom_centered_phase):
-    samples = sample(seq_rydberg)
+def test_extend_duration(with_custom_centered_phase):
+    samples = sample(seq_rydberg())
     short, long = samples.samples_list
     if with_custom_centered_phase:
         short = replace(short, _centered_phase=short.centered_phase)
@@ -606,7 +607,7 @@ def test_to_nested_dict_samples_type(mod_seq, samples_type, all_local):
 
 
 @pytest.fixture
-def seqs(seq_rydberg) -> list[pulser.Sequence]:
+def seqs() -> list[pulser.Sequence]:
     seqs: list[pulser.Sequence] = []
 
     pulse = Pulse(
@@ -622,12 +623,11 @@ def seqs(seq_rydberg) -> list[pulser.Sequence]:
     seq.measure(basis="digital")
     seqs.append(deepcopy(seq))
 
-    seqs.append(seq_rydberg)
+    seqs.append(seq_rydberg())
 
     return seqs
 
 
-@pytest.fixture
 def seq_rydberg() -> pulser.Sequence:
     reg = pulser.Register.from_coordinates(
         np.array([[0.0, 0.0], [2.0, 0.0]]), prefix="q"
