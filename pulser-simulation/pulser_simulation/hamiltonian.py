@@ -153,8 +153,7 @@ class Hamiltonian:
             assert set(self.data.op_matrix_names) == set(self.op_matrix.keys())
         self._build_collapse_operators()
         # Noise, samples and Hamiltonian update routine
-        if kwargs.get("construct_hamiltonian", True):
-            self._construct_hamiltonian()
+        self._construct_hamiltonian()
 
     def _build_operator(
         self, operations: Union[list, tuple], op_matrix: dict[str, qutip.Qobj]
