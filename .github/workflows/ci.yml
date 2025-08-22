@@ -74,8 +74,8 @@ jobs:
         numpy: ["numpy-v1", "numpy-v2"]
         include:
           - python-version: "3.12"
-            numpy: "numpy-v1"
             with-torch: "with-torch"
+            numpy: "numpy-v1"
         exclude:
           # Numpy v1 does not support Python 3.13
           - python-version: "3.13"
