@@ -5,7 +5,7 @@ import pytest
 
 import pulser
 from pulser.sampler import sample
-from pulser.sampler.noisy_sampler import BaseHamiltonian
+from pulser.sampler.noisy_sampler import HamiltonianData
 
 from .test_sequence_sampler import seq_rydberg, seq_with_SLM
 
@@ -21,17 +21,17 @@ def test_init_errors():
             "valid SequenceSamples instance."
         ),
     ):
-        BaseHamiltonian(None, None, None, None)
+        HamiltonianData(None, None, None, None)
 
     with pytest.raises(
         TypeError, match="The device must be a Device or BaseDevice."
     ):
-        BaseHamiltonian(seq_samples, None, None, None)
+        HamiltonianData(seq_samples, None, None, None)
 
     with pytest.raises(
         ValueError, match="Samples use SLM mask but device does not have one."
     ):
-        BaseHamiltonian(seq_samples, seq.register, pulser.AnalogDevice, None)
+        HamiltonianData(seq_samples, seq.register, pulser.AnalogDevice, None)
 
     with pytest.raises(
         ValueError,
@@ -40,7 +40,7 @@ def test_init_errors():
             "mask should be defined in register."
         ),
     ):
-        BaseHamiltonian(
+        HamiltonianData(
             seq_samples, register, pulser.DigitalAnalogDevice, None
         )
 
@@ -51,14 +51,14 @@ def test_init_errors():
             "channels should be defined in register."
         ),
     ):
-        BaseHamiltonian(
+        HamiltonianData(
             sample(seq_rydberg()), register, pulser.DigitalAnalogDevice, None
         )
 
     seq = pulser.Sequence(register, pulser.AnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
     with pytest.raises(ValueError, match="SequenceSamples is empty."):
-        BaseHamiltonian(sample(seq), None, None, None)
+        HamiltonianData(sample(seq), None, None, None)
 
     seq = seq_with_SLM("mw_global")
     seq_samples = sample(seq)
@@ -66,7 +66,7 @@ def test_init_errors():
         ValueError,
         match="Bases used in samples should be supported by device.",
     ):
-        BaseHamiltonian(
+        HamiltonianData(
             seq_samples, seq.register, pulser.DigitalAnalogDevice, None
         )
 
@@ -79,11 +79,11 @@ def test_from_sequence():
         "pulser.sampler.noisy_sampler.sampler.sample"
     ) as mock_sample:
         with unittest.mock.patch(
-            "pulser.sampler.noisy_sampler.BaseHamiltonian.__init__"
+            "pulser.sampler.noisy_sampler.HamiltonianData.__init__"
         ) as mock_init:
             mock_init.return_value = None
             mock_sample.return_value = samples
-            BaseHamiltonian.from_sequence(seq, noise_model=noise_model)
+            HamiltonianData.from_sequence(seq, noise_model=noise_model)
             mock_init.assert_called_once_with(
                 samples, seq.register, seq.device, noise_model
             )
@@ -95,7 +95,7 @@ def test_from_sequence():
             "a valid pulser.Sequence instance."
         ),
     ):
-        BaseHamiltonian.from_sequence(None)
+        HamiltonianData.from_sequence(None)
 
     seq._building = False
     with pytest.raises(
@@ -105,7 +105,7 @@ def test_from_sequence():
             r"Call `Sequence.build\(\)` with the necessary parameters."
         ),
     ):
-        BaseHamiltonian.from_sequence(seq)
+        HamiltonianData.from_sequence(seq)
 
     seq._building = True
     sched = seq._schedule
@@ -113,7 +113,7 @@ def test_from_sequence():
     with pytest.raises(
         ValueError, match="The provided sequence has no declared channels."
     ):
-        BaseHamiltonian.from_sequence(seq)
+        HamiltonianData.from_sequence(seq)
     seq._schedule = sched
 
     with pytest.raises(
@@ -123,7 +123,7 @@ def test_from_sequence():
             "and output modulation is not supported."
         ),
     ):
-        BaseHamiltonian.from_sequence(seq, with_modulation=True)
+        HamiltonianData.from_sequence(seq, with_modulation=True)
 
     with pytest.raises(
         ValueError,
@@ -131,9 +131,9 @@ def test_from_sequence():
     ):
         seq2 = pulser.Sequence(seq.register, seq.device)
         seq2.declare_channel("ch0", "rydberg_global")
-        BaseHamiltonian.from_sequence(seq2)
+        HamiltonianData.from_sequence(seq2)
 
-    ham = BaseHamiltonian.from_sequence(seq, noise_model=noise_model)
+    ham = HamiltonianData.from_sequence(seq, noise_model=noise_model)
     noiseless = ham.samples_obj.to_nested_dict(all_local=True)
     full = ham.noisy_samples
     diff = (
@@ -152,21 +152,21 @@ def test_from_sequence():
 
 def test_noisy_samples_obj():
     seq = seq_with_SLM("rydberg_global")
-    ham = BaseHamiltonian.from_sequence(seq)
+    ham = HamiltonianData.from_sequence(seq)
     with pytest.raises(NotImplementedError):
         ham.noisy_samples_obj
 
 
 def test_register():
     seq = seq_with_SLM("rydberg_global")
-    ham = BaseHamiltonian.from_sequence(seq)
+    ham = HamiltonianData.from_sequence(seq)
     assert ham.register == seq.register
 
 
 def test_bad_atoms():
     seq = seq_with_SLM("rydberg_global")
     noise = pulser.NoiseModel(state_prep_error=1.0, runs=1)
-    ham = BaseHamiltonian.from_sequence(seq, noise_model=noise)
+    ham = HamiltonianData.from_sequence(seq, noise_model=noise)
     for key in seq.register.qubit_ids:
         assert ham.bad_atoms[key]
 
@@ -188,7 +188,7 @@ def test_interaction_matrix(channel_type):
         ),
         "ch0",
     )
-    ham = BaseHamiltonian.from_sequence(seq)
+    ham = HamiltonianData.from_sequence(seq)
 
     if channel_type == "rydberg_global":
         interaction_size = ham._device.interaction_coeff / 8**6
@@ -228,7 +228,7 @@ def test_interaction_matrix_torch(channel_type):
         ),
         "ch0",
     )
-    ham = BaseHamiltonian.from_sequence(seq)
+    ham = HamiltonianData.from_sequence(seq)
     if channel_type == "rydberg_global":
         interaction_size = ham._device.interaction_coeff / 8**6
         assert torch.allclose(
@@ -288,7 +288,7 @@ def test_noisy_interaction_matrix():
         "ch0",
     )
     noise = pulser.NoiseModel(state_prep_error=1.0, runs=1)
-    ham = BaseHamiltonian.from_sequence(seq, noise_model=noise)
+    ham = HamiltonianData.from_sequence(seq, noise_model=noise)
     assert np.allclose(
         ham.noisy_interaction_matrix, np.zeros_like(ham.interaction_matrix)
     )
@@ -312,7 +312,7 @@ def test_noisy_interaction_matrix_torch():
         "ch0",
     )
     noise = pulser.NoiseModel(state_prep_error=1.0, runs=1)
-    ham = BaseHamiltonian.from_sequence(seq, noise_model=noise)
+    ham = HamiltonianData.from_sequence(seq, noise_model=noise)
     assert torch.allclose(
         ham.noisy_interaction_matrix, torch.zeros_like(ham.interaction_matrix)
     )

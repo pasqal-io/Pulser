@@ -25,12 +25,12 @@ from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import BaseRegister, QubitId
-from pulser.sampler.noisy_sampler import BaseHamiltonian
+from pulser.sampler.noisy_sampler import HamiltonianData
 from pulser.sampler.samples import SequenceSamples
 from pulser_simulation.simconfig import SUPPORTED_NOISES
 
 
-class Hamiltonian(BaseHamiltonian):
+class Hamiltonian:
     r"""Generates Hamiltonian from a sampled sequence and noise.
 
     Args:
@@ -52,7 +52,7 @@ class Hamiltonian(BaseHamiltonian):
         config: NoiseModel,
     ) -> None:
         """Instantiates a Hamiltonian object."""
-        super().__init__(
+        self.data = HamiltonianData(
             samples_obj, register, device, config, assign_config=False
         )
         self._sampling_rate = sampling_rate
@@ -62,7 +62,7 @@ class Hamiltonian(BaseHamiltonian):
         self.basis: dict[States, qutip.Qobj]
 
         # Compute sampling times
-        self._duration = self.samples_obj.max_duration
+        self._duration = self.data.samples_obj.max_duration
         self.sampling_times = self._adapt_to_sampling_rate(
             # Include extra time step for final instruction from samples:
             np.arange(self._duration, dtype=np.double)
@@ -77,7 +77,7 @@ class Hamiltonian(BaseHamiltonian):
     @property
     def config(self) -> NoiseModel:
         """The current configuration, as a NoiseModel instance."""
-        return self._config
+        return self.data._config
 
     def _adapt_to_sampling_rate(self, full_array: np.ndarray) -> np.ndarray:
         """Adapt list to correspond to sampling rate."""
@@ -94,7 +94,7 @@ class Hamiltonian(BaseHamiltonian):
     ) -> None:
         """Build the multi-qudit collapse operators."""
         self._collapse_ops = []
-        for coeff, collapse_op in self.local_collapse_operators:
+        for coeff, collapse_op in self.data.local_collapse_operators:
             if isinstance(collapse_op, str):
                 if collapse_op not in self.op_matrix:
                     operator = sum(
@@ -103,7 +103,7 @@ class Hamiltonian(BaseHamiltonian):
                             for (
                                 proj_coeff,
                                 proj_op,
-                            ) in self._depolarizing_pauli_2ds[collapse_op]
+                            ) in self.data._depolarizing_pauli_2ds[collapse_op]
                         ]
                     )
                 else:
@@ -113,8 +113,15 @@ class Hamiltonian(BaseHamiltonian):
                 operator = coeff * qutip.Qobj(collapse_op).full()
             self._collapse_ops += [
                 self._build_operator([(operator, [qid])], self.op_matrix)
-                for qid in self._qid_index
+                for qid in self.data._qid_index
             ]
+
+    def _update_basis(self, cfg: NoiseModel) -> bool:
+        """Whether or not the basis should be updated."""
+        return not hasattr(self, "_config") or (
+            hasattr(self, "_config")
+            and self.data.noise_model.with_leakage != cfg.with_leakage
+        )
 
     def set_config(self, cfg: NoiseModel, **kwargs: bool) -> None:
         """Sets current config to cfg and updates simulation parameters.
@@ -125,22 +132,25 @@ class Hamiltonian(BaseHamiltonian):
         Keyword Args:
             construct_hamiltonian: Whether or not to update noisy values.
         """
-        self._check_config(cfg)
+        self.data._check_config(cfg)
         not_supported = (
-            set(cfg.noise_types) - SUPPORTED_NOISES[self.interaction_type]
+            set(cfg.noise_types) - SUPPORTED_NOISES[self.data.interaction_type]
         )
         if not_supported:
             raise NotImplementedError(
-                f"Interaction mode '{self.interaction_type}' does not support "
+                f"Interaction mode '{self.data.interaction_type}' "
+                "does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
         update_basis = self._update_basis(cfg)
-        super().set_config(cfg, construct_hamiltonian=False)
+        self.data.set_config(cfg, construct_hamiltonian=False)
         if update_basis:
-            basis, op_matrix = self._get_basis_op_matrices(self.eigenbasis)
+            basis, op_matrix = self._get_basis_op_matrices(
+                self.data.eigenbasis
+            )
             self.basis = basis
             self.op_matrix = op_matrix
-            assert set(self.op_matrix_names) == set(self.op_matrix.keys())
+            assert set(self.data.op_matrix_names) == set(self.op_matrix.keys())
         self._build_collapse_operators()
         # Noise, samples and Hamiltonian update routine
         if kwargs.get("construct_hamiltonian", True):
@@ -170,7 +180,7 @@ class Hamiltonian(BaseHamiltonian):
         Returns:
             The final operator.
         """
-        op_list = [op_matrix["I"] for j in range(self._size)]
+        op_list = [op_matrix["I"] for j in range(self.nbqudits)]
 
         if not isinstance(operations, list):
             operations = [operations]
@@ -179,16 +189,16 @@ class Hamiltonian(BaseHamiltonian):
             if qubits == "global":
                 return sum(
                     self._build_operator([(operator, [q_id])], op_matrix)
-                    for q_id in self._qdict
+                    for q_id in self.data._qdict
                 )
             else:
                 qubits_set = set(qubits)
                 if len(qubits_set) < len(qubits):
                     raise ValueError("Duplicate atom ids in argument list.")
-                if not qubits_set.issubset(self._qdict.keys()):
+                if not qubits_set.issubset(self.data._qdict.keys()):
                     raise ValueError(
                         "Invalid qubit names: "
-                        f"{qubits_set - self._qdict.keys()}"
+                        f"{qubits_set - self.data._qdict.keys()}"
                     )
                 if isinstance(operator, str):
                     try:
@@ -200,9 +210,17 @@ class Hamiltonian(BaseHamiltonian):
                 else:
                     operator = qutip.Qobj(operator).to("CSR")
                 for qubit in qubits:
-                    k = self._qid_index[qubit]
+                    k = self.data._qid_index[qubit]
                     op_list[k] = operator
         return qutip.tensor(op_list)
+
+    @property
+    def basis_name(self) -> str:
+        return self.data.basis_name
+
+    @property
+    def nbqudits(self) -> int:
+        return self.data.nbqudits
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non-trivial actions on some qubits.
@@ -243,6 +261,9 @@ class Hamiltonian(BaseHamiltonian):
                 op_matrix[proj_name] = basis[proj0] * basis[proj1].dag()
         return basis, op_matrix
 
+    def _update_noise(self) -> None:
+        pass
+
     def _construct_hamiltonian(self, update: bool = True) -> None:
         """Constructs the hamiltonian from the sampled Sequence and noise.
 
@@ -258,7 +279,9 @@ class Hamiltonian(BaseHamiltonian):
         Args:
             update: Whether to update the noise parameters.
         """
-        super().construct_hamiltonian(update)
+        if update:
+            self._update_noise()
+        self.data.construct_hamiltonian(update=update)
 
         def make_vdw_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
@@ -270,8 +293,8 @@ class Hamiltonian(BaseHamiltonian):
             """
             U = (
                 0.5
-                * self.interaction_matrix[
-                    self._qid_index[q1], self._qid_index[q2]
+                * self.data.noisy_interaction_matrix[
+                    self.data._qid_index[q1], self.data._qid_index[q2]
                 ]
             )
             return U * self.build_operator([("sigma_rr", [q1, q2])])
@@ -284,8 +307,8 @@ class Hamiltonian(BaseHamiltonian):
             The units are given so that the coefficient
             includes a 1/hbar factor.
             """
-            U = self.interaction_matrix[
-                self._qid_index[q1], self._qid_index[q2]
+            U = self.data.noisy_interaction_matrix[
+                self.data._qid_index[q1], self.data._qid_index[q2]
             ]
             return U * self.build_operator(
                 [("sigma_ud", [q1]), ("sigma_du", [q2])]
@@ -294,31 +317,33 @@ class Hamiltonian(BaseHamiltonian):
         def make_interaction_term(masked: bool = False) -> qutip.Qobj:
             if masked:
                 # Calculate the total number of good, unmasked qubits
-                effective_size = self._size - sum(self._bad_atoms.values())
-                for q in self.samples_obj._slm_mask.targets:
-                    if not self._bad_atoms[q]:
+                effective_size = self.nbqudits - sum(
+                    self.data._bad_atoms.values()
+                )
+                for q in self.data.samples_obj._slm_mask.targets:
+                    if not self.data._bad_atoms[q]:
                         effective_size -= 1
                 if effective_size < 2:
                     return 0 * self.build_operator([("I", "global")])
 
             # make interaction term
             dipole_interaction = cast(qutip.Qobj, 0)
-            for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
+            for q1, q2 in itertools.combinations(self.data._qdict.keys(), r=2):
                 if (
-                    self._bad_atoms[q1]
-                    or self._bad_atoms[q2]
+                    self.data._bad_atoms[q1]
+                    or self.data._bad_atoms[q2]
                     or (
                         masked
-                        and self._interaction == "XY"
+                        and self.data._interaction == "XY"
                         and (
-                            q1 in self.samples_obj._slm_mask.targets
-                            or q2 in self.samples_obj._slm_mask.targets
+                            q1 in self.data.samples_obj._slm_mask.targets
+                            or q2 in self.data.samples_obj._slm_mask.targets
                         )
                     )
                 ):
                     continue
 
-                if self._interaction == "XY":
+                if self.data._interaction == "XY":
                     dipole_interaction += make_xy_term(q1, q2)
                 else:
                     dipole_interaction += make_vdw_term(q1, q2)
@@ -326,8 +351,8 @@ class Hamiltonian(BaseHamiltonian):
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
-            samples = self.samples[addr][basis]
-            operators = self.operators[addr][basis]
+            samples = self.data.samples[addr][basis]
+            operators = self.data.operators[addr][basis]
             # Choose operator names according to addressing:
             if basis == "ground-rydberg":
                 op_ids = ["sigma_gr", "sigma_rr"]
@@ -377,23 +402,25 @@ class Hamiltonian(BaseHamiltonian):
                                     self._adapt_to_sampling_rate(coeff),
                                 ]
                             )
-            self.operators[addr][basis] = operators
+            self.data.operators[addr][basis] = operators
             return terms
 
         qobj_list = []
         # Time independent term:
-        effective_size = self._size - sum(self._bad_atoms.values())
+        effective_size = self.data.nbqudits - sum(
+            self.data._bad_atoms.values()
+        )
         if "digital" not in self.basis_name and effective_size > 1:
             # Build time-dependent or time-independent interaction term based
             # on whether an SLM mask was defined or not
             if (
-                self.samples_obj._slm_mask.end > 0
-                and self._interaction == "XY"
+                self.data.samples_obj._slm_mask.end > 0
+                and self.data._interaction == "XY"
             ):
                 # Build an array of binary coefficients for the interaction
                 # term of unmasked qubits
                 coeff = np.ones(self._duration - 1)
-                coeff[0 : self.samples_obj._slm_mask.end] = 0
+                coeff[0 : self.data.samples_obj._slm_mask.end] = 0
                 # Build the interaction term for unmasked qubits
                 qobj_list = [
                     [
@@ -414,9 +441,9 @@ class Hamiltonian(BaseHamiltonian):
                 qobj_list = [make_interaction_term()]
 
         # Time dependent terms:
-        for addr in self.samples:
-            for basis in self.samples[addr]:
-                if self.samples[addr][basis]:
+        for addr in self.data.samples:
+            for basis in self.data.samples[addr]:
+                if self.data.samples[addr][basis]:
                     qobj_list += cast(list, build_coeffs_ops(basis, addr))
 
         if not qobj_list:  # If qobj_list ends up empty

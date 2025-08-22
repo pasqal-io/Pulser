@@ -19,7 +19,7 @@ import functools
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import replace
-from typing import Literal, Union, cast
+from typing import Literal, cast
 
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -34,7 +34,7 @@ from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser.sequence import Sequence
 
 
-class BaseHamiltonian:
+class HamiltonianData:
     r"""Information that can be used to generate an Hamiltonian.
 
     Args:
@@ -120,7 +120,7 @@ class BaseHamiltonian:
         self.op_matrix_names: list[str]
         self.dim: int
         self._bad_atoms: dict[str, bool] = {}
-        self._doppler_detune: dict[Union[str, int], float] = {}
+        self._doppler_detune: dict[str, float] = {}
 
         # Define interaction
         self._interaction: Literal["XY", "ising"] = (
@@ -149,7 +149,7 @@ class BaseHamiltonian:
         *,
         with_modulation: bool = False,
         noise_model: NoiseModel | None = None,
-    ) -> BaseHamiltonian:
+    ) -> HamiltonianData:
         r"""Simulation of a pulse sequence using QuTiP.
 
         Args:
@@ -272,7 +272,7 @@ class BaseHamiltonian:
     @functools.cached_property
     def nbqudits(self) -> int:
         """Number of qudits in the Register."""
-        return len(self.register.qubit_ids)
+        return self._size
 
     @functools.cached_property
     def interaction_matrix(self) -> "pm.torch.Tensor" | np.ndarray:
@@ -311,12 +311,11 @@ class BaseHamiltonian:
                     )
         return interactions
 
-    @functools.cached_property
+    @property
     def noisy_interaction_matrix(self) -> "pm.torch.Tensor" | np.ndarray:
         mask = [False for _ in range(self.nbqudits)]
-        ids = self._register.find_indices(list(self.bad_atoms.keys()))
         for ind, value in enumerate(self.bad_atoms.values()):
-            mask[ids[ind]] = True if value else False  # convert to python bool
+            mask[ind] = True if value else False  # convert to python bool
         if isinstance(self.interaction_matrix, np.ndarray):
             mask2 = np.outer(mask, mask)
             mat = self.interaction_matrix.copy()
@@ -411,13 +410,6 @@ class BaseHamiltonian:
         # Building collapse operators
         self._local_collapse_ops = local_collapse_ops
 
-    def _update_basis(self, cfg: NoiseModel) -> bool:
-        """Whether or not the basis should be updated."""
-        return not hasattr(self, "_config") or (
-            hasattr(self, "_config")
-            and self.noise_model.with_leakage != cfg.with_leakage
-        )
-
     @staticmethod
     def _check_config(cfg: NoiseModel) -> None:
         """Checks that the provided config is a NoiseModel."""
@@ -434,24 +426,19 @@ class BaseHamiltonian:
             construct_hamiltonian: Whether or not to update noisy values.
         """
         self._check_config(cfg)
-        if self._update_basis(cfg):
-            basis_name = self._get_basis_name(cfg.with_leakage)
-            eigenbasis = self._get_eigenbasis(cfg.with_leakage)
-            op_matrix_names = self._get_projectors(eigenbasis)
-            self._build_local_collapse_operators(
-                cfg, basis_name, eigenbasis, op_matrix_names
-            )
-            self.basis_name = basis_name
-            self.eigenbasis = eigenbasis
-            self.op_matrix_names = op_matrix_names
-            self.dim = len(eigenbasis)
-            self.operators: dict[str, defaultdict[str, dict]] = {
-                addr: defaultdict(dict) for addr in ["Global", "Local"]
-            }
-        else:
-            self._build_local_collapse_operators(
-                cfg, self.basis_name, self.eigenbasis, self.op_matrix_names
-            )
+        basis_name = self._get_basis_name(cfg.with_leakage)
+        eigenbasis = self._get_eigenbasis(cfg.with_leakage)
+        op_matrix_names = self._get_projectors(eigenbasis)
+        self.basis_name = basis_name
+        self.eigenbasis = eigenbasis
+        self.op_matrix_names = op_matrix_names
+        self.dim = len(eigenbasis)
+        self.operators: dict[str, defaultdict[str, dict]] = {
+            addr: defaultdict(dict) for addr in ["Global", "Local"]
+        }
+        self._build_local_collapse_operators(
+            cfg, self.basis_name, self.eigenbasis, self.op_matrix_names
+        )
         self._config = cfg
         if not (
             "SPAM" in self.noise_model.noise_types
@@ -461,6 +448,7 @@ class BaseHamiltonian:
         if "doppler" not in self.noise_model.noise_types:
             self._doppler_detune = {qid: 0.0 for qid in self._qid_index}
         # Noise, samples and Hamiltonian update routine
+        # self._create_noise_representation()
         if kwargs.get("construct_hamiltonian", True):
             self.construct_hamiltonian()
 
@@ -574,7 +562,7 @@ class BaseHamiltonian:
                             samples["Local"][basis][qid][qty] = 0.0
         self.samples = samples
 
-    def _update_noise(self) -> None:
+    def _create_noise_representation(self) -> None:
         """Updates noise random parameters.
 
         Used at the start of each run. If SPAM isn't in chosen noises, all
@@ -635,7 +623,7 @@ class BaseHamiltonian:
 
         Warning:
             The refreshed noise parameters (when update=True) are only those
-            that change from shot to shot (ie doppler and state preparation).
+            that change from shot to shot (eg doppler and state preparation).
             Amplitude fluctuations change from pulse to pulse and are always
             applied in `_extract_samples()`.
 
@@ -643,5 +631,5 @@ class BaseHamiltonian:
             update: Whether to update the noise parameters.
         """
         if update:
-            self._update_noise()
+            self._create_noise_representation()
         self._extract_samples()
