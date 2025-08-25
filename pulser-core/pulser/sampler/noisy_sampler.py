@@ -38,7 +38,7 @@ class HamiltonianData:
     r"""Information that can be used to generate an Hamiltonian.
 
     Args:
-        samples_obj: A sampled sequence whose ChannelSamples have same
+        samples: A sampled sequence whose ChannelSamples have same
             duration.
         device: The device specifications.
         register: A Register associating coordinates to qubit ids.
@@ -51,7 +51,7 @@ class HamiltonianData:
 
     def __init__(
         self,
-        samples_obj: SequenceSamples,
+        samples: SequenceSamples,
         register: BaseRegister,
         device: BaseDevice,
         config: NoiseModel,
@@ -59,12 +59,12 @@ class HamiltonianData:
     ) -> None:
         """Instantiates a Hamiltonian object."""
         # Initializing the samples obj
-        if not isinstance(samples_obj, SequenceSamples):
+        if not isinstance(samples, SequenceSamples):
             raise TypeError(
                 "The provided sequence has to be a valid "
                 "SequenceSamples instance."
             )
-        if samples_obj.max_duration == 0:
+        if samples.max_duration == 0:
             raise ValueError("SequenceSamples is empty.")
         # Check compatibility of register and device
         if not isinstance(device, BaseDevice):
@@ -74,23 +74,23 @@ class HamiltonianData:
         self._register = register
         self._qdict = register.qubits
         # Check compatibility of samples and device:
-        if samples_obj._slm_mask.end > 0 and not self.device.supports_slm_mask:
+        if samples._slm_mask.end > 0 and not self.device.supports_slm_mask:
             raise ValueError(
                 "Samples use SLM mask but device does not have one."
             )
-        if not samples_obj.used_bases <= self.device.supported_bases:
+        if not samples.used_bases <= self.device.supported_bases:
             raise ValueError(
                 "Bases used in samples should be supported by device."
             )
         # Check compatibility of masked samples and register
-        if not samples_obj._slm_mask.targets <= set(self._qdict.keys()):
+        if not samples._slm_mask.targets <= set(self._qdict.keys()):
             raise ValueError(
                 "The ids of qubits targeted in SLM mask"
                 " should be defined in register."
             )
         samples_list = []
-        for ch, ch_samples in samples_obj.channel_samples.items():
-            if samples_obj._ch_objs[ch].addressing == "Local":
+        for ch, ch_samples in samples.channel_samples.items():
+            if samples._ch_objs[ch].addressing == "Local":
                 # Check that targets of Local Channels are defined
                 # in register
                 if not set().union(
@@ -112,7 +112,7 @@ class HamiltonianData:
                         ],
                     )
                 )
-        self._samples_obj = replace(samples_obj, samples_list=samples_list)
+        self._samples = replace(samples, samples_list=samples_list)
 
         # Type hints for attributes defined outside of __init__
         self.basis_name: str
@@ -126,7 +126,7 @@ class HamiltonianData:
 
         # Define interaction
         self._interaction: Literal["XY", "ising"] = (
-            "XY" if self.samples_obj._in_xy else "ising"
+            "XY" if self.samples._in_xy else "ising"
         )
 
         # Initializing qubit infos
@@ -200,19 +200,88 @@ class HamiltonianData:
         )
 
     @property
-    def samples_obj(self) -> SequenceSamples:
+    def samples(self) -> SequenceSamples:
         """The samples without noise, as a SequenceSamples."""
-        return self._samples_obj
+        return self._samples
 
     @property
-    def noisy_samples(self) -> dict:
+    def noisy_samples(self) -> dict:  # TODO: make this SequenceSamples
         """The latest samples generated with noise, as a nested dict."""
-        return self.samples
+        local_noises = True
+        if set(self.noise_model.noise_types).issubset(
+            {
+                "dephasing",
+                "relaxation",
+                "SPAM",
+                "depolarizing",
+                "eff_noise",
+                "leakage",
+            }
+        ):
+            local_noises = (
+                "SPAM" in self.noise_model.noise_types
+                and self.noise_model.state_prep_error > 0
+            )
+        samples = self._samples.to_nested_dict(all_local=local_noises)
 
-    @property
-    def noisy_samples_obj(self) -> SequenceSamples:
-        """The latest samples generated with noise, as a SequenceSamples."""
-        raise NotImplementedError  # TODO: nested_dict -> SequenceSamples
+        def add_noise(
+            slot: _PulseTargetSlot,
+            samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
+            is_global_pulse: bool,
+            amp_fluctuation: float,
+            det_fluctuation: float,
+            propagation_dir: tuple | None,
+        ) -> None:
+            """Builds hamiltonian coefficients.
+
+            Taking into account, if necessary, noise effects, which are local
+            and depend on the qubit's id qid.
+            """
+            for qid in slot.targets:
+                if "doppler" in self.noise_model.noise_types:
+                    noise_det = self._doppler_detune[qid]
+                    samples_dict[qid]["det"][slot.ti : slot.tf] += noise_det
+                # Gaussian beam loss in amplitude for global pulses only
+                # Noise is drawn at random for each pulse
+                if "amplitude" in self.noise_model.noise_types:
+                    amp_fraction = amp_fluctuation
+                    if (
+                        self.noise_model.laser_waist is not None
+                        and is_global_pulse
+                    ):
+                        # Default to an optical axis along y
+                        prop_dir = propagation_dir or (0.0, 1.0, 0.0)
+                        amp_fraction *= self._finite_waist_amp_fraction(
+                            tuple(self._qdict[qid].as_array()),
+                            tuple(prop_dir),
+                            self.noise_model.laser_waist,
+                        )
+                    samples_dict[qid]["amp"][slot.ti : slot.tf] *= amp_fraction
+                if "detuning" in self.noise_model.noise_types:
+                    samples_dict[qid]["det"][
+                        slot.ti : slot.tf
+                    ] += det_fluctuation
+
+        if local_noises:
+            for ch, ch_samples in self._samples.channel_samples.items():
+                _ch_obj = self._samples._ch_objs[ch]
+                samples_dict = samples["Local"][_ch_obj.basis]
+                for slot in ch_samples.slots:
+                    add_noise(
+                        slot,
+                        samples_dict,
+                        _ch_obj.addressing == "Global",
+                        amp_fluctuation=self._amp_fluctuations[ch],
+                        det_fluctuation=self._det_fluctuations[ch],
+                        propagation_dir=_ch_obj.propagation_dir,
+                    )
+            # Delete samples for badly prepared atoms
+            for basis in samples["Local"]:
+                for qid in samples["Local"][basis]:
+                    if self._bad_atoms[qid]:
+                        for qty in ("amp", "det", "phase"):
+                            samples["Local"][basis][qid][qty] = 0.0
+        return samples
 
     @property
     def register(self) -> BaseRegister:
@@ -287,9 +356,9 @@ class HamiltonianData:
         interactions = pm.AbstractArray.zeros_like(d)._array
         if self.interaction_type == "XY":
             positions = list(self._qdict.values())
-            assert self.samples_obj._magnetic_field is not None
+            assert self.samples._magnetic_field is not None
             assert self._device.interaction_coeff_xy is not None
-            mag_arr = pm.AbstractArray(self.samples_obj._magnetic_field)
+            mag_arr = pm.AbstractArray(self.samples._magnetic_field)
             mag_norm = mag_arr.norm()
             assert mag_norm > 0, "There must be a magnetic field in XY mode."
             for i in range(self.nbqudits):
@@ -427,9 +496,6 @@ class HamiltonianData:
 
         Args:
             cfg: New configuration.
-
-        Keyword Args:
-            construct_hamiltonian: Whether or not to update noisy values.
         """
         self._check_config(cfg)
         basis_name = self._get_basis_name(cfg.with_leakage)
@@ -453,10 +519,7 @@ class HamiltonianData:
             self._bad_atoms = {qid: False for qid in self._qid_index}
         if "doppler" not in self.noise_model.noise_types:
             self._doppler_detune = {qid: 0.0 for qid in self._qid_index}
-        # Noise, samples and Hamiltonian update routine
-        if kwargs.get("construct_hamiltonian", True):
-            self._create_noise_representation()
-            self.construct_hamiltonian()
+        self._create_noise_representation()
 
     @staticmethod
     @functools.cache
@@ -482,84 +545,6 @@ class HamiltonianData:
         # by the propagation direction), ie
         return float(np.exp(-((dist / laser_waist) ** 2)))
 
-    def _extract_samples(self) -> None:
-        """Populates samples dictionary with every pulse in the sequence."""
-        local_noises = True
-        if set(self.noise_model.noise_types).issubset(
-            {
-                "dephasing",
-                "relaxation",
-                "SPAM",
-                "depolarizing",
-                "eff_noise",
-                "leakage",
-            }
-        ):
-            local_noises = (
-                "SPAM" in self.noise_model.noise_types
-                and self.noise_model.state_prep_error > 0
-            )
-        samples = self._samples_obj.to_nested_dict(all_local=local_noises)
-
-        def add_noise(
-            slot: _PulseTargetSlot,
-            samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
-            is_global_pulse: bool,
-            amp_fluctuation: float,
-            det_fluctuation: float,
-            propagation_dir: tuple | None,
-        ) -> None:
-            """Builds hamiltonian coefficients.
-
-            Taking into account, if necessary, noise effects, which are local
-            and depend on the qubit's id qid.
-            """
-            for qid in slot.targets:
-                if "doppler" in self.noise_model.noise_types:
-                    noise_det = self._doppler_detune[qid]
-                    samples_dict[qid]["det"][slot.ti : slot.tf] += noise_det
-                # Gaussian beam loss in amplitude for global pulses only
-                # Noise is drawn at random for each pulse
-                if "amplitude" in self.noise_model.noise_types:
-                    amp_fraction = amp_fluctuation
-                    if (
-                        self.noise_model.laser_waist is not None
-                        and is_global_pulse
-                    ):
-                        # Default to an optical axis along y
-                        prop_dir = propagation_dir or (0.0, 1.0, 0.0)
-                        amp_fraction *= self._finite_waist_amp_fraction(
-                            tuple(self._qdict[qid].as_array()),
-                            tuple(prop_dir),
-                            self.noise_model.laser_waist,
-                        )
-                    samples_dict[qid]["amp"][slot.ti : slot.tf] *= amp_fraction
-                if "detuning" in self.noise_model.noise_types:
-                    samples_dict[qid]["det"][
-                        slot.ti : slot.tf
-                    ] += det_fluctuation
-
-        if local_noises:
-            for ch, ch_samples in self._samples_obj.channel_samples.items():
-                _ch_obj = self._samples_obj._ch_objs[ch]
-                samples_dict = samples["Local"][_ch_obj.basis]
-                for slot in ch_samples.slots:
-                    add_noise(
-                        slot,
-                        samples_dict,
-                        _ch_obj.addressing == "Global",
-                        amp_fluctuation=self._amp_fluctuations[ch],
-                        det_fluctuation=self._det_fluctuations[ch],
-                        propagation_dir=_ch_obj.propagation_dir,
-                    )
-            # Delete samples for badly prepared atoms
-            for basis in samples["Local"]:
-                for qid in samples["Local"][basis]:
-                    if self._bad_atoms[qid]:
-                        for qty in ("amp", "det", "phase"):
-                            samples["Local"][basis][qid][qty] = 0.0
-        self.samples = samples
-
     def _create_noise_representation(self) -> None:
         """Updates noise random parameters.
 
@@ -582,7 +567,7 @@ class HamiltonianData:
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
         pass
-        for ch in self._samples_obj.channel_samples:
+        for ch in self._samples.channel_samples:
             self._amp_fluctuations[ch] = max(
                 0, np.random.normal(1.0, self.noise_model.amp_sigma)
             )
@@ -593,13 +578,13 @@ class HamiltonianData:
             )
 
     def _get_basis_name(self, with_leakage: bool) -> str:
-        if len(self._samples_obj.used_bases) == 0:
-            if self._samples_obj._in_xy:
+        if len(self._samples.used_bases) == 0:
+            if self._samples._in_xy:
                 basis_name = "XY"
             else:
                 basis_name = "ground-rydberg"
-        elif len(self._samples_obj.used_bases) == 1:
-            basis_name = list(self._samples_obj.used_bases)[0]
+        elif len(self._samples.used_bases) == 1:
+            basis_name = list(self._samples.used_bases)[0]
         else:
             basis_name = "all"  # All three rydberg states
         if with_leakage:
@@ -607,7 +592,7 @@ class HamiltonianData:
         return basis_name
 
     def _get_eigenbasis(self, with_leakage: bool) -> list[States]:
-        eigenbasis = self._samples_obj.eigenbasis
+        eigenbasis = self._samples.eigenbasis
         if with_leakage:
             eigenbasis.append("x")
         return [state for state in STATES_RANK if state in eigenbasis]
@@ -623,19 +608,3 @@ class HamiltonianData:
                 proj_name = "sigma_" + proj0 + proj1
                 op_matrix_names.append(proj_name)
         return op_matrix_names
-
-    def construct_hamiltonian(self) -> None:
-        """Constructs the noisy samples.
-
-        Refreshes potential noise parameters by drawing new at random.
-
-        Warning:
-            The refreshed noise parameters (when update=True) are only those
-            that change from shot to shot (eg doppler and state preparation).
-            Amplitude fluctuations change from pulse to pulse and are always
-            applied in `_extract_samples()`.
-
-        Args:
-            update: Whether to update the noise parameters.
-        """
-        self._extract_samples()

@@ -34,7 +34,7 @@ class Hamiltonian:
     r"""Generates Hamiltonian from a sampled sequence and noise.
 
     Args:
-        samples_obj: A sampled sequence whose ChannelSamples have same
+        samples: A sampled sequence whose ChannelSamples have same
             duration.
         register: A Register associating coordinates to qubit ids.
         device: The device specifications.
@@ -45,7 +45,7 @@ class Hamiltonian:
 
     def __init__(
         self,
-        samples_obj: SequenceSamples,
+        samples: SequenceSamples,
         register: BaseRegister,
         device: BaseDevice,
         sampling_rate: float,
@@ -53,7 +53,7 @@ class Hamiltonian:
     ) -> None:
         """Instantiates a Hamiltonian object."""
         self.data = HamiltonianData(
-            samples_obj, register, device, config, assign_config=False
+            samples, register, device, config, assign_config=False
         )
         self._sampling_rate = sampling_rate
 
@@ -62,7 +62,7 @@ class Hamiltonian:
         self.basis: dict[States, qutip.Qobj]
 
         # Compute sampling times
-        self._duration = self.data.samples_obj.max_duration
+        self._duration = self.data.samples.max_duration
         self.sampling_times = self._adapt_to_sampling_rate(
             # Include extra time step for final instruction from samples:
             np.arange(self._duration, dtype=np.double)
@@ -128,9 +128,6 @@ class Hamiltonian:
 
         Args:
             cfg: New configuration.
-
-        Keyword Args:
-            construct_hamiltonian: Whether or not to update noisy values.
         """
         self.data._check_config(cfg)
         not_supported = (
@@ -301,7 +298,6 @@ class Hamiltonian:
         """
         if update:
             self._update_noise()
-        self.data.construct_hamiltonian()
 
         def make_vdw_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
@@ -340,7 +336,7 @@ class Hamiltonian:
                 effective_size = self.nbqudits - sum(
                     self.data._bad_atoms.values()
                 )
-                for q in self.data.samples_obj._slm_mask.targets:
+                for q in self.data.samples._slm_mask.targets:
                     if not self.data._bad_atoms[q]:
                         effective_size -= 1
                 if effective_size < 2:
@@ -356,8 +352,8 @@ class Hamiltonian:
                         masked
                         and self.data._interaction == "XY"
                         and (
-                            q1 in self.data.samples_obj._slm_mask.targets
-                            or q2 in self.data.samples_obj._slm_mask.targets
+                            q1 in self.data.samples._slm_mask.targets
+                            or q2 in self.data.samples._slm_mask.targets
                         )
                     )
                 ):
@@ -371,7 +367,7 @@ class Hamiltonian:
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
-            samples = self.data.samples[addr][basis]
+            samples = self.data.noisy_samples[addr][basis]
             operators = self.data.operators[addr][basis]
             # Choose operator names according to addressing:
             if basis == "ground-rydberg":
@@ -434,13 +430,13 @@ class Hamiltonian:
             # Build time-dependent or time-independent interaction term based
             # on whether an SLM mask was defined or not
             if (
-                self.data.samples_obj._slm_mask.end > 0
+                self.data.samples._slm_mask.end > 0
                 and self.data._interaction == "XY"
             ):
                 # Build an array of binary coefficients for the interaction
                 # term of unmasked qubits
                 coeff = np.ones(self._duration - 1)
-                coeff[0 : self.data.samples_obj._slm_mask.end] = 0
+                coeff[0 : self.data.samples._slm_mask.end] = 0
                 # Build the interaction term for unmasked qubits
                 qobj_list = [
                     [
@@ -461,9 +457,9 @@ class Hamiltonian:
                 qobj_list = [make_interaction_term()]
 
         # Time dependent terms:
-        for addr in self.data.samples:
-            for basis in self.data.samples[addr]:
-                if self.data.samples[addr][basis]:
+        for addr in self.data.noisy_samples:
+            for basis in self.data.noisy_samples[addr]:
+                if self.data.noisy_samples[addr][basis]:
                     qobj_list += cast(list, build_coeffs_ops(basis, addr))
 
         if not qobj_list:  # If qobj_list ends up empty

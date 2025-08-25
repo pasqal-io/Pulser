@@ -134,7 +134,7 @@ def test_from_sequence():
         HamiltonianData.from_sequence(seq2)
 
     ham = HamiltonianData.from_sequence(seq, noise_model=noise_model)
-    noiseless = ham.samples_obj.to_nested_dict(all_local=True)
+    noiseless = ham.samples.to_nested_dict(all_local=True)
     full = ham.noisy_samples
     diff = (
         noiseless["Local"]["ground-rydberg"]["superman"]["det"]
@@ -148,13 +148,6 @@ def test_from_sequence():
             diff,
         )
     )
-
-
-def test_noisy_samples_obj():
-    seq = seq_with_SLM("rydberg_global")
-    ham = HamiltonianData.from_sequence(seq)
-    with pytest.raises(NotImplementedError):
-        ham.noisy_samples_obj
 
 
 def test_register():

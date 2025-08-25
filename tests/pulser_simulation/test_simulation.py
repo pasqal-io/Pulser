@@ -210,7 +210,7 @@ def test_extraction_of_sequences(seq):
         if addr == "Global":
             for slot in seq._schedule[channel]:
                 if isinstance(slot.type, Pulse):
-                    samples = sim._hamiltonian.data.samples[addr][basis]
+                    samples = sim._hamiltonian.data.noisy_samples[addr][basis]
                     assert np.all(
                         samples["amp"][slot.ti : slot.tf]
                         == slot.type.amplitude.samples
@@ -227,9 +227,9 @@ def test_extraction_of_sequences(seq):
             for slot in seq._schedule[channel]:
                 if isinstance(slot.type, Pulse):
                     for qubit in slot.targets:  # TO DO: multiaddressing??
-                        samples = sim._hamiltonian.data.samples[addr][basis][
-                            qubit
-                        ]
+                        samples = sim._hamiltonian.data.noisy_samples[addr][
+                            basis
+                        ][qubit]
                         assert np.all(
                             samples["amp"][slot.ti : slot.tf]
                             == slot.type.amplitude.samples
@@ -452,12 +452,12 @@ def test_empty_sequences(reg):
             p_false_neg=0.05,
         ),
     )
-    assert not emu._hamiltonian.data.samples["Global"]
-    for basis in emu._hamiltonian.data.samples["Local"]:
-        for q in emu._hamiltonian.data.samples["Local"][basis]:
-            for qty_values in emu._hamiltonian.data.samples["Local"][basis][
-                q
-            ].values():
+    assert not emu._hamiltonian.data.noisy_samples["Global"]
+    for basis in emu._hamiltonian.data.noisy_samples["Local"]:
+        for q in emu._hamiltonian.data.noisy_samples["Local"][basis]:
+            for qty_values in emu._hamiltonian.data.noisy_samples["Local"][
+                basis
+            ][q].values():
                 np.testing.assert_equal(qty_values, 0)
 
 
@@ -814,7 +814,7 @@ def test_noise(seq, matrices):
         QutipEmulator.from_sequence(
             seq, noise_model=NoiseModel(depolarizing_rate=0.05)
         )
-    assert sim2._hamiltonian.data.samples["Global"] == {}
+    assert sim2._hamiltonian.data.noisy_samples["Global"] == {}
     assert any(sim2._hamiltonian.data._bad_atoms.values())
     for basis in ("ground-rydberg", "digital"):
         for t in sim2._hamiltonian.data._bad_atoms:
@@ -822,7 +822,9 @@ def test_noise(seq, matrices):
                 continue
             for qty in ("amp", "det", "phase"):
                 assert np.all(
-                    sim2._hamiltonian.data.samples["Local"][basis][t][qty]
+                    sim2._hamiltonian.data.noisy_samples["Local"][basis][t][
+                        qty
+                    ]
                     == 0.0
                 )
 
@@ -1583,15 +1585,17 @@ def test_mask_local_channel():
     assert seq_._slm_mask_targets == {"q0", "q3"}
     sim = QutipEmulator.from_sequence(seq_)
     assert np.array_equal(
-        sim._hamiltonian.data.samples["Global"]["ground-rydberg"]["amp"],
+        sim._hamiltonian.data.noisy_samples["Global"]["ground-rydberg"]["amp"],
         np.concatenate((pulse.amplitude.samples, [0])),
     )
     assert np.array_equal(
-        sim._hamiltonian.data.samples["Global"]["ground-rydberg"]["det"],
+        sim._hamiltonian.data.noisy_samples["Global"]["ground-rydberg"]["det"],
         np.concatenate((pulse.detuning.samples, [0])),
     )
     assert np.all(
-        sim._hamiltonian.data.samples["Global"]["ground-rydberg"]["phase"]
+        sim._hamiltonian.data.noisy_samples["Global"]["ground-rydberg"][
+            "phase"
+        ]
         == 0.0
     )
     qubits = ["q0", "q1", "q2", "q3"]
@@ -1599,40 +1603,44 @@ def test_mask_local_channel():
     for q in qubits:
         if q in masked_qubits:
             assert np.array_equal(
-                sim._hamiltonian.data.samples["Local"]["ground-rydberg"][q][
-                    "det"
-                ],
+                sim._hamiltonian.data.noisy_samples["Local"]["ground-rydberg"][
+                    q
+                ]["det"],
                 np.concatenate((-10 * pulse.amplitude.samples, [0])),
             )
         else:
             assert np.all(
-                sim._hamiltonian.data.samples["Local"]["ground-rydberg"][q][
-                    "det"
-                ]
+                sim._hamiltonian.data.noisy_samples["Local"]["ground-rydberg"][
+                    q
+                ]["det"]
                 == 0.0
             )
         assert np.all(
-            sim._hamiltonian.data.samples["Local"]["ground-rydberg"][q]["amp"]
+            sim._hamiltonian.data.noisy_samples["Local"]["ground-rydberg"][q][
+                "amp"
+            ]
             == 0.0
         )
         assert np.all(
-            sim._hamiltonian.data.samples["Local"]["ground-rydberg"][q][
+            sim._hamiltonian.data.noisy_samples["Local"]["ground-rydberg"][q][
                 "phase"
             ]
             == 0.0
         )
 
     assert np.array_equal(
-        sim._hamiltonian.data.samples["Local"]["digital"]["q0"]["amp"],
+        sim._hamiltonian.data.noisy_samples["Local"]["digital"]["q0"]["amp"],
         np.concatenate((pulse2.amplitude.samples, [0])),
     )
     assert np.array_equal(
-        sim._hamiltonian.data.samples["Local"]["digital"]["q0"]["det"],
+        sim._hamiltonian.data.noisy_samples["Local"]["digital"]["q0"]["det"],
         np.concatenate((pulse2.detuning.samples, [0])),
     )
     assert np.all(
         np.isclose(
-            sim._hamiltonian.data.samples["Local"]["digital"]["q0"]["phase"],
+            sim._hamiltonian.data.noisy_samples["Local"]["digital"]["q0"][
+                "phase"
+            ],
             np.concatenate((np.pi * np.ones(1000), [0])),
         )
     )
@@ -1715,32 +1723,38 @@ def test_effective_size_disjoint(channel_type):
             "ground-rydberg" if channel_type == "rydberg_global" else "digital"
         )
         assert np.array_equal(
-            sim._hamiltonian.data.samples["Local"][basis]["atom1"]["amp"],
+            sim._hamiltonian.data.noisy_samples["Local"][basis]["atom1"][
+                "amp"
+            ],
             np.concatenate((rise.amplitude.samples, [0])),
         )
         assert np.array_equal(
-            sim._hamiltonian.data.samples["Local"][basis]["atom3"]["amp"],
+            sim._hamiltonian.data.noisy_samples["Local"][basis]["atom3"][
+                "amp"
+            ],
             np.concatenate((rise.amplitude.samples, [0])),
         )
         # SLM
         assert np.all(
-            sim._hamiltonian.data.samples["Local"]["ground-rydberg"]["atom1"][
-                "det"
-            ]
+            sim._hamiltonian.data.noisy_samples["Local"]["ground-rydberg"][
+                "atom1"
+            ]["det"]
             == -10 * np.concatenate((rise.amplitude.samples, [0]))
         )
         if channel_type == "raman_global":
             assert np.all(
-                sim._hamiltonian.data.samples["Local"][basis]["atom1"]["det"]
+                sim._hamiltonian.data.noisy_samples["Local"][basis]["atom1"][
+                    "det"
+                ]
                 == 0.0
             )
         assert np.all(
-            sim._hamiltonian.data.samples["Local"][basis]["atom3"]["det"]
+            sim._hamiltonian.data.noisy_samples["Local"][basis]["atom3"]["det"]
             == 0.0
         )
         for q in ["atom1", "atom3"]:
             assert np.all(
-                sim._hamiltonian.data.samples["Local"][basis][q]["phase"]
+                sim._hamiltonian.data.noisy_samples["Local"][basis][q]["phase"]
                 == 0.0
             )
 
@@ -1791,9 +1805,9 @@ def test_simulation_with_modulation(
     )
 
     assert (
-        sim._hamiltonian.data.samples["Global"] == {}
+        sim._hamiltonian.data.noisy_samples["Global"] == {}
     )  # All samples stored in local
-    raman_samples = sim._hamiltonian.data.samples["Local"]["digital"]
+    raman_samples = sim._hamiltonian.data.noisy_samples["Local"]["digital"]
     # Local pulses
     for qid, time_slice in [
         ("target", slice(0, mod_dt)),
@@ -1829,7 +1843,9 @@ def test_simulation_with_modulation(
 
     # Global pulse
     time_slice = slice(2 * mod_dt, 3 * mod_dt)
-    rydberg_samples = sim._hamiltonian.data.samples["Local"]["ground-rydberg"]
+    rydberg_samples = sim._hamiltonian.data.noisy_samples["Local"][
+        "ground-rydberg"
+    ]
     noise_amp_base = rydberg_samples["target"]["amp"][time_slice] / (
         pulse1_mod_samples * pos_factor("target")
     )
@@ -1909,7 +1925,7 @@ def test_amp_sigma_noise():
         seq
     ).samples_obj.to_nested_dict(all_local=True)
     # All samples are local (because of the noise)
-    sim_samples = sim._hamiltonian.data.samples
+    sim_samples = sim._hamiltonian.data.noisy_samples
     amp_factors = {}
     assert sim_samples["Global"] == {}
 
@@ -1978,7 +1994,7 @@ def test_detuning_noise():
         seq,
         noise_model=NoiseModel(detuning_sigma=0.1, runs=1, samples_per_run=1),
     )
-    sim_samples = sim._hamiltonian.data.samples
+    sim_samples = sim._hamiltonian.data.noisy_samples
 
     rydberg_0 = sim_samples["Local"]["ground-rydberg"]["q0"]["det"]
     rydberg_1 = sim_samples["Local"]["ground-rydberg"]["q1"]["det"]
