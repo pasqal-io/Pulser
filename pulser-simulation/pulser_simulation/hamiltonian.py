@@ -215,10 +215,12 @@ class Hamiltonian:
 
     @property
     def basis_name(self) -> str:
+        """What states are used in the Hamiltonian."""
         return self.data.basis_name
 
     @property
     def nbqudits(self) -> int:
+        """Number of qudits in the Register."""
         return self.data.nbqudits
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:

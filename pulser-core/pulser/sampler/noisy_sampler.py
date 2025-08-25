@@ -249,15 +249,18 @@ class HamiltonianData:
     @functools.cached_property
     def distances(self) -> "pm.torch.Tensor" | np.ndarray:
         r"""Distances between each qubits (in :math:`\mu m`)."""
-
         # TODO: Handle torch arrays
         positions = list(self._qdict.values())
         if not positions[0].is_tensor:
-            return np.round(
-                cast(
-                    np.ndarray, cdist(positions, positions, metric="euclidean")
+            return cast(
+                np.ndarray,
+                np.round(
+                    cast(
+                        np.ndarray,
+                        cdist(positions, positions, metric="euclidean"),
+                    ),
+                    COORD_PRECISION,
                 ),
-                COORD_PRECISION,
             )
         else:
             size = len(positions)
@@ -315,6 +318,7 @@ class HamiltonianData:
 
     @property
     def noisy_interaction_matrix(self) -> "pm.torch.Tensor" | np.ndarray:
+        """Return the noisy interaction matrix."""
         mask = [False for _ in range(self.nbqudits)]
         for ind, value in enumerate(self.bad_atoms.values()):
             mask[ind] = True if value else False  # convert to python bool

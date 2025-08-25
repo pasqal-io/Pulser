@@ -218,6 +218,7 @@ class AbstractArray:
 
     # unary operators
     def norm(self) -> AbstractArray:
+        """Return the norm of the array."""
         if self.is_tensor:
             return AbstractArray(torch.linalg.vector_norm(self._array))
         else:
@@ -330,8 +331,11 @@ class AbstractArray:
 
     @staticmethod
     def zeros_like(other: AbstractArray) -> AbstractArray:
+        """Calls zeros_like on the underlying numpy or torch object."""
         if other.is_tensor:
-            return AbstractArray(torch.zeros_like(other._array))
+            return AbstractArray(
+                torch.zeros_like(cast(torch.Tensor, other._array))
+            )
         else:
             return AbstractArray(np.zeros_like(other._array))
 
