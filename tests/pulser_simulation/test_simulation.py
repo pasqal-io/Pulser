@@ -1398,6 +1398,24 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
             **params,
         ),
     )
+    assert set(sim.noise_model.noise_types) == (
+        {"SPAM", noise}
+        if not with_leakage
+        else {"SPAM", "leakage", "eff_noise"}
+    )
+    assert sim._hamiltonian.data._bad_atoms == {
+        "atom0": True,
+        "atom1": False,
+        "atom2": True,
+        "atom3": False,
+    }
+    assert (
+        len(sim._hamiltonian._collapse_ops) // len(simple_reg.qubits)
+        == n_collapse_ops
+    )
+    r = sim.run()
+    assert r.sample_final_state() == Counter(result)
+
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
@@ -1436,24 +1454,6 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
                 NoiseModel(runs=1, samples_per_run=1, temperature=50)
             )
         )
-
-    assert set(sim.noise_model.noise_types) == (
-        {"SPAM", noise}
-        if not with_leakage
-        else {"SPAM", "leakage", "eff_noise"}
-    )
-    assert sim._hamiltonian.data._bad_atoms == {
-        "atom0": True,
-        "atom1": False,
-        "atom2": True,
-        "atom3": False,
-    }
-    assert (
-        len(sim._hamiltonian._collapse_ops) // len(simple_reg.qubits)
-        == n_collapse_ops
-    )
-    r = sim.run()
-    assert r.sample_final_state() == Counter(result)
 
 
 def test_mask_nopulses():

@@ -52,9 +52,7 @@ class Hamiltonian:
         config: NoiseModel,
     ) -> None:
         """Instantiates a Hamiltonian object."""
-        self.data = HamiltonianData(
-            samples, register, device, config, assign_config=False
-        )
+        self.data = HamiltonianData(samples, register, device, config)
         self._sampling_rate = sampling_rate
 
         # Type hints for attributes defined outside of __init__
@@ -72,7 +70,7 @@ class Hamiltonian:
         # Stores the qutip operators used in building the Hamiltonian
         self._collapse_ops: list[qutip.Qobj] = []
 
-        self.set_config(config)
+        self.set_config(config, from_init=True)
 
     @property
     def config(self) -> NoiseModel:
@@ -123,11 +121,14 @@ class Hamiltonian:
             and self.data.noise_model.with_leakage != cfg.with_leakage
         )
 
-    def set_config(self, cfg: NoiseModel, **kwargs: bool) -> None:
+    def set_config(
+        self, cfg: NoiseModel, from_init: bool = False, **kwargs: bool
+    ) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
         Args:
             cfg: New configuration.
+            from_init: this is only meant to be used in Hamiltonian.__init__
         """
         self.data._check_config(cfg)
         not_supported = (
@@ -140,7 +141,10 @@ class Hamiltonian:
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
         update_basis = self._update_basis(cfg)
-        self.data.set_config(cfg)
+        if not from_init:
+            self.data = HamiltonianData(
+                self.data.samples, self.data.register, self.data.device, cfg
+            )
         if update_basis:
             basis, op_matrix = self._get_basis_op_matrices(
                 self.data.eigenbasis

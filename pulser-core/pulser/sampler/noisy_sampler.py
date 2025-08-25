@@ -141,8 +141,7 @@ class HamiltonianData:
             str, list[tuple[int | complex, str]]
         ] = {}
 
-        if kwargs.get("assign_config", True):
-            self.set_config(config)
+        self.set_config(config)
 
     @classmethod
     def from_sequence(
@@ -566,7 +565,6 @@ class HamiltonianData:
                 0, doppler_sigma(temp), size=len(self._qid_index)
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
-        pass
         for ch in self._samples.channel_samples:
             self._amp_fluctuations[ch] = max(
                 0, np.random.normal(1.0, self.noise_model.amp_sigma)
