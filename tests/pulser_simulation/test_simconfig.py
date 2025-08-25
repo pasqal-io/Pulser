@@ -12,19 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch
 
-import numpy as np
 import pytest
 from qutip import Qobj, qeye, sigmax, sigmaz
 
 from pulser.noise_model import NoiseModel
-from pulser_simulation.simconfig import (
-    SimConfig,
-    doppler_sigma,
-    noisy_register,
-    register_sigma_xy_z,
-)
+from pulser_simulation.simconfig import SimConfig, doppler_sigma
 
 pytestmark = pytest.mark.filterwarnings(
     "ignore:'SimConfig' has been deprecated:DeprecationWarning"
@@ -51,35 +44,23 @@ def test_init():
                 "SPAM",
                 "doppler",
                 "dephasing",
-                "register",
                 "amplitude",
             ),
             temperature=1000.0,
-            trap_waist=1.0,
-            trap_depth=100.0,
             runs=100,
         )
     expected_temperature = 1000.0
-    expected_waist = 1.0
-    expected_depth = 100.0
     runs = 100
 
     assert config.temperature == expected_temperature * 1e-6  # in K
     str_config = config.__str__(True)
-    assert "SPAM, doppler, dephasing, register, amplitude" in str_config
+    assert "SPAM, doppler, dephasing, amplitude" in str_config
     assert (
         f"{expected_temperature}µK" in str_config
-        and f"{expected_waist}µm" in str_config
-        and f"{expected_depth}µK" in str_config
         and f"{runs}" in str_config
         and "Solver Options" in str_config
     )
     assert config.to_noise_model().temperature == expected_temperature
-    assert config.to_noise_model().trap_waist == expected_waist
-    assert config.to_noise_model().trap_depth == expected_depth
-    assert config.register_sigma_xy_z == register_sigma_xy_z(
-        expected_temperature * 1e-6, expected_waist, expected_depth
-    )
     config = SimConfig(noise=("depolarizing", "relaxation", "doppler"))
     expected_temperature = 50.0
     assert config.temperature == pytest.approx(
@@ -188,56 +169,3 @@ def test_noise_model_conversion():
     )
     assert SimConfig.from_noise_model(noise_model) == expected_simconfig
     assert expected_simconfig.to_noise_model() == noise_model
-
-
-@pytest.mark.parametrize(
-    "register2D",
-    [
-        True,
-        False,
-    ],
-)
-def test_noisy_register(register2D: bool) -> None:
-    """Testing noisy_register function in case 2D and 3D register."""
-    if register2D:
-        qdict = {
-            "q0": np.array([-15.0, 0.0]),
-            "q1": np.array([-5.0, 0.0]),
-            "q2": np.array([5.0, 0.0]),
-            "q3": np.array([15.0, 0.0]),
-        }
-    else:
-        qdict = {
-            "q0": np.array([-15.0, 0.0, 0.0]),
-            "q1": np.array([-5.0, 0.0, 0.0]),
-            "q2": np.array([5.0, 0.0, 0.0]),
-            "q3": np.array([15.0, 0.0, 0.0]),
-        }
-
-    register_sigma_xy = 0.13
-    register_sigma_z = 0.8
-    # Predefined deterministic noise
-    fake_normal_xy_noise = np.array(
-        [
-            [0.1, -0.1],
-            [0.2, -0.2],
-            [0.3, -0.3],
-            [0.5, -0.5],
-        ]
-    )
-    fake_normal_z_noise = np.array([0.05, 0.07, 0.09, 0.11])
-    with patch("numpy.random.normal") as mock_normal:
-        # moke the noise generation
-        mock_normal.side_effect = [fake_normal_xy_noise, fake_normal_z_noise]
-
-        result = noisy_register(qdict, register_sigma_xy, register_sigma_z)
-
-    expected_positions = {
-        "q0": np.array([-15.0 + 0.1, 0.0 - 0.1, 0.05]),
-        "q1": np.array([-5.0 + 0.2, 0.0 - 0.2, 0.07]),
-        "q2": np.array([5.0 + 0.3, 0.0 - 0.3, 0.09]),
-        "q3": np.array([15.0 + 0.5, 0.0 - 0.5, 0.11]),
-    }
-
-    for q in qdict:
-        np.testing.assert_array_almost_equal(result[q], expected_positions[q])

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import math
 import warnings
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field, fields
@@ -29,6 +30,8 @@ from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults
 
 __all__ = ["NoiseModel"]
+
+WAVELENGTH = 0.85  # µm
 
 NoiseTypes = Literal[
     "leakage",
@@ -46,7 +49,7 @@ NoiseTypes = Literal[
 _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "leakage": ("with_leakage",),
     "doppler": ("temperature",),
-    "register": ("trap_waist", "trap_depth"),  # temperature is also needed
+    "register": ("trap_waist", "trap_depth"),
     "amplitude": ("laser_waist", "amp_sigma"),
     "detuning": ("detuning_sigma",),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
@@ -71,13 +74,8 @@ _POSITIVE = {
     "temperature",
     "detuning_sigma",
     "trap_waist",
-    "trap_depth",
 }
-_STRICT_POSITIVE = {
-    "runs",
-    "samples_per_run",
-    "laser_waist",
-}
+_STRICT_POSITIVE = {"runs", "samples_per_run", "laser_waist", "trap_depth"}
 _PROBABILITY_LIKE = {
     "state_prep_error",
     "p_false_pos",
@@ -107,6 +105,40 @@ OPTIONAL_IN_ABSTR_REPR = (
     "trap_waist",
     "trap_depth",
 )
+
+
+def register_sigma_xy_z(
+    temperature: float, trap_waist: float, trap_depth: float
+) -> tuple[float, float]:
+    """Standard deviation for fluctuations in atom position in the trap.
+
+    - Plane fluctuation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,
+      w is the trap waist and Uₜᵣₐₚ is the trap depth.
+    - Off plane fluctuation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the wavelength
+    with a constant value of 0.85 µm
+
+    Note: a k_B factor is absorbed in the trap depth (Uₜᵣₐₚ), so the units
+    of temperature and trap depth are the same.
+
+    Args:
+        temperature (float): Temperature (T) of the atoms in the trap
+        (in Kelvin).
+        trap_depth (float): Depth of the trap (Uₜᵣₐₚ)
+        (same units as temperature).
+        trap_waist (float): Waist of the trap (w) (in µmeters).
+
+    Returns:
+        tuple: The standard deviations of the spatial position fluctuations
+        in the xy-plane (register_sigma_xy) and along the z-axis
+        (register_sigma_z).
+    """
+    register_sigma_xy = math.sqrt(
+        temperature * trap_waist**2 / (4 * trap_depth)
+    )
+    register_sigma_z = (
+        math.pi / WAVELENGTH * math.sqrt(2) * trap_waist * register_sigma_xy
+    )
+    return register_sigma_xy, register_sigma_z
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -179,7 +211,7 @@ class NoiseModel:
         trap_waist: Refers to the radius of the trapping laser beam at the
             focus point (in µm). Defaults to 0.
         trap_depth: The potential energy well depth that confines the atoms
-            (in µK). Defaults to 0.
+            (in µK). Defaults to None.
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1. Defaults to 0.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
@@ -210,8 +242,12 @@ class NoiseModel:
     detuning_sigma: float = 0.0
     relaxation_rate: float = 0.0
     dephasing_rate: float = 0.0
-    trap_waist: float = 0.0
-    trap_depth: float | None = None
+    trap_waist: float = (
+        0.0  # if the trap depth > the trap waist should be not none
+    )
+    trap_depth: float | None = (
+        None  # can be 0.0 has to be non zero, it is none raise a error
+    )
     hyperfine_dephasing_rate: float = 0.0
     depolarizing_rate: float = 0.0
     eff_noise_rates: tuple[float, ...] = ()
@@ -231,6 +267,7 @@ class NoiseModel:
             for field in fields(self)
             if field.init
         }
+        print(param_vals)
         param_vals["eff_noise_rates"] = to_tuple(self.eff_noise_rates)
         param_vals["eff_noise_opers"] = to_tuple(self.eff_noise_opers)
 
@@ -250,6 +287,9 @@ class NoiseModel:
             for p_ in param_vals
             if param_vals[p_] and p_ in _PARAM_TO_NOISE_TYPE
         }
+
+        print(true_noise_types)
+
         self._check_leakage_noise(true_noise_types)
         self._check_eff_noise(
             cast(tuple, param_vals["eff_noise_rates"]),
@@ -272,6 +312,8 @@ class NoiseModel:
         }
         self._validate_parameters(relevant_param_vals)
 
+        self._check_register_and_doppler_noise_params(true_noise_types)
+
         object.__setattr__(
             self, "noise_types", tuple(sorted(true_noise_types))
         )
@@ -289,6 +331,48 @@ class NoiseModel:
                     f"are {non_zero_relevant_params}.",
                     stacklevel=2,
                 )
+
+    def register_sigma_xy_z(self) -> tuple[float, float]:
+        """Standard deviation for fluctuations in the xy and z plane."""
+        if self.trap_waist is None or self.trap_depth is None:
+            raise ValueError("Trap waist and depth must be defined.")
+        register_sigma = register_sigma_xy_z(
+            self.temperature, self.trap_waist, self.trap_depth
+        )
+        return register_sigma[0], register_sigma[1]
+
+    def _check_register_and_doppler_noise_params(
+        self, true_noise_types: set
+    ) -> None:
+        if (
+            "register" in true_noise_types
+            and (self.trap_waist == 0.0 or self.trap_depth is None)
+            and self.temperature != 0.0
+        ):
+            warnings.warn(
+                "Trap waist, depth, and temperature must be defined in "
+                + "order to "
+                + "simulate register noise. Only doppler noise will be used",
+                Warning,
+                stacklevel=0,
+            )
+        elif (
+            "register" in true_noise_types
+            and (self.trap_waist == 0.0 or self.trap_waist != 0.0)
+            and self.temperature == 0.0
+            and self.trap_depth is not None
+        ):
+            warnings.warn(
+                "Trap waist, trap depth, and temperature must be "
+                + "defined in order to simulate register noise. "
+                + "Register noise is not activated",
+                Warning,
+            )
+        else:
+            warnings.warn(
+                "unexpected error",
+                Warning,
+            )
 
     @staticmethod
     def _find_relevant_params(
@@ -483,3 +567,23 @@ class NoiseModel:
                 obj_str
             )
         )
+
+
+def noisy_register(
+    q_dict: dict, register_sigma_xy: float, register_sigma_z: float
+) -> dict:
+    """Add Gaussian noise to the positions of the register."""
+    atoms = list(q_dict.keys())
+    num_atoms = len(list(atoms))
+    positions = np.array(list(q_dict.values()))
+
+    if len(positions[0]) == 2:
+        positions = np.array(
+            [np.append(p, 0.0) for p in positions]
+        )  # Convert 2D positions to 3D
+
+    noise_xy = np.random.normal(0, register_sigma_xy, (num_atoms, 2))
+    noise_z = np.random.normal(0, register_sigma_z, num_atoms)
+    noise = np.column_stack((noise_xy, noise_z))
+    positions += noise
+    return {k: pos for (k, pos) in zip(atoms, positions)}

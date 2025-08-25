@@ -52,7 +52,7 @@ from pulser.json.abstract_repr.serializer import (
     abstract_repr,
 )
 from pulser.json.abstract_repr.validation import validate_abstract_repr
-from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel
+from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, noisy_register
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
 from pulser.parametrized.variable import Variable, VariableItem
@@ -2808,3 +2808,56 @@ def test_noise_optional_params(detuning_sigma):
     )
     repr = noise._to_abstract_repr()
     assert ("detuning_sigma" in repr) == (detuning_sigma != 0.0)
+
+
+@pytest.mark.parametrize(
+    "register2D",
+    [
+        True,
+        False,
+    ],
+)
+def test_noisy_register(register2D: bool) -> None:
+    """Testing noisy_register function in case 2D and 3D register."""
+    if register2D:
+        qdict = {
+            "q0": np.array([-15.0, 0.0]),
+            "q1": np.array([-5.0, 0.0]),
+            "q2": np.array([5.0, 0.0]),
+            "q3": np.array([15.0, 0.0]),
+        }
+    else:
+        qdict = {
+            "q0": np.array([-15.0, 0.0, 0.0]),
+            "q1": np.array([-5.0, 0.0, 0.0]),
+            "q2": np.array([5.0, 0.0, 0.0]),
+            "q3": np.array([15.0, 0.0, 0.0]),
+        }
+
+    register_sigma_xy = 0.13
+    register_sigma_z = 0.8
+    # Predefined deterministic noise
+    fake_normal_xy_noise = np.array(
+        [
+            [0.1, -0.1],
+            [0.2, -0.2],
+            [0.3, -0.3],
+            [0.5, -0.5],
+        ]
+    )
+    fake_normal_z_noise = np.array([0.05, 0.07, 0.09, 0.11])
+    with patch("numpy.random.normal") as mock_normal:
+        # moke the noise generation
+        mock_normal.side_effect = [fake_normal_xy_noise, fake_normal_z_noise]
+
+        result = noisy_register(qdict, register_sigma_xy, register_sigma_z)
+
+    expected_positions = {
+        "q0": np.array([-15.0 + 0.1, 0.0 - 0.1, 0.05]),
+        "q1": np.array([-5.0 + 0.2, 0.0 - 0.2, 0.07]),
+        "q2": np.array([5.0 + 0.3, 0.0 - 0.3, 0.09]),
+        "q3": np.array([15.0 + 0.5, 0.0 - 0.5, 0.11]),
+    }
+
+    for q in qdict:
+        np.testing.assert_array_almost_equal(result[q], expected_positions[q])
