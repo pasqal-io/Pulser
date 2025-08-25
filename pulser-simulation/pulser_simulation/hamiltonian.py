@@ -23,7 +23,7 @@ import qutip
 
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
-from pulser.noise_model import NoiseModel
+from pulser.noise_model import NoiseModel, doppler_sigma
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler.noisy_sampler import HamiltonianData
 from pulser.sampler.samples import SequenceSamples
@@ -143,7 +143,7 @@ class Hamiltonian:
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
         update_basis = self._update_basis(cfg)
-        self.data.set_config(cfg, construct_hamiltonian=False)
+        self.data.set_config(cfg)
         if update_basis:
             basis, op_matrix = self._get_basis_op_matrices(
                 self.data.eigenbasis
@@ -153,7 +153,7 @@ class Hamiltonian:
             assert set(self.data.op_matrix_names) == set(self.op_matrix.keys())
         self._build_collapse_operators()
         # Noise, samples and Hamiltonian update routine
-        self._construct_hamiltonian()
+        self._construct_hamiltonian(update=False)
 
     def _build_operator(
         self, operations: Union[list, tuple], op_matrix: dict[str, qutip.Qobj]
@@ -261,7 +261,26 @@ class Hamiltonian:
         return basis, op_matrix
 
     def _update_noise(self) -> None:
-        pass
+        """Updates noise random parameters.
+
+        Used at the start of each run. If SPAM isn't in chosen noises, all
+        atoms are set to be correctly prepared.
+        """
+        if (
+            "SPAM" in self.data.noise_model.noise_types
+            and self.data.noise_model.state_prep_error > 0
+        ):
+            dist = (
+                np.random.uniform(size=len(self.data._qid_index))
+                < self.data.noise_model.state_prep_error
+            )
+            self.data._bad_atoms = dict(zip(self.data._qid_index, dist))
+        if "doppler" in self.data.noise_model.noise_types:
+            temp = self.data.noise_model.temperature * 1e-6
+            detune = np.random.normal(
+                0, doppler_sigma(temp), size=len(self.data._qid_index)
+            )
+            self.data._doppler_detune = dict(zip(self.data._qid_index, detune))
 
     def _construct_hamiltonian(self, update: bool = True) -> None:
         """Constructs the hamiltonian from the sampled Sequence and noise.
@@ -280,7 +299,7 @@ class Hamiltonian:
         """
         if update:
             self._update_noise()
-        self.data.construct_hamiltonian(update=update)
+        self.data.construct_hamiltonian()
 
         def make_vdw_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.

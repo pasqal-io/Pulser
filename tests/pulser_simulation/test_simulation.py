@@ -808,7 +808,7 @@ def test_noise(seq, matrices):
         ),
     )
     assert sim2.run().sample_final_state() == Counter(
-        {"000": 824, "100": 92, "110": 56, "001": 28}
+        {"000": 837, "100": 55, "110": 69, "001": 14, "010": 25}
     )
     with pytest.raises(NotImplementedError, match="Cannot include"):
         QutipEmulator.from_sequence(
@@ -850,13 +850,13 @@ def test_noise_with_zero_epsilons(seq, matrices):
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
-        (("dephasing",), {"0": 571, "1": 429}, 1),
-        (("relaxation",), {"0": 571, "1": 429}, 1),
-        (("eff_noise",), {"0": 571, "1": 429}, 1),
-        (("depolarizing",), {"0": 560, "1": 440}, 3),
-        (("dephasing", "depolarizing", "relaxation"), {"0": 561, "1": 439}, 5),
-        (("eff_noise", "dephasing"), {"0": 572, "1": 428}, 2),
-        (("eff_noise", "leakage"), {"0": 571, "1": 429}, 1),
+        (("dephasing",), {"0": 572, "1": 428}, 1),
+        (("relaxation",), {"0": 572, "1": 428}, 1),
+        (("eff_noise",), {"0": 572, "1": 428}, 1),
+        (("depolarizing",), {"0": 561, "1": 439}, 3),
+        (("dephasing", "depolarizing", "relaxation"), {"0": 562, "1": 438}, 5),
+        (("eff_noise", "dephasing"), {"0": 573, "1": 427}, 2),
+        (("eff_noise", "leakage"), {"0": 572, "1": 428}, 1),
     ],
 )
 def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
@@ -936,8 +936,8 @@ def test_relaxation_noise():
 
 deph_res = {"111": 978, "110": 12, "011": 7, "101": 3}
 depo_res = {
-    "111": 829,
-    "101": 62,
+    "111": 828,
+    "101": 63,
     "011": 58,
     "110": 40,
     "010": 5,
@@ -946,8 +946,8 @@ depo_res = {
     "100": 1,
 }
 deph_depo_res = {
-    "111": 809,
-    "101": 63,
+    "111": 808,
+    "101": 64,
     "011": 59,
     "110": 56,
     "001": 5,
@@ -1339,17 +1339,12 @@ def test_run_xy():
     assert sim.samples_obj._measurement == "XY"
 
 
-res1 = {"0000": 907, "0100": 24, "0001": 41, "0010": 8, "1000": 20}
 res2 = {
-    "0000": 907,
-    "0010": 15,
-    "1000": 34,
-    "0100": 22,
-    "0001": 12,
-    "0101": 10,
+    "0000": 956,
+    "0100": 24,
+    "0101": 20,
 }
-res3 = {"0000": 907, "0100": 24, "1000": 20, "0010": 8, "0001": 41}
-res4 = {"0000": 907, "0100": 24, "1000": 20, "0010": 8, "0001": 41}
+res1 = {"0000": 956, "0100": 34, "0001": 10}
 
 
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
@@ -1360,8 +1355,8 @@ res4 = {"0000": 907, "0100": 24, "1000": 20, "0010": 8, "0001": 41}
         (None, "eff_noise", res1, 1),
         (None, "leakage", res1, 1),
         (None, "depolarizing", res2, 3),
-        ("atom0", "dephasing", res3, 1),
-        ("atom1", "dephasing", res4, 1),
+        ("atom0", "dephasing", res1, 1),
+        ("atom1", "dephasing", res1, 1),
     ],
 )
 def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
@@ -1376,7 +1371,31 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
         seq.config_slm_mask([masked_qubit])
     seq.add(rise, "ch0")
 
-    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.1)
+    # SPAM simulation is implemented:
+    params = {}
+    with_leakage = noise == "leakage"
+    if with_leakage or noise == "eff_noise":
+        params = dict(
+            eff_noise_opers=[
+                (matrices["Z3"] if with_leakage else matrices["Z"]).full()
+            ],
+            eff_noise_rates=[0.025],
+        )
+    else:
+        params[f"{noise}_rate"] = _LEGACY_DEFAULTS[f"{noise}_rate"]
+    sim = QutipEmulator.from_sequence(
+        seq,
+        sampling_rate=0.1,
+        noise_model=NoiseModel(
+            runs=15,
+            samples_per_run=5,
+            with_leakage=with_leakage,
+            state_prep_error=0.4,
+            p_false_pos=0.01,
+            p_false_neg=0.05,
+            **params,
+        ),
+    )
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
@@ -1416,31 +1435,6 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
             )
         )
 
-    # SPAM simulation is implemented:
-    params = {}
-    with_leakage = noise == "leakage"
-    if with_leakage or noise == "eff_noise":
-        params = dict(
-            eff_noise_opers=[
-                (matrices["Z3"] if with_leakage else matrices["Z"]).full()
-            ],
-            eff_noise_rates=[0.025],
-        )
-    else:
-        params[f"{noise}_rate"] = _LEGACY_DEFAULTS[f"{noise}_rate"]
-    sim = QutipEmulator.from_sequence(
-        seq,
-        sampling_rate=0.1,
-        noise_model=NoiseModel(
-            runs=15,
-            samples_per_run=5,
-            with_leakage=with_leakage,
-            state_prep_error=0.4,
-            p_false_pos=0.01,
-            p_false_neg=0.05,
-            **params,
-        ),
-    )
     assert set(sim.noise_model.noise_types) == (
         {"SPAM", noise}
         if not with_leakage
@@ -1456,7 +1450,8 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
         len(sim._hamiltonian._collapse_ops) // len(simple_reg.qubits)
         == n_collapse_ops
     )
-    assert sim.run().sample_final_state() == Counter(result)
+    r = sim.run()
+    assert r.sample_final_state() == Counter(result)
 
 
 def test_mask_nopulses():
@@ -1694,7 +1689,6 @@ def test_effective_size_disjoint(channel_type):
     seq.add(rise, "ch0")
     seq.config_slm_mask(["atom1"])
     assert seq._slm_mask_time == [0, 1500]
-    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
     sim = QutipEmulator.from_sequence(
         seq,
         sampling_rate=0.01,

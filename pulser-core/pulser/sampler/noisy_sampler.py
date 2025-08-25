@@ -121,6 +121,8 @@ class HamiltonianData:
         self.dim: int
         self._bad_atoms: dict[str, bool] = {}
         self._doppler_detune: dict[str, float] = {}
+        self._amp_fluctuations: dict[str, float] = {}
+        self._det_fluctuations: dict[str, float] = {}
 
         # Define interaction
         self._interaction: Literal["XY", "ising"] = (
@@ -448,8 +450,8 @@ class HamiltonianData:
         if "doppler" not in self.noise_model.noise_types:
             self._doppler_detune = {qid: 0.0 for qid in self._qid_index}
         # Noise, samples and Hamiltonian update routine
-        # self._create_noise_representation()
         if kwargs.get("construct_hamiltonian", True):
+            self._create_noise_representation()
             self.construct_hamiltonian()
 
     @staticmethod
@@ -537,21 +539,13 @@ class HamiltonianData:
             for ch, ch_samples in self._samples_obj.channel_samples.items():
                 _ch_obj = self._samples_obj._ch_objs[ch]
                 samples_dict = samples["Local"][_ch_obj.basis]
-                ch_amp_fluctuation = max(
-                    0, np.random.normal(1.0, self.noise_model.amp_sigma)
-                )
-                ch_det_fluctuation = (
-                    np.random.normal(0.0, self.noise_model.detuning_sigma)
-                    if self.noise_model.detuning_sigma
-                    else 0.0
-                )
                 for slot in ch_samples.slots:
                     add_noise(
                         slot,
                         samples_dict,
                         _ch_obj.addressing == "Global",
-                        amp_fluctuation=ch_amp_fluctuation,
-                        det_fluctuation=ch_det_fluctuation,
+                        amp_fluctuation=self._amp_fluctuations[ch],
+                        det_fluctuation=self._det_fluctuations[ch],
                         propagation_dir=_ch_obj.propagation_dir,
                     )
             # Delete samples for badly prepared atoms
@@ -583,6 +577,16 @@ class HamiltonianData:
                 0, doppler_sigma(temp), size=len(self._qid_index)
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
+        pass
+        for ch in self._samples_obj.channel_samples:
+            self._amp_fluctuations[ch] = max(
+                0, np.random.normal(1.0, self.noise_model.amp_sigma)
+            )
+            self._det_fluctuations[ch] = (
+                np.random.normal(0.0, self.noise_model.detuning_sigma)
+                if self.noise_model.detuning_sigma
+                else 0.0
+            )
 
     def _get_basis_name(self, with_leakage: bool) -> str:
         if len(self._samples_obj.used_bases) == 0:
@@ -616,7 +620,7 @@ class HamiltonianData:
                 op_matrix_names.append(proj_name)
         return op_matrix_names
 
-    def construct_hamiltonian(self, update: bool = True) -> None:
+    def construct_hamiltonian(self) -> None:
         """Constructs the noisy samples.
 
         Refreshes potential noise parameters by drawing new at random.
@@ -630,6 +634,4 @@ class HamiltonianData:
         Args:
             update: Whether to update the noise parameters.
         """
-        if update:
-            self._create_noise_representation()
         self._extract_samples()
