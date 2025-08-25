@@ -267,7 +267,7 @@ class NoiseModel:
             for field in fields(self)
             if field.init
         }
-        print(param_vals)
+
         param_vals["eff_noise_rates"] = to_tuple(self.eff_noise_rates)
         param_vals["eff_noise_opers"] = to_tuple(self.eff_noise_opers)
 
@@ -287,8 +287,6 @@ class NoiseModel:
             for p_ in param_vals
             if param_vals[p_] and p_ in _PARAM_TO_NOISE_TYPE
         }
-
-        print(true_noise_types)
 
         self._check_leakage_noise(true_noise_types)
         self._check_eff_noise(
@@ -366,11 +364,6 @@ class NoiseModel:
                 "Trap waist, trap depth, and temperature must be "
                 + "defined in order to simulate register noise. "
                 + "Register noise is not activated",
-                Warning,
-            )
-        else:
-            warnings.warn(
-                "unexpected error",
                 Warning,
             )
 
