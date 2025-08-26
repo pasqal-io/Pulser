@@ -540,7 +540,7 @@ def test_register_noise_no_warning_when_all_params_defined():
 
 def test_register_not_activated_warns_when_temperature_zero():
     """Trap parameters are turned on, but temperature=0.
-    
+
     Warning: register noise not activated.
     """
     with pytest.warns(UserWarning, match=r"Register noise is not activated"):
