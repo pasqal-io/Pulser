@@ -319,10 +319,9 @@ class NoiseModel:
             in the xy-plane (register_sigma_xy) and along the z-axis
             (register_sigma_z).
         """
-        if self.trap_depth is None:
-            raise ValueError("depth must be defined.")
+        tr_depth = cast(float, self.trap_depth)  # trap_depth is not None here
         register_sigma_xy = math.sqrt(
-            self.temperature * self.trap_waist**2 / (4 * self.trap_depth)
+            self.temperature * self.trap_waist**2 / (4 * tr_depth)
         )
         register_sigma_z = (
             math.pi

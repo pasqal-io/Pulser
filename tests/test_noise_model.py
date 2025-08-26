@@ -500,14 +500,27 @@ def test_noisy_register(register2D) -> None:
         np.testing.assert_array_almost_equal(result[q], expected_positions[q])
 
 
-def test_register_noise_no_warning_when_all_params_defined():
-    """
-    Register noise with all parameters.
+def test_register_noise_sigma_xy_z_raises_if_trap_depth_is_none():
+    """Trap_depth is None."""
+    with pytest.raises(
+        ValueError, match="'trap_depth' must be greater than zero, not None"
+    ):
+        obj = NoiseModel(
+            temperature=1.0,
+            trap_depth=None,
+            trap_waist=1.0,
+            runs=1,
+            samples_per_run=1,
+        )
+        obj.register_sigma_xy_z()
 
-    Doing this also defines Doppler noise.
+
+def test_register_noise_no_warning_when_all_params_defined():
+    """Register noise with all parameters. Doing this also defines
+    Doppler noise.
     """
     noise_model = NoiseModel(
-        temperature=1.0,
+        temperature=15.0,
         trap_waist=1.0,
         trap_depth=150.0,  # the same units as temperature
         runs=1,
@@ -525,12 +538,9 @@ def test_register_noise_no_warning_when_all_params_defined():
 
 
 def test_register_not_activated_warns_when_temperature_zero():
+    """Trap parameters are turned on, but temperature=0. Warning: Register
+    noise not activated.
     """
-    Trap parameters are turned on, but temperature=0.
-
-    Warning: Register noise not activated
-    """
-
     with pytest.warns(UserWarning, match=r"Register noise is not activated"):
         noise_model = NoiseModel(
             temperature=0.0,
@@ -543,9 +553,7 @@ def test_register_not_activated_warns_when_temperature_zero():
 
 
 def test_register_only_doppler_warns_when_trap_params_missing():
-    """
-    trap_waist == 0.0, Warning: Only doppler noise will be used
-    """
+    """trap_waist == 0.0, Warning: Only doppler noise will be used."""
     with pytest.warns(UserWarning, match=r"Only doppler noise will be used"):
         noise_model = NoiseModel(
             temperature=15.0,
