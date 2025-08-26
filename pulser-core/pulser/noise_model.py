@@ -31,7 +31,7 @@ from pulser.json.utils import get_dataclass_defaults
 
 __all__ = ["NoiseModel"]
 
-WAVELENGTH = 0.85  # µm
+TRAP_WAVELENGTH = 0.85  # µm
 
 NoiseTypes = Literal[
     "leakage",
@@ -301,8 +301,8 @@ class NoiseModel:
 
         - Plane fluctuation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,
           w is the trap waist and Uₜᵣₐₚ is the trap depth.
-        - Off plane fluctuation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the wavelength
-        with a constant value of 0.85 µm
+        - Off plane fluctuation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the trap
+        wavelength with a constant value of 0.85 µm
 
         Note: a k_B factor is absorbed in the trap depth (Uₜᵣₐₚ), so the units
         of temperature and trap depth are the same.
@@ -326,7 +326,7 @@ class NoiseModel:
         )
         register_sigma_z = (
             math.pi
-            / WAVELENGTH
+            / TRAP_WAVELENGTH
             * math.sqrt(2)
             * self.trap_waist
             * register_sigma_xy
