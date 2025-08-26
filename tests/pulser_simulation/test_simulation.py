@@ -1988,13 +1988,131 @@ def test_detuning_noise():
         )
     )
 
-
-def test_hf_detuning_noise():
-    #duration = 101
-    np.random.seed(1337)
-    reg = Register({"q0": (0, 0), "q1": (10, 10)})
+def afseq(reg):
+    #import pulser
     seq = Sequence(reg, MockDevice)
+    seq.declare_channel("rydberg_global", "rydberg_global")
+    # Parameters in rad/µs
+    U = 2 * np.pi
+    Omega_max = 2.0 * U
+    delta_0 = -6 * U
+    delta_f = 2 * U
 
+    # Parameters in ns
+    t_rise = 2
+    t_sweep = 3
+    t_fall = 4
+
+    rise = Pulse.ConstantPulse(t_rise, 1, 4, 0)
+    sweep = Pulse.ConstantPulse(t_sweep, 2, 5, 0)
+    fall = Pulse.ConstantPulse(t_fall, 3, 6, 0)
+
+    seq.add(rise, "rydberg_global")
+    seq.add(sweep, "rydberg_global")
+    seq.add(fall, "rydberg_global")
+
+    return seq
+
+
+def test_hf_detuning_noise_validation():
+    # expected format
+    noise_mod = NoiseModel(
+        detuning_hf_psd=[1, 4, 2],
+        detuning_hf_freqs=[3, 6, 7],
+        runs=1
+        )
+
+    # not provided psd and freqs
+    noise_mod = NoiseModel()
+    assert noise_mod.detuning_hf_psd == () and noise_mod.detuning_hf_freqs == ()
+
+    # only psd are provided
+    with pytest.raises(ValueError, match=("empty tuples or both be provided")):
+        NoiseModel(detuning_hf_psd=(1, 2, 3))
+
+    # only freqs are provided
+    with pytest.raises(ValueError, match=("empty tuples or both be provided")):
+        NoiseModel(detuning_hf_freqs=(4, 5, 6))
+
+    # psd dim != 1
+    with pytest.raises(ValueError, match=("1D arrays")):
+        NoiseModel(detuning_hf_psd=[[1, 2, 3]], detuning_hf_freqs=[3, 4, 5])
+
+    # freqs dim != 1
+    with pytest.raises(ValueError, match=("1D arrays")):
+        NoiseModel(detuning_hf_psd=[1, 2, 3], detuning_hf_freqs=[[3, 4, 5]])
+
+    # psd len <= 1
+    with pytest.raises(ValueError, match=("length > 1")):
+        NoiseModel(detuning_hf_psd=[1], detuning_hf_freqs=[3, 4])
+
+    # freqs len <= 1
+    with pytest.raises(ValueError, match=("length > 1")):
+        NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[3])
+
+    # len psd != len freqs
+    with pytest.raises(ValueError, match=("same length")):
+        NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[3, 4, 5])
+
+    # psd < 0
+    with pytest.raises(ValueError, match=("positive values")):
+        NoiseModel(detuning_hf_psd=[-1, 2], detuning_hf_freqs=[3, 4])
+
+    # freqs < 0
+    with pytest.raises(ValueError, match=("positive values")):
+        NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[3, -4])
+
+    # freqs should monotonously grow
+    with pytest.raises(ValueError, match=("monotonously growing")):
+        NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[4, 3])
+
+
+def test_hf_detuning_noise0():
+    duration = 13
+    np.random.seed(1337)
+    reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (20, 10)})
+    
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="q0")
+    seq.declare_channel("ch2", "raman_local", initial_target="q1")
+
+    det = 17
+    pulse1 = Pulse.ConstantPulse(duration, 0, det, 0)
+    # Added twice to check the fluctuation doesn't change from pulse to pulse
+    seq.add(pulse1, "ch0")
+    #seq.add(pulse1, "ch0")
+    # The two local channels target alternating qubits on the same basis
+    seq.add(pulse1, "ch1", protocol="no-delay")
+    #seq.add(pulse1, "ch2", protocol="no-delay")
+
+    seq = afseq(reg)
+
+
+    psd = np.array([i**2 for i in range(10)]) # Just list doesn't work for the computational part
+    freq = np.array([i**3 for i in range(10, 20)])
+    psd = psd / np.linalg.norm(psd)
+    freq = freq / np.linalg.norm(freq)
+
+
+    noise_mod = NoiseModel(
+        detuning_sigma=1.1,
+        detuning_hf_psd=psd,
+        detuning_hf_freqs=freq,
+        runs=2,
+        samples_per_run=1
+        )
+
+    sim = QutipEmulator.from_sequence(
+        seq,
+        noise_model=noise_mod,
+    )
+    h = sim._hamiltonian._hamiltonian
+
+    sim_samples = sim._hamiltonian.samples
+
+
+"""
     seq.declare_channel("rydberg_global", "rydberg_global")
 
     import pulser
@@ -2021,54 +2139,20 @@ def test_hf_detuning_noise():
     seq.add(rise, "rydberg_global")
     seq.add(sweep, "rydberg_global")
     seq.add(fall, "rydberg_global")
+"""
 
 
+"""
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="q0")
+    seq.declare_channel("ch2", "raman_local", initial_target="q1")
 
-    #seq.declare_channel("ch0", "rydberg_global")
-    #seq.declare_channel("ch1", "raman_local", initial_target="q0")
-    #seq.declare_channel("ch2", "raman_local", initial_target="q1")
-    #seq.declare_channel("ch3", "raman_local", initial_target="q2")
-#
-    #pulse1 = Pulse.ConstantPulse(duration, 0, 0, 0)
-    ## Added twice to check the fluctuation doesn't change from pulse to pulse
+    det = 17
+    pulse1 = Pulse.ConstantPulse(duration, 0, det, 0)
+    # Added twice to check the fluctuation doesn't change from pulse to pulse
+    seq.add(pulse1, "ch0")
     #seq.add(pulse1, "ch0")
-    #seq.add(pulse1, "ch0")
-    ## The two local channels target alternating qubits on the same basis
-    #seq.add(pulse1, "ch1", protocol="no-delay")
+    # The two local channels target alternating qubits on the same basis
+    seq.add(pulse1, "ch1", protocol="no-delay")
     #seq.add(pulse1, "ch2", protocol="no-delay")
-    #seq.add(pulse1, "ch3", protocol="no-delay")
-#
-    psd = np.array([1, 2, 3]) # Just list doesn't work for the computational part
-    freq = np.array([4, 5, 6])
-
-    noise_mod = NoiseModel(detuning_sigma=1.1,
-                           detuning_high_freq=(psd, freq),
-                           runs=1,samples_per_run=1)
-    
-
-    sim = QutipEmulator.from_sequence(
-        seq,
-        noise_model=noise_mod,
-    )
-    h = sim._hamiltonian._hamiltonian
-
-    sim_samples = sim._hamiltonian.samples
-
-    # rydberg_0 = sim_samples["Local"]["ground-rydberg"]["q0"]["det"]
-    # rydberg_1 = sim_samples["Local"]["ground-rydberg"]["q1"]["det"]
-    # digital_0 = sim_samples["Local"]["digital"]["q0"]["det"]
-    # digital_1 = sim_samples["Local"]["digital"]["q1"]["det"]
-    # np.all(np.isclose(rydberg_0, np.array([-0.04902824] * (2 * duration + 1))))
-    # np.all(np.isclose(rydberg_1, np.array([-0.04902824] * (2 * duration + 1))))
-    # np.all(
-    #     np.isclose(
-    #         digital_0,
-    #         np.array([-0.17550787] * (duration) + [0.0] * (duration + 1)),
-    #     )
-    # )
-    # np.all(
-    #     np.isclose(
-    #         digital_1,
-    #         np.array([-0.20112646] * (duration) + [0.0] * (duration + 1)),
-    #     )
-    # )
+"""

@@ -347,7 +347,10 @@ class NoiseModel:
         freqs: Sequence[float],
     ) -> None:
         if (psd == ()) ^ (freqs == ()):
-            raise ValueError("psd and freqs must be both provided or None")
+            raise ValueError(
+                "psd and freqs must either both be"
+                " empty tuples or both be provided."
+                )
 
         if psd == ():
             return
@@ -364,7 +367,7 @@ class NoiseModel:
         if psd.size != freqs.size:
             raise ValueError("psd and freqs are expected have same length.")
 
-        if np.any(psd) <= 0 or np.any(freqs) <= 0:
+        if not (np.all(psd > 0) and np.all(freqs > 0)):
             raise ValueError("psd and freqs are expected have positive values.")
 
         if np.any(np.diff(freqs) < 0):
