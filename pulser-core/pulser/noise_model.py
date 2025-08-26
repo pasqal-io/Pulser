@@ -107,40 +107,6 @@ OPTIONAL_IN_ABSTR_REPR = (
 )
 
 
-def register_sigma_xy_z(
-    temperature: float, trap_waist: float, trap_depth: float
-) -> tuple[float, float]:
-    """Standard deviation for fluctuations in atom position in the trap.
-
-    - Plane fluctuation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,
-      w is the trap waist and Uₜᵣₐₚ is the trap depth.
-    - Off plane fluctuation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the wavelength
-    with a constant value of 0.85 µm
-
-    Note: a k_B factor is absorbed in the trap depth (Uₜᵣₐₚ), so the units
-    of temperature and trap depth are the same.
-
-    Args:
-        temperature (float): Temperature (T) of the atoms in the trap
-        (in Kelvin).
-        trap_depth (float): Depth of the trap (Uₜᵣₐₚ)
-        (same units as temperature).
-        trap_waist (float): Waist of the trap (w) (in µmeters).
-
-    Returns:
-        tuple: The standard deviations of the spatial position fluctuations
-        in the xy-plane (register_sigma_xy) and along the z-axis
-        (register_sigma_z).
-    """
-    register_sigma_xy = math.sqrt(
-        temperature * trap_waist**2 / (4 * trap_depth)
-    )
-    register_sigma_z = (
-        math.pi / WAVELENGTH * math.sqrt(2) * trap_waist * register_sigma_xy
-    )
-    return register_sigma_xy, register_sigma_z
-
-
 @dataclass(init=True, repr=False, frozen=True)
 class NoiseModel:
     """Specifies the noise model parameters for emulation.
@@ -172,7 +138,7 @@ class NoiseModel:
       Parametrized by the ``temperature`` field.
     - **register**: thermal fluctuations in the
       register positions, parametrized by ``temperature``, ``trap_waist``
-      and, ``trap_depth``.
+      and, ``trap_depth``, which must all be defined
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
@@ -331,40 +297,69 @@ class NoiseModel:
                 )
 
     def register_sigma_xy_z(self) -> tuple[float, float]:
-        """Standard deviation for fluctuations in the xy and z plane."""
-        if self.trap_waist is None or self.trap_depth is None:
-            raise ValueError("Trap waist and depth must be defined.")
-        register_sigma = register_sigma_xy_z(
-            self.temperature, self.trap_waist, self.trap_depth
+        """Standard deviation for fluctuations in atom position in the trap.
+
+        - Plane fluctuation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,
+          w is the trap waist and Uₜᵣₐₚ is the trap depth.
+        - Off plane fluctuation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the wavelength
+        with a constant value of 0.85 µm
+
+        Note: a k_B factor is absorbed in the trap depth (Uₜᵣₐₚ), so the units
+        of temperature and trap depth are the same.
+
+        Args:
+            temperature (float): Temperature (T) of the atoms in the trap
+            (in Kelvin).
+            trap_depth (float): Depth of the trap (Uₜᵣₐₚ)
+            (same units as temperature).
+            trap_waist (float): Waist of the trap (w) (in µmeters).
+
+        Returns:
+            tuple: The standard deviations of the spatial position fluctuations
+            in the xy-plane (register_sigma_xy) and along the z-axis
+            (register_sigma_z).
+        """
+        if self.trap_depth is None:
+            raise ValueError("depth must be defined.")
+        register_sigma_xy = math.sqrt(
+            self.temperature * self.trap_waist**2 / (4 * self.trap_depth)
         )
-        return register_sigma[0], register_sigma[1]
+        register_sigma_z = (
+            math.pi
+            / WAVELENGTH
+            * math.sqrt(2)
+            * self.trap_waist
+            * register_sigma_xy
+        )
+        return register_sigma_xy, register_sigma_z
 
     def _check_register_and_doppler_noise_params(
-        self, true_noise_types: set
+        self, true_noise_types: Collection[NoiseTypes]
     ) -> None:
+
         if (
             "register" in true_noise_types
             and (self.trap_waist == 0.0 or self.trap_depth is None)
             and self.temperature != 0.0
         ):
             warnings.warn(
-                "Trap waist, depth, and temperature must be defined in "
-                + "order to "
-                + "simulate register noise. Only doppler noise will be used",
-                Warning,
-                stacklevel=0,
+                "trap_waist, trap_depth, and temperature must be defined in "
+                "order to simulate register noise. Only doppler noise will "
+                "be used.",
+                UserWarning,
+                stacklevel=2,
             )
         elif (
             "register" in true_noise_types
-            and (self.trap_waist == 0.0 or self.trap_waist != 0.0)
             and self.temperature == 0.0
             and self.trap_depth is not None
         ):
             warnings.warn(
-                "Trap waist, trap depth, and temperature must be "
-                + "defined in order to simulate register noise. "
-                + "Register noise is not activated",
-                Warning,
+                "trap_waist, trap_depth, and temperature must be defined in "
+                "order to simulate register noise. Register noise is not "
+                "activated.",
+                UserWarning,
+                stacklevel=2,
             )
 
     @staticmethod

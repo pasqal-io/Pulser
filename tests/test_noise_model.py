@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import re
+import warnings
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -22,6 +24,7 @@ from pulser.noise_model import (
     _NOISE_TYPE_PARAMS,
     _PARAM_TO_NOISE_TYPE,
     NoiseModel,
+    noisy_register,
 )
 
 
@@ -68,6 +71,16 @@ class TestNoiseModel:
                 {"amplitude", "dephasing"},
             ),
             ({"detuning_sigma", "runs", "samples_per_run"}, {"detuning"}),
+            (
+                {
+                    "temperature",
+                    "trap_waist",
+                    "trap_depth",
+                    "runs",
+                    "samples_per_run",
+                },
+                {"doppler", "register"},
+            ),
         ],
     )
     def test_init(self, params, noise_types):
@@ -418,3 +431,118 @@ class TestNoiseModel:
             "eff_noise_rates=(0.1,), eff_noise_opers=(((1, 0, 0), (0, 1, 0), "
             "(0, 0, 1)),), with_leakage=True)"
         )
+
+        assert (
+            repr(
+                NoiseModel(
+                    temperature=15.0,
+                    trap_depth=150.0,
+                    trap_waist=1.0,
+                    runs=1,
+                    samples_per_run=1,
+                )
+            )
+            == "NoiseModel(noise_types=('doppler', 'register'), runs=1, "
+            "samples_per_run=1, temperature=15.0, trap_waist=1.0, "
+            "trap_depth=150.0)"
+        )
+
+
+@pytest.mark.parametrize(
+    "register2D",
+    [
+        True,
+        False,
+    ],
+)
+def test_noisy_register(register2D) -> None:
+    """Testing noisy_register function in case 2D and 3D register."""
+    if register2D:
+        qdict = {
+            "q0": np.array([-15.0, 0.0]),
+            "q1": np.array([-5.0, 0.0]),
+            "q2": np.array([5.0, 0.0]),
+            "q3": np.array([15.0, 0.0]),
+        }
+    else:
+        qdict = {
+            "q0": np.array([-15.0, 0.0, 0.0]),
+            "q1": np.array([-5.0, 0.0, 0.0]),
+            "q2": np.array([5.0, 0.0, 0.0]),
+            "q3": np.array([15.0, 0.0, 0.0]),
+        }
+    register_sigma_xy = 0.13
+    register_sigma_z = 0.8
+    # Predefined deterministic noise
+    fake_normal_xy_noise = np.array(
+        [
+            [0.1, -0.1],
+            [0.2, -0.2],
+            [0.3, -0.3],
+            [0.5, -0.5],
+        ]
+    )
+    fake_normal_z_noise = np.array([0.05, 0.07, 0.09, 0.11])
+    with patch("numpy.random.normal") as mock_normal:
+        # moke the noise generation
+        mock_normal.side_effect = [
+            fake_normal_xy_noise,
+            fake_normal_z_noise,
+        ]
+        result = noisy_register(qdict, register_sigma_xy, register_sigma_z)
+    expected_positions = {
+        "q0": np.array([-15.0 + 0.1, 0.0 - 0.1, 0.05]),
+        "q1": np.array([-5.0 + 0.2, 0.0 - 0.2, 0.07]),
+        "q2": np.array([5.0 + 0.3, 0.0 - 0.3, 0.09]),
+        "q3": np.array([15.0 + 0.5, 0.0 - 0.5, 0.11]),
+    }
+    for q in qdict:
+        np.testing.assert_array_almost_equal(result[q], expected_positions[q])
+
+
+def test_register_noise_no_warning_when_all_params_defined():
+    """Register noise with all parameters. Doing this als Doppler noise
+    is also defined."""
+    noise_model = NoiseModel(
+        temperature=1.0,
+        trap_waist=1.0,
+        trap_depth=150.0,  # the same units as temperature
+        runs=1,
+        samples_per_run=1,
+    )
+    assert noise_model.noise_types == ("doppler", "register")
+    with warnings.catch_warnings(record=True) as rec:
+        warnings.simplefilter("always")
+        noise_model._check_register_and_doppler_noise_params(
+            noise_model.noise_types
+        )
+        assert (
+            len(rec) == 0
+        ), f"Expected no warnings,got: {[r.message for r in rec]}"
+
+
+def test_register_not_activated_warns_when_temperature_zero():
+    """Trap parameters are turned on, but temperature=0.
+    Warning: Register noise not activated"""
+    with pytest.warns(UserWarning, match=r"Register noise is not activated"):
+        noise_model = NoiseModel(
+            temperature=0.0,
+            trap_waist=1.0,
+            trap_depth=150.0,
+            runs=1,
+            samples_per_run=1,
+        )
+        assert "register" in noise_model.noise_types
+
+
+def test_register_only_doppler_warns_when_trap_params_missing():
+    """trap_waist == 0.0, Warning: Only doppler noise will be used"""
+    with pytest.warns(UserWarning, match=r"Only doppler noise will be used"):
+        noise_model = NoiseModel(
+            temperature=15.0,
+            trap_waist=0.0,
+            trap_depth=150.0,
+            runs=1,
+            samples_per_run=1,
+        )
+        assert ("doppler", "register") == noise_model.noise_types
