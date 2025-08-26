@@ -1,14 +1,13 @@
 repos:
+  - repo: https://github.com/psf/black
+    rev: 24.4.0
+    hooks:
+      - id: black-jupyter
+
   - repo: https://github.com/PyCQA/flake8
     rev: 7.1.1
     hooks:
       - id: flake8
-      
-  - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-        name: isort (python)
 
   # Ruff only checks numpy v2 compatibility at this moment
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -17,10 +16,11 @@ repos:
       - id: ruff
         args: [ --fix ]
 
-  - repo: https://github.com/psf/black
-    rev: 24.4.0
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
     hooks:
-      - id: black-jupyter
+      - id: isort
+        name: isort (python)
 
   # Calling mypy from a bash script, as I cannot figure out how to pass the
   # .mypy.ini config file when using the hook at
@@ -31,4 +31,3 @@ repos:
         name: mypy
         entry: ./.mypy_script
         language: script
-        pass_filenames: false

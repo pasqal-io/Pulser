@@ -516,8 +516,9 @@ def test_register_noise_sigma_xy_z_raises_if_trap_depth_is_none():
 
 
 def test_register_noise_no_warning_when_all_params_defined():
-    """Register noise with all parameters. Doing this also defines
-    Doppler noise.
+    """Register noise with all parameters.
+
+    Doing this also defines doppler noise.
     """
     noise_model = NoiseModel(
         temperature=15.0,
@@ -538,8 +539,9 @@ def test_register_noise_no_warning_when_all_params_defined():
 
 
 def test_register_not_activated_warns_when_temperature_zero():
-    """Trap parameters are turned on, but temperature=0. Warning: Register
-    noise not activated.
+    """Trap parameters are turned on, but temperature=0.
+    
+    Warning: register noise not activated.
     """
     with pytest.warns(UserWarning, match=r"Register noise is not activated"):
         noise_model = NoiseModel(
