@@ -22,6 +22,7 @@ from collections.abc import Mapping
 from typing import Union, cast
 
 import numpy as np
+from numpy.typing import ArrayLike
 import qutip
 
 import pulser.math as pm
@@ -298,9 +299,9 @@ class Hamiltonian:
                         )
                     samples_dict[qid]["amp"][slot.ti : slot.tf] *= amp_fraction
                 if "detuning" in self.config.noise_types:
-                    samples_dict[qid]["det"][
-                        slot.ti : slot.tf
-                    ] += det_fluctuation[slot.ti : slot.tf]
+                    t_window = slice(slot.ti, slot.tf)
+                    samples_dict[qid][
+                        "det"][t_window] += det_fluctuation[t_window]
 
         if local_noises:
             for ch, ch_samples in self.samples_obj.channel_samples.items():
@@ -309,11 +310,11 @@ class Hamiltonian:
                 ch_amp_fluctuation = max(
                     0, np.random.normal(1.0, self.config.amp_sigma)
                 )
-                ch_det_fluctuation = self.config.generate_detuning(
-                    self.config.detuning_sigma,
-                    self.config.detuning_high_freq,
-                    self.sampling_times
-                )
+
+                ch_det_fluctuation = self.config.generate_detuning_fluctuations(
+                        self.sampling_times
+                        )
+
                 for slot in ch_samples.slots:
                     add_noise(
                         slot,

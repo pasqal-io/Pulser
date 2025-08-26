@@ -47,7 +47,7 @@ _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "leakage": ("with_leakage",),
     "doppler": ("temperature",),
     "amplitude": ("laser_waist", "amp_sigma"),
-    "detuning": ("detuning_sigma", "detuning_high_freq"),
+    "detuning": ("detuning_sigma", "detuning_hf_psd", "detuning_hf_freqs"),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
     "dephasing": ("dephasing_rate", "hyperfine_dephasing_rate"),
     "relaxation": ("relaxation_rate",),
@@ -100,7 +100,11 @@ _LEGACY_DEFAULTS = {
     "depolarizing_rate": 0.05,
 }
 
-OPTIONAL_IN_ABSTR_REPR = ("detuning_sigma", "detuning_high_freq")
+OPTIONAL_IN_ABSTR_REPR = (
+    "detuning_sigma",
+    "detuning_hf_psd",
+    "detuning_hf_freqs",
+    )
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -172,6 +176,8 @@ class NoiseModel:
             distribution centered in 0. Assumed to be the same for all
             channels (though each channel has its own randomly sampled
             value in each run). This noise is additive. Defaults to 0.
+        detuning_hf_psd:
+        detuning_hf_frequencies:
         detuning_high_freq: Defines high frequency fluctuations of detuning
             depending on laser power spectral density(psd) and corresponding
             frequencies.
@@ -203,7 +209,8 @@ class NoiseModel:
     laser_waist: float | None = None
     amp_sigma: float = 0.0
     detuning_sigma: float = 0.0
-    detuning_high_freq: Sequence[ArrayLike] = ()
+    detuning_hf_psd: tuple[float, ...] = ()
+    detuning_hf_freqs: tuple[float, ...] = ()
     relaxation_rate: float = 0.0
     dephasing_rate: float = 0.0
     hyperfine_dephasing_rate: float = 0.0
@@ -228,6 +235,9 @@ class NoiseModel:
         param_vals["eff_noise_rates"] = to_tuple(self.eff_noise_rates)
         param_vals["eff_noise_opers"] = to_tuple(self.eff_noise_opers)
 
+        param_vals["detuning_hf_psd"] = to_tuple(self.detuning_hf_psd)
+        param_vals["detuning_hf_freqs"] = to_tuple(self.detuning_hf_freqs)
+
         # Checking the type of provided positive and probability parameters
         for p_, val in param_vals.items():
             if p_ in _PROBABILITY_LIKE | _POSITIVE:
@@ -245,8 +255,9 @@ class NoiseModel:
             if param_vals[p_] and p_ in _PARAM_TO_NOISE_TYPE
         }
         self._check_leakage_noise(true_noise_types)
-        self._check_detuning_high_frequency_noise(
-            param_vals["detuning_high_freq"]
+        self._check_detuning_hf_noise(
+            param_vals["detuning_hf_psd"],
+            param_vals["detuning_hf_freqs"],
         )
         self._check_eff_noise(
             cast(tuple, param_vals["eff_noise_rates"]),
@@ -331,33 +342,33 @@ class NoiseModel:
                 )
 
     @staticmethod
-    def _check_detuning_high_frequency_noise(
-        detuning_hf: Sequence[ArrayLike],
+    def _check_detuning_hf_noise(
+        psd: Sequence[float],
+        freqs: Sequence[float],
     ) -> None:
-        if len(detuning_hf) == 2:
-            psd = detuning_hf[0]
-            freqs = detuning_hf[1]
-            if not (
-                isinstance(psd, np.ndarray)
-                and isinstance(freqs, np.ndarray)
-                and len(psd) == len(freqs)
-                and len(psd) > 1
-                and len(freqs) > 1
-                and psd.ndim == freqs.ndim == 1
-            ):
-                raise ValueError(
-                    "Power Spectral Density and the frequencies"
-                    " expected be 1D NumPy arrays of the same"
-                    " length greater than 1. You provided"
-                    f" PSD: len={len(psd)}, dim = {psd.ndim};"
-                    f" freqs: len={len(freqs)}, dim = {freqs.ndim}"
-                )
-        elif len(detuning_hf) != 0:
-            raise ValueError(
-                "High-frequency detuning noise must be either"
-                " empty or contain two arrays: Power Spectral"
-                " Density and the corresponding frequencies."
-            )
+        if (psd == ()) ^ (freqs == ()):
+            raise ValueError("psd and freqs must be both provided or None")
+
+        if psd == ():
+            return
+
+        psd = np.asarray(psd)
+        freqs = np.asarray(freqs)
+
+        if psd.ndim != 1 or freqs.ndim != 1:
+            raise ValueError("psd and freqs are expected be 1D arrays.")
+
+        if psd.size <= 1 or freqs.size <= 1:
+            raise ValueError("psd and freqs are expected be length > 1.")
+
+        if psd.size != freqs.size:
+            raise ValueError("psd and freqs are expected have same length.")
+
+        if np.any(psd) <= 0 or np.any(freqs) <= 0:
+            raise ValueError("psd and freqs are expected have positive values.")
+
+        if np.any(np.diff(freqs) < 0):
+            raise ValueError("freqs are expected be monotonously growing.")
 
     @staticmethod
     def _check_eff_noise(
@@ -509,12 +520,10 @@ class NoiseModel:
             )
         )
 
-    @staticmethod
-    def generate_detuning(
-        detuning_sigma: float,
-        detuning_high_freq: tuple[ArrayLike, ArrayLike],
+    def generate_detuning_fluctuations(
+        self,
         times: ArrayLike,
-        rng: Generator = np.random.default_rng(),
+        rng: Generator | None = None,
     ) -> ArrayLike:
         """Compute δ_hf(t) + δ_σ.
 
@@ -522,14 +531,7 @@ class NoiseModel:
         with a constant offset of the detuning fluctuations.
 
         Args:
-            detuning_sigma (float):
-                sigma parameter from normal distribution centered at 0
-                ~ N(0, σ).
-            detuning_high_freq (tuple[ArrayLike, ArrayLike]):
-                contains power spectral density `psd` and corresponding
-                frequencies `freqs`.
-            curr_time (ArrayLike): array of sample times.
-
+            times (ArrayLike): array of sample times.
         Notes
         -----
         High frequency term uses Gaussian stochastic noise with power
@@ -542,16 +544,19 @@ class NoiseModel:
         det_cst_term = 0.0
         det_hf = np.zeros_like(times)
 
-        if detuning_sigma:
-            det_cst_term = rng.normal(0.0, detuning_sigma)
+        if rng is None:
+            rng = np.random.default_rng()
 
-        if detuning_high_freq:
-            psd = (detuning_high_freq[0])[:-1]
-            freqs = (detuning_high_freq[1])[:-1]
-            df = np.diff(detuning_high_freq[1])
-            scale = np.sqrt(2.0 * df * psd)
-            phases = rng.uniform(0.0, 1.0, size=len(freqs) - 1)
-            arg = 2.0 * np.pi * (np.outer(freqs, times) + phases[:, None])
-            det_hf = (scale[:, None] * np.cos(arg)).sum(axis=0)
+        if self.detuning_sigma:
+            det_cst_term = rng.normal(0.0, self.detuning_sigma)
+
+        if self.detuning_hf_psd:
+            df = np.diff(self.detuning_hf_freqs)         
+            freqs = np.asarray(self.detuning_hf_freqs)[:-1]
+            psd = np.asarray(self.detuning_hf_psd)[:-1]
+            amp = np.sqrt(2.0 * df * psd)
+            phases = rng.uniform(0.0, 1.0, size=len(freqs))
+            arg  = freqs[:, None] * times[None, :] + phases[:, None]
+            det_hf = (amp[:, None] * np.cos(2.0 * np.pi * arg)).sum(axis=0)
 
         return det_cst_term + det_hf
