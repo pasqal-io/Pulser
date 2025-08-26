@@ -371,7 +371,7 @@ class Hamiltonian:
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
-            samples = self.data.noisy_samples[addr][basis]
+            samples = self.data.noisy_samples.to_nested_dict()[addr][basis]
             operators = self.data.operators[addr][basis]
             # Choose operator names according to addressing:
             if basis == "ground-rydberg":
@@ -461,9 +461,10 @@ class Hamiltonian:
                 qobj_list = [make_interaction_term()]
 
         # Time dependent terms:
-        for addr in self.data.noisy_samples:
-            for basis in self.data.noisy_samples[addr]:
-                if self.data.noisy_samples[addr][basis]:
+        d = self.data.noisy_samples.to_nested_dict()
+        for addr in d:
+            for basis in d[addr]:
+                if d[addr][basis]:
                     qobj_list += cast(list, build_coeffs_ops(basis, addr))
 
         if not qobj_list:  # If qobj_list ends up empty

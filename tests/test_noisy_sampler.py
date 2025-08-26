@@ -135,7 +135,7 @@ def test_from_sequence():
 
     ham = HamiltonianData.from_sequence(seq, noise_model=noise_model)
     noiseless = ham.samples.to_nested_dict(all_local=True)
-    full = ham.noisy_samples
+    full = ham.noisy_samples.to_nested_dict()
     diff = (
         noiseless["Local"]["ground-rydberg"]["superman"]["det"]
         - full["Local"]["ground-rydberg"]["superman"]["det"]

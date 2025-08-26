@@ -25,12 +25,17 @@ import numpy as np
 from scipy.spatial.distance import cdist
 
 import pulser.math as pm
-from pulser.channels.base_channel import STATES_RANK, States
+from pulser.channels import Microwave, Raman, Rydberg
+from pulser.channels.base_channel import STATES_RANK, Channel, States
 from pulser.devices._device_datacls import COORD_PRECISION, BaseDevice
 from pulser.noise_model import NoiseModel, doppler_sigma
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler import sampler
-from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
+from pulser.sampler.samples import (
+    ChannelSamples,
+    SequenceSamples,
+    _PulseTargetSlot,
+)
 from pulser.sequence import Sequence
 
 
@@ -204,7 +209,7 @@ class HamiltonianData:
         return self._samples
 
     @property
-    def noisy_samples(self) -> dict:  # TODO: make this SequenceSamples
+    def noisy_samples(self) -> SequenceSamples:
         """The latest samples generated with noise, as a nested dict."""
         local_noises = True
         if set(self.noise_model.noise_types).issubset(
@@ -274,13 +279,50 @@ class HamiltonianData:
                         det_fluctuation=self._det_fluctuations[ch],
                         propagation_dir=_ch_obj.propagation_dir,
                     )
+            channels = []
+            samples_list = []
+            ch_objs = {}
             # Delete samples for badly prepared atoms
             for basis in samples["Local"]:
-                for qid in samples["Local"][basis]:
+                if basis == "XY":
+                    type: Channel = Microwave  # type: ignore
+                elif basis == "ground-rydberg":
+                    type: Channel = Rydberg  # type: ignore
+                else:
+                    type: Channel = Raman  # type: ignore
+                qids = samples["Local"][basis].keys()
+                basis_channels = list(x + f"_{basis}" for x in qids)
+                channels += basis_channels
+                for qid, ch in zip(qids, basis_channels):
+                    vals = samples["Local"][basis][qid]
                     if self._bad_atoms[qid]:
                         for qty in ("amp", "det", "phase"):
-                            samples["Local"][basis][qid][qty] = 0.0
-        return samples
+                            vals[qty] *= 0.0
+                    samples_list.append(
+                        ChannelSamples(
+                            **vals,
+                            slots=[
+                                _PulseTargetSlot(
+                                    ti=0, tf=len(vals["amp"]), targets={qid}
+                                )
+                            ],
+                        )
+                    )
+                    ch_objs[ch] = type.Local(
+                        max_abs_detuning=None, max_amp=None
+                    )
+
+            return SequenceSamples(
+                _basis_ref=self._samples._basis_ref,
+                _slm_mask=self._samples._slm_mask,
+                _magnetic_field=self._samples._magnetic_field,
+                _measurement=self._samples._measurement,
+                channels=channels,
+                samples_list=samples_list,
+                _ch_objs=ch_objs,
+            )
+        else:
+            return self._samples
 
     @property
     def register(self) -> BaseRegister:
