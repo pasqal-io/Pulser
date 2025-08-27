@@ -273,7 +273,7 @@ class Hamiltonian:
             samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
             is_global_pulse: bool,
             amp_fluctuation: float,
-            det_fluctuation: ArrayLike,
+            det_fluctuation: np.ndarray,
             propagation_dir: tuple | None,
         ) -> None:
             """Builds hamiltonian coefficients.

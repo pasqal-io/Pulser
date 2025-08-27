@@ -335,7 +335,13 @@ class TestNoiseModel:
         ) == {"eff_noise_rates", "eff_noise_opers", "with_leakage"}
         assert NoiseModel._find_relevant_params(
             {"detuning"}, 0.0, 0.0, None
-        ) == {"detuning_sigma", "runs", "samples_per_run"}
+        ) == {
+            "detuning_sigma",
+            "detuning_hf_psd",
+            "detuning_hf_freqs",
+            "runs",
+            "samples_per_run"
+            }
 
     def test_repr(self):
         assert repr(NoiseModel()) == "NoiseModel(noise_types=())"
