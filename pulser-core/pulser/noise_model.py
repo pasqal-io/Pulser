@@ -208,12 +208,10 @@ class NoiseModel:
     detuning_sigma: float = 0.0
     relaxation_rate: float = 0.0
     dephasing_rate: float = 0.0
-    trap_waist: float = (
-        0.0  # if the trap depth > the trap waist should be not none
-    )
-    trap_depth: float | None = (
-        None  # can be 0.0 has to be non zero, it is none raise a error
-    )
+    # if the trap depth is not None the trap waist should be 0.0
+    trap_waist: float = 0.0
+    # Must be defined when trap_waist > 0
+    trap_depth: float | None = None
     hyperfine_dephasing_rate: float = 0.0
     depolarizing_rate: float = 0.0
     eff_noise_rates: tuple[float, ...] = ()
