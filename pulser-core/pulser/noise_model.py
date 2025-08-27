@@ -144,8 +144,8 @@ class NoiseModel:
       (1) constant offset (zero-frequency), parameterized by
       ``detuning_sigma``;
       (2) time-dependent high-frequency fluctuations, defined by the
-      power spectral density ``detuning_hf_psd`` over the specified
-      ``detuning_hf_freqs`` range.
+      power spectral density ``detuning_hf_psd`` over the relevant
+      ``detuning_hf_freqs`` frequencies support.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
 
@@ -176,14 +176,16 @@ class NoiseModel:
             distribution centered in 0. Assumed to be the same for all
             channels (though each channel has its own randomly sampled
             value in each run). This noise is additive. Defaults to 0.
-        detuning_hf_psd: Power Spectral Density(PSD) (in Hz²/Hz)
+        detuning_hf_psd: Power Spectral Density(PSD) is 1D array (in Hz²/Hz)
             provided together with `detuning_hf_freqs` define high frequency
             noise contribution of time dependent detuning (in rad/µs).
-            Default is ().
-        detuning_hf_freqs: relevant frequency support (in Hz) for PSD. Along
-            with PSD, it is required to define high frequency noise
-            contribution of time dependent detuning (in rad/µs).
-            Default is ().
+            Must either be empty or a 1D array with at least two values,
+            matching the length of detuning_hf_freqs. Default is ().
+        detuning_hf_freqs: 1D array (in Hz) of relevant frequency support
+            for PSD. Along with PSD, it is required to define high frequency
+            noise contribution of time dependent detuning (in rad/µs).
+            Must either be empty or a 1D array with at least two values,
+            matching the length of detuning_hf_freqs. Default is ().
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1. Defaults to 0.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
