@@ -2066,32 +2066,6 @@ def test_noise_hf_detuning_generation():
     assert np.allclose(hf_det, hd_det_expected)
 
 
-def afseq(reg):
-    # import pulser
-    seq = Sequence(reg, MockDevice)
-    seq.declare_channel("rydberg_global", "rydberg_global")
-    # Parameters in rad/µs
-    U = 2 * np.pi
-    Omega_max = 2.0 * U
-    delta_0 = -6 * U
-    delta_f = 2 * U
-
-    # Parameters in ns
-    t_rise = 2
-    t_sweep = 3
-    t_fall = 4
-
-    rise = Pulse.ConstantPulse(t_rise, 1, 4, 0)
-    sweep = Pulse.ConstantPulse(t_sweep, 2, 5, 0)
-    fall = Pulse.ConstantPulse(t_fall, 3, 6, 0)
-
-    seq.add(rise, "rydberg_global")
-    seq.add(sweep, "rydberg_global")
-    seq.add(fall, "rydberg_global")
-
-    return seq
-
-
 def test_hf_detuning_noise0():
     duration = 13
     np.random.seed(1337)
@@ -2110,8 +2084,6 @@ def test_hf_detuning_noise0():
     # The two local channels target alternating qubits on the same basis
     seq.add(pulse1, "ch1", protocol="no-delay")
     # seq.add(pulse1, "ch2", protocol="no-delay")
-
-    seq = afseq(reg)
 
     psd = np.array(
         [i**2 for i in range(10)]

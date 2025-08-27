@@ -537,6 +537,7 @@ class NoiseModel:
 
         Args:
             times (ArrayLike): array of sample times.
+
         Notes
         -----
         High frequency term uses Gaussian stochastic noise with power
