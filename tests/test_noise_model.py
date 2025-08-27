@@ -340,8 +340,8 @@ class TestNoiseModel:
             "detuning_hf_psd",
             "detuning_hf_freqs",
             "runs",
-            "samples_per_run"
-            }
+            "samples_per_run",
+        }
 
     def test_repr(self):
         assert repr(NoiseModel()) == "NoiseModel(noise_types=())"

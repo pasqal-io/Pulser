@@ -529,7 +529,7 @@ class NoiseModel:
         self,
         times: ArrayLike,
         rng: Generator | None = None,
-    ) -> ArrayLike:
+    ) -> np.ndarray:
         """Compute δ_hf(t) + δ_σ.
 
         Generates the high-frequency time-dependent component together
