@@ -554,7 +554,7 @@ class NoiseModel:
             det_cst_term = rng.normal(0.0, self.detuning_sigma)
 
         if self.detuning_hf_psd:
-            df = np.diff(self.detuning_hf_freqs)         
+            df = np.diff(self.detuning_hf_freqs)
             freqs = np.asarray(self.detuning_hf_freqs)[:-1]
             psd = np.asarray(self.detuning_hf_psd)[:-1]
             amp = np.sqrt(2.0 * df * psd)

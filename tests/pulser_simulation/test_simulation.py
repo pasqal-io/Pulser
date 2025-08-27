@@ -1988,31 +1988,6 @@ def test_detuning_noise():
         )
     )
 
-def afseq(reg):
-    #import pulser
-    seq = Sequence(reg, MockDevice)
-    seq.declare_channel("rydberg_global", "rydberg_global")
-    # Parameters in rad/µs
-    U = 2 * np.pi
-    Omega_max = 2.0 * U
-    delta_0 = -6 * U
-    delta_f = 2 * U
-
-    # Parameters in ns
-    t_rise = 2
-    t_sweep = 3
-    t_fall = 4
-
-    rise = Pulse.ConstantPulse(t_rise, 1, 4, 0)
-    sweep = Pulse.ConstantPulse(t_sweep, 2, 5, 0)
-    fall = Pulse.ConstantPulse(t_fall, 3, 6, 0)
-
-    seq.add(rise, "rydberg_global")
-    seq.add(sweep, "rydberg_global")
-    seq.add(fall, "rydberg_global")
-
-    return seq
-
 
 def test_hf_detuning_noise_validation():
     # expected format
@@ -2065,6 +2040,56 @@ def test_hf_detuning_noise_validation():
     # freqs should monotonously grow
     with pytest.raises(ValueError, match=("monotonously growing")):
         NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[4, 3])
+
+
+def test_noise_hf_detuning_generation():
+    def original_formula_gen_noise(psd, freqs, times, rng):
+        hf_detun = np.zeros_like(times)
+        for (i, s) in enumerate(psd[:-1]):
+            df = freqs[i + 1] - freqs[i]
+            uniform_rnd = rng.uniform(0.0, 1.0)
+            hf_detun += np.sqrt(2 * df * s) * np.cos(
+                2*np.pi * (freqs[i] * times + uniform_rnd)
+                )
+        return hf_detun
+
+    psd = [1, 2, 3]
+    freqs = [3, 4, 5]
+    times = np.arange(0, 10, 0.1)
+
+    rng0 = np.random.default_rng(seed=0)
+    rng1 = np.random.default_rng(seed=0)
+    noise_m = NoiseModel(detuning_hf_psd=psd, detuning_hf_freqs=freqs, runs=1)
+    hf_det = noise_m.generate_detuning_fluctuations(times, rng0)
+    hd_det_expected = original_formula_gen_noise(psd, freqs, times, rng1)
+
+    assert np.allclose(hf_det, hd_det_expected)
+
+
+def afseq(reg):
+    #import pulser
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("rydberg_global", "rydberg_global")
+    # Parameters in rad/µs
+    U = 2 * np.pi
+    Omega_max = 2.0 * U
+    delta_0 = -6 * U
+    delta_f = 2 * U
+
+    # Parameters in ns
+    t_rise = 2
+    t_sweep = 3
+    t_fall = 4
+
+    rise = Pulse.ConstantPulse(t_rise, 1, 4, 0)
+    sweep = Pulse.ConstantPulse(t_sweep, 2, 5, 0)
+    fall = Pulse.ConstantPulse(t_fall, 3, 6, 0)
+
+    seq.add(rise, "rydberg_global")
+    seq.add(sweep, "rydberg_global")
+    seq.add(fall, "rydberg_global")
+
+    return seq
 
 
 def test_hf_detuning_noise0():
