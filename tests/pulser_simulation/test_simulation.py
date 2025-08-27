@@ -1992,14 +1992,14 @@ def test_detuning_noise():
 def test_hf_detuning_noise_validation():
     # expected format
     noise_mod = NoiseModel(
-        detuning_hf_psd=[1, 4, 2],
-        detuning_hf_freqs=[3, 6, 7],
-        runs=1
-        )
+        detuning_hf_psd=[1, 4, 2], detuning_hf_freqs=[3, 6, 7], runs=1
+    )
 
     # not provided psd and freqs
     noise_mod = NoiseModel()
-    assert noise_mod.detuning_hf_psd == () and noise_mod.detuning_hf_freqs == ()
+    assert (
+        noise_mod.detuning_hf_psd == () and noise_mod.detuning_hf_freqs == ()
+    )
 
     # only psd are provided
     with pytest.raises(ValueError, match=("empty tuples or both be provided")):
@@ -2045,12 +2045,12 @@ def test_hf_detuning_noise_validation():
 def test_noise_hf_detuning_generation():
     def original_formula_gen_noise(psd, freqs, times, rng):
         hf_detun = np.zeros_like(times)
-        for (i, s) in enumerate(psd[:-1]):
+        for i, s in enumerate(psd[:-1]):
             df = freqs[i + 1] - freqs[i]
             uniform_rnd = rng.uniform(0.0, 1.0)
             hf_detun += np.sqrt(2 * df * s) * np.cos(
-                2*np.pi * (freqs[i] * times + uniform_rnd)
-                )
+                2 * np.pi * (freqs[i] * times + uniform_rnd)
+            )
         return hf_detun
 
     psd = [1, 2, 3]
@@ -2067,7 +2067,7 @@ def test_noise_hf_detuning_generation():
 
 
 def afseq(reg):
-    #import pulser
+    # import pulser
     seq = Sequence(reg, MockDevice)
     seq.declare_channel("rydberg_global", "rydberg_global")
     # Parameters in rad/µs
@@ -2096,7 +2096,7 @@ def test_hf_detuning_noise0():
     duration = 13
     np.random.seed(1337)
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (20, 10)})
-    
+
     seq = Sequence(reg, MockDevice)
     seq.declare_channel("ch0", "rydberg_global")
     seq.declare_channel("ch1", "raman_local", initial_target="q0")
@@ -2106,27 +2106,27 @@ def test_hf_detuning_noise0():
     pulse1 = Pulse.ConstantPulse(duration, 0, det, 0)
     # Added twice to check the fluctuation doesn't change from pulse to pulse
     seq.add(pulse1, "ch0")
-    #seq.add(pulse1, "ch0")
+    # seq.add(pulse1, "ch0")
     # The two local channels target alternating qubits on the same basis
     seq.add(pulse1, "ch1", protocol="no-delay")
-    #seq.add(pulse1, "ch2", protocol="no-delay")
+    # seq.add(pulse1, "ch2", protocol="no-delay")
 
     seq = afseq(reg)
 
-
-    psd = np.array([i**2 for i in range(10)]) # Just list doesn't work for the computational part
+    psd = np.array(
+        [i**2 for i in range(10)]
+    )  # Just list doesn't work for the computational part
     freq = np.array([i**3 for i in range(10, 20)])
     psd = psd / np.linalg.norm(psd)
     freq = freq / np.linalg.norm(freq)
-
 
     noise_mod = NoiseModel(
         detuning_sigma=1.1,
         detuning_hf_psd=psd,
         detuning_hf_freqs=freq,
         runs=2,
-        samples_per_run=1
-        )
+        samples_per_run=1,
+    )
 
     sim = QutipEmulator.from_sequence(
         seq,
@@ -2135,49 +2135,3 @@ def test_hf_detuning_noise0():
     h = sim._hamiltonian._hamiltonian
 
     sim_samples = sim._hamiltonian.samples
-
-
-"""
-    seq.declare_channel("rydberg_global", "rydberg_global")
-
-    import pulser
-    # Parameters in rad/µs
-    U = 2 * np.pi
-    Omega_max = 2.0 * U
-    delta_0 = -6 * U
-    delta_f = 2 * U
-
-    # Parameters in ns
-    t_rise = 100
-    t_sweep = 400
-    t_fall = 300
-
-    rise = pulser.Pulse.ConstantDetuning(
-        pulser.RampWaveform(t_rise, 0.0, Omega_max), delta_0, 0.0
-    )
-    sweep = pulser.Pulse.ConstantAmplitude(
-        Omega_max, pulser.RampWaveform(t_sweep, delta_0, delta_f), 0.0
-    )
-    fall = pulser.Pulse.ConstantDetuning(
-        pulser.RampWaveform(t_fall, Omega_max, 0.0), delta_f, 0.0
-    )
-    seq.add(rise, "rydberg_global")
-    seq.add(sweep, "rydberg_global")
-    seq.add(fall, "rydberg_global")
-"""
-
-
-"""
-    seq.declare_channel("ch0", "rydberg_global")
-    seq.declare_channel("ch1", "raman_local", initial_target="q0")
-    seq.declare_channel("ch2", "raman_local", initial_target="q1")
-
-    det = 17
-    pulse1 = Pulse.ConstantPulse(duration, 0, det, 0)
-    # Added twice to check the fluctuation doesn't change from pulse to pulse
-    seq.add(pulse1, "ch0")
-    #seq.add(pulse1, "ch0")
-    # The two local channels target alternating qubits on the same basis
-    seq.add(pulse1, "ch1", protocol="no-delay")
-    #seq.add(pulse1, "ch2", protocol="no-delay")
-"""

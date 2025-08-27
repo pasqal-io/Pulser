@@ -104,7 +104,7 @@ OPTIONAL_IN_ABSTR_REPR = (
     "detuning_sigma",
     "detuning_hf_psd",
     "detuning_hf_freqs",
-    )
+)
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -350,7 +350,7 @@ class NoiseModel:
             raise ValueError(
                 "psd and freqs must either both be"
                 " empty tuples or both be provided."
-                )
+            )
 
         if psd == ():
             return
@@ -368,7 +368,9 @@ class NoiseModel:
             raise ValueError("psd and freqs are expected have same length.")
 
         if not (np.all(psd > 0) and np.all(freqs > 0)):
-            raise ValueError("psd and freqs are expected have positive values.")
+            raise ValueError(
+                "psd and freqs are expected have positive values."
+            )
 
         if np.any(np.diff(freqs) < 0):
             raise ValueError("freqs are expected be monotonously growing.")
@@ -559,7 +561,7 @@ class NoiseModel:
             psd = np.asarray(self.detuning_hf_psd)[:-1]
             amp = np.sqrt(2.0 * df * psd)
             phases = rng.uniform(0.0, 1.0, size=len(freqs))
-            arg  = freqs[:, None] * times[None, :] + phases[:, None]
+            arg = freqs[:, None] * times[None, :] + phases[:, None]
             det_hf = (amp[:, None] * np.cos(2.0 * np.pi * arg)).sum(axis=0)
 
         return det_cst_term + det_hf

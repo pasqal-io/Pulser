@@ -300,8 +300,9 @@ class Hamiltonian:
                     samples_dict[qid]["amp"][slot.ti : slot.tf] *= amp_fraction
                 if "detuning" in self.config.noise_types:
                     t_window = slice(slot.ti, slot.tf)
-                    samples_dict[qid][
-                        "det"][t_window] += det_fluctuation[t_window]
+                    samples_dict[qid]["det"][t_window] += det_fluctuation[
+                        t_window
+                    ]
 
         if local_noises:
             for ch, ch_samples in self.samples_obj.channel_samples.items():
@@ -311,9 +312,11 @@ class Hamiltonian:
                     0, np.random.normal(1.0, self.config.amp_sigma)
                 )
 
-                ch_det_fluctuation = self.config.generate_detuning_fluctuations(
+                ch_det_fluctuation = (
+                    self.config.generate_detuning_fluctuations(
                         self.sampling_times
-                        )
+                    )
+                )
 
                 for slot in ch_samples.slots:
                     add_noise(
