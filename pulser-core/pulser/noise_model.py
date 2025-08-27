@@ -179,13 +179,13 @@ class NoiseModel:
         detuning_hf_psd: Power Spectral Density(PSD) is 1D array (in Hz²/Hz)
             provided together with `detuning_hf_freqs` define high frequency
             noise contribution of time dependent detuning (in rad/µs).
-            Must either be empty or a 1D array with at least two values,
-            matching the length of detuning_hf_freqs. Default is ().
+            Must either be empty or an array with at least two values,
+            matching the length of `detuning_hf_freqs`. Default is ().
         detuning_hf_freqs: 1D array (in Hz) of relevant frequency support
             for PSD. Along with PSD, it is required to define high frequency
             noise contribution of time dependent detuning (in rad/µs).
-            Must either be empty or a 1D array with at least two values,
-            matching the length of detuning_hf_freqs. Default is ().
+            Must either be empty or an array with at least two values,
+            matching the length of `detuning_hf_psd`. Default is ().
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1. Defaults to 0.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
