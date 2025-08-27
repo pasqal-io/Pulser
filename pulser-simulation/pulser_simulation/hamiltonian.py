@@ -22,8 +22,8 @@ from collections.abc import Mapping
 from typing import Union, cast
 
 import numpy as np
-from numpy.typing import ArrayLike
 import qutip
+from numpy.typing import ArrayLike
 
 import pulser.math as pm
 from pulser.channels.base_channel import STATES_RANK, States
