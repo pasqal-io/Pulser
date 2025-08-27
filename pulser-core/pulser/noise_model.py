@@ -296,7 +296,7 @@ class NoiseModel:
                     stacklevel=2,
                 )
 
-    def register_sigma_xy_z(self) -> tuple[float, float]:
+    def _register_sigma_xy_z(self) -> tuple[float, float]:
         """Standard deviation for fluctuations in atom position in the trap.
 
         - Plane fluctuation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,

@@ -441,7 +441,7 @@ class Hamiltonian:
             and self.config.trap_depth is not None
         ):
             # should be applied before the Hamiltonian is built
-            xy_sigma, z_sigma = self.config.register_sigma_xy_z()
+            xy_sigma, z_sigma = self.config._register_sigma_xy_z()
             self._qdict = noisy_register(self._qdict, xy_sigma, z_sigma)
 
     def _get_basis_name(self, with_leakage: bool) -> str:
