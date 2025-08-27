@@ -2064,3 +2064,4 @@ def test_noise_hf_detuning_generation():
     hd_det_expected = original_formula_gen_noise(psd, freqs, times, rng1)
 
     assert np.allclose(hf_det, hd_det_expected)
+    assert hf_det.size == times.size
