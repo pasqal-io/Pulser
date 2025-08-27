@@ -57,7 +57,9 @@ T = TypeVar("T", int, float)
 
 def _cast_check(type_: type[T], value: Any, name: str) -> T:
     try:
-        return type_(value)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=UserWarning)
+            return type_(value)
     except (ValueError, TypeError) as e:
         raise TypeError(
             f"'{name}' needs to be castable to {type_.__name__!s} "
