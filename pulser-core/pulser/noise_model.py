@@ -343,8 +343,8 @@ class NoiseModel:
 
     @staticmethod
     def _check_detuning_hf_noise(
-        psd: Sequence[float],
-        freqs: Sequence[float],
+        psd: tuple[float, ...],
+        freqs: tuple[float, ...],
     ) -> None:
         if (psd == ()) ^ (freqs == ()):
             raise ValueError(
@@ -355,24 +355,24 @@ class NoiseModel:
         if psd == ():
             return
 
-        psd = np.asarray(psd)
-        freqs = np.asarray(freqs)
+        psd_a = np.asarray(psd)
+        freqs_a = np.asarray(freqs)
 
-        if psd.ndim != 1 or freqs.ndim != 1:
+        if psd_a.ndim != 1 or freqs_a.ndim != 1:
             raise ValueError("psd and freqs are expected be 1D arrays.")
 
-        if psd.size <= 1 or freqs.size <= 1:
+        if psd_a.size <= 1 or freqs_a.size <= 1:
             raise ValueError("psd and freqs are expected be length > 1.")
 
-        if psd.size != freqs.size:
+        if psd_a.size != freqs_a.size:
             raise ValueError("psd and freqs are expected have same length.")
 
-        if not (np.all(psd > 0) and np.all(freqs > 0)):
+        if not (np.all(psd_a > 0) and np.all(freqs_a > 0)):
             raise ValueError(
                 "psd and freqs are expected have positive values."
             )
 
-        if np.any(np.diff(freqs) < 0):
+        if np.any(np.diff(freqs_a) < 0):
             raise ValueError("freqs are expected be monotonously growing.")
 
     @staticmethod
@@ -557,12 +557,13 @@ class NoiseModel:
             det_cst_term = rng.normal(0.0, self.detuning_sigma)
 
         if self.detuning_hf_psd:
-            df = np.diff(self.detuning_hf_freqs)
+            t = np.asarray(times)
             freqs = np.asarray(self.detuning_hf_freqs)[:-1]
             psd = np.asarray(self.detuning_hf_psd)[:-1]
+            df = np.diff(self.detuning_hf_freqs)
             amp = np.sqrt(2.0 * df * psd)
             phases = rng.uniform(0.0, 1.0, size=len(freqs))
-            arg = freqs[:, None] * times[None, :] + phases[:, None]
+            arg = freqs[:, None] * t[None, :] + phases[:, None]
             det_hf = (amp[:, None] * np.cos(2.0 * np.pi * arg)).sum(axis=0)
 
         return det_cst_term + det_hf

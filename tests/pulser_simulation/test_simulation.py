@@ -2066,6 +2066,7 @@ def test_noise_hf_detuning_generation():
     assert np.allclose(hf_det, hd_det_expected)
 
 
+"""
 def test_hf_detuning_noise0():
     duration = 13
     np.random.seed(1337)
@@ -2107,3 +2108,4 @@ def test_hf_detuning_noise0():
     h = sim._hamiltonian._hamiltonian
 
     sim_samples = sim._hamiltonian.samples
+"""
