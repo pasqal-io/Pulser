@@ -530,7 +530,7 @@ class NoiseModel:
             )
         )
 
-    def generate_detuning_fluctuations(
+    def _generate_detuning_fluctuations(
         self,
         times: ArrayLike,
         rng: Generator | None = None,

@@ -312,7 +312,7 @@ class Hamiltonian:
                 )
 
                 ch_det_fluctuation = (
-                    self.config.generate_detuning_fluctuations(
+                    self.config._generate_detuning_fluctuations(
                         self.sampling_times
                     )
                 )
