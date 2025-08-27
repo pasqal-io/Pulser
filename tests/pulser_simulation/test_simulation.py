@@ -2010,11 +2010,11 @@ def test_hf_detuning_noise_validation():
         NoiseModel(detuning_hf_freqs=(4, 5, 6))
 
     # psd dim != 1
-    with pytest.raises(ValueError, match=("1D arrays")):
+    with pytest.raises(ValueError, match=("1D tuples")):
         NoiseModel(detuning_hf_psd=[[1, 2, 3]], detuning_hf_freqs=[3, 4, 5])
 
     # freqs dim != 1
-    with pytest.raises(ValueError, match=("1D arrays")):
+    with pytest.raises(ValueError, match=("1D tuples")):
         NoiseModel(detuning_hf_psd=[1, 2, 3], detuning_hf_freqs=[[3, 4, 5]])
 
     # psd len <= 1

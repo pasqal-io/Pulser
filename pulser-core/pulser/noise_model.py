@@ -353,7 +353,7 @@ class NoiseModel:
     ) -> None:
         if (psd == ()) ^ (freqs == ()):
             raise ValueError(
-                "psd and freqs must either both be"
+                "`detuning_hf_psd` and `detuning_hf_freqs` must either both be"
                 " empty tuples or both be provided."
             )
 
@@ -364,21 +364,31 @@ class NoiseModel:
         freqs_a = np.asarray(freqs)
 
         if psd_a.ndim != 1 or freqs_a.ndim != 1:
-            raise ValueError("psd and freqs are expected be 1D arrays.")
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_freqs`"
+                " are expected be 1D tuples."
+                )
 
         if psd_a.size <= 1 or freqs_a.size <= 1:
-            raise ValueError("psd and freqs are expected be length > 1.")
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_freqs`" 
+                " are expected be length > 1.")
 
         if psd_a.size != freqs_a.size:
-            raise ValueError("psd and freqs are expected have same length.")
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_freqs`"
+                " are expected have same length.")
 
         if not (np.all(psd_a > 0) and np.all(freqs_a > 0)):
             raise ValueError(
-                "psd and freqs are expected have positive values."
+                "`detuning_hf_psd` and `detuning_hf_freqs`"
+                " are expected have positive values."
             )
 
         if np.any(np.diff(freqs_a) < 0):
-            raise ValueError("freqs are expected be monotonously growing.")
+            raise ValueError(
+                "`detuning_hf_freqs` are expected be"
+                " monotonously growing.")
 
     @staticmethod
     def _check_eff_noise(
