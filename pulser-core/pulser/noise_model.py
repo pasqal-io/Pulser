@@ -146,6 +146,9 @@ class NoiseModel:
       (2) time-dependent high-frequency fluctuations, defined by the
       power spectral density ``detuning_hf_psd`` over the relevant
       ``detuning_hf_freqs`` frequencies support.
+      δ_hf(t) = Σ_k sqrt(2 * Δf_k * psd_k) * cos(2π(f_k * t + φ_k))
+      where φ_k ~ U[0, 1) (uniform random phase),
+      Δf_k = freqs[k+1] - freqs[k].
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
 
@@ -367,17 +370,19 @@ class NoiseModel:
             raise ValueError(
                 "`detuning_hf_psd` and `detuning_hf_freqs`"
                 " are expected be 1D tuples."
-                )
+            )
 
         if psd_a.size <= 1 or freqs_a.size <= 1:
             raise ValueError(
-                "`detuning_hf_psd` and `detuning_hf_freqs`" 
-                " are expected be length > 1.")
+                "`detuning_hf_psd` and `detuning_hf_freqs`"
+                " are expected be length > 1."
+            )
 
         if psd_a.size != freqs_a.size:
             raise ValueError(
                 "`detuning_hf_psd` and `detuning_hf_freqs`"
-                " are expected have same length.")
+                " are expected have same length."
+            )
 
         if not (np.all(psd_a > 0) and np.all(freqs_a > 0)):
             raise ValueError(
@@ -388,7 +393,8 @@ class NoiseModel:
         if np.any(np.diff(freqs_a) < 0):
             raise ValueError(
                 "`detuning_hf_freqs` are expected be"
-                " monotonously growing.")
+                " monotonously growing."
+            )
 
     @staticmethod
     def _check_eff_noise(

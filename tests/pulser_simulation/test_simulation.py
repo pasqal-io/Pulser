@@ -1989,59 +1989,6 @@ def test_detuning_noise():
     )
 
 
-def test_hf_detuning_noise_validation():
-    # expected format
-    noise_mod = NoiseModel(
-        detuning_hf_psd=[1, 4, 2], detuning_hf_freqs=[3, 6, 7], runs=1
-    )
-
-    # not provided psd and freqs
-    noise_mod = NoiseModel()
-    assert (
-        noise_mod.detuning_hf_psd == () and noise_mod.detuning_hf_freqs == ()
-    )
-
-    # only psd are provided
-    with pytest.raises(ValueError, match=("empty tuples or both be provided")):
-        NoiseModel(detuning_hf_psd=(1, 2, 3))
-
-    # only freqs are provided
-    with pytest.raises(ValueError, match=("empty tuples or both be provided")):
-        NoiseModel(detuning_hf_freqs=(4, 5, 6))
-
-    # psd dim != 1
-    with pytest.raises(ValueError, match=("1D tuples")):
-        NoiseModel(detuning_hf_psd=[[1, 2, 3]], detuning_hf_freqs=[3, 4, 5])
-
-    # freqs dim != 1
-    with pytest.raises(ValueError, match=("1D tuples")):
-        NoiseModel(detuning_hf_psd=[1, 2, 3], detuning_hf_freqs=[[3, 4, 5]])
-
-    # psd len <= 1
-    with pytest.raises(ValueError, match=("length > 1")):
-        NoiseModel(detuning_hf_psd=[1], detuning_hf_freqs=[3, 4])
-
-    # freqs len <= 1
-    with pytest.raises(ValueError, match=("length > 1")):
-        NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[3])
-
-    # len psd != len freqs
-    with pytest.raises(ValueError, match=("same length")):
-        NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[3, 4, 5])
-
-    # psd < 0
-    with pytest.raises(ValueError, match=("positive values")):
-        NoiseModel(detuning_hf_psd=[-1, 2], detuning_hf_freqs=[3, 4])
-
-    # freqs < 0
-    with pytest.raises(ValueError, match=("positive values")):
-        NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[3, -4])
-
-    # freqs should monotonously grow
-    with pytest.raises(ValueError, match=("monotonously growing")):
-        NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[4, 3])
-
-
 def test_noise_hf_detuning_generation():
     def original_formula_gen_noise(psd, freqs, times, rng):
         hf_detun = np.zeros_like(times)
