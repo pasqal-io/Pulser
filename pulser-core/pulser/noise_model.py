@@ -179,15 +179,15 @@ class NoiseModel:
             distribution centered in 0. Assumed to be the same for all
             channels (though each channel has its own randomly sampled
             value in each run). This noise is additive. Defaults to 0.
-        detuning_hf_psd: Power Spectral Density(PSD) is 1D array (in Hz²/Hz)
+        detuning_hf_psd: Power Spectral Density(PSD) is 1D tuple (in Hz²/Hz)
             provided together with `detuning_hf_freqs` define high frequency
             noise contribution of time dependent detuning (in rad/µs).
-            Must either be empty or an array with at least two values,
+            Must either be empty or a tuple with at least two values,
             matching the length of `detuning_hf_freqs`. Default is ().
-        detuning_hf_freqs: 1D array (in Hz) of relevant frequency support
+        detuning_hf_freqs: 1D tuple (in Hz) of relevant frequency support
             for PSD. Along with PSD, it is required to define high frequency
             noise contribution of time dependent detuning (in rad/µs).
-            Must either be empty or an array with at least two values,
+            Must either be empty or a tuple with at least two values,
             matching the length of `detuning_hf_psd`. Default is ().
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1. Defaults to 0.
