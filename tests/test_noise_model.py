@@ -284,74 +284,52 @@ class TestNoiseModel:
         )
 
         # only psd are provided
-        with pytest.raises(ValueError, match=(
-            "empty tuples or both be provided"
-            )
+        with pytest.raises(
+            ValueError, match=("empty tuples or both be provided")
         ):
             NoiseModel(detuning_hf_psd=(1, 2, 3))
 
         # only freqs are provided
-        with pytest.raises(ValueError, match=(
-            "empty tuples or both be provided"
-            )
+        with pytest.raises(
+            ValueError, match=("empty tuples or both be provided")
         ):
             NoiseModel(detuning_hf_freqs=(4, 5, 6))
 
         # psd dim != 1
         with pytest.raises(ValueError, match=("1D tuples")):
             NoiseModel(
-                detuning_hf_psd=[[1, 2, 3]],
-                detuning_hf_freqs=[3, 4, 5]
+                detuning_hf_psd=[[1, 2, 3]], detuning_hf_freqs=[3, 4, 5]
             )
 
         # freqs dim != 1
         with pytest.raises(ValueError, match=("1D tuples")):
             NoiseModel(
-                detuning_hf_psd=[1, 2, 3],
-                detuning_hf_freqs=[[3, 4, 5]]
+                detuning_hf_psd=[1, 2, 3], detuning_hf_freqs=[[3, 4, 5]]
             )
 
         # psd len <= 1
         with pytest.raises(ValueError, match=("length > 1")):
-            NoiseModel(
-                detuning_hf_psd=[1],
-                detuning_hf_freqs=[3, 4]
-            )
+            NoiseModel(detuning_hf_psd=[1], detuning_hf_freqs=[3, 4])
 
         # freqs len <= 1
         with pytest.raises(ValueError, match=("length > 1")):
-            NoiseModel(
-                detuning_hf_psd=[1, 2],
-                detuning_hf_freqs=[3]
-            )
+            NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[3])
 
         # len psd != len freqs
         with pytest.raises(ValueError, match=("same length")):
-            NoiseModel(
-                detuning_hf_psd=[1, 2],
-                detuning_hf_freqs=[3, 4, 5]
-            )
+            NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[3, 4, 5])
 
         # psd < 0
         with pytest.raises(ValueError, match=("positive values")):
-            NoiseModel(
-                detuning_hf_psd=[-1, 2],
-                detuning_hf_freqs=[3, 4]
-            )
+            NoiseModel(detuning_hf_psd=[-1, 2], detuning_hf_freqs=[3, 4])
 
         # freqs < 0
         with pytest.raises(ValueError, match=("positive values")):
-            NoiseModel(
-                detuning_hf_psd=[1, 2],
-                detuning_hf_freqs=[3, -4]
-            )
+            NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[3, -4])
 
         # freqs should monotonously grow
         with pytest.raises(ValueError, match=("monotonously growing")):
-            NoiseModel(
-                detuning_hf_psd=[1, 2],
-                detuning_hf_freqs=[4, 3]
-            )
+            NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[4, 3])
 
     @pytest.mark.parametrize("param", ["dephasing_rate", "depolarizing_rate"])
     def test_leakage(self, param):
