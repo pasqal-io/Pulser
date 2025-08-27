@@ -392,8 +392,7 @@ class NoiseModel:
 
         if np.any(np.diff(freqs_a) < 0):
             raise ValueError(
-                "`detuning_hf_freqs` are expected be"
-                " monotonously growing."
+                "`detuning_hf_freqs` are expected be monotonously growing."
             )
 
     @staticmethod
