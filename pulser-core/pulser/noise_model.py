@@ -594,6 +594,4 @@ def _generate_detuning_fluctuations(
         arg = freqs[:, None] * t[None, :] + phases[:, None]
         det_hf = (amp[:, None] * np.cos(2.0 * np.pi * arg)).sum(axis=0)
 
-    res = det_cst_term + det_hf
-    res[-1] = 0
-    return res
+    return det_cst_term + det_hf

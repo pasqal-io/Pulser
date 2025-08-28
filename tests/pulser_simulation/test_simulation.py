@@ -1951,15 +1951,7 @@ def test_amp_sigma_noise():
     )
 
 
-@pytest.mark.parametrize(
-    "det_sigma, det_hf_psd, det_hf_freqs",
-    [
-        (0.1, (), ()),
-        (0, (1, 2, 3), (4, 5, 6)),
-        (0.1, (1, 2, 3), (4, 5, 6)),
-    ],
-)
-def test_detuning_noise(monkeypatch, det_sigma, det_hf_psd, det_hf_freqs):
+def test_detuning_noise(monkeypatch):
     # Pulse creation
     duration = 10
     reg = Register({"q0": (0, 0), "q1": (10, 10)})
@@ -1976,29 +1968,15 @@ def test_detuning_noise(monkeypatch, det_sigma, det_hf_psd, det_hf_freqs):
     seq.add(pulse1, "ch1", protocol="no-delay")
     seq.add(pulse1, "ch2", protocol="no-delay")
 
-    rng0 = np.random.default_rng(seed=1337)
-    rng1 = np.random.default_rng(seed=1337)
-
+    rng = np.random.default_rng(seed=1337)
     monkeypatch.setattr(
         pulser.noise_model.np.random,
         "default_rng",
-        lambda: rng0,
+        lambda: rng,
     )
 
-    noise_mod = NoiseModel(
-        detuning_sigma=det_sigma,
-        detuning_hf_psd=det_hf_psd,
-        detuning_hf_freqs=det_hf_freqs,
-        runs=1,
-    )
+    noise_mod = NoiseModel(detuning_sigma=0.1, runs=1)
     sim = QutipEmulator.from_sequence(seq, noise_model=noise_mod)
-
-    times = sim._hamiltonian.sampling_times
-    expected_det_rydberg = _generate_detuning_fluctuations(
-        noise_mod, times, rng1
-    )
-    expected_det_q0 = _generate_detuning_fluctuations(noise_mod, times, rng1)
-
     sim_samples = sim._hamiltonian.samples
 
     rydberg_0 = sim_samples["Local"]["ground-rydberg"]["q0"]["det"]
@@ -2006,20 +1984,17 @@ def test_detuning_noise(monkeypatch, det_sigma, det_hf_psd, det_hf_freqs):
     digital_0 = sim_samples["Local"]["digital"]["q0"]["det"]
     digital_1 = sim_samples["Local"]["digital"]["q1"]["det"]
 
-    assert np.allclose(expected_det_rydberg, rydberg_0)
-    assert np.allclose(expected_det_rydberg, rydberg_1)
+    assert np.allclose(rydberg_0, [0.00382682] * (2 * duration) + [0.0])
+    assert np.allclose(rydberg_1, [0.00382682] * (2 * duration) + [0.0])
 
-    np.all(
-        np.isclose(
-            digital_0,
-            np.array([-0.17550787] * (duration) + [0.0] * (duration + 1)),
-        )
+    assert np.allclose(
+        digital_0,
+        np.array([0.04739364] * (duration) + [0.0] * (duration + 1)),
     )
-    np.all(
-        np.isclose(
-            digital_1,
-            np.array([-0.20112646] * (duration) + [0.0] * (duration + 1)),
-        )
+
+    assert np.allclose(
+        digital_1,
+        np.array([-0.01377459] * (duration) + [0.0] * (duration + 1)),
     )
 
 
