@@ -271,9 +271,21 @@ class TestNoiseModel:
             )
 
     def test_hf_detuning_noise_validation(self):
-        # expected format
+        # list - expected format
         noise_mod = NoiseModel(
             detuning_hf_psd=[1, 4, 2], detuning_hf_freqs=[3, 6, 7], runs=1
+        )
+        # np.array - other expected format
+        noise_mod = NoiseModel(
+            detuning_hf_psd=np.array([1, 4, 2]),
+            detuning_hf_freqs=np.array([3, 6, 7]),
+            runs=1,
+        )
+        # tuple - other expected format
+        noise_mod = NoiseModel(
+            detuning_hf_psd=(1, 4, 2),
+            detuning_hf_freqs=(3, 6, 7),
+            runs=1,
         )
 
         # not provided psd and freqs
