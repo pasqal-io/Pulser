@@ -556,7 +556,7 @@ class NoiseModel:
         with a constant offset of the detuning fluctuations.
 
         Args:
-            times (ArrayLike): array of sample times.
+            times (ArrayLike): array of sample times (in µs).
 
         Notes
         -----
@@ -577,7 +577,7 @@ class NoiseModel:
             det_cst_term = rng.normal(0.0, self.detuning_sigma)
 
         if self.detuning_hf_psd:
-            t = np.asarray(times)
+            t = np.asarray(times) * 1e-6  # µsec -> sec
             freqs = np.asarray(self.detuning_hf_freqs)[:-1]
             psd = np.asarray(self.detuning_hf_psd)[:-1]
             df = np.diff(self.detuning_hf_freqs)
