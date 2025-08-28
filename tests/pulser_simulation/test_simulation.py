@@ -1998,6 +1998,120 @@ def test_detuning_noise(monkeypatch):
     )
 
 
+def test_detuning_hf_noise(monkeypatch):
+    # Pulse creation
+    duration = 10
+    reg = Register({"q0": (0, 0), "q1": (10, 10)})
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="q0")
+    seq.declare_channel("ch2", "raman_local", initial_target="q1")
+
+    pulse1 = Pulse.ConstantPulse(duration, 0, 0, 0)
+    # Added twice to check the fluctuation doesn't change from pulse to pulse
+    seq.add(pulse1, "ch0")
+    seq.add(pulse1, "ch0")
+    # The two local channels target alternating qubits on the same basis
+    seq.add(pulse1, "ch1", protocol="no-delay")
+    seq.add(pulse1, "ch2", protocol="no-delay")
+
+    rng = np.random.default_rng(seed=1337)
+    monkeypatch.setattr(
+        pulser.noise_model.np.random,
+        "default_rng",
+        lambda: rng,
+    )
+
+    noise_mod = NoiseModel(
+        detuning_hf_psd=np.array([1, 2, 3]),
+        detuning_hf_freqs=np.array([4, 5, 6]),
+        runs=1,
+    )
+    sim = QutipEmulator.from_sequence(seq, noise_model=noise_mod)
+    sim_samples = sim._hamiltonian.samples
+
+    rydberg_0 = sim_samples["Local"]["ground-rydberg"]["q0"]["det"]
+    rydberg_1 = sim_samples["Local"]["ground-rydberg"]["q1"]["det"]
+    digital_0 = sim_samples["Local"]["digital"]["q0"]["det"]
+    digital_1 = sim_samples["Local"]["digital"]["q1"]["det"]
+
+    rydberg_expected = [
+        1.80750118,
+        1.80750115,
+        1.80750112,
+        1.80750108,
+        1.80750105,
+        1.80750102,
+        1.80750098,
+        1.80750095,
+        1.80750092,
+        1.80750088,
+        1.80750085,
+        1.80750082,
+        1.80750079,
+        1.80750075,
+        1.80750072,
+        1.80750069,
+        1.80750065,
+        1.80750062,
+        1.80750059,
+        1.80750055,
+        0.0,
+    ]
+    assert np.allclose(rydberg_0, rydberg_expected)
+    assert np.allclose(rydberg_1, rydberg_expected)
+
+    digital_0_expected = [
+        3.13145534,
+        3.13145537,
+        3.13145541,
+        3.13145545,
+        3.13145549,
+        3.13145552,
+        3.13145556,
+        3.1314556,
+        3.13145564,
+        3.13145568,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    ]
+    assert np.allclose(digital_0, digital_0_expected)
+
+    digital_1_expected = [
+        2.49093772,
+        2.4909377,
+        2.49093769,
+        2.49093767,
+        2.49093765,
+        2.49093764,
+        2.49093762,
+        2.4909376,
+        2.49093759,
+        2.49093757,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    ]
+    assert np.allclose(digital_1, digital_1_expected)
+
+
 def test_noise_hf_detuning_generation():
     def original_formula_gen_noise(psd, freqs, times, rng):
         """Compute δ_hf(t).
