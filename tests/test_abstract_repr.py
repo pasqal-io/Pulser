@@ -2789,12 +2789,10 @@ class TestDeserialization:
             Sequence.from_abstract_repr(s)
 
 
+@pytest.mark.parametrize("detuning_sigma", [0.0, 1.0])
 @pytest.mark.parametrize(
-    "detuning_sigma, detuning_hf_psd, detuning_hf_freqs",
-    [
-        (0.0, (), ()),
-        (1.0, (1.0, 2.0, 3.0), (4.0, 5.0, 6.0)),
-    ],
+    "detuning_hf_psd, detuning_hf_freqs",
+    [[(), ()], [(1.0, 2.0, 3.0), (4.0, 5.0, 6.0)]],
 )
 def test_noise_optional_params(
     detuning_sigma, detuning_hf_psd, detuning_hf_freqs
@@ -2818,5 +2816,9 @@ def test_noise_optional_params(
     )
     repr = noise._to_abstract_repr()
     assert ("detuning_sigma" in repr) == (detuning_sigma != 0.0)
-    assert ("detuning_hf_psd" in repr) == (detuning_hf_psd != ())
-    assert ("detuning_hf_freqs" in repr) == (detuning_hf_freqs != ())
+    assert ("detuning_hf_psd" in repr) == (
+        detuning_hf_psd != () and detuning_hf_freqs != ()
+    )
+    assert ("detuning_hf_freqs" in repr) == (
+        detuning_hf_psd != () and detuning_hf_freqs != ()
+    )
