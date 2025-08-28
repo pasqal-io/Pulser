@@ -229,6 +229,12 @@ def test_register(reg: Register | Register3D):
             detuning_hf_freqs=(4, 5, 6),
             runs=1,
         ),
+        NoiseModel(
+            detuning_sigma=0.1,
+            detuning_hf_psd=(1, 2, 3),
+            detuning_hf_freqs=(4, 5, 6),
+            runs=1,
+        ),
     ],
 )
 def test_noise_model(noise_model: NoiseModel):
