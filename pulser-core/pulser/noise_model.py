@@ -375,24 +375,24 @@ class NoiseModel:
         if psd_a.size != freqs_a.size:
             raise ValueError(
                 "`detuning_hf_psd` and `detuning_hf_freqs`"
-                " are expected have same length."
+                " are expected to have the same length."
             )
 
         if psd_a.size <= 1:
             raise ValueError(
                 "`detuning_hf_psd` and `detuning_hf_freqs`"
-                " are expected be length > 1."
+                " are expected to have length > 1."
             )
 
         if not (np.all(psd_a > 0) and np.all(freqs_a > 0)):
             raise ValueError(
                 "`detuning_hf_psd` and `detuning_hf_freqs`"
-                " are expected have positive values."
+                " are expected to have positive values."
             )
 
         if np.any(np.diff(freqs_a) < 0):
             raise ValueError(
-                "`detuning_hf_freqs` are expected be monotonously growing."
+                "`detuning_hf_freqs` are expected to be monotonously growing."
             )
 
     @staticmethod
