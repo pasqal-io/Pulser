@@ -27,7 +27,7 @@ import qutip
 import pulser.math as pm
 from pulser.channels.base_channel import STATES_RANK, States
 from pulser.devices._device_datacls import BaseDevice
-from pulser.noise_model import NoiseModel
+from pulser.noise_model import NoiseModel, _generate_detuning_fluctuations
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
@@ -312,7 +312,8 @@ class Hamiltonian:
                 )
 
                 ch_det_fluctuation = (
-                    self.config._generate_detuning_fluctuations(
+                    _generate_detuning_fluctuations(
+                        self.config,
                         self.sampling_times
                     )
                 )

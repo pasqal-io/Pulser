@@ -22,7 +22,7 @@ import qutip
 
 from pulser import Pulse, Register, Sequence
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
-from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel
+from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, _generate_detuning_fluctuations
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
@@ -2016,7 +2016,7 @@ def test_noise_hf_detuning_generation():
     rng0 = np.random.default_rng(seed=0)
     rng1 = np.random.default_rng(seed=0)
     noise_m = NoiseModel(detuning_hf_psd=psd, detuning_hf_freqs=freqs, runs=1)
-    hf_det = noise_m._generate_detuning_fluctuations(times, rng0)
+    hf_det = _generate_detuning_fluctuations(noise_m, times, rng0)
     hd_det_expected = original_formula_gen_noise(psd, freqs, times, rng1)
 
     assert np.allclose(hf_det, hd_det_expected)
