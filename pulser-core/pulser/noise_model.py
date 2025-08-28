@@ -274,7 +274,12 @@ class NoiseModel:
         }
         self._validate_parameters(relevant_param_vals)
 
-        self._check_register_and_doppler_noise_params(true_noise_types)
+        self._check_register_noise_params(
+            true_noise_types,
+            cast(float, param_vals["trap_waist"]),
+            cast(Union[float, None], param_vals["trap_depth"]),
+            cast(float, param_vals["temperature"]),
+        )
 
         object.__setattr__(
             self, "noise_types", tuple(sorted(true_noise_types))
@@ -330,31 +335,25 @@ class NoiseModel:
         )
         return register_sigma_xy, register_sigma_z
 
-    def _check_register_and_doppler_noise_params(
-        self, true_noise_types: Collection[NoiseTypes]
+    @staticmethod
+    def _check_register_noise_params(
+        true_noise_types: Collection[NoiseTypes],
+        trap_waist: float,
+        trap_depth: float | None,
+        temperature: float,
     ) -> None:
-
-        if (
-            "register" in true_noise_types
-            and (self.trap_waist == 0.0 or self.trap_depth is None)
-            and self.temperature != 0.0
-        ):
-            warnings.warn(
-                "trap_waist, trap_depth, and temperature must be defined in "
-                "order to simulate register noise. Only doppler noise will "
-                "be used.",
-                UserWarning,
-                stacklevel=2,
+        if "register" not in true_noise_types:
+            return
+        if trap_waist == 0.0 or trap_depth is None:
+            raise ValueError(
+                "trap_waist and trap_depth must be defined in "
+                "order to simulate register noise."
             )
-        elif (
-            "register" in true_noise_types
-            and self.temperature == 0.0
-            and self.trap_depth is not None
-        ):
+        elif temperature == 0.0:
             warnings.warn(
                 "trap_waist, trap_depth, and temperature must be defined in "
-                "order to simulate register noise. Register noise is not "
-                "activated.",
+                "order to simulate register noise. Temperature is "
+                f"{temperature} µK. Register noise will have no effect",
                 UserWarning,
                 stacklevel=2,
             )
@@ -554,9 +553,7 @@ class NoiseModel:
         )
 
 
-def _noisy_register(
-    q_dict: dict, config: NoiseModel
-) -> dict:
+def _noisy_register(q_dict: dict, config: NoiseModel) -> dict:
     """Add Gaussian noise to the positions of the register."""
     register_sigma_xy, register_sigma_z = config._register_sigma_xy_z()
     atoms = list(q_dict.keys())

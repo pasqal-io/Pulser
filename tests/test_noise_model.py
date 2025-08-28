@@ -532,8 +532,11 @@ def test_register_noise_no_warning_when_all_params_defined():
     assert noise_model.noise_types == ("doppler", "register")
     with warnings.catch_warnings(record=True) as rec:
         warnings.simplefilter("always")
-        noise_model._check_register_and_doppler_noise_params(
-            noise_model.noise_types
+        noise_model._check_register_noise_params(
+            noise_model.noise_types,
+            noise_model.trap_waist,
+            noise_model.trap_depth,
+            noise_model.temperature,
         )
         assert (
             len(rec) == 0
@@ -545,7 +548,9 @@ def test_register_not_activated_warns_when_temperature_zero():
 
     Warning: register noise not activated.
     """
-    with pytest.warns(UserWarning, match=r"Register noise is not activated"):
+    with pytest.warns(
+        UserWarning, match=r"Register noise will have no effect"
+    ):
         noise_model = NoiseModel(
             temperature=0.0,
             trap_waist=1.0,
@@ -556,14 +561,39 @@ def test_register_not_activated_warns_when_temperature_zero():
         assert "register" in noise_model.noise_types
 
 
-def test_register_only_doppler_warns_when_trap_params_missing():
-    """trap_waist == 0.0, Warning: Only doppler noise will be used."""
-    with pytest.warns(UserWarning, match=r"Only doppler noise will be used"):
-        noise_model = NoiseModel(
-            temperature=15.0,
-            trap_waist=0.0,
+def test_check_register_and_doppler_noise_params_error():
+    """Test ValueError is raised when register noise parameters are invalid."""
+    noise_model = NoiseModel(
+        trap_waist=0.0,
+        trap_depth=None,
+        temperature=10.0,
+        runs=1,
+        samples_per_run=1,
+    )
+    assert noise_model.noise_types == ("doppler",)
+
+
+def test_check_register_noise_params_invalid_params():
+    """Raises ValueError if trap_waist is 0.0 or trap_depth is None."""
+    with pytest.raises(
+        ValueError, match="trap_waist and trap_depth must be defined"
+    ):
+        _ = NoiseModel(
             trap_depth=150.0,
+            trap_waist=0.0,
+            temperature=50.0,
             runs=1,
             samples_per_run=1,
         )
-        assert ("doppler", "register") == noise_model.noise_types
+    with pytest.raises(
+        ValueError, match="trap_waist and trap_depth must be defined"
+    ):
+        # trap_depth is None, this test is not going to happend
+        # # because trap_depth is None will raise an error before
+        # # but it is for testing purposes
+        NoiseModel._check_register_noise_params(
+            true_noise_types=["register"],
+            trap_waist=2.0,
+            trap_depth=None,
+            temperature=50.0,
+        )
