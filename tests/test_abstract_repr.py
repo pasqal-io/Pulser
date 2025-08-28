@@ -220,6 +220,15 @@ def test_register(reg: Register | Register3D):
             eff_noise_opers=(((0, -1j, 0), (1j, 0, 0), (0, 0, 1)),),
             with_leakage=True,
         ),
+        NoiseModel(
+            detuning_sigma=0.1,
+            runs=1,
+        ),
+        NoiseModel(
+            detuning_hf_psd=(1, 2, 3),
+            detuning_hf_freqs=(4, 5, 6),
+            runs=1,
+        ),
     ],
 )
 def test_noise_model(noise_model: NoiseModel):
@@ -2813,7 +2822,15 @@ def test_noise_optional_params(detuning_sigma, det_hf_psd, det_hf_freqs):
         hyperfine_dephasing_rate=1.5,
     )
     repr = noise._to_abstract_repr()
-    assert ("detuning_sigma" in repr) == (detuning_sigma != 0.0)
 
-    if "detuning_hf" in repr:
+    if detuning_sigma != 0.0:
+        assert "detuning_sigma" in repr
+        assert repr["detuning_sigma"] == detuning_sigma
+    else:
+        assert "detuning_sigma" not in repr
+
+    if det_hf_psd != () and det_hf_freqs != ():
+        assert "detuning_hf" in repr
         assert repr["detuning_hf"] == (list(zip(det_hf_psd, det_hf_freqs)))
+    else:
+        assert "detuning_hf" not in repr
