@@ -1991,7 +1991,16 @@ def test_detuning_noise():
 
 def test_noise_hf_detuning_generation():
     def original_formula_gen_noise(psd, freqs, times, rng):
+        """Compute δ_hf(t).
+
+        Args:
+            psd : in Hz²/Hz
+            freqs : in Hz
+            times : in µs, is converted to seconds inside
+            rng : random number generator
+        """
         hf_detun = np.zeros_like(times)
+        times *= 1e-6  # µsec -> sec
         for i, s in enumerate(psd[:-1]):
             df = freqs[i + 1] - freqs[i]
             uniform_rnd = rng.uniform(0.0, 1.0)
@@ -2012,3 +2021,54 @@ def test_noise_hf_detuning_generation():
 
     assert np.allclose(hf_det, hd_det_expected)
     assert hf_det.size == times.size
+
+
+def test_high_frequency_detuning_noise():
+    duration = 10
+    np.random.seed(1337)
+    reg = Register({"q0": (0, 0), "q1": (10, 10)})
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="q0")
+    seq.declare_channel("ch2", "raman_local", initial_target="q1")
+
+    pulse1 = Pulse.ConstantPulse(duration, 0, 0, 0)
+    # Added twice to check the fluctuation doesn't change from pulse to pulse
+    seq.add(pulse1, "ch0")
+    seq.add(pulse1, "ch0")
+    # The two local channels target alternating qubits on the same basis
+    seq.add(pulse1, "ch1", protocol="no-delay")
+    seq.add(pulse1, "ch2", protocol="no-delay")
+
+    psd = [1, 2, 3]
+    freqs = [4, 5, 6]
+
+    sim = QutipEmulator.from_sequence(
+        seq,
+        noise_model=NoiseModel(
+            detuning_hf_psd=psd,
+            detuning_hf_freqs=freqs,
+            runs=1,
+            samples_per_run=1,
+        ),
+    )
+    sim_samples = sim._hamiltonian.samples
+
+    rydberg_0 = sim_samples["Local"]["ground-rydberg"]["q0"]["det"]
+    rydberg_1 = sim_samples["Local"]["ground-rydberg"]["q1"]["det"]
+    digital_0 = sim_samples["Local"]["digital"]["q0"]["det"]
+    digital_1 = sim_samples["Local"]["digital"]["q1"]["det"]
+    np.all(np.isclose(rydberg_0, np.array([-0.04902824] * (2 * duration + 1))))
+    np.all(np.isclose(rydberg_1, np.array([-0.04902824] * (2 * duration + 1))))
+    np.all(
+        np.isclose(
+            digital_0,
+            np.array([-0.17550787] * (duration) + [0.0] * (duration + 1)),
+        )
+    )
+    np.all(
+        np.isclose(
+            digital_1,
+            np.array([-0.20112646] * (duration) + [0.0] * (duration + 1)),
+        )
+    )
