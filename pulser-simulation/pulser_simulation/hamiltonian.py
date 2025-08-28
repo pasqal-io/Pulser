@@ -311,11 +311,8 @@ class Hamiltonian:
                     0, np.random.normal(1.0, self.config.amp_sigma)
                 )
 
-                ch_det_fluctuation = (
-                    _generate_detuning_fluctuations(
-                        self.config,
-                        self.sampling_times
-                    )
+                ch_det_fluctuation = _generate_detuning_fluctuations(
+                    self.config, self.sampling_times
                 )
 
                 for slot in ch_samples.slots:
