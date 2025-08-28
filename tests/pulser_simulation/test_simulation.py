@@ -18,8 +18,9 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-import pulser.noise_model  # for monkeypatch in test_detuning_noise
 import qutip
+
+import pulser.noise_model  # for monkeypatch in test_detuning_noise
 
 from pulser import Pulse, Register, Sequence
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
