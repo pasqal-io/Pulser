@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 import warnings
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -24,7 +24,7 @@ from pulser.noise_model import (
     _NOISE_TYPE_PARAMS,
     _PARAM_TO_NOISE_TYPE,
     NoiseModel,
-    noisy_register,
+    _noisy_register,
 )
 
 
@@ -436,7 +436,7 @@ class TestNoiseModel:
             repr(
                 NoiseModel(
                     temperature=15.0,
-                    trap_depth=150.0,
+                    trap_depth=150.0,  # same units as temperature
                     trap_waist=1.0,
                     runs=1,
                     samples_per_run=1,
@@ -457,6 +457,9 @@ class TestNoiseModel:
 )
 def test_noisy_register(register2D) -> None:
     """Testing noisy_register function in case 2D and 3D register."""
+    noise_model = MagicMock()
+    noise_model._register_sigma_xy_z.return_value = (0.13, 0.8)
+
     if register2D:
         qdict = {
             "q0": np.array([-15.0, 0.0]),
@@ -471,8 +474,7 @@ def test_noisy_register(register2D) -> None:
             "q2": np.array([5.0, 0.0, 0.0]),
             "q3": np.array([15.0, 0.0, 0.0]),
         }
-    register_sigma_xy = 0.13
-    register_sigma_z = 0.8
+
     # Predefined deterministic noise
     fake_normal_xy_noise = np.array(
         [
@@ -489,7 +491,7 @@ def test_noisy_register(register2D) -> None:
             fake_normal_xy_noise,
             fake_normal_z_noise,
         ]
-        result = noisy_register(qdict, register_sigma_xy, register_sigma_z)
+        result = _noisy_register(qdict, noise_model)
     expected_positions = {
         "q0": np.array([-15.0 + 0.1, 0.0 - 0.1, 0.05]),
         "q1": np.array([-5.0 + 0.2, 0.0 - 0.2, 0.07]),
@@ -505,14 +507,14 @@ def test_register_noise_sigma_xy_z_raises_if_trap_depth_is_none():
     with pytest.raises(
         ValueError, match="'trap_depth' must be greater than zero, not None"
     ):
-        obj = NoiseModel(
+        noise_model = NoiseModel(
             temperature=1.0,
             trap_depth=None,
             trap_waist=1.0,
             runs=1,
             samples_per_run=1,
         )
-        obj.register_sigma_xy_z()
+        noise_model._register_sigma_xy_z()
 
 
 def test_register_noise_no_warning_when_all_params_defined():

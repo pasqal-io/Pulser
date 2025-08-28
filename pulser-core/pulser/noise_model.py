@@ -136,7 +136,7 @@ class NoiseModel:
     - **doppler**: Local atom detuning due to termal motion of the
       atoms and Doppler effect with respect to laser frequency.
       Parametrized by the ``temperature`` field.
-    - **register**: thermal fluctuations in the
+    - **register**: Thermal fluctuations in the
       register positions, parametrized by ``temperature``, ``trap_waist``
       and, ``trap_depth``, which must all be defined
     - **amplitude**: Gaussian damping due to finite laser waist and
@@ -174,8 +174,8 @@ class NoiseModel:
             distribution centered in 0. Assumed to be the same for all
             channels (though each channel has its own randomly sampled
             value in each run). This noise is additive. Defaults to 0.
-        trap_waist: Refers to the radius of the trapping laser beam at the
-            focus point (in µm). Defaults to 0.
+        trap_waist: The waist of each optical trap at the focal point (in µm).
+            Defaults to 0.
         trap_depth: The potential energy well depth that confines the atoms
             (in µK). Defaults to None.
         relaxation_rate: The rate of relaxation from the Rydberg to the
@@ -554,12 +554,13 @@ class NoiseModel:
         )
 
 
-def noisy_register(
-    q_dict: dict, register_sigma_xy: float, register_sigma_z: float
+def _noisy_register(
+    q_dict: dict, config: NoiseModel
 ) -> dict:
     """Add Gaussian noise to the positions of the register."""
+    register_sigma_xy, register_sigma_z = config._register_sigma_xy_z()
     atoms = list(q_dict.keys())
-    num_atoms = len(list(atoms))
+    num_atoms = len(atoms)
     positions = np.array(list(q_dict.values()))
 
     if len(positions[0]) == 2:

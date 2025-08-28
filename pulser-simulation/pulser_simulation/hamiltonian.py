@@ -27,7 +27,7 @@ import qutip
 import pulser.math as pm
 from pulser.channels.base_channel import STATES_RANK, States
 from pulser.devices._device_datacls import BaseDevice
-from pulser.noise_model import NoiseModel, noisy_register
+from pulser.noise_model import NoiseModel, _noisy_register
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
@@ -441,8 +441,7 @@ class Hamiltonian:
             and self.config.trap_depth is not None
         ):
             # should be applied before the Hamiltonian is built
-            xy_sigma, z_sigma = self.config._register_sigma_xy_z()
-            self._qdict = noisy_register(self._qdict, xy_sigma, z_sigma)
+            self._qdict = _noisy_register(self._qdict, self.config)
 
     def _get_basis_name(self, with_leakage: bool) -> str:
         if len(self.samples_obj.used_bases) == 0:

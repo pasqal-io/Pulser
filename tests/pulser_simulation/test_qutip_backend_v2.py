@@ -139,7 +139,7 @@ def test_qutip_backend_v2_energy():
 def test_qutip_backend_v2_default_noise_model():
     noisy_device = dataclasses.replace(
         pulser.devices.MockDevice,
-        default_noise_model=pulser.noise_model.NoiseModel(
+        default_noise_model=pulser.NoiseModel(
             dephasing_rate=0.01, temperature=50, runs=2, samples_per_run=1
         ),
     )
@@ -148,7 +148,7 @@ def test_qutip_backend_v2_default_noise_model():
         observables=[
             StateResult(evaluation_times=[1.0]),
         ],
-        noise_model=pulser.noise_model.NoiseModel(p_false_neg=0.1),
+        noise_model=pulser.NoiseModel(p_false_neg=0.1),
         prefer_device_noise_model=True,
         initial_state=QutipState(
             qutip.tensor([qutip.basis(2, 0) for _ in range(2)]),
@@ -168,8 +168,8 @@ def test_qutip_backend_v2_default_noise_model():
 def test_qutip_backend_v2_stochastic_noise():
     np.random.seed(123)
 
-    def get_noise_model(samples_per_run: int) -> pulser.noise_model.NoiseModel:
-        return pulser.noise_model.NoiseModel(
+    def get_noise_model(samples_per_run: int) -> pulser.NoiseModel:
+        return pulser.NoiseModel(
             temperature=50.0,
             p_false_neg=0.01,
             amp_sigma=1e-3,
