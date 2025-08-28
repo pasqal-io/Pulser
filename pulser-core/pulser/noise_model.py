@@ -372,16 +372,16 @@ class NoiseModel:
                 " are expected be 1D tuples."
             )
 
-        if psd_a.size <= 1 or freqs_a.size <= 1:
-            raise ValueError(
-                "`detuning_hf_psd` and `detuning_hf_freqs`"
-                " are expected be length > 1."
-            )
-
         if psd_a.size != freqs_a.size:
             raise ValueError(
                 "`detuning_hf_psd` and `detuning_hf_freqs`"
                 " are expected have same length."
+            )
+
+        if psd_a.size <= 1:
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_freqs`"
+                " are expected be length > 1."
             )
 
         if not (np.all(psd_a > 0) and np.all(freqs_a > 0)):

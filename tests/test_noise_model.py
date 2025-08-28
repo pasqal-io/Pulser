@@ -319,17 +319,13 @@ class TestNoiseModel:
                 detuning_hf_psd=[1, 2, 3], detuning_hf_freqs=[[3, 4, 5]]
             )
 
-        # psd len <= 1
-        with pytest.raises(ValueError, match=("length > 1")):
-            NoiseModel(detuning_hf_psd=[1], detuning_hf_freqs=[3, 4])
-
-        # freqs len <= 1
-        with pytest.raises(ValueError, match=("length > 1")):
-            NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[3])
-
         # len psd != len freqs
         with pytest.raises(ValueError, match=("same length")):
             NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[3, 4, 5])
+
+        # psd len <= 1
+        with pytest.raises(ValueError, match=("length > 1")):
+            NoiseModel(detuning_hf_psd=[1], detuning_hf_freqs=[3])
 
         # psd < 0
         with pytest.raises(ValueError, match=("positive values")):
