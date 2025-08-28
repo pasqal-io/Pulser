@@ -22,7 +22,11 @@ import qutip
 
 from pulser import Pulse, Register, Sequence
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
-from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, _generate_detuning_fluctuations
+from pulser.noise_model import (
+    _LEGACY_DEFAULTS,
+    NoiseModel,
+    _generate_detuning_fluctuations,
+)
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform

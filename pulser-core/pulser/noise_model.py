@@ -502,6 +502,12 @@ class NoiseModel:
         eff_noise_rates = all_fields.pop("eff_noise_rates")
         eff_noise_opers = all_fields.pop("eff_noise_opers")
         all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
+
+        if "detuning_hf_psd" in all_fields:
+            det_hf_psd = all_fields.pop("detuning_hf_psd")
+            det_hf_freqs = all_fields.pop("detuning_hf_freqs")
+            all_fields["detuning_hf"] = list(zip(det_hf_psd, det_hf_freqs))
+
         return all_fields
 
     def __repr__(self) -> str:
