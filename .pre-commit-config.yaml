@@ -31,3 +31,4 @@ repos:
         name: mypy
         entry: ./.mypy_script
         language: script
+        pass_filenames : false

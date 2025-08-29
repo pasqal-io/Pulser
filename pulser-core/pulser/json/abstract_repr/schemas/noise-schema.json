@@ -33,6 +33,17 @@
         "depolarizing_rate": {
           "type": "number"
         },
+        "detuning_hf": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        },
         "detuning_sigma": {
           "type": "number"
         },

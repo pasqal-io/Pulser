@@ -220,6 +220,21 @@ def test_register(reg: Register | Register3D):
             eff_noise_opers=(((0, -1j, 0), (1j, 0, 0), (0, 0, 1)),),
             with_leakage=True,
         ),
+        NoiseModel(
+            detuning_sigma=0.1,
+            runs=1,
+        ),
+        NoiseModel(
+            detuning_hf_psd=(1, 2, 3),
+            detuning_hf_freqs=(4, 5, 6),
+            runs=1,
+        ),
+        NoiseModel(
+            detuning_sigma=0.1,
+            detuning_hf_psd=(1, 2, 3),
+            detuning_hf_freqs=(4, 5, 6),
+            runs=1,
+        ),
     ],
 )
 def test_noise_model(noise_model: NoiseModel):
@@ -2789,8 +2804,12 @@ class TestDeserialization:
             Sequence.from_abstract_repr(s)
 
 
+@pytest.mark.parametrize(
+    "det_hf_psd, det_hf_freqs",
+    [[(), ()], [(1.0, 2.0, 3.0), (4.0, 5.0, 6.0)]],
+)
 @pytest.mark.parametrize("detuning_sigma", [0.0, 1.0])
-def test_noise_optional_params(detuning_sigma):
+def test_noise_optional_params(detuning_sigma, det_hf_psd, det_hf_freqs):
     noise = pulser.noise_model.NoiseModel(
         runs=1,  # TODO: connect this with MCArlo
         samples_per_run=1,  # TODO: connect this with MCarlo or ignored
@@ -2800,6 +2819,8 @@ def test_noise_optional_params(detuning_sigma):
         laser_waist=5,
         amp_sigma=0.1,
         detuning_sigma=detuning_sigma,
+        detuning_hf_psd=det_hf_psd,
+        detuning_hf_freqs=det_hf_freqs,
         temperature=10.0,
         with_leakage=True,
         eff_noise_rates=(0.1,),
@@ -2807,4 +2828,15 @@ def test_noise_optional_params(detuning_sigma):
         hyperfine_dephasing_rate=1.5,
     )
     repr = noise._to_abstract_repr()
-    assert ("detuning_sigma" in repr) == (detuning_sigma != 0.0)
+
+    if detuning_sigma != 0.0:
+        assert "detuning_sigma" in repr
+        assert repr["detuning_sigma"] == detuning_sigma
+    else:
+        assert "detuning_sigma" not in repr
+
+    if det_hf_psd != () and det_hf_freqs != ():
+        assert "detuning_hf" in repr
+        assert repr["detuning_hf"] == (list(zip(det_hf_psd, det_hf_freqs)))
+    else:
+        assert "detuning_hf" not in repr

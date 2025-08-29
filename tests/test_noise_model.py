@@ -283,6 +283,75 @@ class TestNoiseModel:
                 eff_noise_rates=[1.0],
             )
 
+    def test_hf_detuning_noise_validation(self):
+        # list - expected format
+        noise_mod = NoiseModel(
+            detuning_hf_psd=[1, 4, 2], detuning_hf_freqs=[3, 6, 7], runs=1
+        )
+        # np.array - other expected format
+        noise_mod = NoiseModel(
+            detuning_hf_psd=np.array([1, 4, 2]),
+            detuning_hf_freqs=np.array([3, 6, 7]),
+            runs=1,
+        )
+        # tuple - other expected format
+        noise_mod = NoiseModel(
+            detuning_hf_psd=(1, 4, 2),
+            detuning_hf_freqs=(3, 6, 7),
+            runs=1,
+        )
+
+        # not provided psd and freqs
+        noise_mod = NoiseModel()
+        assert (
+            noise_mod.detuning_hf_psd == ()
+            and noise_mod.detuning_hf_freqs == ()
+        )
+
+        # only psd are provided
+        with pytest.raises(
+            ValueError, match=("empty tuples or both be provided")
+        ):
+            NoiseModel(detuning_hf_psd=(1, 2, 3))
+
+        # only freqs are provided
+        with pytest.raises(
+            ValueError, match=("empty tuples or both be provided")
+        ):
+            NoiseModel(detuning_hf_freqs=(4, 5, 6))
+
+        # psd dim != 1
+        with pytest.raises(ValueError, match=("1D tuples")):
+            NoiseModel(
+                detuning_hf_psd=[[1, 2, 3]], detuning_hf_freqs=[3, 4, 5]
+            )
+
+        # freqs dim != 1
+        with pytest.raises(ValueError, match=("1D tuples")):
+            NoiseModel(
+                detuning_hf_psd=[1, 2, 3], detuning_hf_freqs=[[3, 4, 5]]
+            )
+
+        # len psd != len freqs
+        with pytest.raises(ValueError, match=("same length")):
+            NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[3, 4, 5])
+
+        # psd len <= 1
+        with pytest.raises(ValueError, match=("length > 1")):
+            NoiseModel(detuning_hf_psd=[1], detuning_hf_freqs=[3])
+
+        # psd < 0
+        with pytest.raises(ValueError, match=("positive values")):
+            NoiseModel(detuning_hf_psd=[-1, 2], detuning_hf_freqs=[3, 4])
+
+        # freqs < 0
+        with pytest.raises(ValueError, match=("positive values")):
+            NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[3, -4])
+
+        # freqs should monotonously grow
+        with pytest.raises(ValueError, match=("monotonously growing")):
+            NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_freqs=[4, 3])
+
     @pytest.mark.parametrize("param", ["dephasing_rate", "depolarizing_rate"])
     def test_leakage(self, param):
         with pytest.raises(
@@ -388,11 +457,14 @@ class TestNoiseModel:
             None,
         ) == {"eff_noise_rates", "eff_noise_opers", "with_leakage"}
         assert NoiseModel._find_relevant_params(
-            {"detuning"},
-            0.0,
-            0.0,
-            None,
-        ) == {"detuning_sigma", "runs", "samples_per_run"}
+            {"detuning"}, 0.0, 0.0, None
+        ) == {
+            "detuning_sigma",
+            "detuning_hf_psd",
+            "detuning_hf_freqs",
+            "runs",
+            "samples_per_run",
+        }
 
     def test_repr(self):
         assert repr(NoiseModel()) == "NoiseModel(noise_types=())"
@@ -502,21 +574,6 @@ def test_noisy_register(register2D) -> None:
         np.testing.assert_array_almost_equal(result[q], expected_positions[q])
 
 
-def test_register_noise_sigma_xy_z_raises_if_trap_depth_is_none():
-    """Trap_depth is None."""
-    with pytest.raises(
-        ValueError, match="'trap_depth' must be greater than zero, not None"
-    ):
-        noise_model = NoiseModel(
-            temperature=1.0,
-            trap_depth=None,
-            trap_waist=1.0,
-            runs=1,
-            samples_per_run=1,
-        )
-        noise_model._register_sigma_xy_z()
-
-
 def test_register_noise_no_warning_when_all_params_defined():
     """Register noise with all parameters.
 
@@ -543,29 +600,11 @@ def test_register_noise_no_warning_when_all_params_defined():
         ), f"Expected no warnings,got: {[r.message for r in rec]}"
 
 
-def test_register_not_activated_warns_when_temperature_zero():
-    """Trap parameters are turned on, but temperature=0.
-
-    Warning: register noise not activated.
-    """
-    with pytest.warns(
-        UserWarning, match=r"Register noise will have no effect"
-    ):
-        noise_model = NoiseModel(
-            temperature=0.0,
-            trap_waist=1.0,
-            trap_depth=150.0,
-            runs=1,
-            samples_per_run=1,
-        )
-        assert "register" in noise_model.noise_types
-
-
 def test_check_register_and_doppler_noise_params_error():
-    """Test ValueError is raised when register noise parameters are invalid."""
+    """Doppler noise is activated when trap parameters are default."""
     noise_model = NoiseModel(
-        trap_waist=0.0,
-        trap_depth=None,
+        trap_waist=0.0,  # default
+        trap_depth=None,  # default
         temperature=10.0,
         runs=1,
         samples_per_run=1,
@@ -574,26 +613,27 @@ def test_check_register_and_doppler_noise_params_error():
 
 
 def test_check_register_noise_params_invalid_params():
-    """Raises ValueError if trap_waist is 0.0 or trap_depth is None."""
+    """Gives a ValueError!
+
+    if trap_waist == 0.0 or trap_depth is None or temperature == 0.0.
+    """
     with pytest.raises(
-        ValueError, match="trap_waist and trap_depth must be defined"
+        ValueError, match="defined in order to simulate register noise"
     ):
         _ = NoiseModel(
             trap_depth=150.0,
             trap_waist=0.0,
-            temperature=50.0,
+            temperature=10.0,
             runs=1,
             samples_per_run=1,
         )
     with pytest.raises(
-        ValueError, match="trap_waist and trap_depth must be defined"
+        ValueError, match="defined in order to simulate register noise"
     ):
-        # trap_depth is None, this test is not going to happend
-        # # because trap_depth is None will raise an error before
-        # # but it is for testing purposes
-        NoiseModel._check_register_noise_params(
-            true_noise_types=["register"],
+        _ = NoiseModel(
             trap_waist=2.0,
-            trap_depth=None,
-            temperature=50.0,
+            trap_depth=150,
+            temperature=0.0,
+            runs=1,
+            samples_per_run=1,
         )

@@ -22,6 +22,7 @@ from dataclasses import dataclass, field, fields
 from typing import Any, Literal, Union, cast, get_args
 
 import numpy as np
+from numpy.random import Generator
 from numpy.typing import ArrayLike
 
 import pulser.json.abstract_repr as pulser_abstract_repr
@@ -51,7 +52,7 @@ _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "doppler": ("temperature",),
     "register": ("trap_waist", "trap_depth"),
     "amplitude": ("laser_waist", "amp_sigma"),
-    "detuning": ("detuning_sigma",),
+    "detuning": ("detuning_sigma", "detuning_hf_psd", "detuning_hf_freqs"),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
     "dephasing": ("dephasing_rate", "hyperfine_dephasing_rate"),
     "relaxation": ("relaxation_rate",),
@@ -104,6 +105,8 @@ OPTIONAL_IN_ABSTR_REPR = (
     "detuning_sigma",
     "trap_waist",
     "trap_depth",
+    "detuning_hf_psd",
+    "detuning_hf_freqs",
 )
 
 
@@ -142,8 +145,16 @@ class NoiseModel:
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
-    - **detuning**: Detuning fluctuations, parametrized by
-      ``detuning_sigma``.
+    - **detuning**: Detuning fluctuations consisting of two
+      components:
+      (1) constant offset (zero-frequency), parameterized by
+      ``detuning_sigma``;
+      (2) time-dependent high-frequency fluctuations, defined by the
+      power spectral density ``detuning_hf_psd`` over the relevant
+      ``detuning_hf_freqs`` frequencies support.
+      δ_hf(t) = Σ_k sqrt(2 * Δf_k * psd_k) * cos(2π(f_k * t + φ_k))
+      where φ_k ~ U[0, 1) (uniform random phase),
+      Δf_k = freqs[k+1] - freqs[k].
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
 
@@ -178,6 +189,16 @@ class NoiseModel:
             Defaults to 0.
         trap_depth: The potential energy well depth that confines the atoms
             (in µK). Defaults to None.
+        detuning_hf_psd: Power Spectral Density(PSD) is 1D tuple (in Hz²/Hz)
+            provided together with `detuning_hf_freqs` define high frequency
+            noise contribution of time dependent detuning (in rad/µs).
+            Must either be empty or a tuple with at least two values,
+            matching the length of `detuning_hf_freqs`. Default is ().
+        detuning_hf_freqs: 1D tuple (in Hz) of relevant frequency support
+            for PSD. Along with PSD, it is required to define high frequency
+            noise contribution of time dependent detuning (in rad/µs).
+            Must either be empty or a tuple with at least two values,
+            matching the length of `detuning_hf_psd`. Default is ().
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1. Defaults to 0.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
@@ -206,6 +227,8 @@ class NoiseModel:
     laser_waist: float | None = None
     amp_sigma: float = 0.0
     detuning_sigma: float = 0.0
+    detuning_hf_psd: tuple[float, ...] = ()
+    detuning_hf_freqs: tuple[float, ...] = ()
     relaxation_rate: float = 0.0
     dephasing_rate: float = 0.0
     # if the trap depth is not None the trap waist should be 0.0
@@ -235,6 +258,9 @@ class NoiseModel:
         param_vals["eff_noise_rates"] = to_tuple(self.eff_noise_rates)
         param_vals["eff_noise_opers"] = to_tuple(self.eff_noise_opers)
 
+        param_vals["detuning_hf_psd"] = to_tuple(self.detuning_hf_psd)
+        param_vals["detuning_hf_freqs"] = to_tuple(self.detuning_hf_freqs)
+
         # Checking the type of provided positive and probability parameters
         for p_, val in param_vals.items():
             if p_ in _PROBABILITY_LIKE | _POSITIVE:
@@ -253,6 +279,10 @@ class NoiseModel:
         }
 
         self._check_leakage_noise(true_noise_types)
+        self._check_detuning_hf_noise(
+            param_vals["detuning_hf_psd"],
+            param_vals["detuning_hf_freqs"],
+        )
         self._check_eff_noise(
             cast(tuple, param_vals["eff_noise_rates"]),
             cast(tuple, param_vals["eff_noise_opers"]),
@@ -299,6 +329,8 @@ class NoiseModel:
                     stacklevel=2,
                 )
 
+    # make a function with explicity parameters
+    # _register_sigma_xy_z(tempera, trap_*)
     def _register_sigma_xy_z(self) -> tuple[float, float]:
         """Standard deviation for fluctuations in atom position in the trap.
 
@@ -344,18 +376,10 @@ class NoiseModel:
     ) -> None:
         if "register" not in true_noise_types:
             return
-        if trap_waist == 0.0 or trap_depth is None:
+        if trap_waist == 0.0 or trap_depth is None or temperature == 0.0:
             raise ValueError(
-                "trap_waist and trap_depth must be defined in "
-                "order to simulate register noise."
-            )
-        elif temperature == 0.0:
-            warnings.warn(
                 "trap_waist, trap_depth, and temperature must be defined in "
-                "order to simulate register noise. Temperature is "
-                f"{temperature} µK. Register noise will have no effect",
-                UserWarning,
-                stacklevel=2,
+                "order to simulate register noise."
             )
 
     @staticmethod
@@ -401,6 +425,52 @@ class NoiseModel:
                     + "Valid noise types: "
                     + ", ".join(get_args(NoiseTypes))
                 )
+
+    @staticmethod
+    def _check_detuning_hf_noise(
+        psd: tuple[float, ...],
+        freqs: tuple[float, ...],
+    ) -> None:
+        if (psd == ()) ^ (freqs == ()):
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_freqs` must either both be"
+                " empty tuples or both be provided."
+            )
+
+        if psd == ():
+            return
+
+        psd_a = np.asarray(psd)
+        freqs_a = np.asarray(freqs)
+
+        if psd_a.ndim != 1 or freqs_a.ndim != 1:
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_freqs`"
+                " are expected to be 1D tuples."
+            )
+
+        if psd_a.size != freqs_a.size:
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_freqs`"
+                " are expected to have the same length."
+            )
+
+        if psd_a.size <= 1:
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_freqs`"
+                " are expected to have length > 1."
+            )
+
+        if not (np.all(psd_a > 0) and np.all(freqs_a > 0)):
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_freqs`"
+                " are expected to have positive values."
+            )
+
+        if np.any(np.diff(freqs_a) < 0):
+            raise ValueError(
+                "`detuning_hf_freqs` are expected to be monotonously growing."
+            )
 
     @staticmethod
     def _check_eff_noise(
@@ -509,6 +579,12 @@ class NoiseModel:
         eff_noise_rates = all_fields.pop("eff_noise_rates")
         eff_noise_opers = all_fields.pop("eff_noise_opers")
         all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
+
+        if "detuning_hf_psd" in all_fields:
+            det_hf_psd = all_fields.pop("detuning_hf_psd")
+            det_hf_freqs = all_fields.pop("detuning_hf_freqs")
+            all_fields["detuning_hf"] = list(zip(det_hf_psd, det_hf_freqs))
+
         return all_fields
 
     def __repr__(self) -> str:
@@ -570,3 +646,48 @@ def _noisy_register(q_dict: dict, config: NoiseModel) -> dict:
     noise = np.column_stack((noise_xy, noise_z))
     positions += noise
     return {k: pos for (k, pos) in zip(atoms, positions)}
+
+
+def _generate_detuning_fluctuations(
+    noise_model: NoiseModel,
+    times: ArrayLike,
+    rng: Generator | None = None,
+) -> np.ndarray:
+    """Compute δ_hf(t) + δ_σ.
+
+    Generates the high-frequency time-dependent component together
+    with a constant offset of the detuning fluctuations.
+
+    Args:
+        noise_model (NoiseModel): class containing noise parameters
+        times (ArrayLike): array of sample times (in µs).
+
+    Notes
+    -----
+    High frequency term uses Gaussian stochastic noise with power
+        spectral density `psd`:
+        δ_hf(t) = Σ_k sqrt(2 * Δf_k * psd_k) * cos(2π(f_k * t + φ_k))
+        where φ_k ~ U[0, 1) (uniform random phase),
+        Δf_k = freqs[k+1] - freqs[k].
+        The last (freqs[-1], psd[-1]) is unused.
+    """
+    det_cst_term = 0.0
+    det_hf = np.zeros_like(times)
+
+    if rng is None:
+        rng = np.random.default_rng()
+
+    if noise_model.detuning_sigma:
+        det_cst_term = rng.normal(0.0, noise_model.detuning_sigma)
+
+    if noise_model.detuning_hf_psd:
+        t = np.asarray(times) * 1e-6  # µsec -> sec
+        freqs = np.asarray(noise_model.detuning_hf_freqs)[:-1]
+        psd = np.asarray(noise_model.detuning_hf_psd)[:-1]
+        df = np.diff(noise_model.detuning_hf_freqs)
+        amp = np.sqrt(2.0 * df * psd)
+        phases = rng.uniform(0.0, 1.0, size=len(freqs))
+        arg = freqs[:, None] * t[None, :] + phases[:, None]
+        det_hf = (amp[:, None] * np.cos(2.0 * np.pi * arg)).sum(axis=0)
+
+    return det_cst_term + det_hf
