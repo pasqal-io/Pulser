@@ -520,6 +520,17 @@ class TestNoiseModel:
         )
 
 
+def test_sigma_register_xy_z():
+    temperature = 15.0
+    trap_waist = 1.0
+    trap_depth = 150.0
+    sigma_xy, sigma_z = NoiseModel._register_sigma_xy_z(
+        temperature, trap_waist, trap_depth
+    )
+    assert 0.158 == pytest.approx(sigma_xy, abs=1e-2)
+    assert 0.826 == pytest.approx(sigma_z, abs=1e-2)
+
+
 @pytest.mark.parametrize(
     "register2D",
     [

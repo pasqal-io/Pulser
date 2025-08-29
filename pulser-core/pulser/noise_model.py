@@ -329,9 +329,10 @@ class NoiseModel:
                     stacklevel=2,
                 )
 
-    # make a function with explicity parameters
-    # _register_sigma_xy_z(tempera, trap_*)
-    def _register_sigma_xy_z(self) -> tuple[float, float]:
+    @staticmethod
+    def _register_sigma_xy_z(
+        temperature: float, trap_waist: float, trap_depth: float
+    ) -> tuple[float, float]:
         """Standard deviation for fluctuations in atom position in the trap.
 
         - Plane fluctuation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,
@@ -354,15 +355,14 @@ class NoiseModel:
             in the xy-plane (register_sigma_xy) and along the z-axis
             (register_sigma_z).
         """
-        tr_depth = cast(float, self.trap_depth)  # trap_depth is not None here
         register_sigma_xy = math.sqrt(
-            self.temperature * self.trap_waist**2 / (4 * tr_depth)
+            temperature * trap_waist**2 / (4 * trap_depth)
         )
         register_sigma_z = (
             math.pi
             / TRAP_WAVELENGTH
             * math.sqrt(2)
-            * self.trap_waist
+            * trap_waist
             * register_sigma_xy
         )
         return register_sigma_xy, register_sigma_z
@@ -631,7 +631,9 @@ class NoiseModel:
 
 def _noisy_register(q_dict: dict, config: NoiseModel) -> dict:
     """Add Gaussian noise to the positions of the register."""
-    register_sigma_xy, register_sigma_z = config._register_sigma_xy_z()
+    register_sigma_xy, register_sigma_z = config._register_sigma_xy_z(
+        config.temperature, config.trap_waist, cast(float, config.trap_depth)
+    )
     atoms = list(q_dict.keys())
     num_atoms = len(atoms)
     positions = np.array(list(q_dict.values()))
