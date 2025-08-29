@@ -769,7 +769,7 @@ def test_config(matrices):
         and noisy_amp_ham[0, 1] != clean_ham[0, 1]
     )
     assert sim._initial_state == qutip.tensor(
-        [qutip.basis(2, 1) for _ in range(2)]
+        *(qutip.basis(2, 1) for _ in range(2))
     )
     # Currently in ground state => initial state is extended without warning
     sim.set_config(
@@ -780,17 +780,17 @@ def test_config(matrices):
         )
     )
     assert sim._initial_state == qutip.tensor(
-        [qutip.basis(3, 1) for _ in range(2)]
+        *(qutip.basis(3, 1) for _ in range(2))
     )
     # Otherwise initial state is set to ground-state
-    sim.set_initial_state(qutip.tensor([qutip.basis(3, 0) for _ in range(2)]))
+    sim.set_initial_state(qutip.tensor(*(qutip.basis(3, 0) for _ in range(2))))
     with pytest.warns(
         UserWarning,
         match="Current initial state's dimension does not match new dim",
     ):
         sim.set_config(SimConfig(noise="SPAM", eta=0.5))
     assert sim._initial_state == qutip.tensor(
-        [qutip.basis(2, 1) for _ in range(2)]
+        *(qutip.basis(2, 1) for _ in range(2))
     )
 
 

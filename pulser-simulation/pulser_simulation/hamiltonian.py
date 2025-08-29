@@ -441,10 +441,7 @@ class Hamiltonian:
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
 
-        if (
-            "register" in self.config.noise_types
-            and self.config.trap_depth is not None
-        ):
+        if "register" in self.config.noise_types:
             # should be applied before the Hamiltonian is built
             self._qdict = _noisy_register(self._qdict, self.config)
 

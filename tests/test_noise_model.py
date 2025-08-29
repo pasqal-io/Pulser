@@ -611,8 +611,12 @@ def test_register_noise_no_warning_when_all_params_defined():
         ), f"Expected no warnings,got: {[r.message for r in rec]}"
 
 
-def test_check_register_and_doppler_noise_params_error():
-    """Doppler noise is activated when trap parameters are default."""
+def test_trap_param_default_and_temperature_set():
+    """Behavior of default trap parameters in presence of temperature.
+
+    Doppler noise is activated when temperature is set but trap parameters
+    are not.
+    """
     noise_model = NoiseModel(
         trap_waist=0.0,  # default
         trap_depth=None,  # default
