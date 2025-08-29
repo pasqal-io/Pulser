@@ -345,9 +345,9 @@ class NoiseModel:
 
         Args:
             temperature (float): Temperature (T) of the atoms in the trap
-            (in Kelvin).
+                (in Kelvin).
             trap_depth (float): Depth of the trap (Uₜᵣₐₚ)
-            (same units as temperature).
+                (same units as temperature).
             trap_waist (float): Waist of the trap (w) (in µmeters).
 
         Returns:
