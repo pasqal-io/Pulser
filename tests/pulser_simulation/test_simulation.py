@@ -1976,11 +1976,11 @@ def test_detuning_noise():
     digital_0 = sim_samples["Local"]["digital"]["q0"]["det"]
     digital_1 = sim_samples["Local"]["digital"]["q1"]["det"]
 
-    assert np.all(
-        np.isclose(rydberg_0, np.array([-0.04902824] * (2 * duration) + [0.0]))
+    np.testing.assert_allclose(
+        rydberg_0, np.array([-0.04902824] * (2 * duration) + [0.0])
     )
-    assert np.all(
-        np.isclose(rydberg_1, np.array([-0.04902824] * (2 * duration) + [0.0]))
+    np.testing.assert_allclose(
+        rydberg_1, np.array([-0.04902824] * (2 * duration) + [0.0])
     )
     assert np.all(
         np.isclose(
