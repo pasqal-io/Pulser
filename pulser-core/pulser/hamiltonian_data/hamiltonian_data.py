@@ -22,6 +22,7 @@ from dataclasses import replace
 from typing import Literal, cast
 
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy.spatial.distance import cdist
 
 import pulser.math as pm
@@ -37,6 +38,44 @@ from pulser.sampler.samples import (
     _PulseTargetSlot,
 )
 from pulser.sequence import Sequence
+
+
+def _generate_detuning_fluctuations(
+    noise_model: NoiseModel,
+    det_cst_term: float,
+    phases: np.ndarray,
+    times: ArrayLike,
+) -> np.ndarray:
+    """Compute δ_hf(t) + δ_σ.
+
+    Generates the high-frequency time-dependent component together
+    with a constant offset of the detuning fluctuations.
+
+    Args:
+        noise_model (NoiseModel): class containing noise parameters
+        times (ArrayLike): array of sample times (in µs).
+
+    Notes
+    -----
+    High frequency term uses Gaussian stochastic noise with power
+        spectral density `psd`:
+        δ_hf(t) = Σ_k sqrt(2 * Δf_k * psd_k) * cos(2π(f_k * t + φ_k))
+        where φ_k ~ U[0, 1) (uniform random phase),
+        Δf_k = freqs[k+1] - freqs[k].
+        The last (freqs[-1], psd[-1]) is unused.
+    """
+    det_hf = np.zeros_like(times)
+
+    if noise_model.detuning_hf_psd:
+        t = np.asarray(times) * 1e-6  # µsec -> sec
+        freqs = np.asarray(noise_model.detuning_hf_freqs)[1:]
+        psd = np.asarray(noise_model.detuning_hf_psd)[1:]
+        df = np.diff(noise_model.detuning_hf_freqs)
+        amp = np.sqrt(2.0 * df * psd)
+        arg = freqs[:, None] * t[None, :] + phases[:, None]
+        det_hf = (amp[:, None] * np.cos(2.0 * np.pi * arg)).sum(axis=0)
+
+    return det_cst_term + det_hf
 
 
 class HamiltonianData:
@@ -128,6 +167,7 @@ class HamiltonianData:
         self._doppler_detune: dict[str, float] = {}
         self._amp_fluctuations: dict[str, float] = {}
         self._det_fluctuations: dict[str, float] = {}
+        self._det_phases: dict[str, np.ndarray] = {}
 
         # Define interaction
         self._interaction: Literal["XY", "ising"] = (
@@ -233,7 +273,7 @@ class HamiltonianData:
             samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
             is_global_pulse: bool,
             amp_fluctuation: float,
-            det_fluctuation: float,
+            det_fluctuation: np.ndarray,
             propagation_dir: tuple | None,
         ) -> None:
             """Builds hamiltonian coefficients.
@@ -262,21 +302,28 @@ class HamiltonianData:
                         )
                     samples_dict[qid]["amp"][slot.ti : slot.tf] *= amp_fraction
                 if "detuning" in self.noise_model.noise_types:
-                    samples_dict[qid]["det"][
-                        slot.ti : slot.tf
-                    ] += det_fluctuation
+                    t_window = slice(slot.ti, slot.tf)
+                    samples_dict[qid]["det"][t_window] += det_fluctuation[
+                        t_window
+                    ]
 
         if local_noises:
             for ch, ch_samples in self._samples.channel_samples.items():
                 _ch_obj = self._samples._ch_objs[ch]
                 samples_dict = samples["Local"][_ch_obj.basis]
                 for slot in ch_samples.slots:
+                    det_fluctuation = _generate_detuning_fluctuations(
+                        self._config,
+                        self._det_fluctuations[ch],
+                        self._det_phases[ch],
+                        np.arange(0, self.samples.max_duration, 1),
+                    )
                     add_noise(
                         slot,
                         samples_dict,
                         _ch_obj.addressing == "Global",
                         amp_fluctuation=self._amp_fluctuations[ch],
-                        det_fluctuation=self._det_fluctuations[ch],
+                        det_fluctuation=det_fluctuation,
                         propagation_dir=_ch_obj.propagation_dir,
                     )
             channels = []
@@ -616,6 +663,12 @@ class HamiltonianData:
                 if self.noise_model.detuning_sigma
                 else 0.0
             )
+            if self._config.detuning_hf_freqs:
+                self._det_phases[ch] = np.random.uniform(
+                    0.0, 1.0, size=len(self._config.detuning_hf_freqs) - 1
+                )
+            else:
+                self._det_phases[ch] = np.array(0.0)
 
     def _get_basis_name(self, with_leakage: bool) -> str:
         if len(self._samples.used_bases) == 0:

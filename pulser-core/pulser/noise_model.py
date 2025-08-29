@@ -22,7 +22,6 @@ from dataclasses import dataclass, field, fields
 from typing import Any, Literal, Union, cast, get_args
 
 import numpy as np
-from numpy.random import Generator
 from numpy.typing import ArrayLike
 
 import pulser.json.abstract_repr as pulser_abstract_repr
@@ -564,48 +563,3 @@ class NoiseModel:
                 obj_str
             )
         )
-
-
-def _generate_detuning_fluctuations(
-    noise_model: NoiseModel,
-    times: ArrayLike,
-    rng: Generator | None = None,
-) -> np.ndarray:
-    """Compute δ_hf(t) + δ_σ.
-
-    Generates the high-frequency time-dependent component together
-    with a constant offset of the detuning fluctuations.
-
-    Args:
-        noise_model (NoiseModel): class containing noise parameters
-        times (ArrayLike): array of sample times (in µs).
-
-    Notes
-    -----
-    High frequency term uses Gaussian stochastic noise with power
-        spectral density `psd`:
-        δ_hf(t) = Σ_k sqrt(2 * Δf_k * psd_k) * cos(2π(f_k * t + φ_k))
-        where φ_k ~ U[0, 1) (uniform random phase),
-        Δf_k = freqs[k+1] - freqs[k].
-        The last (freqs[-1], psd[-1]) is unused.
-    """
-    det_cst_term = 0.0
-    det_hf = np.zeros_like(times)
-
-    if rng is None:
-        rng = np.random.default_rng()
-
-    if noise_model.detuning_sigma:
-        det_cst_term = rng.normal(0.0, noise_model.detuning_sigma)
-
-    if noise_model.detuning_hf_psd:
-        t = np.asarray(times) * 1e-6  # µsec -> sec
-        freqs = np.asarray(noise_model.detuning_hf_freqs)[:-1]
-        psd = np.asarray(noise_model.detuning_hf_psd)[:-1]
-        df = np.diff(noise_model.detuning_hf_freqs)
-        amp = np.sqrt(2.0 * df * psd)
-        phases = rng.uniform(0.0, 1.0, size=len(freqs))
-        arg = freqs[:, None] * t[None, :] + phases[:, None]
-        det_hf = (amp[:, None] * np.cos(2.0 * np.pi * arg)).sum(axis=0)
-
-    return det_cst_term + det_hf
