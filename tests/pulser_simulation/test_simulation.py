@@ -1998,7 +1998,6 @@ def test_detuning_noise(monkeypatch):
     )
 
 
-
 def test_detuning_hf_noise(monkeypatch):
     # Pulse creation
     duration = 10
