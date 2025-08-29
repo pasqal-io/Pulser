@@ -23,9 +23,9 @@ import qutip
 
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
+from pulser.hamiltonian_data import HamiltonianData
 from pulser.noise_model import NoiseModel, doppler_sigma
 from pulser.register.base_register import BaseRegister, QubitId
-from pulser.sampler.noisy_sampler import HamiltonianData
 from pulser.sampler.samples import SequenceSamples
 from pulser_simulation.simconfig import SUPPORTED_NOISES
 
