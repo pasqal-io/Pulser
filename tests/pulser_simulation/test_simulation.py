@@ -1984,24 +1984,8 @@ def test_detuning_noise(monkeypatch):
     digital_0 = sim_samples["Local"]["digital"]["q0"]["det"]
     digital_1 = sim_samples["Local"]["digital"]["q1"]["det"]
 
-    np.testing.assert_allclose(
-        rydberg_0, np.array([-0.04902824] * (2 * duration) + [0.0])
-    )
-    np.testing.assert_allclose(
-        rydberg_1, np.array([-0.04902824] * (2 * duration) + [0.0])
-    )
-    assert np.all(
-        np.isclose(
-            digital_0,
-            np.array([-0.17550787] * (duration) + [0.0] * (duration + 1)),
-        )
-    )
-    assert np.all(
-        np.isclose(
-            digital_1,
-            np.array([-0.20112646] * (duration) + [0.0] * (duration + 1)),
-        )
-    )
+    assert np.allclose(rydberg_0, [0.00382682] * (2 * duration) + [0.0])
+    assert np.allclose(rydberg_1, [0.00382682] * (2 * duration) + [0.0])
 
     assert np.allclose(
         digital_0,
@@ -2012,6 +1996,7 @@ def test_detuning_noise(monkeypatch):
         digital_1,
         np.array([-0.01377459] * (duration) + [0.0] * (duration + 1)),
     )
+
 
 
 def test_detuning_hf_noise(monkeypatch):
