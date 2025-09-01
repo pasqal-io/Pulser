@@ -123,7 +123,10 @@
           "type": "number"
         },
         "trap_depth": {
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "trap_waist": {
           "type": "number"
