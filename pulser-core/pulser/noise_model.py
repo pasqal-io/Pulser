@@ -295,6 +295,7 @@ class NoiseModel:
             cast(float, param_vals["state_prep_error"]),
             cast(float, param_vals["amp_sigma"]),
             cast(Union[float, None], param_vals["laser_waist"]),
+            cast(float, param_vals["temperature"]),
         )
 
         relevant_param_vals = {
@@ -388,6 +389,7 @@ class NoiseModel:
         state_prep_error: float,
         amp_sigma: float,
         laser_waist: float | None,
+        temperature: float,
     ) -> set[str]:
         relevant_params: set[str] = set()
         for nt_ in noise_types:
@@ -397,7 +399,7 @@ class NoiseModel:
                 or nt_ == "detuning"
                 or (nt_ == "amplitude" and amp_sigma != 0.0)
                 or (nt_ == "SPAM" and state_prep_error != 0.0)
-                or nt_ == "register"
+                or (nt_ == "register" and temperature != 0.0)
             ):
                 relevant_params.update(("runs", "samples_per_run"))
         # Disregard laser_waist when not defined
@@ -593,6 +595,7 @@ class NoiseModel:
             self.state_prep_error,
             self.amp_sigma,
             self.laser_waist,
+            self.temperature,
         )
         relevant_params.add("noise_types")
         params_list = []

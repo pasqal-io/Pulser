@@ -450,6 +450,7 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
         noise_model_obj["state_prep_error"],
         noise_model_obj["amp_sigma"],
         noise_model_obj["laser_waist"],
+        noise_model_obj["temperature"],
     ) - {  # Handled separately
         "eff_noise_rates",
         "eff_noise_opers",

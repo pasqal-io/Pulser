@@ -91,6 +91,7 @@ class TestNoiseModel:
             noise_model.state_prep_error,
             noise_model.amp_sigma,
             noise_model.laser_waist,
+            noise_model.temperature,
         )
         assert all(getattr(noise_model, p) == 1.0 for p in params)
         assert all(
@@ -377,20 +378,14 @@ class TestNoiseModel:
 
     def test_relevant_params(self):
         assert NoiseModel._find_relevant_params(
-            {"SPAM"},
-            0.0,
-            0.5,
-            100,
+            {"SPAM"}, 0.0, 0.5, 100, 0.0
         ) == {
             "state_prep_error",
             "p_false_pos",
             "p_false_neg",
         }
         assert NoiseModel._find_relevant_params(
-            {"SPAM"},
-            0.1,
-            0.5,
-            100,
+            {"SPAM"}, 0.1, 0.5, 100, 0.0
         ) == {
             "state_prep_error",
             "p_false_pos",
@@ -400,8 +395,9 @@ class TestNoiseModel:
         }
 
         assert NoiseModel._find_relevant_params(
-            {"register"}, 0.0, 0.0, None
+            {"register", "doppler"}, 0.0, 0.0, None, 0.0
         ) == {
+            "temperature",
             "trap_waist",
             "trap_depth",
             "runs",
@@ -409,55 +405,31 @@ class TestNoiseModel:
         }
 
         assert NoiseModel._find_relevant_params(
-            {"doppler"},
-            0.0,
-            0.0,
-            None,
+            {"doppler"}, 0.0, 0.0, None, 0.0
         ) == {"temperature", "runs", "samples_per_run"}
         assert NoiseModel._find_relevant_params(
-            {"amplitude"},
-            0.0,
-            1.0,
-            None,
+            {"amplitude"}, 0.0, 1.0, None, 0.0
         ) == {"amp_sigma", "runs", "samples_per_run"}
         assert NoiseModel._find_relevant_params(
-            {"amplitude"},
-            0.0,
-            0.0,
-            100.0,
+            {"amplitude"}, 0.0, 0.0, 100.0, 0.0
         ) == {"amp_sigma", "laser_waist"}
         assert NoiseModel._find_relevant_params(
-            {"amplitude"},
-            0.0,
-            0.5,
-            100.0,
+            {"amplitude"}, 0.0, 0.5, 100.0, 0.0
         ) == {"amp_sigma", "laser_waist", "runs", "samples_per_run"}
         assert NoiseModel._find_relevant_params(
-            {"dephasing", "leakage"},
-            0.0,
-            0.0,
-            None,
+            {"dephasing", "leakage"}, 0.0, 0.0, None, 0.0
         ) == {"dephasing_rate", "hyperfine_dephasing_rate", "with_leakage"}
         assert NoiseModel._find_relevant_params(
-            {"relaxation", "leakage"},
-            0.0,
-            0.0,
-            None,
+            {"relaxation", "leakage"}, 0.0, 0.0, None, 0.0
         ) == {"relaxation_rate", "with_leakage"}
         assert NoiseModel._find_relevant_params(
-            {"depolarizing", "leakage"},
-            0.0,
-            0.0,
-            None,
+            {"depolarizing", "leakage"}, 0.0, 0.0, None, 0.0
         ) == {"depolarizing_rate", "with_leakage"}
         assert NoiseModel._find_relevant_params(
-            {"eff_noise", "leakage"},
-            0.0,
-            0.0,
-            None,
+            {"eff_noise", "leakage"}, 0.0, 0.0, None, 0.0
         ) == {"eff_noise_rates", "eff_noise_opers", "with_leakage"}
         assert NoiseModel._find_relevant_params(
-            {"detuning"}, 0.0, 0.0, None
+            {"detuning"}, 0.0, 0.0, None, 0.0
         ) == {
             "detuning_sigma",
             "detuning_hf_psd",

@@ -925,6 +925,7 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
             state_prep_error=_LEGACY_DEFAULTS["state_prep_error"],
             amp_sigma=_LEGACY_DEFAULTS["amp_sigma"],
             laser_waist=_LEGACY_DEFAULTS["laser_waist"],
+            temperature=_LEGACY_DEFAULTS["temperature"],
         )
     }
     with_leakage = "leakage" in noise
@@ -1030,6 +1031,7 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
             state_prep_error=_LEGACY_DEFAULTS["state_prep_error"],
             amp_sigma=_LEGACY_DEFAULTS["amp_sigma"],
             laser_waist=_LEGACY_DEFAULTS["laser_waist"],
+            temperature=_LEGACY_DEFAULTS["temperature"],
         )
     }
     if "dephasing" in noise:
