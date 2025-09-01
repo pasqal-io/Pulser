@@ -527,6 +527,56 @@ def test_get_hamiltonian():
         simple_ham_noiseless.full(), simple_ham_noiseless_expected.full()
     )
 
+    np.random.seed(456)
+    simple_sim_noise = QutipEmulator.from_sequence(
+        simple_seq,
+        noise_model=NoiseModel(
+            runs=1,
+            samples_per_run=1,
+            temperature=50.0,
+            trap_depth=150.0,
+            trap_waist=1.0,
+        ),
+    )
+    simple_ham_noise = simple_sim_noise.get_hamiltonian(144)
+
+    np.testing.assert_allclose(
+        simple_ham_noise.full(),
+        np.array(
+            [
+                [
+                    4.8335284 + 0.0j,
+                    0.09606404 + 0.0j,
+                    0.09606404 + 0.0j,
+                    0.0 + 0.0j,
+                ],
+                [
+                    0.09606404 + 0.0j,
+                    -0.59902269 + 0.0j,
+                    0.0 + 0.0j,
+                    0.09606404 + 0.0j,
+                ],
+                [
+                    0.09606404 + 0.0j,
+                    0.0 + 0.0j,
+                    -0.70099956 + 0.0j,
+                    0.09606404 + 0.0j,
+                ],
+                [0.0 + 0.0j, 0.09606404 + 0.0j, 0.09606404 + 0.0j, 0.0 + 0.0j],
+            ]
+        ),
+    )
+
+    simple_ham_noiseless = simple_sim_noise.get_hamiltonian(
+        144, noiseless=True
+    )
+    simple_ham_noiseless_expected = QutipEmulator.from_sequence(
+        simple_seq
+    ).get_hamiltonian(144)
+    np.testing.assert_allclose(
+        simple_ham_noiseless.full(), simple_ham_noiseless_expected.full()
+    )
+
 
 def test_single_atom_simulation():
     one_reg = Register.from_coordinates([(0, 0)], prefix="atom")
