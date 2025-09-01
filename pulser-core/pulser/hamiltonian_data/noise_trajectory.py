@@ -1,5 +1,9 @@
+"""Definition of a noise trajectory."""
+
 from dataclasses import dataclass, field
+
 import numpy as np
+
 
 @dataclass(frozen=True)
 class NoiseTrajectory:
