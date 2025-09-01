@@ -2155,7 +2155,6 @@ def test_detuning_hf_noise(monkeypatch):
 
 
 def test_noise_hf_detuning_generation():
-
     def original_formula_gen_noise(psd, freqs, times, phases):
         """Compute δ_hf(t).
 
@@ -2163,7 +2162,7 @@ def test_noise_hf_detuning_generation():
             psd : in Hz²/Hz
             freqs : in Hz
             times : in µs, is converted to seconds inside
-            rng : random number generator
+            phases : phase offsets
         """
         hf_detun = np.zeros_like(times)
         times *= 1e-6  # µsec -> sec
