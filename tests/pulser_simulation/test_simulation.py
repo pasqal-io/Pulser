@@ -838,9 +838,9 @@ def test_noise_with_zero_epsilons(seq, matrices):
     sim2 = QutipEmulator.from_sequence(
         seq,
         sampling_rate=0.01,
-        config=SimConfig(
+        noise_model=SimConfig(
             noise=("SPAM"), eta=0.0, epsilon=0.0, epsilon_prime=0.0
-        ),
+        ).to_noise_model(),
     )
     assert sim2.config.noise == ()
 
