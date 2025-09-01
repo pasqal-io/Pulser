@@ -186,13 +186,13 @@ def test_interaction_matrix(channel_type):
     if channel_type == "rydberg_global":
         interaction_size = ham._device.interaction_coeff / 8**6
         assert np.allclose(
-            ham.interaction_matrix,
+            ham._interaction_matrix,
             np.array([[0.0, interaction_size], [interaction_size, 0.0]]),
         )
     elif channel_type == "mw_global":
         interaction_size = ham._device.interaction_coeff_xy / 8**3
         assert np.allclose(
-            ham.interaction_matrix,
+            ham._interaction_matrix,
             np.array([[0.0, interaction_size], [interaction_size, 0.0]]),
         )
     else:
@@ -225,14 +225,14 @@ def test_interaction_matrix_torch(channel_type):
     if channel_type == "rydberg_global":
         interaction_size = ham._device.interaction_coeff / 8**6
         assert torch.allclose(
-            ham.interaction_matrix,
+            ham._interaction_matrix,
             torch.tensor(
                 [[0.0, interaction_size], [interaction_size, 0.0]],
                 dtype=torch.float64,
             ),
         )
         gr = torch.autograd.grad(
-            ham.interaction_matrix[0, 1], q_dict["superman"]
+            ham._interaction_matrix[0, 1], q_dict["superman"]
         )
         assert torch.allclose(
             gr[0],
@@ -244,14 +244,14 @@ def test_interaction_matrix_torch(channel_type):
     elif channel_type == "mw_global":
         interaction_size = ham._device.interaction_coeff_xy / 8**3
         assert torch.allclose(
-            ham.interaction_matrix,
+            ham._interaction_matrix,
             torch.tensor(
                 [[0.0, interaction_size], [interaction_size, 0.0]],
                 dtype=torch.float64,
             ),
         )
         gr = torch.autograd.grad(
-            ham.interaction_matrix[0, 1], q_dict["superman"]
+            ham._interaction_matrix[0, 1], q_dict["superman"]
         )
         assert torch.allclose(
             gr[0],
@@ -283,7 +283,7 @@ def test_noisy_interaction_matrix():
     noise = pulser.NoiseModel(state_prep_error=1.0, runs=1)
     ham = HamiltonianData.from_sequence(seq, noise_model=noise)
     assert np.allclose(
-        ham.noisy_interaction_matrix, np.zeros_like(ham.interaction_matrix)
+        ham.noisy_interaction_matrix, np.zeros_like(ham._interaction_matrix)
     )
 
 
@@ -307,5 +307,5 @@ def test_noisy_interaction_matrix_torch():
     noise = pulser.NoiseModel(state_prep_error=1.0, runs=1)
     ham = HamiltonianData.from_sequence(seq, noise_model=noise)
     assert torch.allclose(
-        ham.noisy_interaction_matrix, torch.zeros_like(ham.interaction_matrix)
+        ham.noisy_interaction_matrix, torch.zeros_like(ham._interaction_matrix)
     )

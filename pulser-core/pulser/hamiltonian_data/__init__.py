@@ -5,3 +5,4 @@ and a list of noise trajectories.
 """
 
 from .hamiltonian_data import HamiltonianData
+from .noise_trajectory import NoiseTrajectory

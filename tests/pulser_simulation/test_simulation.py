@@ -831,10 +831,10 @@ def test_noise(seq, matrices):
     assert (
         sim2._hamiltonian.data.noisy_samples.to_nested_dict()["Global"] == {}
     )
-    assert any(sim2._hamiltonian.data._bad_atoms.values())
+    assert any(sim2._hamiltonian.data.noise_trajectory.bad_atoms.values())
     for basis in ("ground-rydberg", "digital"):
-        for t in sim2._hamiltonian.data._bad_atoms:
-            if not sim2._hamiltonian.data._bad_atoms[t]:
+        for t in sim2._hamiltonian.data.noise_trajectory.bad_atoms:
+            if not sim2._hamiltonian.data.noise_trajectory.bad_atoms[t]:
                 continue
             for qty in ("amp", "det", "phase"):
                 assert np.all(
@@ -1419,7 +1419,7 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
         if not with_leakage
         else {"SPAM", "leakage", "eff_noise"}
     )
-    assert sim._hamiltonian.data._bad_atoms == {
+    assert sim._hamiltonian.data.noise_trajectory.bad_atoms == {
         "atom0": True,
         "atom1": False,
         "atom2": True,
@@ -1691,7 +1691,7 @@ def test_effective_size_intersection():
                 p_false_neg=0.05,
             ),
         )
-        assert sim._hamiltonian.data._bad_atoms == {
+        assert sim._hamiltonian.data.noise_trajectory.bad_atoms == {
             "atom0": True,
             "atom1": False,
             "atom2": True,
@@ -1732,7 +1732,7 @@ def test_effective_size_disjoint(channel_type):
             p_false_neg=0.05,
         ),
     )
-    assert sim._hamiltonian.data._bad_atoms == {
+    assert sim._hamiltonian.data.noise_trajectory.bad_atoms == {
         "atom0": True,
         "atom1": False,
         "atom2": True,
@@ -1850,7 +1850,7 @@ def test_simulation_with_modulation(
         )
         np.testing.assert_equal(
             raman_samples[qid]["det"][time_slice],
-            sim._hamiltonian.data._doppler_detune[qid],
+            sim._hamiltonian.data.noise_trajectory.doppler_detune[qid],
         )
         np.testing.assert_allclose(
             raman_samples[qid]["phase"][time_slice], float(pulse1.phase)
@@ -1886,7 +1886,7 @@ def test_simulation_with_modulation(
         )
         np.testing.assert_equal(
             rydberg_samples[qid]["det"][time_slice],
-            sim._hamiltonian.data._doppler_detune[qid],
+            sim._hamiltonian.data.noise_trajectory.doppler_detune[qid],
         )
         np.testing.assert_allclose(
             rydberg_samples[qid]["phase"][time_slice], float(pulse1.phase)

@@ -31,6 +31,7 @@ import pulser.sampler as sampler
 from pulser import Sequence
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
+from pulser.hamiltonian_data import NoiseTrajectory
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import BaseRegister
 from pulser.result import SampledResult
@@ -790,13 +791,22 @@ class QutipEmulator:
             else:
                 initial_state, reps = initial_configs[i]
                 # We load the initial state manually
-                self._hamiltonian.data._bad_atoms = dict(
-                    zip(
-                        self._hamiltonian.data._qid_index,
-                        # "0110..." -> array([0, 1, 1, 0, ...])
-                        # -> array([False, True, True, False, ...])
-                        np.array(list(initial_state), dtype=int).astype(bool),
-                    )
+                old_traj = self._hamiltonian.data.noise_trajectory
+                self._hamiltonian.data.noise_trajectory = NoiseTrajectory(
+                    dict(
+                        zip(
+                            self._hamiltonian.data._qid_index,
+                            # "0110..." -> array([0, 1, 1, 0, ...])
+                            # -> array([False, True, True, False, ...])
+                            np.array(list(initial_state), dtype=int).astype(
+                                bool
+                            ),
+                        )
+                    ),
+                    old_traj.doppler_detune,
+                    old_traj.amp_fluctuations,
+                    old_traj.det_fluctuations,
+                    old_traj.det_phases,
                 )
             # At each run, new random noise: new Hamiltonian
             self._hamiltonian._construct_hamiltonian(update=update_ham)

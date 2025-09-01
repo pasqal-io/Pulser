@@ -23,7 +23,7 @@ import qutip
 
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
-from pulser.hamiltonian_data import HamiltonianData
+from pulser.hamiltonian_data import HamiltonianData, NoiseTrajectory
 from pulser.noise_model import NoiseModel, doppler_sigma
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler.samples import SequenceSamples
@@ -277,13 +277,25 @@ class Hamiltonian:
                 np.random.uniform(size=len(self.data._qid_index))
                 < self.data.noise_model.state_prep_error
             )
-            self.data._bad_atoms = dict(zip(self.data._qid_index, dist))
+            bad_atoms = dict(zip(self.data._qid_index, dist))
+        else:
+            bad_atoms = {qid: False for qid in self.data._qid_index}
         if "doppler" in self.data.noise_model.noise_types:
             temp = self.data.noise_model.temperature * 1e-6
             detune = np.random.normal(
                 0, doppler_sigma(temp), size=len(self.data._qid_index)
             )
-            self.data._doppler_detune = dict(zip(self.data._qid_index, detune))
+            doppler_detune = dict(zip(self.data._qid_index, detune))
+        else:
+            doppler_detune = {qid: 0.0 for qid in self.data._qid_index}
+        old_traj = self.data.noise_trajectory
+        self.data.noise_trajectory = NoiseTrajectory(
+            bad_atoms,
+            doppler_detune,
+            old_traj.amp_fluctuations,
+            old_traj.det_fluctuations,
+            old_traj.det_phases,
+        )
 
     def _construct_hamiltonian(self, update: bool = True) -> None:
         """Constructs the hamiltonian from the sampled Sequence and noise.
@@ -338,10 +350,10 @@ class Hamiltonian:
             if masked:
                 # Calculate the total number of good, unmasked qubits
                 effective_size = self.nbqudits - sum(
-                    self.data._bad_atoms.values()
+                    self.data.noise_trajectory.bad_atoms.values()
                 )
                 for q in self.data.samples._slm_mask.targets:
-                    if not self.data._bad_atoms[q]:
+                    if not self.data.noise_trajectory.bad_atoms[q]:
                         effective_size -= 1
                 if effective_size < 2:
                     return 0 * self.build_operator([("I", "global")])
@@ -350,8 +362,8 @@ class Hamiltonian:
             dipole_interaction = cast(qutip.Qobj, 0)
             for q1, q2 in itertools.combinations(self.data._qdict.keys(), r=2):
                 if (
-                    self.data._bad_atoms[q1]
-                    or self.data._bad_atoms[q2]
+                    self.data.noise_trajectory.bad_atoms[q1]
+                    or self.data.noise_trajectory.bad_atoms[q2]
                     or (
                         masked
                         and self.data._interaction == "XY"
@@ -428,7 +440,7 @@ class Hamiltonian:
         qobj_list = []
         # Time independent term:
         effective_size = self.data.nbqudits - sum(
-            self.data._bad_atoms.values()
+            self.data.noise_trajectory.bad_atoms.values()
         )
         if "digital" not in self.basis_name and effective_size > 1:
             # Build time-dependent or time-independent interaction term based
