@@ -2809,8 +2809,19 @@ class TestDeserialization:
     [[(), ()], [(1.0, 2.0, 3.0), (4.0, 5.0, 6.0)]],
 )
 @pytest.mark.parametrize("detuning_sigma", [0.0, 1.0])
-def test_noise_optional_params(detuning_sigma, det_hf_psd, det_hf_freqs):
-    noise = pulser.noise_model.NoiseModel(
+@pytest.mark.parametrize(
+    "temperature,trap_depth, trap_waist",
+    [(0.0, None, 0.0), (50.0, 150.0, 1.0)],
+)
+def test_noise_optional_params(
+    detuning_sigma,
+    det_hf_psd,
+    det_hf_freqs,
+    temperature,
+    trap_depth,
+    trap_waist,
+):
+    noise = pulser.NoiseModel(
         runs=1,  # TODO: connect this with MCArlo
         samples_per_run=1,  # TODO: connect this with MCarlo or ignored
         state_prep_error=0.1,
@@ -2819,15 +2830,18 @@ def test_noise_optional_params(detuning_sigma, det_hf_psd, det_hf_freqs):
         laser_waist=5,
         amp_sigma=0.1,
         detuning_sigma=detuning_sigma,
+        trap_waist=trap_waist,
+        trap_depth=trap_depth,
         detuning_hf_psd=det_hf_psd,
         detuning_hf_freqs=det_hf_freqs,
-        temperature=10.0,
+        temperature=temperature,
         with_leakage=True,
         eff_noise_rates=(0.1,),
         eff_noise_opers=(np.random.rand(3, 3),),
         hyperfine_dephasing_rate=1.5,
     )
     repr = noise._to_abstract_repr()
+    print(repr)
 
     if detuning_sigma != 0.0:
         assert "detuning_sigma" in repr
@@ -2840,3 +2854,17 @@ def test_noise_optional_params(detuning_sigma, det_hf_psd, det_hf_freqs):
         assert repr["detuning_hf"] == (list(zip(det_hf_psd, det_hf_freqs)))
     else:
         assert "detuning_hf" not in repr
+
+    if trap_depth is not None and trap_waist != 0.0:
+        assert "trap_waist" in repr
+        assert "trap_depth" in repr
+        assert "temperature" in repr
+        assert repr["trap_waist"] == trap_waist
+        assert repr["trap_depth"] == trap_depth
+        assert "register" in repr["noise_types"]
+        assert "doppler" in repr["noise_types"]
+    else:
+        assert "trap_waist" not in repr
+        assert "trap_depth" not in repr
+        assert "register" not in repr["noise_types"]
+        assert "doppler" not in repr["noise_types"]
