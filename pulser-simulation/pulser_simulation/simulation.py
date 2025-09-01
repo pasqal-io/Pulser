@@ -417,7 +417,7 @@ class QutipEmulator:
             # Note: if `value` is very small `eval_times` is an empty list:
             eval_times = self._hamiltonian.sampling_times[indices]
         elif isinstance(value, (list, tuple, np.ndarray)):
-            if np.max(value, initial=0) > self._tot_duration / 1000:
+            if np.max(value, initial=0) > self._tot_duration * 1e-3:
                 raise ValueError(
                     "Provided evaluation-time list extends "
                     "further than sequence duration."
@@ -436,7 +436,7 @@ class QutipEmulator:
             )
         # Ensure 0 and final time are included:
         self._eval_times_array = np.union1d(
-            eval_times, [0.0, self._tot_duration / 1000]
+            eval_times, [0.0, self._tot_duration * 1e-3]
         )
         self._eval_times_instruction = value
 
