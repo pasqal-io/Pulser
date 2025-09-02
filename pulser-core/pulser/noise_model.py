@@ -141,7 +141,7 @@ class NoiseModel:
       Parametrized by the ``temperature`` field.
     - **register**: Thermal fluctuations in the
       register positions, parametrized by ``temperature``, ``trap_waist``
-      and, ``trap_depth``, which must all be defined
+      and ``trap_depth``, which must all be defined.
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
