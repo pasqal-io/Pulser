@@ -25,6 +25,7 @@ from pulser.noise_model import (
     _PARAM_TO_NOISE_TYPE,
     NoiseModel,
     _noisy_register,
+    _register_sigma_xy_z,
 )
 
 
@@ -531,7 +532,7 @@ def test_sigma_register_xy_z():
     temperature = 15.0
     trap_waist = 1.0
     trap_depth = 150.0
-    sigma_xy, sigma_z = NoiseModel._register_sigma_xy_z(
+    sigma_xy, sigma_z = _register_sigma_xy_z(
         temperature, trap_waist, trap_depth
     )
     assert 0.158 == pytest.approx(sigma_xy, abs=1e-2)
@@ -547,9 +548,6 @@ def test_sigma_register_xy_z():
 )
 def test_noisy_register(register2D) -> None:
     """Testing noisy_register function in case 2D and 3D register."""
-    noise_model = MagicMock()
-    noise_model._register_sigma_xy_z.return_value = (0.13, 0.8)
-
     if register2D:
         qdict = {
             "q0": np.array([-15.0, 0.0]),
@@ -575,13 +573,18 @@ def test_noisy_register(register2D) -> None:
         ]
     )
     fake_normal_z_noise = np.array([0.05, 0.07, 0.09, 0.11])
-    with patch("numpy.random.normal") as mock_normal:
-        # moke the noise generation
-        mock_normal.side_effect = [
-            fake_normal_xy_noise,
-            fake_normal_z_noise,
-        ]
-        result = _noisy_register(qdict, noise_model)
+
+    mock_noise_model = MagicMock(spec=NoiseModel)  # generic NoiseModel class
+    with patch(
+        "pulser.noise_model._register_sigma_xy_z", return_value=(0.13, 0.8)
+    ):
+        with patch("numpy.random.normal") as mock_normal:
+            # moke the noise generation
+            mock_normal.side_effect = [
+                fake_normal_xy_noise,
+                fake_normal_z_noise,
+            ]
+            result = _noisy_register(qdict, mock_noise_model)
     expected_positions = {
         "q0": np.array([-15.0 + 0.1, 0.0 - 0.1, 0.05]),
         "q1": np.array([-5.0 + 0.2, 0.0 - 0.2, 0.07]),

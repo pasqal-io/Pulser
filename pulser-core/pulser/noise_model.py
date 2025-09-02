@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import warnings
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field, fields
@@ -32,7 +33,7 @@ from pulser.json.utils import get_dataclass_defaults
 
 __all__ = ["NoiseModel"]
 
-TRAP_WAVELENGTH = 0.85  # µm
+TRAP_WAVELENGTH = float(os.getenv("TRAP_WAVELENGTH", 0.85))  # µm
 
 NoiseTypes = Literal[
     "leakage",
@@ -341,6 +342,7 @@ class NoiseModel:
         temperature: float,
     ) -> None:
         if "register" not in true_noise_types:
+            # trap_waist and trap_depth have default values
             return
         if trap_waist == 0.0 or trap_depth is None or temperature == 0.0:
             raise ValueError(
@@ -358,6 +360,8 @@ class NoiseModel:
         relevant_params: set[str] = set()
         for nt_ in noise_types:
             relevant_params.update(_NOISE_TYPE_PARAMS[nt_])
+            if nt_ == "register":
+                relevant_params.add("temperature")
             if (
                 nt_ == "doppler"
                 or nt_ == "detuning"
