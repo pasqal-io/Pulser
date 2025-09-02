@@ -141,7 +141,11 @@ class NoiseModel:
       Parametrized by the ``temperature`` field.
     - **register**: Thermal fluctuations in the
       register positions, parametrized by ``temperature``, ``trap_waist``
-      and ``trap_depth``, which must all be defined.
+      and, ``trap_depth``, which must all be defined,
+        - Plane standard deviation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is
+        temperature, w is the trap waist and Uₜᵣₐₚ is the trap depth.
+        - Off plane standard deviation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the
+        trap wavelength with a constant value of 0.85 µm
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
@@ -295,7 +299,6 @@ class NoiseModel:
             cast(float, param_vals["state_prep_error"]),
             cast(float, param_vals["amp_sigma"]),
             cast(Union[float, None], param_vals["laser_waist"]),
-            cast(float, param_vals["temperature"]),
         )
 
         relevant_param_vals = {
@@ -331,44 +334,6 @@ class NoiseModel:
                 )
 
     @staticmethod
-    def _register_sigma_xy_z(
-        temperature: float, trap_waist: float, trap_depth: float
-    ) -> tuple[float, float]:
-        """Standard deviation for fluctuations in atom position in the trap.
-
-        - Plane fluctuation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,
-          w is the trap waist and Uₜᵣₐₚ is the trap depth.
-        - Off plane fluctuation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the trap
-        wavelength with a constant value of 0.85 µm
-
-        Note: a k_B factor is absorbed in the trap depth (Uₜᵣₐₚ), so the units
-        of temperature and trap depth are the same.
-
-        Args:
-            temperature (float): Temperature (T) of the atoms in the trap
-                (in Kelvin).
-            trap_depth (float): Depth of the trap (Uₜᵣₐₚ)
-                (same units as temperature).
-            trap_waist (float): Waist of the trap (w) (in µmeters).
-
-        Returns:
-            tuple: The standard deviations of the spatial position fluctuations
-            in the xy-plane (register_sigma_xy) and along the z-axis
-            (register_sigma_z).
-        """
-        register_sigma_xy = math.sqrt(
-            temperature * trap_waist**2 / (4 * trap_depth)
-        )
-        register_sigma_z = (
-            math.pi
-            / TRAP_WAVELENGTH
-            * math.sqrt(2)
-            * trap_waist
-            * register_sigma_xy
-        )
-        return register_sigma_xy, register_sigma_z
-
-    @staticmethod
     def _check_register_noise_params(
         true_noise_types: Collection[NoiseTypes],
         trap_waist: float,
@@ -389,7 +354,6 @@ class NoiseModel:
         state_prep_error: float,
         amp_sigma: float,
         laser_waist: float | None,
-        temperature: float,
     ) -> set[str]:
         relevant_params: set[str] = set()
         for nt_ in noise_types:
@@ -399,7 +363,7 @@ class NoiseModel:
                 or nt_ == "detuning"
                 or (nt_ == "amplitude" and amp_sigma != 0.0)
                 or (nt_ == "SPAM" and state_prep_error != 0.0)
-                or (nt_ == "register" and temperature != 0.0)
+                or nt_ == "register"
             ):
                 relevant_params.update(("runs", "samples_per_run"))
         # Disregard laser_waist when not defined
@@ -595,7 +559,6 @@ class NoiseModel:
             self.state_prep_error,
             self.amp_sigma,
             self.laser_waist,
-            self.temperature,
         )
         relevant_params.add("noise_types")
         params_list = []
@@ -632,9 +595,47 @@ class NoiseModel:
         )
 
 
+def _register_sigma_xy_z(
+    temperature: float, trap_waist: float, trap_depth: float
+) -> tuple[float, float]:
+    """Standard deviation for fluctuations in atom position in the trap.
+
+    - Plane fluctuation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,
+      w is the trap waist and Uₜᵣₐₚ is the trap depth.
+    - Off plane fluctuation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the trap
+    wavelength with a constant value of 0.85 µm
+
+    Note: a k_B factor is absorbed in the trap depth (Uₜᵣₐₚ), so the units
+    of temperature and trap depth are the same.
+
+    Args:
+        temperature (float): Temperature (T) of the atoms in the trap
+            (in Kelvin).
+        trap_depth (float): Depth of the trap (Uₜᵣₐₚ)
+            (same units as temperature).
+        trap_waist (float): Waist of the trap (w) (in µmeters).
+
+    Returns:
+        tuple: The standard deviations of the spatial position fluctuations
+        in the xy-plane (register_sigma_xy) and along the z-axis
+        (register_sigma_z).
+    """
+    register_sigma_xy = math.sqrt(
+        temperature * trap_waist**2 / (4 * trap_depth)
+    )
+    register_sigma_z = (
+        math.pi
+        / TRAP_WAVELENGTH
+        * math.sqrt(2)
+        * trap_waist
+        * register_sigma_xy
+    )
+    return register_sigma_xy, register_sigma_z
+
+
 def _noisy_register(q_dict: dict, config: NoiseModel) -> dict:
     """Add Gaussian noise to the positions of the register."""
-    register_sigma_xy, register_sigma_z = config._register_sigma_xy_z(
+    register_sigma_xy, register_sigma_z = _register_sigma_xy_z(
         config.temperature, config.trap_waist, cast(float, config.trap_depth)
     )
     atoms = list(q_dict.keys())
