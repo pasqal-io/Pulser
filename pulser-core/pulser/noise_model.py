@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import json
 import math
-import os
 import warnings
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field, fields
@@ -33,7 +32,7 @@ from pulser.json.utils import get_dataclass_defaults
 
 __all__ = ["NoiseModel"]
 
-TRAP_WAVELENGTH = float(os.getenv("TRAP_WAVELENGTH", 0.85))  # µm
+TRAP_WAVELENGTH = 0.85  # µm
 
 NoiseTypes = Literal[
     "leakage",
