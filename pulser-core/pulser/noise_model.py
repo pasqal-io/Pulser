@@ -142,9 +142,10 @@ class NoiseModel:
     - **register**: Thermal fluctuations in the
       register positions, parametrized by ``temperature``, ``trap_waist``
       and, ``trap_depth``, which must all be defined,
-      - Plane standard deviation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is
-      temperature, w is the trap waist and Uₜᵣₐₚ is the trap depth.
-      - Off plane standard deviation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the
+
+      - Plane standard deviation: :math:`\sigma^{xy} = \sqrt{\frac{T w²}{4 U_{trap}}}`, where T is
+      temperature, w is the trap waist and :math:`U_{trap}` is the trap depth.
+      - Off plane standard deviation: :math:`\sigma^z = \frac{\pi}{\lambda \sqrt{2} w \sigma^{xy}}`, where :math:`lambda` is the
       trap wavelength with a constant value of 0.85 µm
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
