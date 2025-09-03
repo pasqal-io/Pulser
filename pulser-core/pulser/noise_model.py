@@ -151,6 +151,7 @@ class NoiseModel:
         :math:`\sigma^z = \frac{\pi}{\lambda}\sqrt{2} w \sigma^{xy}`, where
         :math:`\lambda` is the trap wavelength with a constant value of
         0.85 µm.
+
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
