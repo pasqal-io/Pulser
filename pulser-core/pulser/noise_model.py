@@ -142,7 +142,6 @@ class NoiseModel:
     - **register**: Thermal fluctuations in the
       register positions, parametrized by ``temperature``, ``trap_waist``
       and, ``trap_depth``, which must all be defined,
-
       - Plane standard deviation:
       :math:`\\sigma^{xy} = \\sqrt{\\frac{T w^2}{4 U_{trap}}}`, where T is
       temperature, w is the trap waist and :math:`U_{trap}` is the trap depth.
