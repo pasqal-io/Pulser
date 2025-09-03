@@ -112,7 +112,7 @@ OPTIONAL_IN_ABSTR_REPR = (
 
 @dataclass(init=True, repr=False, frozen=True)
 class NoiseModel:
-    """Specifies the noise model parameters for emulation.
+    r"""Specifies the noise model parameters for emulation.
 
     **Supported noise types:**
 
