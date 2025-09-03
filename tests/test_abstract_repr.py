@@ -235,11 +235,20 @@ def test_register(reg: Register | Register3D):
             detuning_hf_freqs=(4, 5, 6),
             runs=1,
         ),
+        NoiseModel(
+            temperature=50.0,
+            trap_depth=150.0,
+            trap_waist=1.0,
+            runs=1,
+            samples_per_run=1,
+        ),
+        NoiseModel(temperature=50.0, trap_depth=150.0, trap_waist=1.0, runs=1),
     ],
 )
 def test_noise_model(noise_model: NoiseModel):
     ser_noise_model_str = noise_model.to_abstract_repr()
     re_noise_model = NoiseModel.from_abstract_repr(ser_noise_model_str)
+
     assert noise_model == re_noise_model
 
     # Define parameters with defaults, like it was done before
@@ -2841,7 +2850,6 @@ def test_noise_optional_params(
         hyperfine_dephasing_rate=1.5,
     )
     repr = noise._to_abstract_repr()
-    print(repr)
 
     if detuning_sigma != 0.0:
         assert "detuning_sigma" in repr
