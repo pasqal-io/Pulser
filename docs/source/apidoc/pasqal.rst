@@ -22,7 +22,7 @@ Backends
    EmuMPSBackend
 
 Deprecated Backends
-------------------
+--------------------
 
 .. autosummary::
    :toctree: _autosummary
