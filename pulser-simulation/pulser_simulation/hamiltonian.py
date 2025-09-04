@@ -27,7 +27,11 @@ import qutip
 import pulser.math as pm
 from pulser.channels.base_channel import STATES_RANK, States
 from pulser.devices._device_datacls import BaseDevice
-from pulser.noise_model import NoiseModel
+from pulser.noise_model import (
+    NoiseModel,
+    _generate_detuning_fluctuations,
+    _noisy_register,
+)
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
@@ -272,7 +276,7 @@ class Hamiltonian:
             samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
             is_global_pulse: bool,
             amp_fluctuation: float,
-            det_fluctuation: float,
+            det_fluctuation: np.ndarray,
             propagation_dir: tuple | None,
         ) -> None:
             """Builds hamiltonian coefficients.
@@ -286,6 +290,7 @@ class Hamiltonian:
                     samples_dict[qid]["det"][slot.ti : slot.tf] += noise_det
                 # Gaussian beam loss in amplitude for global pulses only
                 # Noise is drawn at random for each pulse
+
                 if "amplitude" in self.config.noise_types:
                     amp_fraction = amp_fluctuation
                     if self.config.laser_waist is not None and is_global_pulse:
@@ -298,9 +303,10 @@ class Hamiltonian:
                         )
                     samples_dict[qid]["amp"][slot.ti : slot.tf] *= amp_fraction
                 if "detuning" in self.config.noise_types:
-                    samples_dict[qid]["det"][
-                        slot.ti : slot.tf
-                    ] += det_fluctuation
+                    t_window = slice(slot.ti, slot.tf)
+                    samples_dict[qid]["det"][t_window] += det_fluctuation[
+                        t_window
+                    ]
 
         if local_noises:
             for ch, ch_samples in self.samples_obj.channel_samples.items():
@@ -309,11 +315,11 @@ class Hamiltonian:
                 ch_amp_fluctuation = max(
                     0, np.random.normal(1.0, self.config.amp_sigma)
                 )
-                ch_det_fluctuation = (
-                    np.random.normal(0.0, self.config.detuning_sigma)
-                    if self.config.detuning_sigma
-                    else 0.0
+
+                ch_det_fluctuation = _generate_detuning_fluctuations(
+                    self.config, self.sampling_times
                 )
+
                 for slot in ch_samples.slots:
                     add_noise(
                         slot,
@@ -435,6 +441,10 @@ class Hamiltonian:
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
 
+        if "register" in self.config.noise_types:
+            # should be applied before the Hamiltonian is built
+            self._qdict = _noisy_register(self._qdict, self.config)
+
     def _get_basis_name(self, with_leakage: bool) -> str:
         if len(self.samples_obj.used_bases) == 0:
             if self.samples_obj._in_xy:
@@ -478,7 +488,8 @@ class Hamiltonian:
 
         Warning:
             The refreshed noise parameters (when update=True) are only those
-            that change from shot to shot (ie doppler and state preparation).
+            that change from shot to shot (ie doppler, state preparation,
+            and register).
             Amplitude fluctuations change from pulse to pulse and are always
             applied in `_extract_samples()`.
 

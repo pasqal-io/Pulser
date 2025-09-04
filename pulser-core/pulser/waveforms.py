@@ -57,7 +57,9 @@ T = TypeVar("T", int, float)
 
 def _cast_check(type_: type[T], value: Any, name: str) -> T:
     try:
-        return type_(value)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=UserWarning)
+            return type_(value)
     except (ValueError, TypeError) as e:
         raise TypeError(
             f"'{name}' needs to be castable to {type_.__name__!s} "
@@ -1138,7 +1140,7 @@ class KaiserWaveform(Waveform):
         # Compute the ratio area / duration for a long duration
         # and use this value for a first guess of the best duration
 
-        ratio: float = max_val * np.sum(np.kaiser(100, beta)) / 100
+        ratio: np.floating = max_val * np.sum(np.kaiser(100, beta)) / 100
         duration_guess: int = int(area_float * 1000.0 / ratio)
 
         duration_best: int = 0
@@ -1147,13 +1149,13 @@ class KaiserWaveform(Waveform):
             # Because of the seesawing effect on short durations,
             # all solutions must be tested to find the best one
 
-            max_val_best: float = 0
+            max_val_best = 0.0
             for duration in range(1, 16):
                 kaiser_temp = np.kaiser(duration, beta)
                 scaling_temp = 1000 * area_float / np.sum(kaiser_temp)
                 max_val_temp = np.max(kaiser_temp) * scaling_temp
                 if max_val_best < max_val_temp <= max_val:
-                    max_val_best = max_val_temp
+                    max_val_best = float(max_val_temp)
                     duration_best = duration
 
         else:

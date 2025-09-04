@@ -521,6 +521,7 @@ class QutipEmulator:
         Args:
             time: The specific time at which we want to extract the
                 Hamiltonian (in ns).
+            noiseless: If True, returns the Hamiltonian without noise.
 
         Returns:
             A new Qobj for the Hamiltonian with coefficients
@@ -720,15 +721,14 @@ class QutipEmulator:
                 [
                     cleanres_noisyseq.sample_state(
                         t,
-                        n_samples=cast(int, self.noise_model.samples_per_run)
-                        * reps,
+                        n_samples=self.noise_model.samples_per_run * reps,
                     )
                     for t in self._eval_times_array
                 ]
             )
 
-        n_measures = cast(int, self.noise_model.runs) * cast(
-            int, self.noise_model.samples_per_run
+        n_measures = (
+            cast(int, self.noise_model.runs) * self.noise_model.samples_per_run
         )
         results = [
             SampledResult(
@@ -788,7 +788,9 @@ class QutipEmulator:
                 self._hamiltonian._bad_atoms = dict(
                     zip(
                         self._hamiltonian._qid_index,
-                        np.array(list(initial_state)).astype(bool),
+                        # "0110..." -> array([0, 1, 1, 0, ...])
+                        # -> array([False, True, True, False, ...])
+                        np.array(list(initial_state), dtype=int).astype(bool),
                     )
                 )
             # At each run, new random noise: new Hamiltonian

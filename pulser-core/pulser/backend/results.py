@@ -18,10 +18,12 @@ import collections.abc
 import json
 import typing
 import uuid
+import warnings
 from dataclasses import dataclass, field
-from typing import Any, TypeVar, cast, overload
+from typing import Any, Callable, TypeVar, cast, overload
 
-from pulser.backend.observable import Observable
+from pulser.backend.aggregators import AGGREGATOR_MAPPING
+from pulser.backend.observable import AggregationMethod, Observable
 from pulser.backend.state import State
 from pulser.json.abstract_repr.deserializer import deserialize_complex
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
@@ -42,15 +44,25 @@ class Results:
     total_duration: int
     _results: dict[uuid.UUID, list[Any]] = field(init=False)
     _times: dict[uuid.UUID, list[float]] = field(init=False)
+    _aggregation_methods: dict[uuid.UUID, AggregationMethod] = field(
+        init=False
+    )
     _tagmap: dict[str, uuid.UUID] = field(init=False)
 
     def __post_init__(self) -> None:
         self._results = {}
         self._times = {}
         self._tagmap = {}
+        self._aggregation_methods = {}
 
     def _store_raw(
-        self, *, uuid: uuid.UUID, tag: str, time: float, value: Any
+        self,
+        *,
+        uuid: uuid.UUID,
+        tag: str,
+        time: float,
+        value: Any,
+        aggregation_method: AggregationMethod,
     ) -> None:
         _times = self._times.setdefault(uuid, [])
         if time in _times:
@@ -64,6 +76,7 @@ class Results:
         ), "Evaluation times are not sorted."
         _times.append(time)
         self._results.setdefault(uuid, []).append(value)
+        self._aggregation_methods[uuid] = aggregation_method
         assert len(_times) == len(self._results[uuid])
 
     def _store(
@@ -77,7 +90,11 @@ class Results:
             value: The value of the observable.
         """
         self._store_raw(
-            uuid=observable.uuid, tag=observable.tag, time=time, value=value
+            uuid=observable.uuid,
+            tag=observable.tag,
+            time=time,
+            value=value,
+            aggregation_method=observable.default_aggregation_method,
         )
 
     def __getattr__(self, name: str) -> list[Any]:
@@ -186,20 +203,27 @@ class Results:
             str(key): value for key, value in self._results.items()
         }
         d["times"] = {str(key): value for key, value in self._times.items()}
+        d["aggregation_methods"] = {
+            str(key): value for key, value in self._aggregation_methods.items()
+        }
         return d
 
     @classmethod
-    def _from_abstract_repr(cls, dict: dict) -> Results:
+    def _from_abstract_repr(cls, obj: dict) -> Results:
         results = cls(
-            atom_order=tuple(dict["atom_order"]),
-            total_duration=dict["total_duration"],
+            atom_order=tuple(obj["atom_order"]),
+            total_duration=obj["total_duration"],
         )
-        for key, value in dict["tagmap"].items():
+        for key, value in obj["tagmap"].items():
             results._tagmap[key] = uuid.UUID(value)
-        for key, value in dict["results"].items():
+        for key, value in obj["results"].items():
             results._results[uuid.UUID(key)] = deserialize_complex(value)
-        for key, value in dict["times"].items():
+        for key, value in obj["times"].items():
             results._times[uuid.UUID(key)] = value
+        for key, value in obj.get("aggregation_methods", {}).items():
+            results._aggregation_methods[uuid.UUID(key)] = AggregationMethod(
+                value
+            )
         return results
 
     def to_abstract_repr(self, skip_validation: bool = False) -> str:
@@ -232,6 +256,150 @@ class Results:
         validate_abstract_repr(repr, "results")
         d = json.loads(repr)
         return cls._from_abstract_repr(d)
+
+    @classmethod
+    def aggregate(
+        cls,
+        results_to_aggregate: typing.Sequence[Results],
+        **aggregation_functions: Callable[[Any], Any],
+    ) -> Results:
+        """Aggregate a Sequence of Results objects into a single Results.
+
+        This is meant to accumulate the results of several runs with
+        different noise trajectories into a single averaged Results.
+        By default, results are averaged, with the exception of BitStrings,
+        where the counters are joined.
+        StateResult and EnergyVariance are not supported by default.
+
+        Args:
+            results_to_aggregate: The list of Results to aggregate
+
+        Keyword Args:
+            observable_tag: Overrides the default aggregator.
+                The argument name should be the tag of the Observable.
+                The value is a Callable taking a list of the type to aggregate.
+                Note that this does not override the default aggregation
+                behaviour of the aggregated results.
+
+        Returns:
+            The averaged Results object
+        """
+        if len(results_to_aggregate) == 0:
+            raise ValueError("No results to aggregate.")
+        result_0 = results_to_aggregate[0]
+        if len(results_to_aggregate) == 1:
+            return result_0
+
+        all_tags = set().union(
+            *[set(x.get_result_tags()) for x in results_to_aggregate]
+        )
+        common_tags = all_tags.intersection(
+            *[set(x.get_result_tags()) for x in results_to_aggregate]
+        )
+
+        for results in results_to_aggregate:
+            if results._results and (not results._aggregation_methods):
+                raise NotImplementedError(
+                    (
+                        "You're trying to aggregate results from pulser<1.6,"
+                        "aggregation is not supported in this case."
+                    )
+                )
+            for tag, uid in results._tagmap.items():
+                if tag not in common_tags and not (
+                    results._aggregation_methods[uid].value
+                    in (AggregationMethod.SKIP, AggregationMethod.SKIP_WARN)
+                ):
+                    raise ValueError(
+                        "You're trying to aggregate incompatible results: "
+                        f"result `{tag}` is not present in all results, "
+                        "but it's not marked to be skipped."
+                    )
+        if not all(
+            {
+                tag: results._aggregation_methods[results._find_uuid(tag)]
+                for tag in common_tags
+            }
+            == {
+                tag: result_0._aggregation_methods[result_0._find_uuid(tag)]
+                for tag in common_tags
+            }
+            for results in results_to_aggregate
+        ):
+            raise ValueError(
+                "You're trying to aggregate incompatible results: "
+                "they do not all contain the same aggregation functions."
+            )
+        if not all(
+            results.atom_order == result_0.atom_order
+            for results in results_to_aggregate
+        ):
+            raise ValueError(
+                "You're trying to aggregate incompatible results: "
+                "they do not all have the same atom order."
+            )
+        if not all(
+            results.total_duration == result_0.total_duration
+            for results in results_to_aggregate
+        ):
+            raise ValueError(
+                "You're trying to aggregate incompatible results: "
+                "they do not all have the same sequence duration."
+            )
+        aggregated = Results(
+            atom_order=result_0.atom_order,
+            total_duration=result_0.total_duration,
+        )
+        for tag in common_tags:
+            default_aggregation_method = result_0._aggregation_methods[
+                result_0._tagmap[tag]
+            ]
+            aggregation_method = aggregation_functions.get(
+                tag, default_aggregation_method
+            )
+            if (
+                aggregation_method is AggregationMethod.SKIP
+                or aggregation_method is AggregationMethod.SKIP_WARN
+            ):
+                if aggregation_method is AggregationMethod.SKIP_WARN:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("once")
+                        warnings.warn(f"Skipping aggregation of `{tag}`.")
+                continue
+            aggregation_function: Any = (
+                AGGREGATOR_MAPPING[aggregation_method]
+                if isinstance(aggregation_method, AggregationMethod)
+                else aggregation_method
+            )
+            evaluation_times = results_to_aggregate[0].get_result_times(tag)
+            if not all(
+                results.get_result_times(tag) == evaluation_times
+                for results in results_to_aggregate
+            ):
+                raise ValueError(
+                    "The Results come from "
+                    "incompatible simulations: "
+                    f"the times for `{tag}` are not all the same."
+                )
+            uid = uuid.uuid4()
+
+            for t in result_0.get_result_times(tag):
+                v = aggregation_function(
+                    [
+                        result.get_result(tag, t)
+                        for result in results_to_aggregate
+                    ]
+                )
+
+                aggregated._store_raw(
+                    uuid=uid,
+                    tag=tag,
+                    time=t,
+                    value=v,
+                    aggregation_method=default_aggregation_method,
+                )
+
+        return aggregated
 
 
 ResultsType = TypeVar("ResultsType", bound=Results)
