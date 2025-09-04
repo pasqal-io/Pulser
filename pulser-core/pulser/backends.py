@@ -27,7 +27,11 @@ Attributes:
     QutipBackend: See :py:class:`pulser_simulation.QutipBackend`.
     QutipBackendV2: See :py:class:`pulser_simulation.QutipBackendV2`.
     EmuFreeBackend: See :py:class:`pulser_pasqal.EmuFreeBackend`.
+    EmuFreeBackendV2: See :py:class:`pulser_pasqal.EmuFreeBackendV2`.
     EmuTNBackend: See :py:class:`pulser_pasqal.EmuTNBackend`.
+    EmuMPSBackend: See :py:class:`pulser_pasqal.EmuMPSBackend`.
+    MPSBackend: See :py:class:`emu_mps.MPSBackend`.
+    SVBackend: See :py:class:`emu_sv.MPSBackend`.
 
 """
 from __future__ import annotations
