@@ -3,17 +3,25 @@
 
 .. automodule:: pulser_pasqal
 
-Classes
------------------
+Connections
+------------
 
 .. autosummary::
    :toctree: _autosummary
 
    PasqalCloud
-   EmuFreeBackendV2
+   OVHConnection
+
+Backends
+-----------------
+
+.. autosummary::
+   :toctree: _autosummary
+
+   ~pulser_pasqal.backends.EmuFreeBackendV2
    EmuMPSBackend
 
-Deprecated Classes
+Deprecated Backends
 ------------------
 
 .. autosummary::
