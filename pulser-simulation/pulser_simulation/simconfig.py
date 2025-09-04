@@ -28,6 +28,7 @@ MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
 KEFF = 8.7  # µm^-1
 
+
 T = TypeVar("T", bound="SimConfig")
 
 SUPPORTED_NOISES: dict = {
@@ -41,8 +42,16 @@ SUPPORTED_NOISES: dict = {
         "eff_noise",
         "SPAM",
         "leakage",
+        "register",
     },
-    "XY": {"dephasing", "depolarizing", "eff_noise", "SPAM", "leakage"},
+    "XY": {
+        "dephasing",
+        "depolarizing",
+        "eff_noise",
+        "SPAM",
+        "leakage",
+        "register",
+    },
 }
 
 # Maps the noise model parameters with a different name in SimConfig
@@ -196,6 +205,7 @@ class SimConfig:
             raise TypeError(
                 f"'temperature' must be a float, not {type(self.temperature)}."
             )
+
         self._change_attribute("temperature", self.temperature / 1e6)
 
         NoiseModel._check_noise_types(cast(Tuple[NoiseTypes], self.noise))

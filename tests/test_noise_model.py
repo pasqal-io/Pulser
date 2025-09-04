@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import re
+import warnings
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -22,6 +24,8 @@ from pulser.noise_model import (
     _NOISE_TYPE_PARAMS,
     _PARAM_TO_NOISE_TYPE,
     NoiseModel,
+    _noisy_register,
+    _register_sigma_xy_z,
 )
 
 
@@ -68,6 +72,16 @@ class TestNoiseModel:
                 {"amplitude", "dephasing"},
             ),
             ({"detuning_sigma", "runs", "samples_per_run"}, {"detuning"}),
+            (
+                {
+                    "temperature",
+                    "trap_waist",
+                    "trap_depth",
+                    "runs",
+                    "samples_per_run",
+                },
+                {"doppler", "register"},
+            ),
         ],
     )
     def test_init(self, params, noise_types):
@@ -363,12 +377,22 @@ class TestNoiseModel:
             assert final_fields[param] == getattr(noise_model, param)
 
     def test_relevant_params(self):
-        assert NoiseModel._find_relevant_params({"SPAM"}, 0.0, 0.5, 100) == {
+        assert NoiseModel._find_relevant_params(
+            {"SPAM"},
+            0.0,
+            0.5,
+            100,
+        ) == {
             "state_prep_error",
             "p_false_pos",
             "p_false_neg",
         }
-        assert NoiseModel._find_relevant_params({"SPAM"}, 0.1, 0.5, 100) == {
+        assert NoiseModel._find_relevant_params(
+            {"SPAM"},
+            0.1,
+            0.5,
+            100,
+        ) == {
             "state_prep_error",
             "p_false_pos",
             "p_false_neg",
@@ -377,33 +401,71 @@ class TestNoiseModel:
         }
 
         assert NoiseModel._find_relevant_params(
-            {"doppler"}, 0.0, 0.0, None
-        ) == {"temperature", "runs", "samples_per_run"}
+            {"register", "doppler"},
+            0.0,
+            0.0,
+            None,
+        ) == {
+            "temperature",
+            "trap_waist",
+            "trap_depth",
+            "runs",
+            "samples_per_run",
+        }
 
         assert NoiseModel._find_relevant_params(
-            {"amplitude"}, 0.0, 1.0, None
+            {"doppler"},
+            0.0,
+            0.0,
+            None,
+        ) == {"temperature", "runs", "samples_per_run"}
+        assert NoiseModel._find_relevant_params(
+            {"amplitude"},
+            0.0,
+            1.0,
+            None,
         ) == {"amp_sigma", "runs", "samples_per_run"}
         assert NoiseModel._find_relevant_params(
-            {"amplitude"}, 0.0, 0.0, 100.0
+            {"amplitude"},
+            0.0,
+            0.0,
+            100.0,
         ) == {"amp_sigma", "laser_waist"}
         assert NoiseModel._find_relevant_params(
-            {"amplitude"}, 0.0, 0.5, 100.0
+            {"amplitude"},
+            0.0,
+            0.5,
+            100.0,
         ) == {"amp_sigma", "laser_waist", "runs", "samples_per_run"}
-
         assert NoiseModel._find_relevant_params(
-            {"dephasing", "leakage"}, 0.0, 0.0, None
+            {"dephasing", "leakage"},
+            0.0,
+            0.0,
+            None,
         ) == {"dephasing_rate", "hyperfine_dephasing_rate", "with_leakage"}
         assert NoiseModel._find_relevant_params(
-            {"relaxation", "leakage"}, 0.0, 0.0, None
+            {"relaxation", "leakage"},
+            0.0,
+            0.0,
+            None,
         ) == {"relaxation_rate", "with_leakage"}
         assert NoiseModel._find_relevant_params(
-            {"depolarizing", "leakage"}, 0.0, 0.0, None
+            {"depolarizing", "leakage"},
+            0.0,
+            0.0,
+            None,
         ) == {"depolarizing_rate", "with_leakage"}
         assert NoiseModel._find_relevant_params(
-            {"eff_noise", "leakage"}, 0.0, 0.0, None
+            {"eff_noise", "leakage"},
+            0.0,
+            0.0,
+            None,
         ) == {"eff_noise_rates", "eff_noise_opers", "with_leakage"}
         assert NoiseModel._find_relevant_params(
-            {"detuning"}, 0.0, 0.0, None
+            {"detuning"},
+            0.0,
+            0.0,
+            None,
         ) == {
             "detuning_sigma",
             "detuning_hf_psd",
@@ -448,4 +510,155 @@ class TestNoiseModel:
             "dephasing_rate=0.0, hyperfine_dephasing_rate=0.2, "
             "eff_noise_rates=(0.1,), eff_noise_opers=(((1, 0, 0), (0, 1, 0), "
             "(0, 0, 1)),), with_leakage=True)"
+        )
+
+        assert (
+            repr(
+                NoiseModel(
+                    temperature=15.0,
+                    trap_depth=150.0,  # same units as temperature
+                    trap_waist=1.0,
+                    runs=1,
+                    samples_per_run=1,
+                )
+            )
+            == "NoiseModel(noise_types=('doppler', 'register'), runs=1, "
+            "samples_per_run=1, temperature=15.0, trap_waist=1.0, "
+            "trap_depth=150.0)"
+        )
+
+
+def test_sigma_register_xy_z():
+    temperature = 15.0
+    trap_waist = 1.0
+    trap_depth = 150.0
+    sigma_xy, sigma_z = _register_sigma_xy_z(
+        temperature, trap_waist, trap_depth
+    )
+    assert 0.158 == pytest.approx(sigma_xy, abs=1e-2)
+    assert 0.826 == pytest.approx(sigma_z, abs=1e-2)
+
+
+@pytest.mark.parametrize(
+    "register2D",
+    [
+        True,
+        False,
+    ],
+)
+def test_noisy_register(register2D) -> None:
+    """Testing noisy_register function in case 2D and 3D register."""
+    if register2D:
+        qdict = {
+            "q0": np.array([-15.0, 0.0]),
+            "q1": np.array([-5.0, 0.0]),
+            "q2": np.array([5.0, 0.0]),
+            "q3": np.array([15.0, 0.0]),
+        }
+    else:
+        qdict = {
+            "q0": np.array([-15.0, 0.0, 0.0]),
+            "q1": np.array([-5.0, 0.0, 0.0]),
+            "q2": np.array([5.0, 0.0, 0.0]),
+            "q3": np.array([15.0, 0.0, 0.0]),
+        }
+
+    # Predefined deterministic noise
+    fake_normal_xy_noise = np.array(
+        [
+            [0.1, -0.1],
+            [0.2, -0.2],
+            [0.3, -0.3],
+            [0.5, -0.5],
+        ]
+    )
+    fake_normal_z_noise = np.array([0.05, 0.07, 0.09, 0.11])
+
+    mock_noise_model = MagicMock(spec=NoiseModel)  # generic NoiseModel class
+    with patch(
+        "pulser.noise_model._register_sigma_xy_z", return_value=(0.13, 0.8)
+    ):
+        with patch("numpy.random.normal") as mock_normal:
+            # moke the noise generation
+            mock_normal.side_effect = [
+                fake_normal_xy_noise,
+                fake_normal_z_noise,
+            ]
+            result = _noisy_register(qdict, mock_noise_model)
+    expected_positions = {
+        "q0": np.array([-15.0 + 0.1, 0.0 - 0.1, 0.05]),
+        "q1": np.array([-5.0 + 0.2, 0.0 - 0.2, 0.07]),
+        "q2": np.array([5.0 + 0.3, 0.0 - 0.3, 0.09]),
+        "q3": np.array([15.0 + 0.5, 0.0 - 0.5, 0.11]),
+    }
+    for q in qdict:
+        np.testing.assert_array_almost_equal(result[q], expected_positions[q])
+
+
+def test_register_noise_no_warning_when_all_params_defined():
+    """Register noise with all parameters.
+
+    Doing this also defines doppler noise.
+    """
+    noise_model = NoiseModel(
+        temperature=15.0,
+        trap_waist=1.0,
+        trap_depth=150.0,  # the same units as temperature
+        runs=1,
+        samples_per_run=1,
+    )
+    assert noise_model.noise_types == ("doppler", "register")
+    with warnings.catch_warnings(record=True) as rec:
+        warnings.simplefilter("always")
+        noise_model._check_register_noise_params(
+            noise_model.noise_types,
+            noise_model.trap_waist,
+            noise_model.trap_depth,
+            noise_model.temperature,
+        )
+        assert (
+            len(rec) == 0
+        ), f"Expected no warnings,got: {[r.message for r in rec]}"
+
+
+def test_trap_param_default_and_temperature_set():
+    """Behavior of default trap parameters in presence of temperature.
+
+    Doppler noise is activated when temperature is set but trap parameters
+    are not.
+    """
+    noise_model = NoiseModel(
+        trap_waist=0.0,  # default
+        trap_depth=None,  # default
+        temperature=10.0,
+        runs=1,
+        samples_per_run=1,
+    )
+    assert noise_model.noise_types == ("doppler",)
+
+
+def test_check_register_noise_params_invalid_params():
+    """Gives a ValueError!
+
+    if trap_waist == 0.0 or trap_depth is None or temperature == 0.0.
+    """
+    with pytest.raises(
+        ValueError, match="defined in order to simulate register noise"
+    ):
+        _ = NoiseModel(
+            trap_depth=150.0,
+            trap_waist=0.0,
+            temperature=10.0,
+            runs=1,
+            samples_per_run=1,
+        )
+    with pytest.raises(
+        ValueError, match="defined in order to simulate register noise"
+    ):
+        _ = NoiseModel(
+            trap_waist=2.0,
+            trap_depth=150,
+            temperature=0.0,
+            runs=1,
+            samples_per_run=1,
         )

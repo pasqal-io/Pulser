@@ -121,6 +121,15 @@
         },
         "temperature": {
           "type": "number"
+        },
+        "trap_depth": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "trap_waist": {
+          "type": "number"
         }
       },
       "required": [
@@ -144,6 +153,7 @@
     "NoiseType": {
       "enum": [
         "doppler",
+        "register",
         "amplitude",
         "SPAM",
         "relaxation",

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import pytest
 from qutip import Qobj, qeye, sigmax, sigmaz
 
@@ -48,17 +49,24 @@ def test_init():
             temperature=1000.0,
             runs=100,
         )
-    assert config.temperature == 1e-3  # in K
+    expected_temperature = 1000.0
+    runs = 100
+
+    assert config.temperature == expected_temperature * 1e-6  # in K
     str_config = config.__str__(True)
     assert "SPAM, doppler, dephasing, amplitude" in str_config
     assert (
-        "1000.0µK" in str_config
-        and "100" in str_config
+        f"{expected_temperature}µK" in str_config
+        and f"{runs}" in str_config
         and "Solver Options" in str_config
     )
+    assert config.to_noise_model().temperature == expected_temperature
     config = SimConfig(noise=("depolarizing", "relaxation", "doppler"))
-    assert config.temperature == 5e-5
-    assert config.to_noise_model().temperature == 50
+    expected_temperature = 50.0
+    assert config.temperature == pytest.approx(
+        expected_temperature * 1.0e-6
+    )  # 4.9999999999999996e-05
+    assert config.to_noise_model().temperature == expected_temperature
     str_config = config.__str__(True)
     assert "depolarizing" in str_config and "relaxation" in str_config
     assert f"Depolarizing rate: {config.depolarizing_rate}" in str_config
@@ -69,7 +77,7 @@ def test_init():
         eff_noise_rates=[0.3, 0.7],
     )
     str_config = config.__str__(True)
-    assert config.doppler_sigma == doppler_sigma(50 * 1e-6)
+    assert config.doppler_sigma == doppler_sigma(expected_temperature * 1e-6)
     assert (
         "Effective noise rates" in str_config
         and "Effective noise operators" in str_config

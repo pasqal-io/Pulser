@@ -521,6 +521,7 @@ class QutipEmulator:
         Args:
             time: The specific time at which we want to extract the
                 Hamiltonian (in ns).
+            noiseless: If True, returns the Hamiltonian without noise.
 
         Returns:
             A new Qobj for the Hamiltonian with coefficients
