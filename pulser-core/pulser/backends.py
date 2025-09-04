@@ -30,8 +30,8 @@ Attributes:
     EmuFreeBackendV2: See :py:class:`pulser_pasqal.EmuFreeBackendV2`.
     EmuTNBackend: See :py:class:`pulser_pasqal.EmuTNBackend`.
     EmuMPSBackend: See :py:class:`pulser_pasqal.EmuMPSBackend`.
-    MPSBackend: See `emu_mps.MPSBackend<https://pypi.org/project/emu-mps/>`__.
-    SVBackend: See `emu_sv.SVBackend<https://pypi.org/project/emu-sv/>`__.
+    MPSBackend: See `emu_mps.MPSBackend <https://pypi.org/project/emu-mps/>`_.
+    SVBackend: See `emu_sv.SVBackend <https://pypi.org/project/emu-sv/>`_.
 
 """
 from __future__ import annotations
