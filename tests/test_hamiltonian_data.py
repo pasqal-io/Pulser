@@ -1,14 +1,19 @@
 import unittest
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-from unittest.mock import MagicMock, patch
 
 import pulser
-from pulser.hamiltonian_data.hamiltonian_data import HamiltonianData, _register_sigma_xy_z, _noisy_register
+from pulser.hamiltonian_data.hamiltonian_data import (
+    HamiltonianData,
+    _noisy_register,
+    _register_sigma_xy_z,
+)
 from pulser.sampler import sample
 
 from .test_sequence_sampler import seq_rydberg, seq_with_SLM
+
 
 def test_sigma_register_xy_z():
     temperature = 15.0
@@ -56,9 +61,12 @@ def test_noisy_register(register2D) -> None:
     )
     fake_normal_z_noise = np.array([0.05, 0.07, 0.09, 0.11])
 
-    mock_noise_model = MagicMock(spec=pulser.NoiseModel)  # generic NoiseModel class
+    mock_noise_model = MagicMock(
+        spec=pulser.NoiseModel
+    )  # generic NoiseModel class
     with patch(
-        "pulser.hamiltonian_data.hamiltonian_data._register_sigma_xy_z", return_value=(0.13, 0.8)
+        "pulser.hamiltonian_data.hamiltonian_data._register_sigma_xy_z",
+        return_value=(0.13, 0.8),
     ):
         with patch("numpy.random.normal") as mock_normal:
             # moke the noise generation
@@ -74,8 +82,9 @@ def test_noisy_register(register2D) -> None:
         "q3": np.array([15.0 + 0.5, 0.0 - 0.5, 0.11]),
     }
     for q in qdict:
-        np.testing.assert_array_almost_equal(result.qubits[q], expected_positions[q])
-
+        np.testing.assert_array_almost_equal(
+            result.qubits[q], expected_positions[q]
+        )
 
 
 def test_init_errors():

@@ -757,10 +757,15 @@ class QutipEmulator:
     def _noisy_runs(
         self, progress_bar: bool, **options: Any
     ) -> Iterator[tuple[SimulationResults, int]]:
-        if "doppler" in self.noise_model.noise_types or (
-            "amplitude" in self.noise_model.noise_types
-            and self.noise_model.amp_sigma != 0.0
-        ) or "detuning" in self.noise_model.noise_types or "register" in self.noise_model.noise_types:
+        if (
+            "doppler" in self.noise_model.noise_types
+            or (
+                "amplitude" in self.noise_model.noise_types
+                and self.noise_model.amp_sigma != 0.0
+            )
+            or "detuning" in self.noise_model.noise_types
+            or "register" in self.noise_model.noise_types
+        ):
             loop_runs = cast(int, self.noise_model.runs)
             update_ham = True
         else:
@@ -808,7 +813,7 @@ class QutipEmulator:
                     old_traj.amp_fluctuations,
                     old_traj.det_fluctuations,
                     old_traj.det_phases,
-                    old_traj.register
+                    old_traj.register,
                 )
             # At each run, new random noise: new Hamiltonian
             self._hamiltonian._construct_hamiltonian(update=update_ham)

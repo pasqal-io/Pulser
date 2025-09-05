@@ -23,7 +23,6 @@ import qutip
 
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
-
 from pulser.hamiltonian_data import HamiltonianData, NoiseTrajectory
 from pulser.hamiltonian_data.hamiltonian_data import _noisy_register
 from pulser.noise_model import NoiseModel, doppler_sigma
@@ -290,10 +289,10 @@ class Hamiltonian:
             doppler_detune = dict(zip(self.data._qid_index, detune))
         else:
             doppler_detune = {qid: 0.0 for qid in self.data._qid_index}
+
+        register: BaseRegister = self.data.register
         if "register" in self.config.noise_types:
             register = _noisy_register(self.data.register.qubits, self.config)
-        else:
-            register = self.data.register
         old_traj = self.data.noise_trajectory
         self.data.noise_trajectory = NoiseTrajectory(
             bad_atoms,
@@ -301,7 +300,7 @@ class Hamiltonian:
             old_traj.amp_fluctuations,
             old_traj.det_fluctuations,
             old_traj.det_phases,
-            register
+            register,
         )
 
     def _construct_hamiltonian(self, update: bool = True) -> None:
@@ -368,7 +367,9 @@ class Hamiltonian:
 
             # make interaction term
             dipole_interaction = cast(qutip.Qobj, 0)
-            for q1, q2 in itertools.combinations(self.data.register.qubits.keys(), r=2):
+            for q1, q2 in itertools.combinations(
+                self.data.register.qubits.keys(), r=2
+            ):
                 if (
                     self.data.noise_trajectory.bad_atoms[q1]
                     or self.data.noise_trajectory.bad_atoms[q2]

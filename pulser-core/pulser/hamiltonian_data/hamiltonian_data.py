@@ -31,8 +31,8 @@ from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import STATES_RANK, Channel, States
 from pulser.devices._device_datacls import COORD_PRECISION, BaseDevice
 from pulser.noise_model import NoiseModel, doppler_sigma
-from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register import Register3D
+from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler import sampler
 from pulser.sampler.samples import (
     ChannelSamples,
@@ -215,7 +215,9 @@ class HamiltonianData:
                     replace(
                         ch_samples,
                         slots=[
-                            replace(slot, targets=set(self.register.qubits.keys()))
+                            replace(
+                                slot, targets=set(self.register.qubits.keys())
+                            )
                             for slot in ch_samples.slots
                         ],
                     )
@@ -235,7 +237,9 @@ class HamiltonianData:
 
         # Initializing qubit infos
         self._size = len(self.register.qubits)
-        self._qid_index = {qid: i for i, qid in enumerate(self.register.qubits)}
+        self._qid_index = {
+            qid: i for i, qid in enumerate(self.register.qubits)
+        }
 
         # Stores the qutip operators used in building the Hamiltonian
         self._local_collapse_ops: list[
@@ -455,7 +459,7 @@ class HamiltonianData:
     def register(self) -> BaseRegister:
         """The register used."""
         return self._register
-    
+
     @property
     def noisy_register(self) -> BaseRegister:
         """The register used."""
@@ -553,8 +557,7 @@ class HamiltonianData:
             for i in range(self.nbqudits):
                 for j in range(i + 1, self.nbqudits):
                     interactions[[i, j], [j, i]] = (
-                        self._device.interaction_coeff
-                        / d._array[i, j] ** 6
+                        self._device.interaction_coeff / d._array[i, j] ** 6
                     )
         return interactions
 
@@ -698,7 +701,7 @@ class HamiltonianData:
         amp_fluctuations: dict[str, float] = {}
         det_fluctuations: dict[str, float] = {}
         det_phases: dict[str, np.ndarray] = {}
-        register:BaseRegister = self._register
+        register: BaseRegister = self._register
         if (
             "SPAM" in self.noise_model.noise_types
             and self.noise_model.state_prep_error > 0
@@ -741,7 +744,7 @@ class HamiltonianData:
             amp_fluctuations,
             det_fluctuations,
             det_phases,
-            register
+            register,
         )
 
     def _get_basis_name(self, with_leakage: bool) -> str:
