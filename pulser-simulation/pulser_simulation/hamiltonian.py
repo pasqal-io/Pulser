@@ -23,7 +23,9 @@ import qutip
 
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
+
 from pulser.hamiltonian_data import HamiltonianData, NoiseTrajectory
+from pulser.hamiltonian_data.hamiltonian_data import _noisy_register
 from pulser.noise_model import NoiseModel, doppler_sigma
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler.samples import SequenceSamples
@@ -189,16 +191,16 @@ class Hamiltonian:
             if qubits == "global":
                 return sum(
                     self._build_operator([(operator, [q_id])], op_matrix)
-                    for q_id in self.data._qdict
+                    for q_id in self.data.register.qubits
                 )
             else:
                 qubits_set = set(qubits)
                 if len(qubits_set) < len(qubits):
                     raise ValueError("Duplicate atom ids in argument list.")
-                if not qubits_set.issubset(self.data._qdict.keys()):
+                if not qubits_set.issubset(self.data.register.qubits.keys()):
                     raise ValueError(
                         "Invalid qubit names: "
-                        f"{qubits_set - self.data._qdict.keys()}"
+                        f"{qubits_set - self.data.register.qubits.keys()}"
                     )
                 if isinstance(operator, str):
                     try:
@@ -288,6 +290,10 @@ class Hamiltonian:
             doppler_detune = dict(zip(self.data._qid_index, detune))
         else:
             doppler_detune = {qid: 0.0 for qid in self.data._qid_index}
+        if "register" in self.config.noise_types:
+            register = _noisy_register(self.data.register.qubits, self.config)
+        else:
+            register = self.data.register
         old_traj = self.data.noise_trajectory
         self.data.noise_trajectory = NoiseTrajectory(
             bad_atoms,
@@ -295,6 +301,7 @@ class Hamiltonian:
             old_traj.amp_fluctuations,
             old_traj.det_fluctuations,
             old_traj.det_phases,
+            register
         )
 
     def _construct_hamiltonian(self, update: bool = True) -> None:
@@ -305,7 +312,8 @@ class Hamiltonian:
 
         Warning:
             The refreshed noise parameters (when update=True) are only those
-            that change from shot to shot (ie doppler and state preparation).
+            that change from shot to shot (ie doppler, state preparation,
+            and register).
             Amplitude fluctuations change from pulse to pulse and are always
             applied in `_extract_samples()`.
 
@@ -360,7 +368,7 @@ class Hamiltonian:
 
             # make interaction term
             dipole_interaction = cast(qutip.Qobj, 0)
-            for q1, q2 in itertools.combinations(self.data._qdict.keys(), r=2):
+            for q1, q2 in itertools.combinations(self.data.register.qubits.keys(), r=2):
                 if (
                     self.data.noise_trajectory.bad_atoms[q1]
                     or self.data.noise_trajectory.bad_atoms[q2]

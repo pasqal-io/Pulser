@@ -36,6 +36,7 @@ NoiseTypes = Literal[
     "doppler",
     "amplitude",
     "detuning",
+    "register",
     "SPAM",
     "dephasing",
     "relaxation",
@@ -46,6 +47,7 @@ NoiseTypes = Literal[
 _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "leakage": ("with_leakage",),
     "doppler": ("temperature",),
+    "register": ("trap_waist", "trap_depth"),
     "amplitude": ("laser_waist", "amp_sigma"),
     "detuning": ("detuning_sigma", "detuning_hf_psd", "detuning_hf_freqs"),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
@@ -61,7 +63,6 @@ _PARAM_TO_NOISE_TYPE: dict[str, NoiseTypes] = {
     for param in params
 }
 
-# Parameter characterization
 
 _POSITIVE = {
     "dephasing_rate",
@@ -70,12 +71,9 @@ _POSITIVE = {
     "depolarizing_rate",
     "temperature",
     "detuning_sigma",
+    "trap_waist",
 }
-_STRICT_POSITIVE = {
-    "runs",
-    "samples_per_run",
-    "laser_waist",
-}
+_STRICT_POSITIVE = {"runs", "samples_per_run", "laser_waist", "trap_depth"}
 _PROBABILITY_LIKE = {
     "state_prep_error",
     "p_false_pos",
@@ -102,6 +100,8 @@ _LEGACY_DEFAULTS = {
 
 OPTIONAL_IN_ABSTR_REPR = (
     "detuning_sigma",
+    "trap_waist",
+    "trap_depth",
     "detuning_hf_psd",
     "detuning_hf_freqs",
 )
@@ -122,7 +122,7 @@ def doppler_sigma(temperature: float) -> float:
 
 @dataclass(init=True, repr=False, frozen=True)
 class NoiseModel:
-    """Specifies the noise model parameters for emulation.
+    r"""Specifies the noise model parameters for emulation.
 
     **Supported noise types:**
 
@@ -149,6 +149,16 @@ class NoiseModel:
     - **doppler**: Local atom detuning due to termal motion of the
       atoms and Doppler effect with respect to laser frequency.
       Parametrized by the ``temperature`` field.
+    - **register**: Thermal fluctuations in the
+      register positions, parametrized by ``temperature``, ``trap_waist``
+      and, ``trap_depth``, which must all be defined.
+      (1) Plane standard deviation fluctuation given by:
+      :math:`\sigma^{xy} = \sqrt{\frac{T w²}{4 U_{trap}}}`, where T is
+      temperature, w is the trap waist and :math:`U_{trap}` is
+      the trap depth.
+      (2) Off plane standard deviation fluctuation given by:
+      :math:`\sigma^z = \frac{\pi}{\lambda}\sqrt{2} w \sigma^{xy}`, where
+      :math:`\lambda` is the trap wavelength with a constant value of 0.85 µm.
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
@@ -192,6 +202,10 @@ class NoiseModel:
             distribution centered in 0. Assumed to be the same for all
             channels (though each channel has its own randomly sampled
             value in each run). This noise is additive. Defaults to 0.
+        trap_waist: The waist of each optical trap at the focal point (in µm).
+            Defaults to 0.
+        trap_depth: The potential energy well depth that confines the atoms
+            (in µK). Defaults to None.
         detuning_hf_psd: Power Spectral Density(PSD) is 1D tuple (in Hz²/Hz)
             provided together with `detuning_hf_freqs` define high frequency
             noise contribution of time dependent detuning (in rad/µs).
@@ -234,6 +248,10 @@ class NoiseModel:
     detuning_hf_freqs: tuple[float, ...] = ()
     relaxation_rate: float = 0.0
     dephasing_rate: float = 0.0
+    # if the trap depth is not None the trap waist should be 0.0
+    trap_waist: float = 0.0
+    # Must be defined when trap_waist > 0
+    trap_depth: float | None = None
     hyperfine_dephasing_rate: float = 0.0
     depolarizing_rate: float = 0.0
     eff_noise_rates: tuple[float, ...] = ()
@@ -253,6 +271,7 @@ class NoiseModel:
             for field in fields(self)
             if field.init
         }
+
         param_vals["eff_noise_rates"] = to_tuple(self.eff_noise_rates)
         param_vals["eff_noise_opers"] = to_tuple(self.eff_noise_opers)
 
@@ -275,6 +294,7 @@ class NoiseModel:
             for p_ in param_vals
             if param_vals[p_] and p_ in _PARAM_TO_NOISE_TYPE
         }
+
         self._check_leakage_noise(true_noise_types)
         self._check_detuning_hf_noise(
             param_vals["detuning_hf_psd"],
@@ -301,6 +321,13 @@ class NoiseModel:
         }
         self._validate_parameters(relevant_param_vals)
 
+        self._check_register_noise_params(
+            true_noise_types,
+            cast(float, param_vals["trap_waist"]),
+            cast(Union[float, None], param_vals["trap_depth"]),
+            cast(float, param_vals["temperature"]),
+        )
+
         object.__setattr__(
             self, "noise_types", tuple(sorted(true_noise_types))
         )
@@ -320,6 +347,22 @@ class NoiseModel:
                 )
 
     @staticmethod
+    def _check_register_noise_params(
+        true_noise_types: Collection[NoiseTypes],
+        trap_waist: float,
+        trap_depth: float | None,
+        temperature: float,
+    ) -> None:
+        if "register" not in true_noise_types:
+            # trap_waist and trap_depth have default values
+            return
+        if trap_waist == 0.0 or trap_depth is None or temperature == 0.0:
+            raise ValueError(
+                "trap_waist, trap_depth, and temperature must be defined in "
+                "order to simulate register noise."
+            )
+
+    @staticmethod
     def _find_relevant_params(
         noise_types: Collection[NoiseTypes],
         state_prep_error: float,
@@ -329,11 +372,14 @@ class NoiseModel:
         relevant_params: set[str] = set()
         for nt_ in noise_types:
             relevant_params.update(_NOISE_TYPE_PARAMS[nt_])
+            if nt_ == "register":
+                relevant_params.add("temperature")
             if (
                 nt_ == "doppler"
                 or nt_ == "detuning"
                 or (nt_ == "amplitude" and amp_sigma != 0.0)
                 or (nt_ == "SPAM" and state_prep_error != 0.0)
+                or nt_ == "register"
             ):
                 relevant_params.update(("runs", "samples_per_run"))
         # Disregard laser_waist when not defined

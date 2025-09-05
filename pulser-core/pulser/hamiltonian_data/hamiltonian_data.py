@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import functools
+import math
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import replace
@@ -31,6 +32,7 @@ from pulser.channels.base_channel import STATES_RANK, Channel, States
 from pulser.devices._device_datacls import COORD_PRECISION, BaseDevice
 from pulser.noise_model import NoiseModel, doppler_sigma
 from pulser.register.base_register import BaseRegister, QubitId
+from pulser.register import Register3D
 from pulser.sampler import sampler
 from pulser.sampler.samples import (
     ChannelSamples,
@@ -40,6 +42,67 @@ from pulser.sampler.samples import (
 from pulser.sequence import Sequence
 
 from .noise_trajectory import NoiseTrajectory
+
+TRAP_WAVELENGTH = 0.85  # µm
+
+
+def _register_sigma_xy_z(
+    temperature: float, trap_waist: float, trap_depth: float
+) -> tuple[float, float]:
+    """Standard deviation for fluctuations in atom position in the trap.
+
+    - Plane fluctuation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,
+      w is the trap waist and Uₜᵣₐₚ is the trap depth.
+    - Off plane fluctuation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the trap
+    wavelength with a constant value of 0.85 µm
+
+    Note: a k_B factor is absorbed in the trap depth (Uₜᵣₐₚ), so the units
+    of temperature and trap depth are the same.
+
+    Args:
+        temperature (float): Temperature (T) of the atoms in the trap
+            (in Kelvin).
+        trap_depth (float): Depth of the trap (Uₜᵣₐₚ)
+            (same units as temperature).
+        trap_waist (float): Waist of the trap (w) (in µmeters).
+
+    Returns:
+        tuple: The standard deviations of the spatial position fluctuations
+        in the xy-plane (register_sigma_xy) and along the z-axis
+        (register_sigma_z).
+    """
+    register_sigma_xy = math.sqrt(
+        temperature * trap_waist**2 / (4 * trap_depth)
+    )
+    register_sigma_z = (
+        math.pi
+        / TRAP_WAVELENGTH
+        * math.sqrt(2)
+        * trap_waist
+        * register_sigma_xy
+    )
+    return register_sigma_xy, register_sigma_z
+
+
+def _noisy_register(q_dict: dict, config: NoiseModel) -> Register3D:
+    """Add Gaussian noise to the positions of the register."""
+    register_sigma_xy, register_sigma_z = _register_sigma_xy_z(
+        config.temperature, config.trap_waist, cast(float, config.trap_depth)
+    )
+    atoms = list(q_dict.keys())
+    num_atoms = len(atoms)
+    positions = np.array(list(q_dict.values()))
+
+    if len(positions[0]) == 2:
+        positions = np.array(
+            [np.append(p, 0.0) for p in positions]
+        )  # Convert 2D positions to 3D
+
+    noise_xy = np.random.normal(0, register_sigma_xy, (num_atoms, 2))
+    noise_z = np.random.normal(0, register_sigma_z, num_atoms)
+    noise = np.column_stack((noise_xy, noise_z))
+    positions += noise
+    return Register3D({k: pos for (k, pos) in zip(atoms, positions)})
 
 
 def _generate_detuning_fluctuations(
@@ -118,7 +181,6 @@ class HamiltonianData:
         self._device = device
         self.device.validate_register(register)
         self._register = register
-        self._qdict = register.qubits
         # Check compatibility of samples and device:
         if samples._slm_mask.end > 0 and not self.device.supports_slm_mask:
             raise ValueError(
@@ -129,7 +191,7 @@ class HamiltonianData:
                 "Bases used in samples should be supported by device."
             )
         # Check compatibility of masked samples and register
-        if not samples._slm_mask.targets <= set(self._qdict.keys()):
+        if not samples._slm_mask.targets <= set(self.register.qubits.keys()):
             raise ValueError(
                 "The ids of qubits targeted in SLM mask"
                 " should be defined in register."
@@ -141,7 +203,7 @@ class HamiltonianData:
                 # in register
                 if not set().union(
                     *(slot.targets for slot in ch_samples.slots)
-                ) <= set(self._qdict.keys()):
+                ) <= set(self.register.qubits.keys()):
                     raise ValueError(
                         "The ids of qubits targeted in Local channels"
                         " should be defined in register."
@@ -153,7 +215,7 @@ class HamiltonianData:
                     replace(
                         ch_samples,
                         slots=[
-                            replace(slot, targets=set(self._qdict.keys()))
+                            replace(slot, targets=set(self.register.qubits.keys()))
                             for slot in ch_samples.slots
                         ],
                     )
@@ -172,8 +234,8 @@ class HamiltonianData:
         )
 
         # Initializing qubit infos
-        self._size = len(self._qdict)
-        self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
+        self._size = len(self.register.qubits)
+        self._qid_index = {qid: i for i, qid in enumerate(self.register.qubits)}
 
         # Stores the qutip operators used in building the Hamiltonian
         self._local_collapse_ops: list[
@@ -308,7 +370,7 @@ class HamiltonianData:
                         # Default to an optical axis along y
                         prop_dir = propagation_dir or (0.0, 1.0, 0.0)
                         amp_fraction *= self._finite_waist_amp_fraction(
-                            tuple(self._qdict[qid].as_array()),
+                            tuple(self.noisy_register.qubits[qid].as_array()),
                             tuple(prop_dir),
                             self.noise_model.laser_waist,
                         )
@@ -393,6 +455,11 @@ class HamiltonianData:
     def register(self) -> BaseRegister:
         """The register used."""
         return self._register
+    
+    @property
+    def noisy_register(self) -> BaseRegister:
+        """The register used."""
+        return self.noise_trajectory.register
 
     @property
     def device(self) -> BaseDevice:
@@ -421,11 +488,11 @@ class HamiltonianData:
         """The badly prepared atoms at the beginning of the run."""
         return self.noise_trajectory.bad_atoms
 
-    @functools.cached_property
+    @property
     def distances(self) -> "pm.torch.Tensor" | np.ndarray:
         r"""Distances between each qubits (in :math:`\mu m`)."""
         # TODO: Handle torch arrays
-        positions = list(self._qdict.values())
+        positions = list(self.noisy_register.qubits.values())
         if not positions[0].is_tensor:
             return cast(
                 np.ndarray,
@@ -454,14 +521,14 @@ class HamiltonianData:
         """Number of qudits in the Register."""
         return self._size
 
-    @functools.cached_property
+    @property
     def _interaction_matrix(self) -> "pm.torch.Tensor" | np.ndarray:
         r"""C6/C3 Interactions between the qubits (in :math:`rad/\mu s`)."""
         # TODO: Include masked qubits in XY + bad atoms in the interaction
         d = pm.AbstractArray(self.distances)
         interactions = pm.AbstractArray.zeros_like(d)._array
         if self.interaction_type == "XY":
-            positions = list(self._qdict.values())
+            positions = list(self.noisy_register.qubits.values())
             assert self.samples._magnetic_field is not None
             assert self._device.interaction_coeff_xy is not None
             mag_arr = pm.AbstractArray(self.samples._magnetic_field)
@@ -480,14 +547,14 @@ class HamiltonianData:
                     interactions[[i, j], [j, i]] = (
                         self._device.interaction_coeff_xy  # type: ignore
                         * (1 - 3 * cosine._array**2)
-                        / self.distances[i, j] ** 3
+                        / d._array[i, j] ** 3
                     )
         else:
             for i in range(self.nbqudits):
                 for j in range(i + 1, self.nbqudits):
                     interactions[[i, j], [j, i]] = (
                         self._device.interaction_coeff
-                        / self.distances[i, j] ** 6
+                        / d._array[i, j] ** 6
                     )
         return interactions
 
@@ -497,15 +564,16 @@ class HamiltonianData:
         mask = [False for _ in range(self.nbqudits)]
         for ind, value in enumerate(self.bad_atoms.values()):
             mask[ind] = True if value else False  # convert to python bool
-        if isinstance(self._interaction_matrix, np.ndarray):
+        imat = self._interaction_matrix
+        if isinstance(imat, np.ndarray):
             mask2 = np.outer(mask, mask)
-            mat = self._interaction_matrix.copy()
+            mat = imat.copy()
             mat[mask2] = 0.0
             return mat
         else:
             ten = pm.torch.tensor(mask, dtype=pm.torch.bool)
             mask3 = pm.torch.outer(ten, ten)
-            mat2 = self._interaction_matrix.clone()
+            mat2 = imat.clone()
             mat2[mask3] = 0.0
             return mat2
 
@@ -630,6 +698,7 @@ class HamiltonianData:
         amp_fluctuations: dict[str, float] = {}
         det_fluctuations: dict[str, float] = {}
         det_phases: dict[str, np.ndarray] = {}
+        register:BaseRegister = self._register
         if (
             "SPAM" in self.noise_model.noise_types
             and self.noise_model.state_prep_error > 0
@@ -664,12 +733,15 @@ class HamiltonianData:
                 )
             else:
                 det_phases[ch] = np.array(0.0)
+        if "register" in self._config.noise_types:
+            register = _noisy_register(self.register.qubits, self._config)
         self.noise_trajectory = NoiseTrajectory(
             bad_atoms,
             doppler_detune,
             amp_fluctuations,
             det_fluctuations,
             det_phases,
+            register
         )
 
     def _get_basis_name(self, with_leakage: bool) -> str:

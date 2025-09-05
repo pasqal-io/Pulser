@@ -163,7 +163,7 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
             for ch in sampled_seq.channels
         ]
     )
-    assert Register(sim._hamiltonian.data._qdict) == Register(seq.qubit_info)
+    assert Register(sim._hamiltonian.data.register.qubits) == Register(seq.qubit_info)
     assert sim._hamiltonian.nbqudits == len(seq.qubit_info)
     assert sim._tot_duration == 9000  # seq has 9 pulses of 1µs
     assert sim._hamiltonian.data._qid_index == {
@@ -538,6 +538,56 @@ def test_get_hamiltonian():
         simple_ham_noiseless.full(), simple_ham_noiseless_expected.full()
     )
 
+    np.random.seed(456)
+    simple_sim_noise = QutipEmulator.from_sequence(
+        simple_seq,
+        noise_model=NoiseModel(
+            runs=1,
+            samples_per_run=1,
+            temperature=50.0,
+            trap_depth=150.0,
+            trap_waist=1.0,
+        ),
+    )
+    simple_ham_noise = simple_sim_noise.get_hamiltonian(144)
+
+    np.testing.assert_allclose(
+        simple_ham_noise.full(),
+        np.array(
+            [
+                [
+                    4.92294305 + 0.0j,
+                    0.09606404 + 0.0j,
+                    0.09606404 + 0.0j,
+                    0.0 + 0.0j,
+                ],
+                [
+                    0.09606404 + 0.0j,
+                    -0.59902269 + 0.0j,
+                    0.0 + 0.0j,
+                    0.09606404 + 0.0j,
+                ],
+                [
+                    0.09606404 + 0.0j,
+                    0.0 + 0.0j,
+                    -0.70099956 + 0.0j,
+                    0.09606404 + 0.0j,
+                ],
+                [0.0 + 0.0j, 0.09606404 + 0.0j, 0.09606404 + 0.0j, 0.0 + 0.0j],
+            ]
+        ),
+    )
+
+    simple_ham_noiseless = simple_sim_noise.get_hamiltonian(
+        144, noiseless=True
+    )
+    simple_ham_noiseless_expected = QutipEmulator.from_sequence(
+        simple_seq
+    ).get_hamiltonian(144)
+    np.testing.assert_allclose(
+        simple_ham_noiseless.full(), simple_ham_noiseless_expected.full()
+    )
+
 
 def test_single_atom_simulation():
     one_reg = Register.from_coordinates([(0, 0)], prefix="atom")
@@ -782,7 +832,7 @@ def test_config(matrices):
         and noisy_amp_ham[0, 1] != clean_ham[0, 1]
     )
     assert sim._initial_state == qutip.tensor(
-        [qutip.basis(2, 1) for _ in range(2)]
+        *(qutip.basis(2, 1) for _ in range(2))
     )
     # Currently in ground state => initial state is extended without warning
     sim.set_config(
@@ -793,17 +843,17 @@ def test_config(matrices):
         )
     )
     assert sim._initial_state == qutip.tensor(
-        [qutip.basis(3, 1) for _ in range(2)]
+        *(qutip.basis(3, 1) for _ in range(2))
     )
     # Otherwise initial state is set to ground-state
-    sim.set_initial_state(qutip.tensor([qutip.basis(3, 0) for _ in range(2)]))
+    sim.set_initial_state(qutip.tensor(*(qutip.basis(3, 0) for _ in range(2))))
     with pytest.warns(
         UserWarning,
         match="Current initial state's dimension does not match new dim",
     ):
         sim.set_config(SimConfig(noise="SPAM", eta=0.5))
     assert sim._initial_state == qutip.tensor(
-        [qutip.basis(2, 1) for _ in range(2)]
+        *(qutip.basis(2, 1) for _ in range(2))
     )
 
 
@@ -856,9 +906,9 @@ def test_noise_with_zero_epsilons(seq, matrices):
     sim2 = QutipEmulator.from_sequence(
         seq,
         sampling_rate=0.01,
-        config=SimConfig(
+        noise_model=SimConfig(
             noise=("SPAM"), eta=0.0, epsilon=0.0, epsilon_prime=0.0
-        ),
+        ).to_noise_model(),
     )
     assert sim2.config.noise == ()
 

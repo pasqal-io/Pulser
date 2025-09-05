@@ -528,6 +528,7 @@ class QutipEmulator:
         Args:
             time: The specific time at which we want to extract the
                 Hamiltonian (in ns).
+            noiseless: If True, returns the Hamiltonian without noise.
 
         Returns:
             A new Qobj for the Hamiltonian with coefficients
@@ -619,7 +620,7 @@ class QutipEmulator:
             )
         results = [
             QutipResult(
-                tuple(self._hamiltonian.data._qdict),
+                tuple(self._hamiltonian.data.register.qubits),
                 self._meas_basis,
                 state,
                 self._meas_basis in self.basis_name,
@@ -738,7 +739,7 @@ class QutipEmulator:
         )
         results = [
             SampledResult(
-                tuple(self._hamiltonian.data._qdict),
+                tuple(self._hamiltonian.data.register.qubits),
                 self._meas_basis,
                 total_count[ind],
                 evaluation_time=t / self._tot_duration * 1e3,
@@ -759,7 +760,7 @@ class QutipEmulator:
         if "doppler" in self.noise_model.noise_types or (
             "amplitude" in self.noise_model.noise_types
             and self.noise_model.amp_sigma != 0.0
-        ):
+        ) or "detuning" in self.noise_model.noise_types or "register" in self.noise_model.noise_types:
             loop_runs = cast(int, self.noise_model.runs)
             update_ham = True
         else:
@@ -807,6 +808,7 @@ class QutipEmulator:
                     old_traj.amp_fluctuations,
                     old_traj.det_fluctuations,
                     old_traj.det_phases,
+                    old_traj.register
                 )
             # At each run, new random noise: new Hamiltonian
             self._hamiltonian._construct_hamiltonian(update=update_ham)

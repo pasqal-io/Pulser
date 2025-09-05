@@ -2,12 +2,80 @@ import unittest
 
 import numpy as np
 import pytest
+from unittest.mock import MagicMock, patch
 
 import pulser
-from pulser.hamiltonian_data import HamiltonianData
+from pulser.hamiltonian_data.hamiltonian_data import HamiltonianData, _register_sigma_xy_z, _noisy_register
 from pulser.sampler import sample
 
 from .test_sequence_sampler import seq_rydberg, seq_with_SLM
+
+def test_sigma_register_xy_z():
+    temperature = 15.0
+    trap_waist = 1.0
+    trap_depth = 150.0
+    sigma_xy, sigma_z = _register_sigma_xy_z(
+        temperature, trap_waist, trap_depth
+    )
+    assert 0.158 == pytest.approx(sigma_xy, abs=1e-2)
+    assert 0.826 == pytest.approx(sigma_z, abs=1e-2)
+
+
+@pytest.mark.parametrize(
+    "register2D",
+    [
+        True,
+        False,
+    ],
+)
+def test_noisy_register(register2D) -> None:
+    """Testing noisy_register function in case 2D and 3D register."""
+    if register2D:
+        qdict = {
+            "q0": np.array([-15.0, 0.0]),
+            "q1": np.array([-5.0, 0.0]),
+            "q2": np.array([5.0, 0.0]),
+            "q3": np.array([15.0, 0.0]),
+        }
+    else:
+        qdict = {
+            "q0": np.array([-15.0, 0.0, 0.0]),
+            "q1": np.array([-5.0, 0.0, 0.0]),
+            "q2": np.array([5.0, 0.0, 0.0]),
+            "q3": np.array([15.0, 0.0, 0.0]),
+        }
+
+    # Predefined deterministic noise
+    fake_normal_xy_noise = np.array(
+        [
+            [0.1, -0.1],
+            [0.2, -0.2],
+            [0.3, -0.3],
+            [0.5, -0.5],
+        ]
+    )
+    fake_normal_z_noise = np.array([0.05, 0.07, 0.09, 0.11])
+
+    mock_noise_model = MagicMock(spec=pulser.NoiseModel)  # generic NoiseModel class
+    with patch(
+        "pulser.hamiltonian_data.hamiltonian_data._register_sigma_xy_z", return_value=(0.13, 0.8)
+    ):
+        with patch("numpy.random.normal") as mock_normal:
+            # moke the noise generation
+            mock_normal.side_effect = [
+                fake_normal_xy_noise,
+                fake_normal_z_noise,
+            ]
+            result = _noisy_register(qdict, mock_noise_model)
+    expected_positions = {
+        "q0": np.array([-15.0 + 0.1, 0.0 - 0.1, 0.05]),
+        "q1": np.array([-5.0 + 0.2, 0.0 - 0.2, 0.07]),
+        "q2": np.array([5.0 + 0.3, 0.0 - 0.3, 0.09]),
+        "q3": np.array([15.0 + 0.5, 0.0 - 0.5, 0.11]),
+    }
+    for q in qdict:
+        np.testing.assert_array_almost_equal(result.qubits[q], expected_positions[q])
+
 
 
 def test_init_errors():
