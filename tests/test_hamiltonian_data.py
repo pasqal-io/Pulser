@@ -7,6 +7,7 @@ import pytest
 import pulser
 from pulser.hamiltonian_data.hamiltonian_data import (
     HamiltonianData,
+    _generate_detuning_fluctuations,
     _noisy_register,
     _register_sigma_xy_z,
 )
@@ -386,3 +387,41 @@ def test_noisy_interaction_matrix_torch():
     assert torch.allclose(
         ham.noisy_interaction_matrix, torch.zeros_like(ham._interaction_matrix)
     )
+
+
+def test_noise_hf_detuning_generation():
+    def original_formula_gen_noise(psd, freqs, times, phases):
+        """Compute δ_hf(t).
+
+        Args:
+            psd : in Hz²/Hz
+            freqs : in Hz
+            times : in µs, is converted to seconds inside
+            phases : phase offsets
+        """
+        hf_detun = np.zeros_like(times)
+        times *= 1e-6  # µsec -> sec
+        for i, s in enumerate(psd[1:]):
+            df = freqs[i + 1] - freqs[i]
+            hf_detun += (
+                2.0
+                * np.pi
+                * 1e-6
+                * np.sqrt(2 * df * s)
+                * np.cos(2 * np.pi * (freqs[i + 1] * times + phases[i]))
+            )
+        return hf_detun
+
+    psd = [1, 2, 3]
+    freqs = [3, 4, 5]
+    times = np.arange(0, 10, 0.1)
+    phases = np.random.uniform(size=(2,))
+
+    noise_m = pulser.NoiseModel(
+        detuning_hf_psd=psd, detuning_hf_freqs=freqs, runs=1
+    )
+    hf_det = _generate_detuning_fluctuations(noise_m, 0.0, phases, times)
+    hd_det_expected = original_formula_gen_noise(psd, freqs, times, phases)
+
+    assert np.allclose(hf_det, hd_det_expected)
+    assert hf_det.size == times.size

@@ -132,14 +132,14 @@ def _generate_detuning_fluctuations(
     det_hf = np.zeros_like(times)
 
     if noise_model.detuning_hf_psd:
-        t = np.asarray(times) * 1e-6  # µsec -> sec
+        t = np.asarray(times) * 1e-9  # ns -> s
         freqs = np.asarray(noise_model.detuning_hf_freqs)[1:]
         psd = np.asarray(noise_model.detuning_hf_psd)[1:]
         df = np.diff(noise_model.detuning_hf_freqs)
         amp = np.sqrt(2.0 * df * psd)
         arg = freqs[:, None] * t[None, :] + phases[:, None]
         det_hf = (amp[:, None] * np.cos(2.0 * np.pi * arg)).sum(axis=0)
-
+        det_hf *= 2.0 * np.pi * 1e-6  # Hz -> rad/microsec
     return det_cst_term + det_hf
 
 
@@ -152,10 +152,6 @@ class HamiltonianData:
         device: The device specifications.
         register: A Register associating coordinates to qubit ids.
         config: NoiseModel to be used to generate noise.
-
-    Keyword Args:
-        assign_config: Whether to assign a configuration at initialization
-            (defaults to True).
     """
 
     def __init__(
@@ -164,7 +160,6 @@ class HamiltonianData:
         register: BaseRegister,
         device: BaseDevice,
         config: NoiseModel,
-        **kwargs: bool,
     ) -> None:
         """Instantiates a Hamiltonian object."""
         # Initializing the samples obj
