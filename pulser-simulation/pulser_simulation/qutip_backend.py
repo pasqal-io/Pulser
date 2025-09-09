@@ -22,7 +22,7 @@ import qutip
 
 import pulser
 from pulser.backend.abc import Backend, EmulatorBackend
-from pulser.backend.config import EmulationConfig, EmulatorConfig
+from pulser.backend.config import EmulatorConfig
 from pulser.backend.default_observables import BitStrings, StateResult
 from pulser.backend.results import Results
 from pulser.noise_model import NoiseModel
@@ -123,15 +123,8 @@ class QutipBackendV2(EmulatorBackend):
     )
     _config: QutipConfig
 
-    def __init__(
-        self,
-        sequence: pulser.Sequence,
-        *,
-        config: EmulationConfig | None = None,
-        mimic_qpu: bool = False,
-    ) -> None:
-        """Initializes the backend."""
-        super().__init__(sequence, config=config, mimic_qpu=mimic_qpu)
+    def set_sequence(self, sequence: pulser.Sequence) -> None:
+        super().set_sequence(sequence)
         noise_model: None | NoiseModel = None
         if self._config.prefer_device_noise_model:
             noise_model = sequence.device.default_noise_model
@@ -154,6 +147,8 @@ class QutipBackendV2(EmulatorBackend):
 
     def run(self) -> Results:
         """Executes the sequence on the backend."""
+        if not self._sequence:
+            raise ValueError("No sequence was passed to the backend yet!")
         res = Results(
             atom_order=tuple(self._sequence.qubit_info),
             total_duration=self._sim_obj.total_duration_ns,

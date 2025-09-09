@@ -275,7 +275,7 @@ def test_qpu_backend(sequence):
     with pytest.raises(
         TypeError, match="must be a real device, instance of 'Device'"
     ):
-        QPUBackend(sequence, connection)
+        QPUBackend(connection, sequence)
 
     with pytest.warns(
         UserWarning, match="device with a different Rydberg level"
@@ -283,7 +283,7 @@ def test_qpu_backend(sequence):
         seq = sequence.switch_device(AnalogDevice)
 
     with pytest.raises(ValueError, match="defined from a `RegisterLayout`"):
-        QPUBackend(seq, connection)
+        QPUBackend(connection, seq)
 
     seq = seq.switch_register(SquareLatticeLayout(5, 5, 5).square_register(2))
     seq = seq.switch_device(
@@ -292,15 +292,26 @@ def test_qpu_backend(sequence):
     with pytest.raises(
         ValueError, match="does not accept new register layouts"
     ):
-        QPUBackend(seq, connection)
+        QPUBackend(connection, seq)
     seq = seq.switch_register(
         AnalogDevice.pre_calibrated_layouts[0].define_register(1, 2, 3)
     )
 
     with pytest.raises(TypeError, match="must be a valid RemoteConnection"):
-        QPUBackend(seq, "fake_connection")
+        QPUBackend("fake_connection", seq)
 
-    qpu_backend = QPUBackend(seq, connection)
+    with pytest.raises(
+        ValueError, match="No sequence was passed to the backend yet!"
+    ):
+        be = QPUBackend(connection)
+        be.run()
+
+    with pytest.raises(ValueError, match="'job_params' must be specified"):
+        be = QPUBackend(connection)
+        be.set_sequence(seq)
+        be.run()
+
+    qpu_backend = QPUBackend(connection, seq)
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         qpu_backend.run()
     with pytest.raises(TypeError, match="'job_params' must be a list"):
@@ -351,7 +362,7 @@ def test_qpu_backend(sequence):
 
     # Test create a batch and submitting jobs via a context manager
     # behaves as expected.
-    qpu = QPUBackend(seq, connection)
+    qpu = QPUBackend(connection, seq)
     assert connection._got_closed == ""
     with qpu.open_batch() as ob:
         assert ob.backend is qpu
@@ -366,7 +377,7 @@ def test_qpu_backend(sequence):
     assert connection._got_closed == "abcd"
 
     connection._support_open_batch = False
-    qpu = QPUBackend(seq, connection)
+    qpu = QPUBackend(connection, seq)
     with pytest.raises(
         NotImplementedError,
         match="Unable to execute open_batch using this remote connection",

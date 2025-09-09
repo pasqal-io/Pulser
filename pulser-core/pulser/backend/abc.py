@@ -28,12 +28,18 @@ class Backend(ABC):
     """The backend abstract base class."""
 
     def __init__(
-        self, sequence: pulser.Sequence, mimic_qpu: bool = False
+        self, sequence: pulser.Sequence | None = None, mimic_qpu: bool = False
     ) -> None:
         """Starts a new backend instance."""
-        self.validate_sequence(sequence, mimic_qpu=mimic_qpu)
-        self._sequence = sequence
         self._mimic_qpu = bool(mimic_qpu)
+        if sequence:
+            self.set_sequence(sequence)
+        else:
+            self._sequence: pulser.Sequence | None = None
+
+    def set_sequence(self, sequence: pulser.Sequence) -> None:
+        self.validate_sequence(sequence, mimic_qpu=self._mimic_qpu)
+        self._sequence = sequence
 
     @abstractmethod
     def run(self) -> Results | Sequence[Results]:
@@ -89,13 +95,12 @@ class EmulatorBackend(Backend):
 
     def __init__(
         self,
-        sequence: pulser.Sequence,
+        sequence: pulser.Sequence | None = None,
         *,
         config: EmulationConfig | None = None,
         mimic_qpu: bool = False,
     ) -> None:
         """Initializes the backend."""
-        super().__init__(sequence, mimic_qpu=mimic_qpu)
         config = config or self.default_config
         if not isinstance(config, EmulationConfig):
             raise TypeError(
@@ -111,3 +116,4 @@ class EmulatorBackend(Backend):
                 **config._backend_options,
             }
         )
+        super().__init__(sequence, mimic_qpu=mimic_qpu)

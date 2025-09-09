@@ -314,8 +314,8 @@ class RemoteBackend(Backend):
 
     def __init__(
         self,
-        sequence: Sequence,
         connection: RemoteConnection,
+        sequence: Sequence | None = None,
         mimic_qpu: bool = False,
     ) -> None:
         """Starts a new remote backend instance."""
@@ -348,6 +348,8 @@ class RemoteBackend(Backend):
             The results, which can be accessed once all sequences have been
             successfully executed.
         """
+        if not self._sequence:
+            raise ValueError("No sequence was passed to the backend yet!")
         if self._mimic_qpu:
             sequence = self._connection.update_sequence_device(self._sequence)
             self.validate_job_params(job_params, sequence.device.max_runs)

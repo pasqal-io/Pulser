@@ -15,12 +15,7 @@
 from __future__ import annotations
 
 from pulser import Sequence
-from pulser.backend.remote import (
-    JobParams,
-    RemoteBackend,
-    RemoteConnection,
-    RemoteResults,
-)
+from pulser.backend.remote import RemoteBackend, RemoteConnection
 
 
 class QPUBackend(RemoteBackend):
@@ -34,31 +29,7 @@ class QPUBackend(RemoteBackend):
     """
 
     def __init__(
-        self, sequence: Sequence, connection: RemoteConnection
+        self, connection: RemoteConnection, sequence: Sequence | None = None
     ) -> None:
         """Starts a new QPU backend instance."""
-        super().__init__(sequence, connection, mimic_qpu=True)
-
-    def run(
-        self, job_params: list[JobParams] | None = None, wait: bool = False
-    ) -> RemoteResults:
-        """Runs the sequence on the remote QPU and returns the result.
-
-        Args:
-            job_params: A list of parameters for each job to execute. Each
-                mapping must contain a defined 'runs' field specifying
-                the number of times to run the same sequence. If the sequence
-                is parametrized, the values for all the variables necessary
-                to build the sequence must be given in it's own mapping, for
-                each job, under the 'variables' field.
-            wait: Whether to wait until the results of the jobs become
-                available.  If set to False, the call is non-blocking and the
-                obtained results' status can be checked using their `status`
-                property.
-
-        Returns:
-            The results, which can be accessed once all sequences have been
-            successfully executed.
-        """
-        self.validate_job_params(job_params, self._sequence.device.max_runs)
-        return super().run(job_params, wait)
+        super().__init__(connection, sequence, mimic_qpu=True)
