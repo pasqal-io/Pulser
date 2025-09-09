@@ -247,9 +247,11 @@ def test_get_final_state_noisy(reg, pi_pulse):
     final_state = res3.get_final_state()
     assert isdiagonal(final_state)
     res3._meas_basis = "ground-rydberg"
-    assert final_state[0, 0] == 0.04 + 0j and final_state[2, 2] == 0.96 + 0j
+    a1 = 0.02666666666666667 + 0j
+    a2 = 0.9733333333333334 + 0j
+    assert final_state[0, 0] == a1 and final_state[2, 2] == a2
     assert res3.states[-1] == final_state
-    assert res3.results[-1] == Counter({"10": 0.96, "00": 0.04})
+    assert res3.results[-1] == Counter({"10": a2, "00": a1})
 
 
 def test_get_state_float_time(results):
@@ -326,7 +328,7 @@ def test_expect_noisy(results_noisy):
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    assert np.isclose(results_noisy.expect([op])[0][-1], 0.8)
+    assert np.isclose(results_noisy.expect([op])[0][-1], 0.72)
 
 
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
@@ -374,7 +376,7 @@ def test_sample_final_state_three_level(seq_no_meas, pi_pulse):
 def test_sample_final_state_noisy(seq_no_meas, results_noisy):
     np.random.seed(123)
     assert results_noisy.sample_final_state(N_samples=1234) == Counter(
-        {"11": 626, "10": 154, "01": 351, "00": 103}
+        {"11": 588, "10": 250, "01": 270, "00": 126}
     )
     res_3level = QutipEmulator.from_sequence(
         seq_no_meas,
@@ -392,10 +394,10 @@ def test_sample_final_state_noisy(seq_no_meas, results_noisy):
         final_state.full(),
         np.array(
             [
-                [0.42 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.1 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.0 + 0.0j, 0.34 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.14 + 0.0j],
+                [0.54 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+                [0.0 + 0.0j, 0.18 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+                [0.0 + 0.0j, 0.0 + 0.0j, 0.2 + 0.0j, 0.0 + 0.0j],
+                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.08 + 0.0j],
             ]
         ),
     ).all()

@@ -23,9 +23,8 @@ import qutip
 
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
-from pulser.hamiltonian_data import HamiltonianData, NoiseTrajectory
-from pulser.hamiltonian_data.hamiltonian_data import _noisy_register
-from pulser.noise_model import NoiseModel, doppler_sigma
+from pulser.hamiltonian_data import HamiltonianData
+from pulser.noise_model import NoiseModel
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler.samples import SequenceSamples
 from pulser_simulation.simconfig import SUPPORTED_NOISES
@@ -265,43 +264,7 @@ class Hamiltonian:
         return basis, op_matrix
 
     def _update_noise(self) -> None:
-        """Updates noise random parameters.
-
-        Used at the start of each run. If SPAM isn't in chosen noises, all
-        atoms are set to be correctly prepared.
-        """
-        if (
-            "SPAM" in self.data.noise_model.noise_types
-            and self.data.noise_model.state_prep_error > 0
-        ):
-            dist = (
-                np.random.uniform(size=len(self.data._qid_index))
-                < self.data.noise_model.state_prep_error
-            )
-            bad_atoms = dict(zip(self.data._qid_index, dist))
-        else:
-            bad_atoms = {qid: False for qid in self.data._qid_index}
-        if "doppler" in self.data.noise_model.noise_types:
-            temp = self.data.noise_model.temperature * 1e-6
-            detune = np.random.normal(
-                0, doppler_sigma(temp), size=len(self.data._qid_index)
-            )
-            doppler_detune = dict(zip(self.data._qid_index, detune))
-        else:
-            doppler_detune = {qid: 0.0 for qid in self.data._qid_index}
-
-        register: BaseRegister = self.data.register
-        if "register" in self.config.noise_types:
-            register = _noisy_register(self.data.register.qubits, self.config)
-        old_traj = self.data.noise_trajectory
-        self.data.noise_trajectory = NoiseTrajectory(
-            bad_atoms,
-            doppler_detune,
-            old_traj.amp_fluctuations,
-            old_traj.det_fluctuations,
-            old_traj.det_phases,
-            register,
-        )
+        self.data._create_noise_trajectory()
 
     def _construct_hamiltonian(self, update: bool = True) -> None:
         """Constructs the hamiltonian from the sampled Sequence and noise.
