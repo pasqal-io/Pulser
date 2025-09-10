@@ -496,13 +496,12 @@ class HamiltonianData:
         return self.noise_trajectory.bad_atoms
 
     @property
-    def distances(self) -> "pm.torch.Tensor" | np.ndarray:
+    def noisy_distances(self) -> pm.AbstractArray:
         r"""Distances between each qubits (in :math:`\mu m`)."""
         # TODO: Handle torch arrays
         positions = list(self.noisy_register.qubits.values())
         if not positions[0].is_tensor:
-            return cast(
-                np.ndarray,
+            return pm.AbstractArray(
                 np.round(
                     cast(
                         np.ndarray,
@@ -515,7 +514,7 @@ class HamiltonianData:
             ten = pm.torch.stack(
                 [cast(pm.torch.Tensor, x._array) for x in positions]
             )
-            return pm.torch.cdist(ten, ten)
+            return pm.AbstractArray(pm.torch.cdist(ten, ten))
 
     @functools.cached_property
     def nbqudits(self) -> int:
@@ -526,7 +525,7 @@ class HamiltonianData:
     def _interaction_matrix(self) -> "pm.torch.Tensor" | np.ndarray:
         r"""C6/C3 Interactions between the qubits (in :math:`rad/\mu s`)."""
         # TODO: Include masked qubits in XY + bad atoms in the interaction
-        d = pm.AbstractArray(self.distances)
+        d = self.noisy_distances
         interactions = pm.zeros_like(d)._array
         if self.interaction_type == "XY":
             positions = list(self.noisy_register.qubits.values())
@@ -557,7 +556,7 @@ class HamiltonianData:
         return interactions
 
     @property
-    def noisy_interaction_matrix(self) -> "pm.torch.Tensor" | np.ndarray:
+    def noisy_interaction_matrix(self) -> pm.AbstractArray:
         """Return the noisy interaction matrix."""
         mask = [False for _ in range(self.nbqudits)]
         for ind, value in enumerate(self.bad_atoms.values()):
@@ -567,13 +566,13 @@ class HamiltonianData:
             mask2 = np.outer(mask, mask)
             mat = imat.copy()
             mat[mask2] = 0.0
-            return mat
+            return pm.AbstractArray(mat)
         else:
             ten = pm.torch.tensor(mask, dtype=pm.torch.bool)
             mask3 = pm.torch.outer(ten, ten)
             mat2 = imat.clone()
             mat2[mask3] = 0.0
-            return mat2
+            return pm.AbstractArray(mat2)
 
     def _build_local_collapse_operators(
         self,

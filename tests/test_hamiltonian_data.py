@@ -361,7 +361,8 @@ def test_noisy_interaction_matrix():
     noise = pulser.NoiseModel(state_prep_error=1.0, runs=1)
     ham = HamiltonianData.from_sequence(seq, noise_model=noise)
     assert np.allclose(
-        ham.noisy_interaction_matrix, np.zeros_like(ham._interaction_matrix)
+        ham.noisy_interaction_matrix._array,
+        np.zeros_like(ham._interaction_matrix),
     )
 
 
@@ -385,7 +386,8 @@ def test_noisy_interaction_matrix_torch():
     noise = pulser.NoiseModel(state_prep_error=1.0, runs=1)
     ham = HamiltonianData.from_sequence(seq, noise_model=noise)
     assert torch.allclose(
-        ham.noisy_interaction_matrix, torch.zeros_like(ham._interaction_matrix)
+        ham.noisy_interaction_matrix._array,
+        torch.zeros_like(ham._interaction_matrix),
     )
 
 

@@ -290,7 +290,7 @@ class Hamiltonian:
             """
             U = (
                 0.5
-                * self.data.noisy_interaction_matrix[
+                * self.data.noisy_interaction_matrix._array[
                     self.data._qid_index[q1], self.data._qid_index[q2]
                 ]
             )
@@ -304,7 +304,7 @@ class Hamiltonian:
             The units are given so that the coefficient
             includes a 1/hbar factor.
             """
-            U = self.data.noisy_interaction_matrix[
+            U = self.data.noisy_interaction_matrix._array[
                 self.data._qid_index[q1], self.data._qid_index[q2]
             ]
             return U * self.build_operator(
