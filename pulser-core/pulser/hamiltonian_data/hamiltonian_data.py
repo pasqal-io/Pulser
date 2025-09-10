@@ -30,6 +30,7 @@ import pulser.math as pm
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import STATES_RANK, Channel, States
 from pulser.devices._device_datacls import COORD_PRECISION, BaseDevice
+from pulser.hamiltonian_data.noise_trajectory import NoiseTrajectory
 from pulser.noise_model import NoiseModel, doppler_sigma
 from pulser.register import Register3D
 from pulser.register.base_register import BaseRegister, QubitId
@@ -40,8 +41,6 @@ from pulser.sampler.samples import (
     _PulseTargetSlot,
 )
 from pulser.sequence import Sequence
-
-from pulser.hamiltonian_data.noise_trajectory import NoiseTrajectory
 
 TRAP_WAVELENGTH = 0.85  # µm
 

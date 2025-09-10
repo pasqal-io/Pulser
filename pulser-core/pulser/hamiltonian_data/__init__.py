@@ -17,5 +17,9 @@ HamiltonianData contains information about a sequence,
 and a list of noise trajectories.
 """
 
-from pulser.hamiltonian_data import HamiltonianData as HamiltonianData
-from pulser.noise_trajectory import NoiseTrajectory as NoiseTrajectory
+from pulser.hamiltonian_data.hamiltonian_data import (
+    HamiltonianData as HamiltonianData,
+)
+from pulser.hamiltonian_data.noise_trajectory import (
+    NoiseTrajectory as NoiseTrajectory,
+)

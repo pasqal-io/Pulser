@@ -13,7 +13,7 @@
 # limitations under the License.
 """Definition of a noise trajectory."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -24,9 +24,9 @@ from pulser.register.base_register import BaseRegister
 class NoiseTrajectory:
     """Defines a noise trajectory."""
 
-    bad_atoms: dict[str, bool] = field()
-    doppler_detune: dict[str, float] = field()
-    amp_fluctuations: dict[str, float] = field()
-    det_fluctuations: dict[str, float] = field()
-    det_phases: dict[str, ArrayLike] = field()
-    register: BaseRegister = field()
+    bad_atoms: dict[str, bool]
+    doppler_detune: dict[str, float]
+    amp_fluctuations: dict[str, float]
+    det_fluctuations: dict[str, float]
+    det_phases: dict[str, np.ndarray]
+    register: BaseRegister
