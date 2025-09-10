@@ -467,7 +467,7 @@ class HamiltonianData:
 
     @property
     def noise_model(self) -> NoiseModel:
-        """The current configuration, as a NoiseModel instance."""
+        """The current NoiseModel used."""
         return self._config
 
     @property
