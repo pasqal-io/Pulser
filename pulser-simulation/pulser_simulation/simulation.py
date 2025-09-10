@@ -798,8 +798,8 @@ class QutipEmulator:
                 initial_state, reps = initial_configs[i]
                 # We load the initial state manually
                 old_traj = self._hamiltonian.data.noise_trajectory
-                self._hamiltonian.data.noise_trajectory = NoiseTrajectory(
-                    dict(
+                self._hamiltonian.data.noise_trajectory = dataclasses.replace(
+                    old_traj, bad_atoms=dict(
                         zip(
                             self._hamiltonian.data._qid_index,
                             # "0110..." -> array([0, 1, 1, 0, ...])
@@ -809,11 +809,6 @@ class QutipEmulator:
                             ),
                         )
                     ),
-                    old_traj.doppler_detune,
-                    old_traj.amp_fluctuations,
-                    old_traj.det_fluctuations,
-                    old_traj.det_phases,
-                    old_traj.register,
                 )
             # At each run, new random noise: new Hamiltonian
             self._hamiltonian._construct_hamiltonian(update=update_ham)
