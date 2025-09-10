@@ -142,6 +142,7 @@ class Hamiltonian:
             )
         update_basis = self._update_basis(cfg)
         if not from_init:
+            # Don't generate Data again if set_config called from init
             self.data = HamiltonianData(
                 self.data.samples, self.data.register, self.data.device, cfg
             )
