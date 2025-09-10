@@ -28,5 +28,5 @@ class NoiseTrajectory:
     doppler_detune: dict[str, float] = field()
     amp_fluctuations: dict[str, float] = field()
     det_fluctuations: dict[str, float] = field()
-    det_phases: dict[str, np.ndarray] = field()
+    det_phases: dict[str, ArrayLike] = field()
     register: BaseRegister = field()
