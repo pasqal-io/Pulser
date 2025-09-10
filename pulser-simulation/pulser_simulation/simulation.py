@@ -31,7 +31,6 @@ import pulser.sampler as sampler
 from pulser import Sequence
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
-from pulser.hamiltonian_data import NoiseTrajectory
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import BaseRegister
 from pulser.result import SampledResult
@@ -798,8 +797,9 @@ class QutipEmulator:
                 initial_state, reps = initial_configs[i]
                 # We load the initial state manually
                 old_traj = self._hamiltonian.data.noise_trajectory
-                self._hamiltonian.data.noise_trajectory = dataclasses.replace(
-                    old_traj, bad_atoms=dict(
+                self._hamiltonian.data.noise_trajectory = replace(
+                    old_traj,
+                    bad_atoms=dict(
                         zip(
                             self._hamiltonian.data._qid_index,
                             # "0110..." -> array([0, 1, 1, 0, ...])

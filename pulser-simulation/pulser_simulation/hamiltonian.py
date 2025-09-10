@@ -75,7 +75,7 @@ class Hamiltonian:
     @property
     def config(self) -> NoiseModel:
         """The current configuration, as a NoiseModel instance."""
-        return self.data._config
+        return self.data.noise_model
 
     def _adapt_to_sampling_rate(self, full_array: np.ndarray) -> np.ndarray:
         """Adapt list to correspond to sampling rate."""
@@ -114,23 +114,14 @@ class Hamiltonian:
                 for qid in self.data._qid_index
             ]
 
-    def _update_basis(self, cfg: NoiseModel) -> bool:
-        """Whether or not the basis should be updated."""
-        return not hasattr(self, "_config") or (
-            hasattr(self, "_config")
-            and self.data.noise_model.with_leakage != cfg.with_leakage
-        )
-
-    def set_config(
-        self, cfg: NoiseModel, from_init: bool = False, **kwargs: bool
-    ) -> None:
+    def set_config(self, cfg: NoiseModel, from_init: bool = False) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
         Args:
             cfg: New configuration.
             from_init: this is only meant to be used in Hamiltonian.__init__
         """
-        self.data._check_config(cfg)
+        self.data._check_noise_model(cfg)
         not_supported = (
             set(cfg.noise_types) - SUPPORTED_NOISES[self.data.interaction_type]
         )
@@ -140,7 +131,10 @@ class Hamiltonian:
                 "does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
-        update_basis = self._update_basis(cfg)
+        update_basis = not hasattr(self, "_config") or (
+            hasattr(self, "_config")
+            and self.data.noise_model.with_leakage != cfg.with_leakage
+        )
         if not from_init:
             # Don't generate Data again if set_config called from init
             self.data = HamiltonianData(
@@ -354,9 +348,11 @@ class Hamiltonian:
                     dipole_interaction += make_vdw_term(q1, q2)
             return dipole_interaction
 
-        def build_coeffs_ops(basis: str, addr: str) -> list[list]:
+        def build_coeffs_ops(
+            basis: str, addr: str, samples_dict: dict
+        ) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
-            samples = self.data.noisy_samples.to_nested_dict()[addr][basis]
+            samples = samples_dict[addr][basis]
             operators = self.data.operators[addr][basis]
             # Choose operator names according to addressing:
             if basis == "ground-rydberg":
@@ -450,7 +446,7 @@ class Hamiltonian:
         for addr in d:
             for basis in d[addr]:
                 if d[addr][basis]:
-                    qobj_list += cast(list, build_coeffs_ops(basis, addr))
+                    qobj_list += cast(list, build_coeffs_ops(basis, addr, d))
 
         if not qobj_list:  # If qobj_list ends up empty
             qobj_list = [0 * self.build_operator([("I", "global")])]
