@@ -412,6 +412,8 @@ class _OpenBatchContextManager:
         self.backend = backend
 
     def __enter__(self) -> _OpenBatchContextManager:
+        if not self.backend._sequence:
+            raise ValueError("No sequence was passed to the backend yet!")
         batch = self.backend._connection.submit(
             self.backend._sequence,
             open=True,

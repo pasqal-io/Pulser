@@ -124,6 +124,7 @@ class QutipBackendV2(EmulatorBackend):
     _config: QutipConfig
 
     def set_sequence(self, sequence: pulser.Sequence) -> None:
+        """Specify or change the sequence used"""
         super().set_sequence(sequence)
         noise_model: None | NoiseModel = None
         if self._config.prefer_device_noise_model:

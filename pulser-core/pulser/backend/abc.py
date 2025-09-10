@@ -38,6 +38,7 @@ class Backend(ABC):
             self._sequence: pulser.Sequence | None = None
 
     def set_sequence(self, sequence: pulser.Sequence) -> None:
+        """Specify or change the sequence used"""
         self.validate_sequence(sequence, mimic_qpu=self._mimic_qpu)
         self._sequence = sequence
 
