@@ -41,7 +41,7 @@ from pulser.sampler.samples import (
 )
 from pulser.sequence import Sequence
 
-from .noise_trajectory import NoiseTrajectory
+from pulser.hamiltonian_data.noise_trajectory import NoiseTrajectory
 
 TRAP_WAVELENGTH = 0.85  # µm
 
