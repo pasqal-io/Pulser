@@ -402,7 +402,7 @@ class HamiltonianData:
             channels = []
             samples_list = []
             ch_objs = {}
-            # Delete samples for badly prepared atoms
+            # Set amplitude, detuning, phase to 0 over all sequence for badly prepared atoms
             for basis in samples["Local"]:
                 if basis == "XY":
                     type: Channel = Microwave  # type: ignore
