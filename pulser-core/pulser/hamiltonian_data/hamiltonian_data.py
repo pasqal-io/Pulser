@@ -31,7 +31,7 @@ from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import STATES_RANK, Channel, States
 from pulser.devices._device_datacls import COORD_PRECISION, BaseDevice
 from pulser.hamiltonian_data.noise_trajectory import NoiseTrajectory
-from pulser.noise_model import NoiseModel, doppler_sigma
+from pulser.noise_model import NoiseModel
 from pulser.register import Register3D
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler import sampler
@@ -43,6 +43,41 @@ from pulser.sampler.samples import (
 from pulser.sequence import Sequence
 
 TRAP_WAVELENGTH = 0.85  # µm
+MASS = 1.45e-25  # kg
+KB = 1.38e-23  # J/K
+KEFF = 8.7  # µm^-1
+
+SUPPORTED_NOISES: dict = {
+    "ising": {
+        "amplitude",
+        "detuning",
+        "dephasing",
+        "relaxation",
+        "depolarizing",
+        "doppler",
+        "eff_noise",
+        "SPAM",
+        "leakage",
+        "register",
+    },
+    "XY": {
+        "dephasing",
+        "depolarizing",
+        "eff_noise",
+        "SPAM",
+        "leakage",
+        "register",
+    },
+}
+
+
+def doppler_sigma(temperature: float) -> float:
+    """Standard deviation for Doppler shifting due to thermal motion.
+
+    Arg:
+        temperature: The temperature in K.
+    """
+    return KEFF * math.sqrt(KB * temperature / MASS)
 
 
 def _register_sigma_xy_z(
@@ -674,12 +709,21 @@ class HamiltonianData:
         # Building collapse operators
         self._local_collapse_ops = local_collapse_ops
 
-    @staticmethod
-    def _check_noise_model(noise_model: NoiseModel) -> None:
+    def _check_noise_model(self, noise_model: NoiseModel) -> None:
         """Checks that the provided noise_model is a NoiseModel."""
         if not isinstance(noise_model, NoiseModel):
             raise ValueError(
                 f"Object {noise_model} is not a valid `NoiseModel`."
+            )
+        not_supported = (
+            set(noise_model.noise_types)
+            - SUPPORTED_NOISES[self.interaction_type]
+        )
+        if not_supported:
+            raise NotImplementedError(
+                f"Interaction mode '{self.interaction_type}' "
+                "does not support "
+                f"simulation of noise types: {', '.join(not_supported)}."
             )
 
     @staticmethod

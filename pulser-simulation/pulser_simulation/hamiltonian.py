@@ -27,7 +27,6 @@ from pulser.hamiltonian_data import HamiltonianData
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler.samples import SequenceSamples
-from pulser_simulation.simconfig import SUPPORTED_NOISES
 
 
 class Hamiltonian:
@@ -122,15 +121,6 @@ class Hamiltonian:
             from_init: this is only meant to be used in Hamiltonian.__init__
         """
         self.data._check_noise_model(cfg)
-        not_supported = (
-            set(cfg.noise_types) - SUPPORTED_NOISES[self.data.interaction_type]
-        )
-        if not_supported:
-            raise NotImplementedError(
-                f"Interaction mode '{self.data.interaction_type}' "
-                "does not support "
-                f"simulation of noise types: {', '.join(not_supported)}."
-            )
         update_basis = not hasattr(self, "_config") or (
             hasattr(self, "_config")
             and self.data.noise_model.with_leakage != cfg.with_leakage

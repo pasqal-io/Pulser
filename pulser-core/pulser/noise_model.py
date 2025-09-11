@@ -106,19 +106,6 @@ OPTIONAL_IN_ABSTR_REPR = (
     "detuning_hf_freqs",
 )
 
-MASS = 1.45e-25  # kg
-KB = 1.38e-23  # J/K
-KEFF = 8.7  # µm^-1
-
-
-def doppler_sigma(temperature: float) -> float:
-    """Standard deviation for Doppler shifting due to thermal motion.
-
-    Arg:
-        temperature: The temperature in K.
-    """
-    return KEFF * math.sqrt(KB * temperature / MASS)
-
 
 @dataclass(init=True, repr=False, frozen=True)
 class NoiseModel:

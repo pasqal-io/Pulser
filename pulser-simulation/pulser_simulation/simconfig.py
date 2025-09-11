@@ -22,37 +22,13 @@ from typing import Any, Tuple, Type, TypeVar, Union, cast
 
 import qutip
 
-from pulser.noise_model import (
-    _LEGACY_DEFAULTS,
-    NoiseModel,
-    NoiseTypes,
+from pulser.hamiltonian_data.hamiltonian_data import (
+    SUPPORTED_NOISES,
     doppler_sigma,
 )
+from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, NoiseTypes
 
 T = TypeVar("T", bound="SimConfig")
-
-SUPPORTED_NOISES: dict = {
-    "ising": {
-        "amplitude",
-        "detuning",
-        "dephasing",
-        "relaxation",
-        "depolarizing",
-        "doppler",
-        "eff_noise",
-        "SPAM",
-        "leakage",
-        "register",
-    },
-    "XY": {
-        "dephasing",
-        "depolarizing",
-        "eff_noise",
-        "SPAM",
-        "leakage",
-        "register",
-    },
-}
 
 # Maps the noise model parameters with a different name in SimConfig
 _DIFF_NOISE_PARAMS = {
