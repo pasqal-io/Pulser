@@ -29,6 +29,7 @@ from scipy.spatial.distance import cdist
 import pulser.math as pm
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import STATES_RANK, Channel, States
+from pulser.constants import KB, KEFF, MASS, TRAP_WAVELENGTH
 from pulser.devices._device_datacls import COORD_PRECISION, BaseDevice
 from pulser.hamiltonian_data.noise_trajectory import NoiseTrajectory
 from pulser.noise_model import NoiseModel
@@ -41,11 +42,6 @@ from pulser.sampler.samples import (
     _PulseTargetSlot,
 )
 from pulser.sequence import Sequence
-
-TRAP_WAVELENGTH = 0.85  # µm
-MASS = 1.45e-25  # kg
-KB = 1.38e-23  # J/K
-KEFF = 8.7  # µm^-1
 
 SUPPORTED_NOISES: dict = {
     "ising": {
@@ -136,7 +132,8 @@ def _noisy_register(
             p_array = np.array(
                 [np.append(p, 0.0) for p in positions]
             )  # Convert 2D positions to 3D
-
+        else:
+            p_array = np.array(positions)
         narr_xy = np.random.normal(0, register_sigma_xy, (num_atoms, 2))
         narr_z = np.random.normal(0, register_sigma_z, num_atoms)
         narr = np.column_stack((narr_xy, narr_z))
