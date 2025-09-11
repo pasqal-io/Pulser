@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 import pulser
+import pulser.math as pm
 from pulser.hamiltonian_data.hamiltonian_data import (
     HamiltonianData,
     _generate_detuning_fluctuations,
@@ -38,17 +39,17 @@ def test_noisy_register(register2D) -> None:
     """Testing noisy_register function in case 2D and 3D register."""
     if register2D:
         qdict = {
-            "q0": np.array([-15.0, 0.0]),
-            "q1": np.array([-5.0, 0.0]),
-            "q2": np.array([5.0, 0.0]),
-            "q3": np.array([15.0, 0.0]),
+            "q0": pm.AbstractArray(np.array([-15.0, 0.0])),
+            "q1": pm.AbstractArray(np.array([-5.0, 0.0])),
+            "q2": pm.AbstractArray(np.array([5.0, 0.0])),
+            "q3": pm.AbstractArray(np.array([15.0, 0.0])),
         }
     else:
         qdict = {
-            "q0": np.array([-15.0, 0.0, 0.0]),
-            "q1": np.array([-5.0, 0.0, 0.0]),
-            "q2": np.array([5.0, 0.0, 0.0]),
-            "q3": np.array([15.0, 0.0, 0.0]),
+            "q0": pm.AbstractArray(np.array([-15.0, 0.0, 0.0])),
+            "q1": pm.AbstractArray(np.array([-5.0, 0.0, 0.0])),
+            "q2": pm.AbstractArray(np.array([5.0, 0.0, 0.0])),
+            "q3": pm.AbstractArray(np.array([15.0, 0.0, 0.0])),
         }
 
     # Predefined deterministic noise
@@ -86,6 +87,93 @@ def test_noisy_register(register2D) -> None:
         np.testing.assert_array_almost_equal(
             result.qubits[q], expected_positions[q]
         )
+
+
+@pytest.mark.parametrize(
+    "register2D",
+    [
+        True,
+        False,
+    ],
+)
+def test_noisy_register_torch(register2D):
+    torch = pytest.importorskip("torch")
+    if register2D:
+        qdict = {
+            "q0": pm.AbstractArray(
+                torch.tensor([-15.0, 0.0], requires_grad=True)
+            ),
+            "q1": pm.AbstractArray(
+                torch.tensor([-5.0, 0.0], requires_grad=True)
+            ),
+            "q2": pm.AbstractArray(
+                torch.tensor([5.0, 0.0], requires_grad=True)
+            ),
+            "q3": pm.AbstractArray(
+                torch.tensor([15.0, 0.0], requires_grad=True)
+            ),
+        }
+    else:
+        qdict = {
+            "q0": pm.AbstractArray(
+                torch.tensor([-15.0, 0.0, 0.0], requires_grad=True)
+            ),
+            "q1": pm.AbstractArray(
+                torch.tensor([-5.0, 0.0, 0.0], requires_grad=True)
+            ),
+            "q2": pm.AbstractArray(
+                torch.tensor([5.0, 0.0, 0.0], requires_grad=True)
+            ),
+            "q3": pm.AbstractArray(
+                torch.tensor([15.0, 0.0, 0.0], requires_grad=True)
+            ),
+        }
+
+    # Predefined deterministic noise
+    fake_normal_xy_noise = torch.tensor(
+        [
+            [0.1, -0.1],
+            [0.2, -0.2],
+            [0.3, -0.3],
+            [0.5, -0.5],
+        ]
+    )
+    fake_normal_z_noise = torch.tensor([[0.05], [0.07], [0.09], [0.11]])
+
+    mock_noise_model = MagicMock(
+        spec=pulser.NoiseModel
+    )  # generic NoiseModel class
+    with patch(
+        "pulser.hamiltonian_data.hamiltonian_data._register_sigma_xy_z",
+        return_value=(0.13, 0.8),
+    ):
+        with patch("torch.normal") as mock_normal:
+            # moke the noise generation
+            mock_normal.side_effect = [
+                fake_normal_xy_noise,
+                fake_normal_z_noise,
+            ]
+            result = _noisy_register(qdict, mock_noise_model)
+    expected_positions = {
+        "q0": torch.tensor(
+            [-15.0 + 0.1, 0.0 - 0.1, 0.05], dtype=pm.torch.float64
+        ),
+        "q1": torch.tensor(
+            [-5.0 + 0.2, 0.0 - 0.2, 0.07], dtype=pm.torch.float64
+        ),
+        "q2": torch.tensor(
+            [5.0 + 0.3, 0.0 - 0.3, 0.09], dtype=pm.torch.float64
+        ),
+        "q3": torch.tensor(
+            [15.0 + 0.5, 0.0 - 0.5, 0.11], dtype=pm.torch.float64
+        ),
+    }
+    for q in qdict:
+        assert torch.allclose(result.qubits[q]._array, expected_positions[q])
+    g = torch.autograd.grad(result.qubits["q0"]._array[0], qdict["q0"]._array)[
+        0
+    ]
+    assert g.shape == qdict["q0"]._array.shape
 
 
 def test_init_errors():

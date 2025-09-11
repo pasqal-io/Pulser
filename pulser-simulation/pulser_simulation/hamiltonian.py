@@ -210,11 +210,6 @@ class Hamiltonian:
         return qutip.tensor(op_list)
 
     @property
-    def basis_name(self) -> str:
-        """What states are used in the Hamiltonian."""
-        return self.data.basis_name
-
-    @property
     def nbqudits(self) -> int:
         """Number of qudits in the Register."""
         return self.data.nbqudits
@@ -411,7 +406,7 @@ class Hamiltonian:
         effective_size = self.data.nbqudits - sum(
             self.data.noise_trajectory.bad_atoms.values()
         )
-        if "digital" not in self.basis_name and effective_size > 1:
+        if "digital" not in self.data.basis_name and effective_size > 1:
             # Build time-dependent or time-independent interaction term based
             # on whether an SLM mask was defined or not
             if (

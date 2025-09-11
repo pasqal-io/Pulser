@@ -217,7 +217,7 @@ class QutipEmulator:
     @property
     def basis_name(self) -> str:
         """The name of the basis."""
-        return self._hamiltonian.basis_name
+        return self._hamiltonian.data.basis_name
 
     @property
     def basis(self) -> dict[States, Any]:

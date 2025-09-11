@@ -83,7 +83,9 @@ def _register_sigma_xy_z(
     return register_sigma_xy, register_sigma_z
 
 
-def _noisy_register(q_dict: dict, noise_model: NoiseModel) -> Register3D:
+def _noisy_register(
+    q_dict: dict[QubitId, pm.AbstractArray], noise_model: NoiseModel
+) -> Register3D:
     """Add Gaussian noise to the positions of the register."""
     register_sigma_xy, register_sigma_z = _register_sigma_xy_z(
         noise_model.temperature,
@@ -92,18 +94,35 @@ def _noisy_register(q_dict: dict, noise_model: NoiseModel) -> Register3D:
     )
     atoms = list(q_dict.keys())
     num_atoms = len(atoms)
-    positions = np.array(list(q_dict.values()))
+    positions = list(q_dict.values())
+    pos = positions[0]
+    if not pos.is_tensor:
+        if len(pos) == 2:
+            p_array = np.array(
+                [np.append(p, 0.0) for p in positions]
+            )  # Convert 2D positions to 3D
 
-    if len(positions[0]) == 2:
-        positions = np.array(
-            [np.append(p, 0.0) for p in positions]
-        )  # Convert 2D positions to 3D
-
-    noise_xy = np.random.normal(0, register_sigma_xy, (num_atoms, 2))
-    noise_z = np.random.normal(0, register_sigma_z, num_atoms)
-    noise = np.column_stack((noise_xy, noise_z))
-    positions += noise
-    return Register3D({k: pos for (k, pos) in zip(atoms, positions)})
+        narr_xy = np.random.normal(0, register_sigma_xy, (num_atoms, 2))
+        narr_z = np.random.normal(0, register_sigma_z, num_atoms)
+        narr = np.column_stack((narr_xy, narr_z))
+        p_array += narr
+        return Register3D({k: pos for (k, pos) in zip(atoms, p_array)})
+    else:
+        if len(pos) == 2:
+            p_list = [
+                pm.torch.cat(
+                    (cast(pm.torch.Tensor, p._array), pm.torch.tensor([0.0]))
+                )
+                for p in positions
+            ]
+        else:
+            p_list = [cast(pm.torch.Tensor, p._array) for p in positions]
+        nten_xy = pm.torch.normal(0, register_sigma_xy, size=(num_atoms, 2))
+        nten_z = pm.torch.normal(0, register_sigma_z, size=(num_atoms, 1))
+        nten = pm.torch.hstack((nten_xy, nten_z))
+        return Register3D(
+            {k: p_list[i] + nten[i] for i, k in enumerate(atoms)}
+        )
 
 
 def _generate_detuning_fluctuations(

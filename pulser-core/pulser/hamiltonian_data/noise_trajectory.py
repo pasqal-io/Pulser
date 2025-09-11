@@ -19,14 +19,17 @@ import numpy as np
 
 from pulser.register.base_register import BaseRegister
 
+QubitId = str
+ChannelName = str
+
 
 @dataclass(frozen=True)
 class NoiseTrajectory:
     """Defines a noise trajectory."""
 
-    bad_atoms: dict[str, bool]
-    doppler_detune: dict[str, float]
-    amp_fluctuations: dict[str, float]
-    det_fluctuations: dict[str, float]
-    det_phases: dict[str, np.ndarray]
+    bad_atoms: dict[QubitId, bool]
+    doppler_detune: dict[QubitId, float]
+    amp_fluctuations: dict[ChannelName, float]
+    det_fluctuations: dict[ChannelName, float]
+    det_phases: dict[ChannelName, np.ndarray]
     register: BaseRegister
