@@ -690,7 +690,7 @@ class Sequence(Generic[DeviceType]):
         # DMM has Global addressing
         self._add_to_schedule(dmm_name, _TimeSlot("target", -1, 0, self._qids))
 
-    def switch_register(
+    def with_new_register(
         self, new_register: BaseRegister | MappableRegister
     ) -> Sequence:
         """Replicate the sequence with a different register.
@@ -729,7 +729,44 @@ class Sequence(Generic[DeviceType]):
             getattr(new_seq, call.name)(*call.args, **call.kwargs)
         return new_seq
 
-    def switch_device(
+    def switch_register(
+        self, new_register: BaseRegister | MappableRegister
+    ) -> Sequence:
+        """Replicate the sequence with a different register.
+
+        Warning:
+            Deprecated since v1.6. Please use `Sequence.with_new_register()`
+            instead.
+
+        The new sequence is reconstructed with the provided register by
+        replicating all the instructions used to build the original sequence.
+        This means that operations referecing specific qubits IDs
+        (eg. `Sequence.target()`) expect to find the same qubit IDs in the new
+        register. By the same token, switching from a register to a mappable
+        register might fail if one of the instructions does not work with
+        mappable registers (e.g. `Sequence.configure_slm_mask()`).
+
+        Warns:
+            UserWarning: If the sequence is configuring a detuning map, a
+                warning is raised to remind the user that the detuning map is
+                unchanged and might no longer be aligned with the qubits in
+                the new register.
+
+        Args:
+            new_register: The new register to give the sequence.
+
+        Returns:
+            The sequence with the new register.
+        """
+        warnings.warn(
+            "'Sequence.switch_register()' has been deprecated and replaced by "
+            "'Sequence.with_new_register()'.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.with_new_register(new_register)
+
+    def with_new_device(
         self, new_device: DeviceType, strict: bool = False
     ) -> Sequence:
         """Replicate the sequence with a different device.
@@ -749,6 +786,37 @@ class Sequence(Generic[DeviceType]):
             The sequence on the new device.
         """
         return switch_device(self, new_device, strict)
+
+    def switch_device(
+        self, new_device: DeviceType, strict: bool = False
+    ) -> Sequence:
+        """Replicate the sequence with a different device.
+
+        Warning:
+            Deprecated since v1.6. Please use `Sequence.with_new_device()`
+            instead.
+
+        This method is designed to replicate the sequence with as few changes
+        to the original contents as possible.
+        If the `strict` option is chosen, the device switch will fail whenever
+        it cannot guarantee that the new sequence's contents will not be
+        modified in the process.
+
+        Args:
+            new_device: The target device instance.
+            strict: Enforce a strict match between devices and channels to
+                guarantee the pulse sequence is left unchanged.
+
+        Returns:
+            The sequence on the new device.
+        """
+        warnings.warn(
+            "'Sequence.switch_device()' has been deprecated and replaced by "
+            "'Sequence.with_new_device()'.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.with_new_device(new_device, strict)
 
     @seq_decorators.conditionally_block()
     def declare_channel(

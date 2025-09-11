@@ -63,12 +63,12 @@ def test_qutip_backend(sequence):
         TypeError, match="must be a real device"
     ), pytest.deprecated_call(match="'QutipBackend' is deprecated"):
         QutipBackend(sequence, mimic_qpu=True)
-    sequence = sequence.switch_device(pulser.DigitalAnalogDevice)
+    sequence = sequence.with_new_device(pulser.DigitalAnalogDevice)
     with pytest.raises(
         ValueError, match="defined from a `RegisterLayout`"
     ), pytest.deprecated_call(match="'QutipBackend' is deprecated"):
         QutipBackend(sequence, mimic_qpu=True)
-    sequence = sequence.switch_register(
+    sequence = sequence.with_new_register(
         SquareLatticeLayout(5, 5, 5).square_register(2)
     )
     with pytest.deprecated_call(match="'QutipBackend' is deprecated"):
@@ -86,7 +86,7 @@ def test_with_default_noise(sequence):
     new_device = dataclasses.replace(
         MockDevice, default_noise_model=spam_noise
     )
-    new_seq = sequence.switch_device(new_device)
+    new_seq = sequence.with_new_device(new_device)
     with pytest.deprecated_call(match="'QutipBackend' is deprecated"):
         backend = QutipBackend(
             new_seq,
