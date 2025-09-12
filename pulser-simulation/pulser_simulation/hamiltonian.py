@@ -21,11 +21,12 @@ from typing import Union, cast
 import numpy as np
 import qutip
 
+import pulser.math as pm
+from pulser._hamiltonian_data import HamiltonianData
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
-from pulser.hamiltonian_data import HamiltonianData
 from pulser.noise_model import NoiseModel
-from pulser.register.base_register import BaseRegister, QubitId
+from pulser.register import QubitId, Register
 from pulser.sampler.samples import SequenceSamples
 
 
@@ -44,14 +45,17 @@ class Hamiltonian:
 
     def __init__(
         self,
-        samples: SequenceSamples,
-        register: BaseRegister,
+        samples_obj: SequenceSamples,
+        qdict: dict[QubitId, pm.AbstractArray],
         device: BaseDevice,
         sampling_rate: float,
         config: NoiseModel,
     ) -> None:
         """Instantiates a Hamiltonian object."""
-        self.data = HamiltonianData(samples, register, device, config)
+        register = Register.from_coordinates(
+            list(qdict.values()), labels=list(qdict.keys()), center=False
+        )
+        self.data = HamiltonianData(samples_obj, register, device, config)
         self._sampling_rate = sampling_rate
 
         # Type hints for attributes defined outside of __init__

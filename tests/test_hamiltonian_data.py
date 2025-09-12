@@ -6,7 +6,7 @@ import pytest
 
 import pulser
 import pulser.math as pm
-from pulser.hamiltonian_data.hamiltonian_data import (
+from pulser._hamiltonian_data.hamiltonian_data import (
     HamiltonianData,
     _generate_detuning_fluctuations,
     _noisy_register,
@@ -67,7 +67,7 @@ def test_noisy_register(register2D) -> None:
         spec=pulser.NoiseModel
     )  # generic NoiseModel class
     with patch(
-        "pulser.hamiltonian_data.hamiltonian_data._register_sigma_xy_z",
+        "pulser._hamiltonian_data.hamiltonian_data._register_sigma_xy_z",
         return_value=(0.13, 0.8),
     ):
         with patch("numpy.random.normal") as mock_normal:
@@ -144,7 +144,7 @@ def test_noisy_register_torch(register2D):
         spec=pulser.NoiseModel
     )  # generic NoiseModel class
     with patch(
-        "pulser.hamiltonian_data.hamiltonian_data._register_sigma_xy_z",
+        "pulser._hamiltonian_data.hamiltonian_data._register_sigma_xy_z",
         return_value=(0.13, 0.8),
     ):
         with patch("numpy.random.normal") as mock_normal:
@@ -242,10 +242,11 @@ def test_from_sequence():
     noise_model = pulser.NoiseModel(detuning_sigma=0.5, runs=1)
     samples = 5  # something that implements __eq__
     with unittest.mock.patch(
-        "pulser.hamiltonian_data.hamiltonian_data.sampler.sample"
+        "pulser._hamiltonian_data.hamiltonian_data.sampler.sample"
     ) as mock_sample:
         with unittest.mock.patch(
-            "pulser.hamiltonian_data.hamiltonian_data.HamiltonianData.__init__"
+            "pulser._hamiltonian_data.hamiltonian_data.HamiltonianData."
+            "__init__"
         ) as mock_init:
             mock_init.return_value = None
             mock_sample.return_value = samples

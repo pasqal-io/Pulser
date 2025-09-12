@@ -22,7 +22,7 @@ from typing import Any, Tuple, Type, TypeVar, Union, cast
 
 import qutip
 
-from pulser.hamiltonian_data.hamiltonian_data import (
+from pulser._hamiltonian_data.hamiltonian_data import (
     SUPPORTED_NOISES,
     doppler_sigma,
 )
