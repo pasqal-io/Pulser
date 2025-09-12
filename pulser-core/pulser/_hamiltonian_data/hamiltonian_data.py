@@ -271,7 +271,6 @@ class HamiltonianData:
             qid: i for i, qid in enumerate(self.register.qubits)
         }
 
-        # Stores the qutip operators used in building the Hamiltonian
         self._local_collapse_ops: list[
             tuple[int | float | complex, str | np.ndarray]
         ] = []
@@ -528,7 +527,6 @@ class HamiltonianData:
     @property
     def noisy_distances(self) -> pm.AbstractArray:
         r"""Distances between each qubits (in :math:`\mu m`)."""
-        # TODO: Handle torch arrays
         positions = list(self.noisy_register.qubits.values())
         if not positions[0].is_tensor:
             return pm.AbstractArray(

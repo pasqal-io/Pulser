@@ -13,8 +13,7 @@
 # limitations under the License.
 """Defines a series of physical constants.
 
-It's done in such a way that the user can overrride them
-through environment variables.
+These are environment variables that can be overwritten.
 """
 from os import getenv
 

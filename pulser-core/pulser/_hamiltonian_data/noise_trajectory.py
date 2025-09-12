@@ -17,9 +17,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from pulser.register.base_register import BaseRegister
+from pulser.register.base_register import BaseRegister, QubitId
 
-QubitId = str
 ChannelName = str
 
 
