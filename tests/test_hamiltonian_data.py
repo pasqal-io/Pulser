@@ -147,7 +147,7 @@ def test_noisy_register_torch(register2D):
         "pulser.hamiltonian_data.hamiltonian_data._register_sigma_xy_z",
         return_value=(0.13, 0.8),
     ):
-        with patch("torch.normal") as mock_normal:
+        with patch("numpy.random.normal") as mock_normal:
             # moke the noise generation
             mock_normal.side_effect = [
                 fake_normal_xy_noise,
