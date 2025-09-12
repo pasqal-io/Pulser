@@ -27,11 +27,11 @@ from numpy.typing import ArrayLike
 from scipy.spatial.distance import cdist
 
 import pulser.math as pm
+from pulser._hamiltonian_data.noise_trajectory import NoiseTrajectory
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import STATES_RANK, Channel, States
 from pulser.constants import KB, KEFF, MASS, TRAP_WAVELENGTH
 from pulser.devices._device_datacls import COORD_PRECISION, BaseDevice
-from pulser._hamiltonian_data.noise_trajectory import NoiseTrajectory
 from pulser.noise_model import NoiseModel
 from pulser.register import Register3D
 from pulser.register.base_register import BaseRegister, QubitId
