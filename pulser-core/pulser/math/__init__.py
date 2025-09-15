@@ -46,6 +46,15 @@ class TensorLike(Protocol[T]):
 # Custom function definitions
 
 
+def norm(a: AbstractArrayLike) -> AbstractArray:
+    """Return the norm of the array."""
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.linalg.vector_norm(a._array))
+    else:
+        return AbstractArray(np.linalg.norm(a._array))
+
+
 def exp(a: AbstractArrayLike, /) -> AbstractArray:
     a = AbstractArray(a)
     if a.is_tensor:
@@ -254,3 +263,11 @@ def flatten(a: AbstractArrayLike) -> AbstractArray:
     if a.is_tensor:
         return AbstractArray(torch.flatten(a.as_tensor()))
     return AbstractArray(a.as_array().flatten())
+
+
+def zeros_like(a: AbstractArrayLike) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.zeros_like(cast(torch.Tensor, a._array)))
+    else:
+        return AbstractArray(np.zeros_like(a._array))

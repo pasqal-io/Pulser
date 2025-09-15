@@ -15,14 +15,12 @@
 from __future__ import annotations
 
 import json
-import math
 import warnings
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field, fields
 from typing import Any, Literal, Union, cast, get_args
 
 import numpy as np
-from numpy.random import Generator
 from numpy.typing import ArrayLike
 
 import pulser.json.abstract_repr as pulser_abstract_repr
@@ -31,8 +29,6 @@ from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults
 
 __all__ = ["NoiseModel"]
-
-TRAP_WAVELENGTH = 0.85  # µm
 
 NoiseTypes = Literal[
     "leakage",
@@ -599,107 +595,3 @@ class NoiseModel:
                 obj_str
             )
         )
-
-
-def _register_sigma_xy_z(
-    temperature: float, trap_waist: float, trap_depth: float
-) -> tuple[float, float]:
-    """Standard deviation for fluctuations in atom position in the trap.
-
-    - Plane fluctuation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,
-      w is the trap waist and Uₜᵣₐₚ is the trap depth.
-    - Off plane fluctuation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the trap
-    wavelength with a constant value of 0.85 µm
-
-    Note: a k_B factor is absorbed in the trap depth (Uₜᵣₐₚ), so the units
-    of temperature and trap depth are the same.
-
-    Args:
-        temperature (float): Temperature (T) of the atoms in the trap
-            (in Kelvin).
-        trap_depth (float): Depth of the trap (Uₜᵣₐₚ)
-            (same units as temperature).
-        trap_waist (float): Waist of the trap (w) (in µmeters).
-
-    Returns:
-        tuple: The standard deviations of the spatial position fluctuations
-        in the xy-plane (register_sigma_xy) and along the z-axis
-        (register_sigma_z).
-    """
-    register_sigma_xy = math.sqrt(
-        temperature * trap_waist**2 / (4 * trap_depth)
-    )
-    register_sigma_z = (
-        math.pi
-        / TRAP_WAVELENGTH
-        * math.sqrt(2)
-        * trap_waist
-        * register_sigma_xy
-    )
-    return register_sigma_xy, register_sigma_z
-
-
-def _noisy_register(q_dict: dict, config: NoiseModel) -> dict:
-    """Add Gaussian noise to the positions of the register."""
-    register_sigma_xy, register_sigma_z = _register_sigma_xy_z(
-        config.temperature, config.trap_waist, cast(float, config.trap_depth)
-    )
-    atoms = list(q_dict.keys())
-    num_atoms = len(atoms)
-    positions = np.array(list(q_dict.values()))
-
-    if len(positions[0]) == 2:
-        positions = np.array(
-            [np.append(p, 0.0) for p in positions]
-        )  # Convert 2D positions to 3D
-
-    noise_xy = np.random.normal(0, register_sigma_xy, (num_atoms, 2))
-    noise_z = np.random.normal(0, register_sigma_z, num_atoms)
-    noise = np.column_stack((noise_xy, noise_z))
-    positions += noise
-    return {k: pos for (k, pos) in zip(atoms, positions)}
-
-
-def _generate_detuning_fluctuations(
-    noise_model: NoiseModel,
-    times: ArrayLike,
-    rng: Generator | None = None,
-) -> np.ndarray:
-    """Compute δ_hf(t) + δ_σ.
-
-    Generates the high-frequency time-dependent component together
-    with a constant offset of the detuning fluctuations.
-
-    Args:
-        noise_model (NoiseModel): class containing noise parameters
-        times (ArrayLike): array of sample times (in µs).
-
-    Notes
-    -----
-    High frequency term uses Gaussian stochastic noise with power
-        spectral density `psd`:
-        δ_hf(t) = Σ_k sqrt(2 * Δf_k * psd_k) * cos(2π(f_k * t + φ_k))
-        where φ_k ~ U[0, 1) (uniform random phase),
-        Δf_k = freqs[k+1] - freqs[k].
-        The last (freqs[-1], psd[-1]) is unused.
-    """
-    det_cst_term = 0.0
-    det_hf = np.zeros_like(times)
-
-    if rng is None:
-        rng = np.random.default_rng()
-
-    if noise_model.detuning_sigma:
-        det_cst_term = rng.normal(0.0, noise_model.detuning_sigma)
-
-    if noise_model.detuning_hf_psd:
-        t = np.asarray(times) * 1e-6  # µsec -> sec
-        freqs = np.asarray(noise_model.detuning_hf_freqs)[:-1]
-        psd = np.asarray(noise_model.detuning_hf_psd)[:-1]
-        df = np.diff(noise_model.detuning_hf_freqs)
-        amp = np.sqrt(2.0 * df * psd)
-        phases = rng.uniform(0.0, 1.0, size=len(freqs))
-        arg = freqs[:, None] * t[None, :] + phases[:, None]
-        det_hf = (amp[:, None] * np.cos(2.0 * np.pi * arg)).sum(axis=0)
-
-    return det_cst_term + det_hf
