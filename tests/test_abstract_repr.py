@@ -1014,7 +1014,7 @@ class TestSerialization:
             post_phase_shift=1.0,
         )
 
-        method_call = parametrize(BlackmanWaveform.change_duration)(wf, var)
+        method_call = parametrize(BlackmanWaveform.with_new_duration)(wf, var)
         with pytest.raises(
             NotImplementedError,
             match="Instance or static method serialization is not supported.",

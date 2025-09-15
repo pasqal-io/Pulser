@@ -64,23 +64,25 @@ def test_duration():
 
 
 def test_change_duration():
-    with pytest.raises(NotImplementedError):
+    with pytest.deprecated_call(
+        match=re.escape("'Waveform.change_duration()' has been deprecated")
+    ), pytest.raises(NotImplementedError):
         custom.change_duration(53)
 
-    new_cte = constant.change_duration(103)
+    new_cte = constant.with_new_duration(103)
     assert constant.duration == 100
     assert new_cte.duration == 103
 
-    new_blackman = blackman.change_duration(30)
+    new_blackman = blackman.with_new_duration(30)
     assert np.isclose(new_blackman.integral, blackman.integral)
     assert new_blackman != blackman
 
-    new_ramp = ramp.change_duration(100)
+    new_ramp = ramp.with_new_duration(100)
     assert new_ramp.duration == 100
     assert new_ramp != ramp
 
     assert interp.duration == 1000
-    new_interp = interp.change_duration(100)
+    new_interp = interp.with_new_duration(100)
     assert new_interp.duration == 100
 
 
@@ -353,10 +355,10 @@ def test_kaiser():
 
     # Check duration change
     new_duration = duration * 2
-    wf_change_duration = wf.change_duration(new_duration)
-    assert wf_change_duration.samples.size == new_duration
+    wf_with_new_duration = wf.with_new_duration(new_duration)
+    assert wf_with_new_duration.samples.size == new_duration
     assert np.isclose(
-        np.sum(wf_samples), np.sum(wf_change_duration.samples.as_array())
+        np.sum(wf_samples), np.sum(wf_with_new_duration.samples.as_array())
     )
 
     # Check __str__
@@ -552,7 +554,9 @@ def test_waveform_diff(
     assert wf[-1].requires_grad == requires_grad
 
     try:
-        assert wf.change_duration(1000).samples.requires_grad == requires_grad
+        assert (
+            wf.with_new_duration(1000).samples.requires_grad == requires_grad
+        )
     except NotImplementedError:
         pass
 

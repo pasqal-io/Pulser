@@ -2445,8 +2445,8 @@ class Sequence(Generic[DeviceType]):
         new_phase = pulse.phase + (phase_ref if phase_ref else 0)
         if _duration != pulse.duration:
             try:
-                new_amp = pulse.amplitude.change_duration(_duration)
-                new_det = pulse.detuning.change_duration(_duration)
+                new_amp = pulse.amplitude.with_new_duration(_duration)
+                new_det = pulse.detuning.with_new_duration(_duration)
             except NotImplementedError:
                 raise TypeError(
                     "Failed to automatically adjust one of the pulse's "
