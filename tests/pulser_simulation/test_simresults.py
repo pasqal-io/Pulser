@@ -235,6 +235,8 @@ def test_get_final_state_noisy(reg, pi_pulse):
             runs=15,
             samples_per_run=5,
             temperature=50.0,
+            trap_depth=0.01,
+            trap_waist=0.02,
             state_prep_error=0.005,
             p_false_pos=0.01,
             p_false_neg=0.05,
@@ -245,14 +247,11 @@ def test_get_final_state_noisy(reg, pi_pulse):
     final_state = res3.get_final_state()
     assert isdiagonal(final_state)
     res3._meas_basis = "ground-rydberg"
-    assert (
-        final_state[0, 0] == 0.06666666666666667 + 0j
-        and final_state[2, 2] == 0.9333333333333333 + 0j
-    )
+    a1 = 0.02666666666666667 + 0j
+    a2 = 0.9733333333333334 + 0j
+    assert final_state[0, 0] == a1 and final_state[2, 2] == a2
     assert res3.states[-1] == final_state
-    assert res3.results[-1] == Counter(
-        {"10": 0.9333333333333333, "00": 0.06666666666666667}
-    )
+    assert res3.results[-1] == Counter({"10": a2, "00": a1})
 
 
 def test_get_state_float_time(results):

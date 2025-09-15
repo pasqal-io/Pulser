@@ -22,37 +22,13 @@ from typing import Any, Tuple, Type, TypeVar, Union, cast
 
 import qutip
 
+from pulser._hamiltonian_data.hamiltonian_data import (
+    SUPPORTED_NOISES,
+    doppler_sigma,
+)
 from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, NoiseTypes
 
-MASS = 1.45e-25  # kg
-KB = 1.38e-23  # J/K
-KEFF = 8.7  # µm^-1
-
-
 T = TypeVar("T", bound="SimConfig")
-
-SUPPORTED_NOISES: dict = {
-    "ising": {
-        "amplitude",
-        "detuning",
-        "dephasing",
-        "relaxation",
-        "depolarizing",
-        "doppler",
-        "eff_noise",
-        "SPAM",
-        "leakage",
-        "register",
-    },
-    "XY": {
-        "dephasing",
-        "depolarizing",
-        "eff_noise",
-        "SPAM",
-        "leakage",
-        "register",
-    },
-}
 
 # Maps the noise model parameters with a different name in SimConfig
 _DIFF_NOISE_PARAMS = {
@@ -61,15 +37,6 @@ _DIFF_NOISE_PARAMS = {
     "p_false_pos": "epsilon",
     "p_false_neg": "epsilon_prime",
 }
-
-
-def doppler_sigma(temperature: float) -> float:
-    """Standard deviation for Doppler shifting due to thermal motion.
-
-    Arg:
-        temperature: The temperature in K.
-    """
-    return KEFF * math.sqrt(KB * temperature / MASS)
 
 
 @dataclass(frozen=True)
