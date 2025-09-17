@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import re
 import typing
 import uuid
@@ -261,7 +262,7 @@ def test_update_sequence_device(sequence):
         pulser.AnalogDevice, requires_layout=False
     )
     with pytest.warns(UserWarning, match="different Rydberg level"):
-        sequence = sequence.switch_device(custom_device)
+        sequence = sequence.with_new_device(custom_device)
     device = dataclasses.replace(
         custom_device, max_atom_num=custom_device.max_atom_num + 1
     )
@@ -280,20 +281,22 @@ def test_qpu_backend(sequence):
     with pytest.warns(
         UserWarning, match="device with a different Rydberg level"
     ):
-        seq = sequence.switch_device(AnalogDevice)
+        seq = sequence.with_new_device(AnalogDevice)
 
     with pytest.raises(ValueError, match="defined from a `RegisterLayout`"):
         QPUBackend(seq, connection)
 
-    seq = seq.switch_register(SquareLatticeLayout(5, 5, 5).square_register(2))
-    seq = seq.switch_device(
+    seq = seq.with_new_register(
+        SquareLatticeLayout(5, 5, 5).square_register(2)
+    )
+    seq = seq.with_new_device(
         dataclasses.replace(seq.device, accepts_new_layouts=False)
     )
     with pytest.raises(
         ValueError, match="does not accept new register layouts"
     ):
         QPUBackend(seq, connection)
-    seq = seq.switch_register(
+    seq = seq.with_new_register(
         AnalogDevice.pre_calibrated_layouts[0].define_register(1, 2, 3)
     )
 
@@ -395,22 +398,37 @@ def test_emulator_backend(sequence):
     ):
         ConcreteEmulator(sequence, config=EmulatorConfig)
 
-    emu = ConcreteEmulator(
-        sequence,
-        config=EmulationConfig(
-            observables=(BitStrings(),), default_evaluation_times="Full"
-        ),
+    concrete_config = EmulationConfig(
+        observables=(BitStrings(),),
+        default_evaluation_times="Full",
+        my_param="bar",
     )
-    assert emu._config.default_evaluation_times == "Full"
-    # with_modulation is not True because EmulationConfig has it in the
-    # signature as `with_modulation=False``
-    assert not emu._config.with_modulation
-    # But the parameter that's not in EmulationConfig's signature is still
-    # passed to the config
-    assert emu._config.extra_param == "foo"
+    emu = ConcreteEmulator(sequence, config=concrete_config)
 
-    # Uses the default config
-    assert ConcreteEmulator(sequence)._config.with_modulation
+    # The adopted configuration, as given by validate_config
+    # (we use the abstract representation to compare them)
+    assert (
+        json.loads(emu._config.to_abstract_repr())
+        == json.loads(
+            ConcreteEmulator.validate_config(
+                concrete_config
+            ).to_abstract_repr()
+        )
+        == json.loads(
+            EmulationConfig(
+                # These come from the concrete config
+                observables=(BitStrings(),),
+                default_evaluation_times="Full",
+                my_param="bar",
+                # with_modulation is not True because EmulationConfig has it
+                # in the signature as `with_modulation=False``
+                with_modulation=False,
+                # But the parameter that's not in EmulationConfig's signature
+                # is still passed to the config
+                extra_param="foo",
+            ).to_abstract_repr()
+        )
+    )
 
 
 def test_backend_config():

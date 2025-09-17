@@ -166,7 +166,7 @@ class Waveform(ABC):
             )
         plt.show()
 
-    def change_duration(self, new_duration: int) -> Waveform:
+    def with_new_duration(self, new_duration: int) -> Waveform:
         """Returns a new waveform with modified duration.
 
         Args:
@@ -176,6 +176,24 @@ class Waveform(ABC):
             f"{self.__class__.__name__} does not support"
             " modifications to its duration."
         )
+
+    def change_duration(self, new_duration: int) -> Waveform:
+        """Returns a new waveform with modified duration.
+
+        Warning:
+            Deprecated since v1.6. Please use `Waveform.with_new_duration()`
+            instead.
+
+        Args:
+            new_duration: The duration of the new waveform.
+        """
+        warnings.warn(
+            "'Waveform.change_duration()' has been deprecated and replaced by "
+            "'Waveform.with_new_duration()'.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.with_new_duration(new_duration)
 
     def truncated(self, new_duration: int) -> Waveform:
         """Returns a new waveform, truncated to a new duration.
@@ -553,7 +571,7 @@ class ConstantWaveform(Waveform):
         """
         return self._value * np.ones(self.duration)
 
-    def change_duration(self, new_duration: int) -> ConstantWaveform:
+    def with_new_duration(self, new_duration: int) -> ConstantWaveform:
         """Returns a new waveform with modified duration.
 
         Args:
@@ -576,7 +594,7 @@ class ConstantWaveform(Waveform):
         Returns:
             The truncated waveform (if applicable).
         """
-        return self.change_duration(min(new_duration, self.duration))
+        return self.with_new_duration(min(new_duration, self.duration))
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._value)
@@ -648,7 +666,7 @@ class RampWaveform(Waveform):
         r"""Slope of the ramp, in [waveform units] / ns."""
         return float(self._slope)
 
-    def change_duration(self, new_duration: int) -> RampWaveform:
+    def with_new_duration(self, new_duration: int) -> RampWaveform:
         """Returns a new waveform with modified duration.
 
         Args:
@@ -790,7 +808,7 @@ class BlackmanWaveform(Waveform):
         """
         return self._norm_samples * self._scaling
 
-    def change_duration(self, new_duration: int) -> BlackmanWaveform:
+    def with_new_duration(self, new_duration: int) -> BlackmanWaveform:
         """Returns a new waveform with modified duration.
 
         Args:
@@ -972,7 +990,7 @@ class InterpolatedWaveform(Waveform):
         """Points (t[ns], value[arb. units]) that define the interpolation."""
         return self._data_pts.copy()
 
-    def change_duration(self, new_duration: int) -> InterpolatedWaveform:
+    def with_new_duration(self, new_duration: int) -> InterpolatedWaveform:
         """Returns a new waveform with modified duration.
 
         Args:
@@ -1195,7 +1213,7 @@ class KaiserWaveform(Waveform):
         """
         return self._norm_samples * self._scaling
 
-    def change_duration(self, new_duration: int) -> KaiserWaveform:
+    def with_new_duration(self, new_duration: int) -> KaiserWaveform:
         """Returns a new waveform with modified duration.
 
         Args:
