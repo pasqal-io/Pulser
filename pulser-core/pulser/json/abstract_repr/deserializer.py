@@ -460,14 +460,14 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
     relevant_params -= {"detuning_sigma"}  # Handled separately, optional arg
 
     detuning_hf_psd = []
-    detuning_hf_freqs = []
+    detuning_hf_omegas = []
     if "detuning_hf" in noise_model_obj:
         for psd, freq in noise_model_obj.pop("detuning_hf"):
             detuning_hf_psd.append(psd)
-            detuning_hf_freqs.append(freq)
+            detuning_hf_omegas.append(freq)
     relevant_params -= {  # Handled separately
         "detuning_hf_psd",
-        "detuning_hf_freqs",
+        "detuning_hf_omegas",
     }
 
     noise_model = pulser.NoiseModel(
@@ -476,7 +476,7 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
         eff_noise_opers=tuple(eff_noise_opers),
         with_leakage=with_leakage,
         detuning_hf_psd=tuple(detuning_hf_psd),
-        detuning_hf_freqs=tuple(detuning_hf_freqs),
+        detuning_hf_omegas=tuple(detuning_hf_omegas),
         detuning_sigma=detuning_sigma,
     )
     assert set(noise_model.noise_types) == set(noise_types)

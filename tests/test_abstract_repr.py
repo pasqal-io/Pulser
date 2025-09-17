@@ -226,13 +226,13 @@ def test_register(reg: Register | Register3D):
         ),
         NoiseModel(
             detuning_hf_psd=(1, 2, 3),
-            detuning_hf_freqs=(4, 5, 6),
+            detuning_hf_omegas=(4, 5, 6),
             runs=1,
         ),
         NoiseModel(
             detuning_sigma=0.1,
             detuning_hf_psd=(1, 2, 3),
-            detuning_hf_freqs=(4, 5, 6),
+            detuning_hf_omegas=(4, 5, 6),
             runs=1,
         ),
         NoiseModel(
@@ -2842,7 +2842,7 @@ def test_noise_optional_params(
         trap_waist=trap_waist,
         trap_depth=trap_depth,
         detuning_hf_psd=det_hf_psd,
-        detuning_hf_freqs=det_hf_freqs,
+        detuning_hf_omegas=det_hf_freqs,
         temperature=temperature,
         with_leakage=True,
         eff_noise_rates=(0.1,),
