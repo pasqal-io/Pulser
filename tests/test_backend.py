@@ -262,7 +262,7 @@ def test_update_sequence_device(sequence):
         pulser.AnalogDevice, requires_layout=False
     )
     with pytest.warns(UserWarning, match="different Rydberg level"):
-        sequence = sequence.switch_device(custom_device)
+        sequence = sequence.with_new_device(custom_device)
     device = dataclasses.replace(
         custom_device, max_atom_num=custom_device.max_atom_num + 1
     )
@@ -281,20 +281,22 @@ def test_qpu_backend(sequence):
     with pytest.warns(
         UserWarning, match="device with a different Rydberg level"
     ):
-        seq = sequence.switch_device(AnalogDevice)
+        seq = sequence.with_new_device(AnalogDevice)
 
     with pytest.raises(ValueError, match="defined from a `RegisterLayout`"):
         QPUBackend(seq, connection)
 
-    seq = seq.switch_register(SquareLatticeLayout(5, 5, 5).square_register(2))
-    seq = seq.switch_device(
+    seq = seq.with_new_register(
+        SquareLatticeLayout(5, 5, 5).square_register(2)
+    )
+    seq = seq.with_new_device(
         dataclasses.replace(seq.device, accepts_new_layouts=False)
     )
     with pytest.raises(
         ValueError, match="does not accept new register layouts"
     ):
         QPUBackend(seq, connection)
-    seq = seq.switch_register(
+    seq = seq.with_new_register(
         AnalogDevice.pre_calibrated_layouts[0].define_register(1, 2, 3)
     )
 
