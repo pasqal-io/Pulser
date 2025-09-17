@@ -452,8 +452,17 @@ def test_noisy_interaction_matrix():
     )
     noise = pulser.NoiseModel(state_prep_error=0.5, runs=1)
     ham = HamiltonianData.from_sequence(seq, noise_model=noise)
+
+    assert ham.bad_atoms == {
+        "batman": True,
+        "superman": False,
+        "ironman": False,
+        "aquaman": True,
+    }
+
+    actual = ham.noisy_interaction_matrix._array
     assert np.allclose(
-        ham.noisy_interaction_matrix._array,
+        actual,
         np.array(
             [
                 [0.0000, 0.0000, 0.0000, 0.0000],
@@ -463,6 +472,7 @@ def test_noisy_interaction_matrix():
             ]
         ),
     )
+    assert actual[1, 2] == ham._interaction_matrix[1, 2]
 
 
 def test_noisy_interaction_matrix_torch():
@@ -487,8 +497,15 @@ def test_noisy_interaction_matrix_torch():
     )
     noise = pulser.NoiseModel(state_prep_error=0.5, runs=1)
     ham = HamiltonianData.from_sequence(seq, noise_model=noise)
+    assert ham.bad_atoms == {
+        "batman": True,
+        "superman": False,
+        "ironman": False,
+        "aquaman": True,
+    }
+    actual = ham.noisy_interaction_matrix._array
     assert torch.allclose(
-        ham.noisy_interaction_matrix._array,
+        actual,
         torch.tensor(
             [
                 [0.0000, 0.0000, 0.0000, 0.0000],
@@ -499,6 +516,8 @@ def test_noisy_interaction_matrix_torch():
             dtype=torch.float64,
         ),
     )
+
+    assert actual[1, 2] == ham._interaction_matrix[1, 2]
 
 
 def test_noise_hf_detuning_generation():
