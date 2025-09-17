@@ -96,7 +96,19 @@ class EmulatorBackend(Backend):
     ) -> None:
         """Initializes the backend."""
         super().__init__(sequence, mimic_qpu=mimic_qpu)
-        config = config or self.default_config
+        self._config = self.validate_config(config or self.default_config)
+
+    @classmethod
+    def validate_config(cls, config: EmulationConfig) -> EmulationConfig:
+        """Validates a given configuration for this backend.
+
+        Args:
+            config: The configuration to validate.
+
+        Returns:
+            The full configuration that will be used by the backend if
+            the given configuration passes validation.
+        """
         if not isinstance(config, EmulationConfig):
             raise TypeError(
                 "'config' must be an instance of 'EmulationConfig', "
@@ -105,9 +117,9 @@ class EmulatorBackend(Backend):
         # Use all the parameters in config and then fill the rest with the
         # ones of default_config
         # See the BackendConfig definition to see why this works
-        self._config = type(self.default_config)(
+        return type(cls.default_config)(
             **{
-                **self.default_config._backend_options,
+                **cls.default_config._backend_options,
                 **config._backend_options,
             }
         )

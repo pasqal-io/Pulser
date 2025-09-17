@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import re
 import typing
 import uuid
@@ -397,22 +398,37 @@ def test_emulator_backend(sequence):
     ):
         ConcreteEmulator(sequence, config=EmulatorConfig)
 
-    emu = ConcreteEmulator(
-        sequence,
-        config=EmulationConfig(
-            observables=(BitStrings(),), default_evaluation_times="Full"
-        ),
+    concrete_config = EmulationConfig(
+        observables=(BitStrings(),),
+        default_evaluation_times="Full",
+        my_param="bar",
     )
-    assert emu._config.default_evaluation_times == "Full"
-    # with_modulation is not True because EmulationConfig has it in the
-    # signature as `with_modulation=False``
-    assert not emu._config.with_modulation
-    # But the parameter that's not in EmulationConfig's signature is still
-    # passed to the config
-    assert emu._config.extra_param == "foo"
+    emu = ConcreteEmulator(sequence, config=concrete_config)
 
-    # Uses the default config
-    assert ConcreteEmulator(sequence)._config.with_modulation
+    # The adopted configuration, as given by validate_config
+    # (we use the abstract representation to compare them)
+    assert (
+        json.loads(emu._config.to_abstract_repr())
+        == json.loads(
+            ConcreteEmulator.validate_config(
+                concrete_config
+            ).to_abstract_repr()
+        )
+        == json.loads(
+            EmulationConfig(
+                # These come from the concrete config
+                observables=(BitStrings(),),
+                default_evaluation_times="Full",
+                my_param="bar",
+                # with_modulation is not True because EmulationConfig has it
+                # in the signature as `with_modulation=False``
+                with_modulation=False,
+                # But the parameter that's not in EmulationConfig's signature
+                # is still passed to the config
+                extra_param="foo",
+            ).to_abstract_repr()
+        )
+    )
 
 
 def test_backend_config():
