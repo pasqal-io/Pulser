@@ -296,20 +296,23 @@ def test_noise_model(noise_model: NoiseModel):
     # temperature is now >0 whereas it was 0 in initial noise model.
     disable_doppler = dict_legacy.pop("disable_doppler")
     assert disable_doppler == (
-        dict_legacy["temperature"] > 0 and "doppler" not in re_noise_model.noise_types
+        dict_legacy["temperature"] > 0
+        and "doppler" not in re_noise_model.noise_types
     )
     dict_re_noise_model.pop("disable_doppler")
     if disable_doppler:
-        # Temperature/runs have been updated if they were 0/None 
+        # Temperature/runs have been updated if they were 0/None
         temp = dict_legacy.pop("temperature")
-        assert temp == (noise_model.temperature or _LEGACY_DEFAULTS["temperature"])
+        assert temp == (
+            noise_model.temperature or _LEGACY_DEFAULTS["temperature"]
+        )
         dict_re_noise_model.pop("temperature")
         assert (
-            dict_legacy.pop("runs") == noise_model.runs or _LEGACY_DEFAULTS["runs"]
+            dict_legacy.pop("runs") == noise_model.runs
+            or _LEGACY_DEFAULTS["runs"]
         )
         dict_re_noise_model.pop("runs")
     assert dict_legacy == dict_re_noise_model
-
 
     with pytest.raises(TypeError, match="must be given as a string"):
         NoiseModel.from_abstract_repr(ser_noise_model_obj)
