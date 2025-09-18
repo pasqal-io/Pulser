@@ -18,7 +18,7 @@ import json
 import re
 from collections.abc import Callable
 from copy import deepcopy
-from dataclasses import replace
+from dataclasses import replace, asdict
 from typing import Any, Type, cast
 from unittest.mock import patch
 
@@ -209,8 +209,13 @@ def test_register(reg: Register | Register3D):
     "noise_model",
     [
         NoiseModel(),
+        NoiseModel(disable_doppler=True),
         NoiseModel(laser_waist=100),
+        NoiseModel(laser_waist=100, disable_doppler=True),
         NoiseModel(temperature=100, runs=10, samples_per_run=1),
+        NoiseModel(
+            temperature=100, runs=10, samples_per_run=1, disable_doppler=True
+        ),
         NoiseModel(
             eff_noise_rates=(0.1,),
             eff_noise_opers=(((0, -1j), (1j, 0)),),
@@ -242,6 +247,14 @@ def test_register(reg: Register | Register3D):
             runs=1,
             samples_per_run=1,
         ),
+        NoiseModel(
+            temperature=50.0,
+            trap_depth=150.0,
+            trap_waist=1.0,
+            runs=1,
+            samples_per_run=1,
+            disable_doppler=True,
+        ),
         NoiseModel(temperature=50.0, trap_depth=150.0, trap_waist=1.0, runs=1),
     ],
 )
@@ -249,7 +262,16 @@ def test_noise_model(noise_model: NoiseModel):
     ser_noise_model_str = noise_model.to_abstract_repr()
     re_noise_model = NoiseModel.from_abstract_repr(ser_noise_model_str)
 
-    assert noise_model == re_noise_model
+    if noise_model.disable_doppler and noise_model.temperature == 0:
+        # Deserialization sets disable doppler to False, because that was
+        # a non-necessary argument in initial NoiseModel
+        dict_noise_model = asdict(noise_model)
+        dict_re_noise_model = asdict(re_noise_model)
+        assert dict_noise_model.pop("disable_doppler") is True
+        assert dict_re_noise_model.pop("disable_doppler") is False
+        assert dict_re_noise_model == dict_noise_model
+    else:
+        assert noise_model == re_noise_model
 
     # Define parameters with defaults, like it was done before
     # pulser-core < 0.20, and check deserialization still works
@@ -264,10 +286,23 @@ def test_noise_model(noise_model: NoiseModel):
             ser_noise_model_obj[param] = (
                 ser_noise_model_obj[param] or _LEGACY_DEFAULTS[param]
             )
-    assert (
-        NoiseModel.from_abstract_repr(json.dumps(ser_noise_model_obj))
-        == re_noise_model
+    legacy_noise_model = NoiseModel.from_abstract_repr(
+        json.dumps(ser_noise_model_obj)
     )
+    dict_legacy = asdict(legacy_noise_model)
+    dict_re_noise_model = asdict(re_noise_model)
+    temp = dict_legacy.pop("temperature")
+    assert temp == (noise_model.temperature or _LEGACY_DEFAULTS["temperature"])
+    dict_re_noise_model.pop("temperature")
+    assert (
+        dict_legacy.pop("runs") == noise_model.runs or _LEGACY_DEFAULTS["runs"]
+    )
+    dict_re_noise_model.pop("runs")
+    assert dict_legacy.pop("disable_doppler") == (
+        temp > 0 and "doppler" not in re_noise_model.noise_types
+    )
+    dict_re_noise_model.pop("disable_doppler")
+    assert dict_legacy == dict_re_noise_model
 
     with pytest.raises(TypeError, match="must be given as a string"):
         NoiseModel.from_abstract_repr(ser_noise_model_obj)

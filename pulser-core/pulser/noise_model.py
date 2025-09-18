@@ -80,7 +80,7 @@ _PROBABILITY_LIKE = {
     "amp_sigma",
 }
 
-_BOOLEAN = {"with_leakage"}
+_BOOLEAN = {"with_leakage", "disable_doppler"}
 
 _LEGACY_DEFAULTS = {
     "runs": 15,
@@ -134,7 +134,8 @@ class NoiseModel:
       corresponding rates ``eff_noise_rates``.
     - **doppler**: Local atom detuning due to termal motion of the
       atoms and Doppler effect with respect to laser frequency.
-      Parametrized by the ``temperature`` field.
+      Parametrized by the ``temperature`` field. Can be disabled with
+      the ``disable_doppler`` field.
     - **register**: Thermal fluctuations in the
       register positions, parametrized by ``temperature``, ``trap_waist``
       and, ``trap_depth``, which must all be defined.
@@ -218,6 +219,8 @@ class NoiseModel:
             Defaults to 0.
         with_leakage: Whether or not to include an error state in the
             computations (default to False).
+        disable_doppler: Whether or not to disable the doppler noise,
+            even if the temperature is defined.
     """
 
     noise_types: tuple[NoiseTypes, ...] = field(init=False)
@@ -243,6 +246,7 @@ class NoiseModel:
     eff_noise_rates: tuple[float, ...] = ()
     eff_noise_opers: tuple[ArrayLike, ...] = ()
     with_leakage: bool = False
+    disable_doppler: bool = False
 
     def __post_init__(self) -> None:
         """Initializes a noise model."""
@@ -313,6 +317,8 @@ class NoiseModel:
             cast(Union[float, None], param_vals["trap_depth"]),
             cast(float, param_vals["temperature"]),
         )
+        if self.disable_doppler:
+            true_noise_types.discard("doppler")
 
         object.__setattr__(
             self, "noise_types", tuple(sorted(true_noise_types))
@@ -322,8 +328,10 @@ class NoiseModel:
         ]
         for param_, val_ in param_vals.items():
             object.__setattr__(self, param_, val_)
-            if param_ not in relevant_params and (
-                val_ if param_ != "samples_per_run" else val_ != 1
+            if (
+                param_ != "disable_doppler"  # disable_doppler is not used
+                and param_ not in relevant_params
+                and (val_ if param_ != "samples_per_run" else val_ != 1)
             ):
                 warnings.warn(
                     f"{param_!r} is not used by any active noise type "
@@ -543,7 +551,10 @@ class NoiseModel:
             ):
                 continue
             all_fields[f.name] = value
+        # Remove fields that can be deduced from the noise_types
+        all_fields.pop("disable_doppler")
         all_fields.pop("with_leakage")
+        # Effective noise as a list of (rate, operator)
         eff_noise_rates = all_fields.pop("eff_noise_rates")
         eff_noise_opers = all_fields.pop("eff_noise_opers")
         all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
