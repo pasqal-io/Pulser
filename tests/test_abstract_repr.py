@@ -18,7 +18,7 @@ import json
 import re
 from collections.abc import Callable
 from copy import deepcopy
-from dataclasses import replace, asdict
+from dataclasses import asdict, replace
 from typing import Any, Type, cast
 from unittest.mock import patch
 
