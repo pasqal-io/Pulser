@@ -289,7 +289,7 @@ class RemoteConnection(ABC):
             new_device := available_devices[available_device_names[name]]
         ):
             try:
-                sequence = sequence.switch_device(new_device, strict=True)
+                sequence = sequence.with_new_device(new_device, strict=True)
             except Exception as e:
                 raise ValueError(
                     "The sequence is not compatible with the latest "

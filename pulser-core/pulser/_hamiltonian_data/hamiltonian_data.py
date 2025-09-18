@@ -590,13 +590,14 @@ class HamiltonianData:
             mask[ind] = True if value else False  # convert to python bool
         imat = self._interaction_matrix
         if isinstance(imat, np.ndarray):
-            mask2 = np.outer(mask, mask)
+            arr = np.array(mask)
+            mask2 = arr.reshape(1, -1) | arr.reshape(-1, 1)
             mat = imat.copy()
             mat[mask2] = 0.0
             return pm.AbstractArray(mat)
         else:
             ten = pm.torch.tensor(mask, dtype=pm.torch.bool)
-            mask3 = pm.torch.outer(ten, ten)
+            mask3 = ten.reshape(1, -1) | ten.reshape(-1, 1)
             mat2 = imat.clone()
             mat2[mask3] = 0.0
             return pm.AbstractArray(mat2)
