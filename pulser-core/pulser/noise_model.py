@@ -155,9 +155,10 @@ class NoiseModel:
       (2) time-dependent high-frequency fluctuations, defined by the
       power spectral density ``detuning_hf_psd`` over the relevant
       ``detuning_hf_omegas`` frequencies support.
-      δ_hf(t) = Σ_k sqrt(2 * Δf_k * psd_k) * cos(2π(f_k * t + φ_k))
-      where φ_k ~ U[0, 1) (uniform random phase),
-      Δf_k = freqs[k+1] - freqs[k].
+      :math:`\delta_{hf}(t) = \Sigma_k \sqrt(2 * \Delta f_k * psd_k)
+      * \cos(2\pi(f_k * t + \phi_k))`
+      where :math:`\phi_k \backsim U[0, 1)` (uniform random phase),
+      and :math:`\Delta f_k = freqs[k+1] - freqs[k]`.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
 
