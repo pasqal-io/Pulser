@@ -329,7 +329,8 @@ class NoiseModel:
         for param_, val_ in param_vals.items():
             object.__setattr__(self, param_, val_)
             if (
-                param_ != "disable_doppler"  # disable_doppler is not used
+                # disable_doppler is not a noise parameter
+                param_ != "disable_doppler"
                 and param_ not in relevant_params
                 and (val_ if param_ != "samples_per_run" else val_ != 1)
             ):

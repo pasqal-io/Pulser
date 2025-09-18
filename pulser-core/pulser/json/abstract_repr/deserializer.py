@@ -449,6 +449,7 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
         noise_model_obj["temperature"] > 0 and "doppler" not in noise_types
     )
     relevant_params = pulser.NoiseModel._find_relevant_params(
+        # doppler parameters are relevant even if doppler is disabled
         noise_types + (["doppler"] if disable_doppler else []),
         noise_model_obj["state_prep_error"],
         noise_model_obj["amp_sigma"],
