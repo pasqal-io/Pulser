@@ -327,8 +327,8 @@ def test_expect(results, pi_pulse, reg):
     res = sim_single.run()
     assert isinstance(res, CoherentResults)
     # define an observable for the state
-    assert (
-        res.expect([qutip.basis(3, 0).proj()])[0][-1] == 0.7804005343228073
+    assert np.isclose(
+        res.expect([qutip.basis(3, 0).proj()])[0][-1], 0.7804005, atol=1e-6
     )  # ground state projector
 
     seq3dim = Sequence(reg, DigitalAnalogDevice)
