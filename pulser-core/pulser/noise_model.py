@@ -157,7 +157,7 @@ class NoiseModel:
       (2) time-dependent high-frequency fluctuations, defined by the
       power spectral density (PSD) ``detuning_hf_psd`` over the relevant
       ``detuning_hf_omegas`` angular frequency support.
-      :math:`\delta_{hf}(t) = \sum_k \sqrt(2*\Delta \omega_k*\mathrm{PSD}_k)
+      :math:`\delta_{hf}(t) = \sum_k \sqrt{2*\Delta \omega_k*\mathrm{PSD}_k}
       * \cos(\omega_k * t + \phi_k)`
       where :math:`\phi_k \backsim U[0, 2\pi)` (uniform random phase),
       and :math:`\Delta \omega_k = \omega_{k+1} - \omega_k`.
