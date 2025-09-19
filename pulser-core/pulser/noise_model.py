@@ -158,8 +158,8 @@ class NoiseModel:
       power spectral density (PSD) ``detuning_hf_psd`` over the relevant
       ``detuning_hf_omegas`` angular frequency support.
       :math:`\delta_{hf}(t) = \sum_k \sqrt(2*\Delta \omega_k*\mathrm{PSD}_k)
-      * \cos(2\pi(\omega_k * t + \phi_k))`
-      where :math:`\phi_k \backsim U[0, 1)` (uniform random phase),
+      * \cos(\omega_k * t + \phi_k)`
+      where :math:`\phi_k \backsim U[0, 2\pi)` (uniform random phase),
       and :math:`\Delta \omega_k = \omega_{k+1} - \omega_k`.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
