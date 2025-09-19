@@ -153,12 +153,12 @@ class NoiseModel:
       (1) constant offset (zero-frequency), parameterized by
       ``detuning_sigma``;
       (2) time-dependent high-frequency fluctuations, defined by the
-      power spectral density ``detuning_hf_psd`` over the relevant
-      ``detuning_hf_omegas`` frequencies support.
-      :math:`\delta_{hf}(t) = \Sigma_k \sqrt(2 * \Delta f_k * psd_k)
-      * \cos(2\pi(f_k * t + \phi_k))`
+      power spectral density (PSD) ``detuning_hf_psd`` over the relevant
+      ``detuning_hf_omegas`` angular frequency support.
+      :math:`\delta_{hf}(t) = \sum_k \sqrt(2*\Delta \omega_k*\mathrm{PSD}_k)
+      * \cos(2\pi(\omega_k * t + \phi_k))`
       where :math:`\phi_k \backsim U[0, 1)` (uniform random phase),
-      and :math:`\Delta f_k = freqs[k+1] - freqs[k]`.
+      and :math:`\Delta \omega_k = \omega_{k+1} - \omega_k`.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
 
@@ -193,7 +193,7 @@ class NoiseModel:
             Defaults to 0.
         trap_depth: The potential energy well depth that confines the atoms
             (in µK). Defaults to None.
-        detuning_hf_psd: Power Spectral Density(PSD) is 1D tuple (in rad/µs)
+        detuning_hf_psd: Power Spectral Density (PSD) is 1D tuple (in rad/µs)
             provided together with `detuning_hf_omegas` define high frequency
             noise contribution of time dependent detuning (in rad/µs).
             Must either be empty or a tuple with at least two values,
