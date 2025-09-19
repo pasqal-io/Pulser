@@ -150,8 +150,10 @@ class NoiseModel:
       and ``amp_sigma``.
     - **detuning**: Detuning fluctuations consisting of two
       components:
+
       (1) constant offset (zero-frequency), parameterized by
-      ``detuning_sigma``;
+      ``detuning_sigma``
+
       (2) time-dependent high-frequency fluctuations, defined by the
       power spectral density (PSD) ``detuning_hf_psd`` over the relevant
       ``detuning_hf_omegas`` angular frequency support.
