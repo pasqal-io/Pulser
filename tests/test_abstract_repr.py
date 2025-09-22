@@ -273,6 +273,50 @@ def test_noise_model(noise_model: NoiseModel):
     else:
         assert noise_model == re_noise_model
 
+
+@pytest.mark.parametrize(
+    "noise_model",
+    [
+        NoiseModel(),
+        NoiseModel(laser_waist=100),
+        NoiseModel(temperature=100, runs=10, samples_per_run=1),
+        NoiseModel(
+            eff_noise_rates=(0.1,),
+            eff_noise_opers=(((0, -1j), (1j, 0)),),
+        ),
+        NoiseModel(
+            eff_noise_rates=(0.1,),
+            eff_noise_opers=(((0, -1j, 0), (1j, 0, 0), (0, 0, 1)),),
+            with_leakage=True,
+        ),
+        NoiseModel(
+            detuning_sigma=0.1,
+            runs=1,
+        ),
+        NoiseModel(
+            detuning_hf_psd=(1, 2, 3),
+            detuning_hf_omegas=(4, 5, 6),
+            runs=1,
+        ),
+        NoiseModel(
+            detuning_sigma=0.1,
+            detuning_hf_psd=(1, 2, 3),
+            detuning_hf_omegas=(4, 5, 6),
+            runs=1,
+        ),
+        NoiseModel(
+            temperature=50.0,
+            trap_depth=150.0,
+            trap_waist=1.0,
+            runs=1,
+            samples_per_run=1,
+        ),
+        NoiseModel(temperature=50.0, trap_depth=150.0, trap_waist=1.0, runs=1),
+    ],
+)
+def test_legacy_noise_model(noise_model: NoiseModel):
+    ser_noise_model_str = noise_model.to_abstract_repr()
+    re_noise_model = NoiseModel.from_abstract_repr(ser_noise_model_str)
     # Define parameters with defaults, like it was done before
     # pulser-core < 0.20, and check deserialization still works
     # i.e. the obtained noise models are equivalent

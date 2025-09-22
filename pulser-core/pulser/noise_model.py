@@ -225,7 +225,9 @@ class NoiseModel:
         with_leakage: Whether or not to include an error state in the
             computations (default to False).
         disable_doppler: Whether or not to disable the doppler noise,
-            even if the temperature is defined.
+            even if the temperature is defined. In this way, 'register' noise
+            (which requires 'temperature') can be activated on its own (i.e
+            without doppler).
     """
 
     noise_types: tuple[NoiseTypes, ...] = field(init=False)
@@ -557,7 +559,7 @@ class NoiseModel:
             ):
                 continue
             all_fields[f.name] = value
-        # Remove fields that can be deduced from the noise_types
+        # Removed fields that can be deduced from the noise_types
         all_fields.pop("disable_doppler")
         all_fields.pop("with_leakage")
         # Effective noise as a list of (rate, operator)
