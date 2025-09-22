@@ -531,25 +531,21 @@ def test_noise_hf_detuning_generation():
             phases : phase offsets
         """
         hf_detun = np.zeros_like(times)
-        times *= 1e-6  # µsec -> sec
+        times *= 1e-3  # ns -> µs
         for i, s in enumerate(psd[1:]):
             df = freqs[i + 1] - freqs[i]
-            hf_detun += (
-                2.0
-                * np.pi
-                * 1e-6
-                * np.sqrt(2 * df * s)
-                * np.cos(2 * np.pi * (freqs[i + 1] * times + phases[i]))
+            hf_detun += np.sqrt(2 * df * s) * np.cos(
+                freqs[i + 1] * times + phases[i]
             )
         return hf_detun
 
     psd = [1, 2, 3]
     freqs = [3, 4, 5]
     times = np.arange(0, 10, 0.1)
-    phases = np.random.uniform(size=(2,))
+    phases = np.random.uniform(0, 2 * np.pi, size=(2,))
 
     noise_m = pulser.NoiseModel(
-        detuning_hf_psd=psd, detuning_hf_freqs=freqs, runs=1
+        detuning_hf_psd=psd, detuning_hf_omegas=freqs, runs=1
     )
     hf_det = _generate_detuning_fluctuations(noise_m, 0.0, phases, times)
     hd_det_expected = original_formula_gen_noise(psd, freqs, times, phases)
