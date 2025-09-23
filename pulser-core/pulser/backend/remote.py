@@ -351,6 +351,8 @@ class RemoteBackend(Backend):
         if self._mimic_qpu:
             sequence = self._connection.update_sequence_device(self._sequence)
             self.validate_job_params(job_params, sequence.device.max_runs)
+        elif job_params is not None:
+            self._type_check_job_params(job_params)
 
         return self._connection.submit(
             self._sequence,
