@@ -248,7 +248,7 @@ class Hamiltonian:
         return basis, op_matrix
 
     def _update_noise(self) -> None:
-        self.data._create_noise_trajectory()
+        self.data._create_noise_trajectories()
 
     def _construct_hamiltonian(self, update: bool = True) -> None:
         """Constructs the hamiltonian from the sampled Sequence and noise.
@@ -279,9 +279,9 @@ class Hamiltonian:
             """
             U = (
                 0.5
-                * self.data.noisy_interaction_matrix.as_array(detach=True)[
-                    self.data._qid_index[q1], self.data._qid_index[q2]
-                ]
+                * self.data.noisy_interaction_matrices[0].as_array(
+                    detach=True
+                )[self.data._qid_index[q1], self.data._qid_index[q2]]
             )
             return U * self.build_operator([("sigma_rr", [q1, q2])])
 
@@ -293,7 +293,7 @@ class Hamiltonian:
             The units are given so that the coefficient
             includes a 1/hbar factor.
             """
-            U = self.data.noisy_interaction_matrix.as_array(detach=True)[
+            U = self.data.noisy_interaction_matrices[0].as_array(detach=True)[
                 self.data._qid_index[q1], self.data._qid_index[q2]
             ]
             return U * self.build_operator(
@@ -304,10 +304,10 @@ class Hamiltonian:
             if masked:
                 # Calculate the total number of good, unmasked qubits
                 effective_size = self.nbqudits - sum(
-                    self.data.noise_trajectory.bad_atoms.values()
+                    self.data.bad_atoms[0].values()
                 )
                 for q in self.data.samples._slm_mask.targets:
-                    if not self.data.noise_trajectory.bad_atoms[q]:
+                    if not self.data.bad_atoms[0][q]:
                         effective_size -= 1
                 if effective_size < 2:
                     return 0 * self.build_operator([("I", "global")])
@@ -318,8 +318,8 @@ class Hamiltonian:
                 self.data.register.qubits.keys(), r=2
             ):
                 if (
-                    self.data.noise_trajectory.bad_atoms[q1]
-                    or self.data.noise_trajectory.bad_atoms[q2]
+                    self.data.bad_atoms[0][q1]
+                    or self.data.bad_atoms[0][q2]
                     or (
                         masked
                         and self.data._interaction == "XY"
@@ -398,7 +398,7 @@ class Hamiltonian:
         qobj_list = []
         # Time independent term:
         effective_size = self.data.nbqudits - sum(
-            self.data.noise_trajectory.bad_atoms.values()
+            self.data.bad_atoms[0].values()
         )
         if "digital" not in self.data.basis_name and effective_size > 1:
             # Build time-dependent or time-independent interaction term based
@@ -431,7 +431,7 @@ class Hamiltonian:
                 qobj_list = [make_interaction_term()]
 
         # Time dependent terms:
-        d = self.data.noisy_samples.to_nested_dict()
+        d = self.data.noisy_samples.__next__()[0].to_nested_dict()
         for addr in d:
             for basis in d[addr]:
                 if d[addr][basis]:
