@@ -2114,8 +2114,8 @@ def test_detuning_hf_noise(monkeypatch):
     seq.add(pulse1, "ch2", protocol="no-delay")
 
     noise_mod = NoiseModel(
-        detuning_hf_psd=np.array([1e6, 2e6, 3e6]),
-        detuning_hf_freqs=np.array([4e6, 5e6, 6e6]),
+        detuning_hf_psd=2.0 * np.pi * np.array([1, 2, 3]),
+        detuning_hf_omegas=2.0 * np.pi * np.array([4, 5, 6]),
         runs=1,
     )
     sim = QutipEmulator.from_sequence(seq, noise_model=noise_mod)

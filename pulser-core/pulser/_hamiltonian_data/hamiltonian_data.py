@@ -164,14 +164,13 @@ def _generate_detuning_fluctuations(
     det_hf = np.zeros_like(times)
 
     if noise_model.detuning_hf_psd:
-        t = np.asarray(times) * 1e-9  # ns -> s
-        freqs = np.asarray(noise_model.detuning_hf_freqs)[1:]
+        t = np.asarray(times) * 1e-3  # ns -> microsec
+        freqs = np.asarray(noise_model.detuning_hf_omegas)[1:]
         psd = np.asarray(noise_model.detuning_hf_psd)[1:]
-        df = np.diff(noise_model.detuning_hf_freqs)
+        df = np.diff(noise_model.detuning_hf_omegas)
         amp = np.sqrt(2.0 * df * psd)
         arg = freqs[:, None] * t[None, :] + phases[:, None]
-        det_hf = (amp[:, None] * np.cos(2.0 * np.pi * arg)).sum(axis=0)
-        det_hf *= 2.0 * np.pi * 1e-6  # Hz -> rad/microsec
+        det_hf = (amp[:, None] * np.cos(arg)).sum(axis=0)
     return det_cst_term + det_hf
 
 
@@ -591,13 +590,14 @@ class HamiltonianData:
             mask[ind] = True if value else False  # convert to python bool
         imat = self._interaction_matrix
         if isinstance(imat, np.ndarray):
-            mask2 = np.outer(mask, mask)
+            arr = np.array(mask)
+            mask2 = arr.reshape(1, -1) | arr.reshape(-1, 1)
             mat = imat.copy()
             mat[mask2] = 0.0
             return pm.AbstractArray(mat)
         else:
             ten = pm.torch.tensor(mask, dtype=pm.torch.bool)
-            mask3 = pm.torch.outer(ten, ten)
+            mask3 = ten.reshape(1, -1) | ten.reshape(-1, 1)
             mat2 = imat.clone()
             mat2[mask3] = 0.0
             return pm.AbstractArray(mat2)
@@ -763,9 +763,11 @@ class HamiltonianData:
                 if self.noise_model.detuning_sigma
                 else 0.0
             )
-            if self._noise_model.detuning_hf_freqs:
+            if self._noise_model.detuning_hf_omegas:
                 det_phases[ch] = np.random.uniform(
-                    0.0, 1.0, size=len(self._noise_model.detuning_hf_freqs) - 1
+                    0.0,
+                    2 * np.pi,
+                    size=len(self._noise_model.detuning_hf_omegas) - 1,
                 )
             else:
                 det_phases[ch] = np.array(0.0)

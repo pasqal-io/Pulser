@@ -48,7 +48,7 @@ _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "doppler": ("temperature",),
     "register": ("trap_waist", "trap_depth"),
     "amplitude": ("laser_waist", "amp_sigma"),
-    "detuning": ("detuning_sigma", "detuning_hf_psd", "detuning_hf_freqs"),
+    "detuning": ("detuning_sigma", "detuning_hf_psd", "detuning_hf_omegas"),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
     "dephasing": ("dephasing_rate", "hyperfine_dephasing_rate"),
     "relaxation": ("relaxation_rate",),
@@ -102,7 +102,7 @@ OPTIONAL_IN_ABSTR_REPR = (
     "trap_waist",
     "trap_depth",
     "detuning_hf_psd",
-    "detuning_hf_freqs",
+    "detuning_hf_omegas",
 )
 
 
@@ -138,10 +138,12 @@ class NoiseModel:
     - **register**: Thermal fluctuations in the
       register positions, parametrized by ``temperature``, ``trap_waist``
       and, ``trap_depth``, which must all be defined.
+
       (1) Plane standard deviation fluctuation given by:
       :math:`\sigma^{xy} = \sqrt{\frac{T w²}{4 U_{trap}}}`, where T is
       temperature, w is the trap waist and :math:`U_{trap}` is
       the trap depth.
+
       (2) Off plane standard deviation fluctuation given by:
       :math:`\sigma^z = \frac{\pi}{\lambda}\sqrt{2} w \sigma^{xy}`, where
       :math:`\lambda` is the trap wavelength with a constant value of 0.85 µm.
@@ -150,14 +152,17 @@ class NoiseModel:
       and ``amp_sigma``.
     - **detuning**: Detuning fluctuations consisting of two
       components:
+
       (1) constant offset (zero-frequency), parameterized by
-      ``detuning_sigma``;
+      ``detuning_sigma``
+
       (2) time-dependent high-frequency fluctuations, defined by the
-      power spectral density ``detuning_hf_psd`` over the relevant
-      ``detuning_hf_freqs`` frequencies support.
-      δ_hf(t) = Σ_k sqrt(2 * Δf_k * psd_k) * cos(2π(f_k * t + φ_k))
-      where φ_k ~ U[0, 1) (uniform random phase),
-      Δf_k = freqs[k+1] - freqs[k].
+      power spectral density (PSD) ``detuning_hf_psd`` over the relevant
+      ``detuning_hf_omegas`` angular frequency support.
+      :math:`\delta_{hf}(t) = \sum_k \sqrt{2*\Delta \omega_k*\mathrm{PSD}_k}
+      * \cos(\omega_k * t + \phi_k)`
+      where :math:`\phi_k \backsim U[0, 2\pi)` (uniform random phase),
+      and :math:`\Delta \omega_k = \omega_{k+1} - \omega_k`.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
 
@@ -192,16 +197,16 @@ class NoiseModel:
             Defaults to 0.
         trap_depth: The potential energy well depth that confines the atoms
             (in µK). Defaults to None.
-        detuning_hf_psd: Power Spectral Density(PSD) is 1D tuple (in Hz²/Hz)
-            provided together with `detuning_hf_freqs` define high frequency
+        detuning_hf_psd: Power Spectral Density (PSD) is 1D tuple (in rad/µs)
+            provided together with `detuning_hf_omegas` define high frequency
             noise contribution of time dependent detuning (in rad/µs).
             Must either be empty or a tuple with at least two values,
-            matching the length of `detuning_hf_freqs`. Default is ().
-        detuning_hf_freqs: 1D tuple (in Hz) of relevant frequency support
-            for PSD. Along with PSD, it is required to define high frequency
-            noise contribution of time dependent detuning (in rad/µs).
-            Must either be empty or a tuple with at least two values,
-            matching the length of `detuning_hf_psd`. Default is ().
+            matching the length of `detuning_hf_omegas`. Default is ().
+        detuning_hf_omegas: 1D tuple (in rad/µs) of relevant angular frequency
+            support for the PSD. Along with the PSD, it is required to define
+            high frequency noise contribution of time dependent detuning
+            (in rad/µs). Must either be empty or a tuple with at least two
+            values, matching the length of `detuning_hf_psd`. Default is ().
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1. Defaults to 0.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
@@ -231,7 +236,7 @@ class NoiseModel:
     amp_sigma: float = 0.0
     detuning_sigma: float = 0.0
     detuning_hf_psd: tuple[float, ...] = ()
-    detuning_hf_freqs: tuple[float, ...] = ()
+    detuning_hf_omegas: tuple[float, ...] = ()
     relaxation_rate: float = 0.0
     dephasing_rate: float = 0.0
     # if the trap depth is not None the trap waist should be 0.0
@@ -262,7 +267,7 @@ class NoiseModel:
         param_vals["eff_noise_opers"] = to_tuple(self.eff_noise_opers)
 
         param_vals["detuning_hf_psd"] = to_tuple(self.detuning_hf_psd)
-        param_vals["detuning_hf_freqs"] = to_tuple(self.detuning_hf_freqs)
+        param_vals["detuning_hf_omegas"] = to_tuple(self.detuning_hf_omegas)
 
         # Checking the type of provided positive and probability parameters
         for p_, val in param_vals.items():
@@ -284,7 +289,7 @@ class NoiseModel:
         self._check_leakage_noise(true_noise_types)
         self._check_detuning_hf_noise(
             param_vals["detuning_hf_psd"],
-            param_vals["detuning_hf_freqs"],
+            param_vals["detuning_hf_omegas"],
         )
         self._check_eff_noise(
             cast(tuple, param_vals["eff_noise_rates"]),
@@ -401,8 +406,8 @@ class NoiseModel:
     ) -> None:
         if (psd == ()) ^ (freqs == ()):
             raise ValueError(
-                "`detuning_hf_psd` and `detuning_hf_freqs` must either both be"
-                " empty tuples or both be provided."
+                "`detuning_hf_psd` and `detuning_hf_omegas` must either"
+                " both be empty tuples or both be provided."
             )
 
         if psd == ():
@@ -413,31 +418,31 @@ class NoiseModel:
 
         if psd_a.ndim != 1 or freqs_a.ndim != 1:
             raise ValueError(
-                "`detuning_hf_psd` and `detuning_hf_freqs`"
+                "`detuning_hf_psd` and `detuning_hf_omegas`"
                 " are expected to be 1D tuples."
             )
 
         if psd_a.size != freqs_a.size:
             raise ValueError(
-                "`detuning_hf_psd` and `detuning_hf_freqs`"
+                "`detuning_hf_psd` and `detuning_hf_omegas`"
                 " are expected to have the same length."
             )
 
         if psd_a.size <= 1:
             raise ValueError(
-                "`detuning_hf_psd` and `detuning_hf_freqs`"
+                "`detuning_hf_psd` and `detuning_hf_omegas`"
                 " are expected to have length > 1."
             )
 
         if not (np.all(psd_a > 0) and np.all(freqs_a > 0)):
             raise ValueError(
-                "`detuning_hf_psd` and `detuning_hf_freqs`"
+                "`detuning_hf_psd` and `detuning_hf_omegas`"
                 " are expected to have positive values."
             )
 
         if np.any(np.diff(freqs_a) < 0):
             raise ValueError(
-                "`detuning_hf_freqs` are expected to be monotonously growing."
+                "`detuning_hf_omegas` are expected to be monotonously growing."
             )
 
     @staticmethod
@@ -550,7 +555,7 @@ class NoiseModel:
 
         if "detuning_hf_psd" in all_fields:
             det_hf_psd = all_fields.pop("detuning_hf_psd")
-            det_hf_freqs = all_fields.pop("detuning_hf_freqs")
+            det_hf_freqs = all_fields.pop("detuning_hf_omegas")
             all_fields["detuning_hf"] = list(zip(det_hf_psd, det_hf_freqs))
 
         return all_fields
