@@ -189,3 +189,18 @@ class SampledResult(Result):
         for bitstr, counts in self.bitstring_counts.items():
             weights[int(bitstr, base=2)] = counts / self.n_samples
         return weights / sum(weights)
+
+    def get_samples(self, n_samples: int) -> Counter[str]:
+        """Takes multiple samples from the sampling distribution.
+
+        Args:
+            n_samples: Number of samples to return.
+
+        Returns:
+            Samples of bitstrings corresponding to measured quantum states.
+        """
+        warnings.warn(
+            "Sampling the sample distribution associated with the bitstrings of the"
+            "SampledResult. Get the bitstrings with the property `final_bitstrings`."
+        )
+        return super().get_samples(n_samples)

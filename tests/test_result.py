@@ -69,7 +69,11 @@ def test_sampled_result(patch_plt_show):
     }
     n_samples = 100
     np.random.seed(3052023)
-    new_samples = result.get_samples(100)
+    with pytest.warns(
+        UserWarning,
+        match="Sampling the sample distribution associated with the bitstrings of",
+    ):
+        new_samples = result.get_samples(100)
     new_samples.subtract(samples)
     assert all(
         abs(counts_diff) < sampling_err * n_samples
