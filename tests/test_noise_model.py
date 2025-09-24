@@ -41,6 +41,8 @@ class TestNoiseModel:
     @pytest.mark.parametrize(
         "params, noise_types",
         [
+            (set(), set()),
+            ({"disable_doppler"}, set()),
             ({"p_false_pos", "dephasing_rate"}, {"SPAM", "dephasing"}),
             (
                 {
@@ -61,6 +63,16 @@ class TestNoiseModel:
                 {"doppler", "depolarizing"},
             ),
             (
+                {
+                    "temperature",
+                    "depolarizing_rate",
+                    "runs",
+                    "samples_per_run",
+                    "disable_doppler",
+                },
+                {"depolarizing"},
+            ),
+            (
                 {"amp_sigma", "runs", "samples_per_run"},
                 {"amplitude"},
             ),
@@ -79,10 +91,23 @@ class TestNoiseModel:
                 },
                 {"doppler", "register"},
             ),
+            (
+                {
+                    "temperature",
+                    "trap_waist",
+                    "trap_depth",
+                    "runs",
+                    "samples_per_run",
+                    "disable_doppler",
+                },
+                {"register"},
+            ),
         ],
     )
     def test_init(self, params, noise_types):
-        noise_model = NoiseModel(**{p: 1.0 for p in params})
+        noise_model = NoiseModel(
+            **{p: (1.0 if p != "disable_doppler" else True) for p in params}
+        )
         assert set(noise_model.noise_types) == noise_types
         relevant_params = NoiseModel._find_relevant_params(
             noise_types,
@@ -90,6 +115,9 @@ class TestNoiseModel:
             noise_model.amp_sigma,
             noise_model.laser_waist,
         )
+        assert "disable_doppler" not in relevant_params
+        assert noise_model.disable_doppler == ("disable_doppler" in params)
+        params.discard("disable_doppler")
         assert all(getattr(noise_model, p) == 1.0 for p in params)
         assert all(
             not getattr(noise_model, p) for p in relevant_params - params
@@ -220,6 +248,8 @@ class TestNoiseModel:
             with_leakage=value,
         )
         assert noise_model.with_leakage == value
+        noise_model = NoiseModel(disable_doppler=value)
+        assert noise_model.disable_doppler == value
 
     @pytest.mark.parametrize("value", [0, 1, 0.1])
     def test_wrong_init_bool_like(self, value, matrices):
@@ -231,6 +261,11 @@ class TestNoiseModel:
                 eff_noise_opers=[matrices["I3"] if value else matrices["I"]],
                 with_leakage=value,
             )
+        with pytest.raises(
+            ValueError,
+            match=f"'disable_doppler' must be a boolean, not {value}",
+        ):
+            NoiseModel(disable_doppler=value)
 
     def test_eff_noise_rates(self, matrices):
         with pytest.raises(
@@ -474,6 +509,10 @@ class TestNoiseModel:
     def test_repr(self):
         assert repr(NoiseModel()) == "NoiseModel(noise_types=())"
         assert (
+            repr(NoiseModel(temperature=1.0, runs=10, disable_doppler=True))
+            == "NoiseModel(noise_types=())"
+        )
+        assert (
             repr(NoiseModel(p_false_pos=0.1, relaxation_rate=0.2))
             == "NoiseModel(noise_types=('SPAM', 'relaxation'), "
             "state_prep_error=0.0, p_false_pos=0.1, p_false_neg=0.0, "
@@ -520,6 +559,21 @@ class TestNoiseModel:
                 )
             )
             == "NoiseModel(noise_types=('doppler', 'register'), runs=1, "
+            "samples_per_run=1, temperature=15.0, trap_waist=1.0, "
+            "trap_depth=150.0)"
+        )
+        assert (
+            repr(
+                NoiseModel(
+                    temperature=15.0,
+                    trap_depth=150.0,  # same units as temperature
+                    trap_waist=1.0,
+                    runs=1,
+                    samples_per_run=1,
+                    disable_doppler=True,
+                )
+            )
+            == "NoiseModel(noise_types=('register',), runs=1, "
             "samples_per_run=1, temperature=15.0, trap_waist=1.0, "
             "trap_depth=150.0)"
         )
