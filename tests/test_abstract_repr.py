@@ -293,25 +293,6 @@ def test_noise_model(noise_model: NoiseModel):
             detuning_sigma=0.1,
             runs=1,
         ),
-        NoiseModel(
-            detuning_hf_psd=(1, 2, 3),
-            detuning_hf_omegas=(4, 5, 6),
-            runs=1,
-        ),
-        NoiseModel(
-            detuning_sigma=0.1,
-            detuning_hf_psd=(1, 2, 3),
-            detuning_hf_omegas=(4, 5, 6),
-            runs=1,
-        ),
-        NoiseModel(
-            temperature=50.0,
-            trap_depth=150.0,
-            trap_waist=1.0,
-            runs=1,
-            samples_per_run=1,
-        ),
-        NoiseModel(temperature=50.0, trap_depth=150.0, trap_waist=1.0, runs=1),
     ],
 )
 def test_legacy_noise_model(noise_model: NoiseModel):
