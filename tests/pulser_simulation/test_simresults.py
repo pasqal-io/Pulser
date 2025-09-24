@@ -369,12 +369,20 @@ def test_sim_without_measurement(seq_no_meas):
 
 
 def test_sample_final_state(results):
-    sampling = results.sample_final_state(1234)
+    with pytest.warns(
+        UserWarning,
+        match="Sampling the sample distribution associated with the",
+    ):
+        sampling = results.sample_final_state(1234)
     assert len(sampling) == 4  # Check that all states were observed.
 
     # Switch the measurement basis in the result
     results[-1].matching_meas_basis = False
-    sampling0 = results.sample_final_state(N_samples=911)
+    with pytest.warns(
+        UserWarning,
+        match="Sampling the sample distribution associated with the",
+    ):
+        sampling0 = results.sample_final_state(N_samples=911)
     assert sampling0 == {"00": 911}
 
 
