@@ -200,7 +200,8 @@ class SampledResult(Result):
             Samples of bitstrings corresponding to measured quantum states.
         """
         warnings.warn(
-            "Sampling the sample distribution associated with the bitstrings of the"
-            "SampledResult. Get the bitstrings with the property `final_bitstrings`."
+            "Sampling the sample distribution associated with the bitstrings"
+            " of the SampledResult. Get the bitstrings with the property "
+            "`final_bitstrings`."
         )
         return super().get_samples(n_samples)
