@@ -447,7 +447,7 @@ class HamiltonianData:
                 else:
                     type: Channel = Raman  # type: ignore
                 qids = samples["Local"][basis].keys()
-                basis_channels = list(x + f"_{basis}" for x in qids)
+                basis_channels = list(f"{x}_{basis}" for x in qids)
                 channels += basis_channels
                 for qid, ch in zip(qids, basis_channels):
                     vals = samples["Local"][basis][qid]
