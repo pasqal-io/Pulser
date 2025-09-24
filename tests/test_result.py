@@ -71,7 +71,9 @@ def test_sampled_result(patch_plt_show):
     np.random.seed(3052023)
     with pytest.warns(
         UserWarning,
-        match="Sampling the sample distribution associated with the",
+        match=re.escape(
+            "'SampledResult.get_samples()' resamples a sampling distribution"
+        ),
     ):
         new_samples = result.get_samples(100)
     new_samples.subtract(samples)

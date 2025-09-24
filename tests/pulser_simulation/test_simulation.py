@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import dataclasses
+import re
 from collections import Counter
 from unittest.mock import patch
 
@@ -872,7 +873,9 @@ def test_noise(seq, matrices):
     )
     with pytest.warns(
         UserWarning,
-        match="Sampling the sample distribution associated with the",
+        match=re.escape(
+            "'SampledResult.get_samples()' resamples a sampling distribution"
+        ),
     ):
         assert sim2.run().sample_final_state() == Counter(
             {"000": 837, "100": 55, "110": 69, "001": 14, "010": 25}
@@ -1485,7 +1488,9 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
     r = sim.run()
     with pytest.warns(
         UserWarning,
-        match="Sampling the sample distribution associated with the",
+        match=re.escape(
+            "'SampledResult.get_samples()' resamples a sampling distribution"
+        ),
     ):
         assert r.sample_final_state() == Counter(result)
 

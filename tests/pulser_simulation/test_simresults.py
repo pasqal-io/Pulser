@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
 from collections import Counter
 from typing import cast
 
@@ -398,7 +399,9 @@ def test_sample_final_state_noisy(seq_no_meas, results_noisy):
     np.random.seed(123)
     with pytest.warns(
         UserWarning,
-        match="Sampling the sample distribution associated with the",
+        match=re.escape(
+            "'SampledResult.get_samples()' resamples a sampling distribution"
+        ),
     ):
         assert results_noisy.sample_final_state(N_samples=1234) == Counter(
             {"11": 588, "10": 250, "01": 270, "00": 126}

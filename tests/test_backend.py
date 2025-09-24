@@ -307,7 +307,7 @@ def test_remote_backend(sequence):
     qpu_backend = QPUBackend(seq, connection)
     remote_backend = RemoteBackend(seq, connection)
     # Generic remote backend can run without job_params
-    remote_backend.run()
+    assert remote_backend.run().batch_id == "abcd"
     # But QPUBackend requires job_params
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         qpu_backend.run()
