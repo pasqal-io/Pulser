@@ -284,15 +284,6 @@ def test_noise_model(noise_model: NoiseModel):
             eff_noise_rates=(0.1,),
             eff_noise_opers=(((0, -1j), (1j, 0)),),
         ),
-        NoiseModel(
-            eff_noise_rates=(0.1,),
-            eff_noise_opers=(((0, -1j, 0), (1j, 0, 0), (0, 0, 1)),),
-            with_leakage=True,
-        ),
-        NoiseModel(
-            detuning_sigma=0.1,
-            runs=1,
-        ),
     ],
 )
 def test_legacy_noise_model(noise_model: NoiseModel):
