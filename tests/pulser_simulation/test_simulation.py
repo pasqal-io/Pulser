@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import dataclasses
+import re
 from collections import Counter
 from unittest.mock import patch
 
@@ -870,9 +871,15 @@ def test_noise(seq, matrices):
             state_prep_error=0.9,
         ),
     )
-    assert sim2.run().sample_final_state() == Counter(
-        {"000": 837, "100": 55, "110": 69, "001": 14, "010": 25}
-    )
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "'SampledResult.get_samples()' resamples a sampling distribution"
+        ),
+    ):
+        assert sim2.run().sample_final_state() == Counter(
+            {"000": 837, "100": 55, "110": 69, "001": 14, "010": 25}
+        )
     with pytest.raises(NotImplementedError, match="Cannot include"):
         QutipEmulator.from_sequence(
             seq, noise_model=NoiseModel(depolarizing_rate=0.05)
@@ -1479,7 +1486,13 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
         == n_collapse_ops
     )
     r = sim.run()
-    assert r.sample_final_state() == Counter(result)
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "'SampledResult.get_samples()' resamples a sampling distribution"
+        ),
+    ):
+        assert r.sample_final_state() == Counter(result)
 
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
