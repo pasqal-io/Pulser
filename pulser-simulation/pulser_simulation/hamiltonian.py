@@ -26,7 +26,7 @@ from pulser._hamiltonian_data import HamiltonianData
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
-from pulser.register import QubitId, Register
+from pulser.register import QubitId, Register, Register3D
 from pulser.sampler.samples import SequenceSamples
 
 
@@ -52,8 +52,15 @@ class Hamiltonian:
         config: NoiseModel,
     ) -> None:
         """Instantiates a Hamiltonian object."""
-        register = Register.from_coordinates(
-            list(qdict.values()), labels=list(qdict.keys()), center=False
+
+        coords = list(qdict.values())
+        if device.dimensions == 3 and len(coords[0]) == 3:
+            RegisterClass = Register3D
+        else:
+            RegisterClass = Register
+
+        register = RegisterClass.from_coordinates(
+            coords, labels=list(qdict.keys()), center=False
         )
         self.data = HamiltonianData(samples_obj, register, device, config)
         self._sampling_rate = sampling_rate
