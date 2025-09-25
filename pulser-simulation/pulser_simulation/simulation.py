@@ -36,6 +36,7 @@ from pulser.register.base_register import BaseRegister
 from pulser.result import SampledResult
 from pulser.sampler.samples import ChannelSamples, SequenceSamples
 from pulser.sequence._seq_drawer import draw_samples
+from pulser._hamiltonian_data import HamiltonianData
 from pulser_simulation.hamiltonian import Hamiltonian
 from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simconfig import SimConfig
@@ -95,7 +96,9 @@ class QutipEmulator:
         if sampled_seq.max_duration == 0:
             raise ValueError("SequenceSamples is empty.")
         # Check compatibility of register and device
+        self._sampling_rate = sampling_rate
         device.validate_register(register)
+        self._device = device
         self._register = register
         # Check compatibility of samples and device:
         if sampled_seq._slm_mask.end > 0 and not device.supports_slm_mask:
@@ -169,13 +172,13 @@ class QutipEmulator:
                 )
             noise_model = config.to_noise_model()
 
-        self._hamiltonian = Hamiltonian(
+        self._hamiltonian_data = HamiltonianData(
             self.samples_obj,
-            self._register.qubits,
-            device,
-            sampling_rate,
+            self._register,
+            self._device,
             noise_model or NoiseModel(),
         )
+        self._current_hamiltonian = next(self._hamiltonians)[0]
         # Initializing evaluation times
         self._eval_times_array: np.ndarray
         self.set_evaluation_times(evaluation_times)
@@ -192,47 +195,49 @@ class QutipEmulator:
     @cached_property
     def _noiseless_hamiltonian(self) -> Hamiltonian:
         return Hamiltonian(
-            self.samples_obj,
-            self._register.qubits,
-            self._hamiltonian.data._device,
+            self._hamiltonian_data,
+            self._hamiltonian_data.samples,
             self._sampling_rate,
-            NoiseModel(),
         )
+    
+    @property
+    def _hamiltonians(self) -> Iterator[tuple[Hamiltonian, int]]:
+        for noisy_samples, n in self._hamiltonian_data.noisy_samples:
+            yield Hamiltonian(
+                self._hamiltonian_data,
+                noisy_samples,
+                self._sampling_rate,
+            ), n
 
     @property
     def sampling_times(self) -> np.ndarray:
         """The times at which hamiltonian is sampled."""
-        return self._hamiltonian.sampling_times
-
-    @property
-    def _sampling_rate(self) -> float:
-        """The sampling rate."""
-        return self._hamiltonian._sampling_rate
+        return self._noiseless_hamiltonian.sampling_times
 
     @property
     def dim(self) -> int:
         """The dimension of the basis."""
-        return self._hamiltonian.data.dim
+        return self._hamiltonian_data.dim
 
     @property
     def basis_name(self) -> str:
         """The name of the basis."""
-        return self._hamiltonian.data.basis_name
+        return self._hamiltonian_data.basis_name
 
     @property
     def basis(self) -> dict[States, Any]:
         """The basis in which result is expressed."""
-        return self._hamiltonian.basis
+        return self._current_hamiltonian.basis
 
     @property
     def noise_model(self) -> NoiseModel:
         """The current NoiseModel being used."""
-        return self._hamiltonian.config
+        return self._hamiltonian_data.noise_model
 
     @property
     def config(self) -> SimConfig:
         """The current configuration, as a SimConfig instance."""
-        return SimConfig.from_noise_model(self._hamiltonian.config)
+        return SimConfig.from_noise_model(self._hamiltonian_data.noise_model)
 
     @property
     def total_duration_ns(self) -> int:
@@ -260,26 +265,32 @@ class QutipEmulator:
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
         not_supported = (
             set(cfg.noise)
-            - cfg.supported_noises[self._hamiltonian.data._interaction]
+            - cfg.supported_noises[self._hamiltonian_data._interaction]
         )
         if not_supported:
             raise NotImplementedError(
-                f"Interaction mode '{self._hamiltonian.data._interaction}' "
+                f"Interaction mode '{self._hamiltonian_data._interaction}' "
                 "does not support simulation of noise types:"
                 f"{', '.join(not_supported)}."
             )
         former_dim = self.dim
-        former_basis = self._hamiltonian.basis
-        self._hamiltonian.set_config(cfg.to_noise_model())
+        former_basis = self.basis
+        self._hamiltonian_data = HamiltonianData(
+            self.samples_obj,
+            self._register,
+            self._device,
+            cfg.to_noise_model(),
+        )
+        self._current_hamiltonian = next(self._hamiltonians)[0]
         if self.dim == former_dim:
             self.set_initial_state(self._initial_state)
             return
         if self._initial_state != qutip.tensor(
             [
                 former_basis[
-                    "u" if self._hamiltonian.data._interaction == "XY" else "g"
+                    "u" if self._hamiltonian_data._interaction == "XY" else "g"
                 ]
-                for _ in range(self._hamiltonian.nbqudits)
+                for _ in range(self._hamiltonian_data.nbqudits)
             ]
         ):
             warnings.warn(
@@ -316,20 +327,20 @@ class QutipEmulator:
 
         not_supported = (
             set(config.noise)
-            - config.supported_noises[self._hamiltonian.data._interaction]
+            - config.supported_noises[self._hamiltonian_data._interaction]
         )
         if not_supported:
             raise NotImplementedError(
-                f"Interaction mode '{self._hamiltonian.data._interaction}' "
+                f"Interaction mode '{self._hamiltonian_data._interaction}' "
                 "does not support simulation of noise types: "
                 f"{', '.join(not_supported)}."
             )
         noise_model = config.to_noise_model()
-        old_noise_set = set(self._hamiltonian.config.noise_types)
+        old_noise_set = set(self._hamiltonian_data.noise_model.noise_types)
         new_noise_set = old_noise_set.union(noise_model.noise_types)
         diff_noise_set = new_noise_set - old_noise_set
         # Create temporary param_dict to add noise parameters:
-        param_dict: dict[str, Any] = asdict(self._hamiltonian.config)
+        param_dict: dict[str, Any] = asdict(self._hamiltonian_data.noise_model)
         relevant_params = NoiseModel._find_relevant_params(
             diff_noise_set,
             noise_model.state_prep_error,
@@ -340,25 +351,7 @@ class QutipEmulator:
             param_dict[param] = getattr(noise_model, param)
         # set config with the new parameters:
         param_dict.pop("noise_types")
-        former_dim = self.dim
-        former_basis = self._hamiltonian.basis
-        self._hamiltonian.set_config(NoiseModel(**param_dict))
-        if self.dim == former_dim:
-            self.set_initial_state(self._initial_state)
-            return
-        if self._initial_state != qutip.tensor(
-            [
-                former_basis[
-                    "u" if self._hamiltonian.data._interaction == "XY" else "g"
-                ]
-                for _ in range(self._hamiltonian.nbqudits)
-            ]
-        ):
-            warnings.warn(
-                "Current initial state's dimension does not match new"
-                " dimensions. Setting initial state to 'all-ground'."
-            )
-        self.set_initial_state("all-ground")
+        self.set_config(SimConfig.from_noise_model(NoiseModel(**param_dict)))        
 
     def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""
@@ -390,25 +383,25 @@ class QutipEmulator:
         if isinstance(state, str) and state == "all-ground":
             self._initial_state = qutip.tensor(
                 [
-                    self._hamiltonian.basis[
+                    self.basis[
                         (
                             "u"
-                            if self._hamiltonian.data._interaction == "XY"
+                            if self._hamiltonian_data._interaction == "XY"
                             else "g"
                         )
                     ]
-                    for _ in range(self._hamiltonian.nbqudits)
+                    for _ in range(self._hamiltonian_data.nbqudits)
                 ]
             )
         else:
             state = cast(Union[np.ndarray, qutip.Qobj], state)
             shape = state.shape[0]
             legal_shape = (
-                self._hamiltonian.data.dim**self._hamiltonian.nbqudits
+                self._hamiltonian_data.dim**self._hamiltonian_data.nbqudits
             )
             legal_dims = [
-                [self._hamiltonian.data.dim] * self._hamiltonian.nbqudits,
-                [1] * self._hamiltonian.nbqudits,
+                [self._hamiltonian_data.dim] * self._hamiltonian_data.nbqudits,
+                [1] * self._hamiltonian_data.nbqudits,
             ]
             if shape != legal_shape:
                 raise ValueError(
@@ -445,7 +438,7 @@ class QutipEmulator:
         """
         if isinstance(value, str):
             if value == "Full":
-                eval_times = np.copy(self._hamiltonian.sampling_times)
+                eval_times = np.copy(self._noiseless_hamiltonian.sampling_times)
             elif value == "Minimal":
                 eval_times = np.array([])
             else:
@@ -461,12 +454,12 @@ class QutipEmulator:
                 )
             indices = np.linspace(
                 0,
-                len(self._hamiltonian.sampling_times) - 1,
-                int(value * len(self._hamiltonian.sampling_times)),
+                len(self._noiseless_hamiltonian.sampling_times) - 1,
+                int(value * len(self._noiseless_hamiltonian.sampling_times)),
                 dtype=int,
             )
             # Note: if `value` is very small `eval_times` is an empty list:
-            eval_times = self._hamiltonian.sampling_times[indices]
+            eval_times = self._noiseless_hamiltonian.sampling_times[indices]
         elif isinstance(value, (list, tuple, np.ndarray)):
             if np.max(value, initial=0) > self._tot_duration * 1e-3:
                 raise ValueError(
@@ -549,7 +542,7 @@ class QutipEmulator:
         if noiseless:
             return self._noiseless_hamiltonian._hamiltonian(time / 1000)
 
-        return self._hamiltonian._hamiltonian(
+        return self._current_hamiltonian._hamiltonian(
             time / 1000
         )  # Creates new Qutip.Qobj
 
@@ -619,7 +612,7 @@ class QutipEmulator:
             )
         results = [
             QutipResult(
-                tuple(self._hamiltonian.data.register.qubits),
+                tuple(self._hamiltonian_data.register.qubits),
                 self._meas_basis,
                 state,
                 self._meas_basis in self.basis_name,
@@ -639,7 +632,7 @@ class QutipEmulator:
 
         return CoherentResults(
             results,
-            self._hamiltonian.nbqudits,
+            self._hamiltonian_data.nbqudits,
             self.basis_name,
             self._eval_times_array,
             self._meas_basis,
@@ -666,14 +659,14 @@ class QutipEmulator:
                 and self.initial_state
                 != qutip.tensor(
                     [
-                        self._hamiltonian.basis[
+                        self.basis[
                             (
                                 "u"
-                                if self._hamiltonian.data._interaction == "XY"
+                                if self._hamiltonian_data._interaction == "XY"
                                 else "g"
                             )
                         ]
-                        for _ in range(self._hamiltonian.nbqudits)
+                        for _ in range(self._hamiltonian_data.nbqudits)
                     ]
                 )
             ):
@@ -738,7 +731,7 @@ class QutipEmulator:
         )
         results = [
             SampledResult(
-                tuple(self._hamiltonian.data.register.qubits),
+                tuple(self._hamiltonian_data.register.qubits),
                 self._meas_basis,
                 total_count[ind],
                 evaluation_time=t / self._tot_duration * 1e3,
@@ -747,7 +740,7 @@ class QutipEmulator:
         ]
         return NoisyResults(
             results,
-            self._hamiltonian.nbqudits,
+            self._hamiltonian_data.nbqudits,
             self.basis_name,
             self._eval_times_array,
             n_measures,
@@ -778,7 +771,7 @@ class QutipEmulator:
                 "".join(
                     (
                         np.random.uniform(
-                            size=len(self._hamiltonian.data._qid_index)
+                            size=len(self._hamiltonian_data._qid_index)
                         )
                         < self.noise_model.state_prep_error
                     )
@@ -796,13 +789,13 @@ class QutipEmulator:
             else:
                 initial_state, reps = initial_configs[i]
                 # We load the initial state manually
-                old_traj = self._hamiltonian.data.noise_trajectories[0]
-                self._hamiltonian.data.noise_trajectories[0] = (
+                old_traj = self._hamiltonian_data.noise_trajectories[0]
+                self._hamiltonian_data.noise_trajectories[0] = (
                     replace(
                         old_traj[0],
                         bad_atoms=dict(
                             zip(
-                                self._hamiltonian.data._qid_index,
+                                self._hamiltonian_data._qid_index,
                                 # "0110..." -> array([0, 1, 1, 0, ...])
                                 # -> array([False, True, True, False, ...])
                                 np.array(
@@ -813,8 +806,6 @@ class QutipEmulator:
                     ),
                     old_traj[1],
                 )
-            # At each run, new random noise: new Hamiltonian
-            self._hamiltonian._construct_hamiltonian(update=update_ham)
             # Yield CoherentResults instance from sequence with added noise:
             yield self._run_solver(progress_bar, **options), reps
 

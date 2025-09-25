@@ -45,17 +45,13 @@ class Hamiltonian:
 
     def __init__(
         self,
-        samples_obj: SequenceSamples,
-        qdict: dict[QubitId, pm.AbstractArray],
-        device: BaseDevice,
+        data: HamiltonianData,
+        samples: SequenceSamples,
         sampling_rate: float,
-        config: NoiseModel,
     ) -> None:
         """Instantiates a Hamiltonian object."""
-        register = Register.from_coordinates(
-            list(qdict.values()), labels=list(qdict.keys()), center=False
-        )
-        self.data = HamiltonianData(samples_obj, register, device, config)
+        self.data = data
+        self.samples = samples #TODO: this should be gotten from self.data
         self._sampling_rate = sampling_rate
 
         # Type hints for attributes defined outside of __init__
@@ -73,12 +69,7 @@ class Hamiltonian:
         # Stores the qutip operators used in building the Hamiltonian
         self._collapse_ops: list[qutip.Qobj] = []
 
-        self.set_config(config, from_init=True)
-
-    @property
-    def config(self) -> NoiseModel:
-        """The current configuration, as a NoiseModel instance."""
-        return self.data.noise_model
+        self._set_config()
 
     def _adapt_to_sampling_rate(self, full_array: np.ndarray) -> np.ndarray:
         """Adapt list to correspond to sampling rate."""
@@ -117,33 +108,22 @@ class Hamiltonian:
                 for qid in self.data._qid_index
             ]
 
-    def set_config(self, cfg: NoiseModel, from_init: bool = False) -> None:
+    def _set_config(self) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
         Args:
             cfg: New configuration.
             from_init: this is only meant to be used in Hamiltonian.__init__
         """
-        self.data._check_noise_model(cfg)
-        update_basis = not hasattr(self, "_config") or (
-            hasattr(self, "_config")
-            and self.data.noise_model.with_leakage != cfg.with_leakage
+        basis, op_matrix = self._get_basis_op_matrices(
+            self.data.eigenbasis
         )
-        if not from_init:
-            # Don't generate Data again if set_config called from init
-            self.data = HamiltonianData(
-                self.data.samples, self.data.register, self.data.device, cfg
-            )
-        if update_basis:
-            basis, op_matrix = self._get_basis_op_matrices(
-                self.data.eigenbasis
-            )
-            self.basis = basis
-            self.op_matrix = op_matrix
-            assert set(self.data.op_matrix_names) == set(self.op_matrix.keys())
+        self.basis = basis
+        self.op_matrix = op_matrix
+        assert set(self.data.op_matrix_names) == set(self.op_matrix.keys())
         self._build_collapse_operators()
         # Noise, samples and Hamiltonian update routine
-        self._construct_hamiltonian(update=False)
+        self._construct_hamiltonian()
 
     def _build_operator(
         self, operations: Union[list, tuple], op_matrix: dict[str, qutip.Qobj]
@@ -247,10 +227,7 @@ class Hamiltonian:
                 op_matrix[proj_name] = basis[proj0] * basis[proj1].dag()
         return basis, op_matrix
 
-    def _update_noise(self) -> None:
-        self.data._create_noise_trajectories()
-
-    def _construct_hamiltonian(self, update: bool = True) -> None:
+    def _construct_hamiltonian(self) -> None:
         """Constructs the hamiltonian from the sampled Sequence and noise.
 
         Also builds qutip.Qobjs related to the Sequence if not built already,
@@ -262,13 +239,7 @@ class Hamiltonian:
             and register).
             Amplitude fluctuations change from pulse to pulse and are always
             applied in `_extract_samples()`.
-
-        Args:
-            update: Whether to update the noise parameters.
         """
-        if update:
-            self._update_noise()
-
         def make_vdw_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
 
@@ -431,7 +402,7 @@ class Hamiltonian:
                 qobj_list = [make_interaction_term()]
 
         # Time dependent terms:
-        d = self.data.noisy_samples.__next__()[0].to_nested_dict()
+        d = self.samples.to_nested_dict()
         for addr in d:
             for basis in d[addr]:
                 if d[addr][basis]:
