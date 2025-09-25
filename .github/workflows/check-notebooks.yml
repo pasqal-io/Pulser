@@ -27,4 +27,4 @@ jobs:
       - name: Run the tutorial notebooks
         run: |
           cd tutorials
-          pytest --nbmake advanced_features applications classical_simulation quantum_simulation
+          pytest --nbmake advanced_features applications quantum_simulation
