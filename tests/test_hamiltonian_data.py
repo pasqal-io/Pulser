@@ -317,6 +317,31 @@ def test_from_sequence():
     )
 
 
+def test_int_qubit_ids():
+    # see MR #938
+    q_dict = {
+        0: [-4.0, 0.0],
+        1: [4.0, 0.0],
+    }
+    reg = pulser.Register(q_dict)
+    seq = pulser.Sequence(reg, pulser.MockDevice)
+
+    seq.declare_channel("ch0", "rydberg_global")
+
+    seq.add(
+        pulser.Pulse.ConstantDetuning(
+            pulser.BlackmanWaveform(200, np.pi / 5), 0.0, 0.0
+        ),
+        "ch0",
+    )
+    noise_model = pulser.NoiseModel(detuning_sigma=0.5, runs=1)
+
+    ham = HamiltonianData.from_sequence(seq, noise_model=noise_model)
+
+    # this should not error
+    ham.noisy_samples
+
+
 def test_register():
     seq = seq_with_SLM("rydberg_global")
     ham = HamiltonianData.from_sequence(seq)
