@@ -193,9 +193,10 @@ class SampledResult(Result):
     def get_samples(self, n_samples: int) -> Counter[str]:
         """Takes multiple samples from the sampling distribution.
 
-        The sampling distribution is derived from the original 'bitstring_counts'.
-        To get the real "samples", accessing 'SampledResult.final_bitstrings' is
-        recommended.
+        Warning:
+            This method resamples a sampling distribution derived from the
+            original 'bitstring_counts'. To get the actual "samples",
+            accessing 'SampledResult.final_bitstrings' is recommended.
 
         Args:
             n_samples: Number of samples to return.
