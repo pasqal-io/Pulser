@@ -445,8 +445,12 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
 
     noise_types = noise_model_obj.pop("noise_types")
     with_leakage = "leakage" in noise_types
+    disable_doppler = (
+        noise_model_obj["temperature"] > 0 and "doppler" not in noise_types
+    )
     relevant_params = pulser.NoiseModel._find_relevant_params(
-        noise_types,
+        # doppler parameters are relevant even if doppler is disabled
+        noise_types + (["doppler"] if disable_doppler else []),
         noise_model_obj["state_prep_error"],
         noise_model_obj["amp_sigma"],
         noise_model_obj["laser_waist"],
@@ -475,6 +479,7 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
         eff_noise_rates=tuple(eff_noise_rates),
         eff_noise_opers=tuple(eff_noise_opers),
         with_leakage=with_leakage,
+        disable_doppler=disable_doppler,
         detuning_hf_psd=tuple(detuning_hf_psd),
         detuning_hf_omegas=tuple(detuning_hf_omegas),
         detuning_sigma=detuning_sigma,
