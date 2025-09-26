@@ -183,7 +183,7 @@ class QutipEmulator:
 
         self._hamiltonian = Hamiltonian(
             self.samples_obj,
-            self._register.qubits,
+            self._register,
             device,
             sampling_rate,
             noise_model or NoiseModel(),
@@ -205,7 +205,7 @@ class QutipEmulator:
     def _noiseless_hamiltonian(self) -> Hamiltonian:
         return Hamiltonian(
             self.samples_obj,
-            self._register.qubits,
+            self._register,
             self._hamiltonian.data._device,
             self._sampling_rate,
             NoiseModel(),
