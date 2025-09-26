@@ -46,6 +46,18 @@ from pulser_simulation.simresults import (
 )
 
 
+def _has_shot_to_shot_except_spam(noise_model: NoiseModel) -> bool:
+    return (
+        "doppler" in noise_model.noise_types
+        or (
+            "amplitude" in noise_model.noise_types
+            and noise_model.amp_sigma != 0.0
+        )
+        or "detuning" in noise_model.noise_types
+        or "register" in noise_model.noise_types
+    )
+
+
 class QutipEmulator:
     r"""Emulator of a pulse sequence using QuTiP.
 
@@ -708,13 +720,11 @@ class QutipEmulator:
         self._validate_options(options)
 
         if (
-            "amplitude" not in self.noise_model.noise_types
-            or self.noise_model.amp_sigma == 0.0
-        ) and (
             "SPAM" not in self.noise_model.noise_types
             or self.noise_model.state_prep_error == 0
-        ):
-            # A single run is needed, regardless of self.config.runs
+        ) and not _has_shot_to_shot_except_spam(self.noise_model):
+            # No shot to shot noise is present, only a single run is needed,
+            # regardless of self.config.runs
             return self._run_solver(progress_bar, **options)
 
         # Will return NoisyResults
@@ -756,15 +766,7 @@ class QutipEmulator:
     def _noisy_runs(
         self, progress_bar: bool, **options: Any
     ) -> Iterator[tuple[SimulationResults, int]]:
-        if (
-            "doppler" in self.noise_model.noise_types
-            or (
-                "amplitude" in self.noise_model.noise_types
-                and self.noise_model.amp_sigma != 0.0
-            )
-            or "detuning" in self.noise_model.noise_types
-            or "register" in self.noise_model.noise_types
-        ):
+        if _has_shot_to_shot_except_spam(self.noise_model):
             loop_runs = cast(int, self.noise_model.runs)
             update_ham = True
         else:
