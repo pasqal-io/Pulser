@@ -28,6 +28,7 @@ from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 from pulser_simulation import QutipEmulator, SimConfig
+from pulser_simulation.simresults import NoisyResults
 
 
 @pytest.fixture
@@ -2214,3 +2215,53 @@ def test_detuning_hf_noise(monkeypatch):
         0.0,
     ]
     assert np.allclose(digital_1, digital_1_expected)
+
+
+@pytest.mark.parametrize(
+    ("noise"),
+    (
+        {"detuning_sigma": 1.0},
+        {"amp_sigma": 1.0},
+        {
+            "temperature": 10,
+        },
+        {
+            "temperature": 10,
+            "disable_doppler": True,
+            "trap_depth": 1000,
+            "trap_waist": 0.1,
+        },
+        {"detuning_hf_psd": [1.0, 2.0], "detuning_hf_omegas": [3.0, 4.0]},
+    ),
+)
+def test_noisy_runs(noise):
+    count = 0
+    old_run = QutipEmulator._run_solver
+
+    def mock_run_solver(self, progress_bar: bool = False, **options):
+        nonlocal count, old_run
+        count += 1
+        return old_run(self, progress_bar, **options)
+
+    np.random.seed(1337)
+    duration = 10
+    reg = Register({"q0": (0, 0), "q1": (10, 10)})
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="q0")
+    seq.declare_channel("ch2", "raman_local", initial_target="q1")
+
+    pulse1 = Pulse.ConstantPulse(duration, 0, 0, 0)
+    # Added twice to check the fluctuation doesn't change from pulse to pulse
+    seq.add(pulse1, "ch0")
+    seq.add(pulse1, "ch0")
+    # The two local channels target alternating qubits on the same basis
+    seq.add(pulse1, "ch1", protocol="no-delay")
+    seq.add(pulse1, "ch2", protocol="no-delay")
+    nruns = 2
+    noise_mod = NoiseModel(runs=nruns, **noise)
+    with patch.object(QutipEmulator, "_run_solver", new=mock_run_solver) as m:
+        sim = QutipEmulator.from_sequence(seq, noise_model=noise_mod)
+        result = sim.run()
+        assert count == nruns
+        assert isinstance(result, NoisyResults)
