@@ -159,7 +159,7 @@ class QutipBackendV2(EmulatorBackend):
             total_duration=self._sim_obj.total_duration_ns,
         )
         eigenstates = self._sim_obj.samples_obj.eigenbasis
-        options = {}
+        options: dict = {}
         self._sim_obj._validate_options(
             options
         )  # setup the default qutip options
