@@ -46,6 +46,18 @@ from pulser_simulation.simresults import (
 )
 
 
+def _has_shot_to_shot_except_spam(noise_model: NoiseModel) -> bool:
+    return (
+        "doppler" in noise_model.noise_types
+        or (
+            "amplitude" in noise_model.noise_types
+            and noise_model.amp_sigma != 0.0
+        )
+        or "detuning" in noise_model.noise_types
+        or "register" in noise_model.noise_types
+    )
+
+
 class QutipEmulator:
     r"""Emulator of a pulse sequence using QuTiP.
 
@@ -645,9 +657,8 @@ class QutipEmulator:
         self._validate_options(options)
 
         if (
-            "amplitude" not in self.config.noise
-            or self.config.amp_sigma == 0.0
-        ) and ("SPAM" not in self.config.noise or self.config.eta == 0):
+            "SPAM" not in self.config.noise or self.config.eta == 0
+        ) and not _has_shot_to_shot_except_spam(self._hamiltonian.config):
             # A single run is needed, regardless of self.config.runs
             return self._run_solver(progress_bar, **options)
 
@@ -687,9 +698,7 @@ class QutipEmulator:
     def _noisy_runs(
         self, progress_bar: bool, **options: Any
     ) -> Iterator[tuple[SimulationResults, int]]:
-        if "doppler" in self.config.noise or (
-            "amplitude" in self.config.noise and self.config.amp_sigma != 0.0
-        ):
+        if _has_shot_to_shot_except_spam(self._hamiltonian.config):
             loop_runs = self.config.runs
             update_ham = True
         else:
