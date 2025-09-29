@@ -723,7 +723,8 @@ class QutipEmulator:
             "SPAM" not in self.noise_model.noise_types
             or self.noise_model.state_prep_error == 0
         ) and not _has_shot_to_shot_except_spam(self.noise_model):
-            # A single run is needed, regardless of self.config.runs
+            # No shot to shot noise is present, only a single run is needed,
+            # regardless of self.config.runs
             return self._run_solver(progress_bar, **options)
 
         # Will return NoisyResults
