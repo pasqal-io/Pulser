@@ -14,10 +14,12 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import re
 import typing
 import uuid
 from collections import Counter
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -44,12 +46,13 @@ from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
     BatchStatus,
     JobStatus,
+    RemoteBackend,
     RemoteConnection,
     RemoteResults,
     RemoteResultsError,
     _OpenBatchContextManager,
 )
-from pulser.backend.results import Results
+from pulser.backend.results import AggregationMethod, Results
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
@@ -233,6 +236,9 @@ def test_update_sequence_device(sequence):
     connection = _MockConnection()
     device = pulser.AnalogDevice
 
+    new_sequence = connection.update_sequence_device(sequence)
+    assert new_sequence == sequence
+
     def fetch_available_devices():
         return {device.name: device}
 
@@ -257,7 +263,7 @@ def test_update_sequence_device(sequence):
         pulser.AnalogDevice, requires_layout=False
     )
     with pytest.warns(UserWarning, match="different Rydberg level"):
-        sequence = sequence.switch_device(custom_device)
+        sequence = sequence.with_new_device(custom_device)
     device = dataclasses.replace(
         custom_device, max_atom_num=custom_device.max_atom_num + 1
     )
@@ -265,7 +271,7 @@ def test_update_sequence_device(sequence):
     assert connection.update_sequence_device(sequence).device == device
 
 
-def test_qpu_backend(sequence):
+def test_remote_backend(sequence):
     connection = _MockConnection()
 
     with pytest.raises(
@@ -276,20 +282,22 @@ def test_qpu_backend(sequence):
     with pytest.warns(
         UserWarning, match="device with a different Rydberg level"
     ):
-        seq = sequence.switch_device(AnalogDevice)
+        seq = sequence.with_new_device(AnalogDevice)
 
     with pytest.raises(ValueError, match="defined from a `RegisterLayout`"):
         QPUBackend(seq, connection)
 
-    seq = seq.switch_register(SquareLatticeLayout(5, 5, 5).square_register(2))
-    seq = seq.switch_device(
+    seq = seq.with_new_register(
+        SquareLatticeLayout(5, 5, 5).square_register(2)
+    )
+    seq = seq.with_new_device(
         dataclasses.replace(seq.device, accepts_new_layouts=False)
     )
     with pytest.raises(
         ValueError, match="does not accept new register layouts"
     ):
         QPUBackend(seq, connection)
-    seq = seq.switch_register(
+    seq = seq.with_new_register(
         AnalogDevice.pre_calibrated_layouts[0].define_register(1, 2, 3)
     )
 
@@ -297,14 +305,21 @@ def test_qpu_backend(sequence):
         QPUBackend(seq, "fake_connection")
 
     qpu_backend = QPUBackend(seq, connection)
+    remote_backend = RemoteBackend(seq, connection)
+    # Generic remote backend can run without job_params
+    assert remote_backend.run().batch_id == "abcd"
+    # But QPUBackend requires job_params
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         qpu_backend.run()
-    with pytest.raises(TypeError, match="'job_params' must be a list"):
-        qpu_backend.run(job_params={"runs": 100})
-    with pytest.raises(
-        TypeError, match="All elements of 'job_params' must be dictionaries"
-    ):
-        qpu_backend.run(job_params=[{"runs": 100}, "foo"])
+    for backend in [qpu_backend, remote_backend]:
+        # Remote Backend only checks that the type is correct
+        with pytest.raises(TypeError, match="'job_params' must be a list"):
+            backend.run(job_params={"runs": 100})
+        with pytest.raises(
+            TypeError,
+            match="All elements of 'job_params' must be dictionaries",
+        ):
+            backend.run(job_params=[{"runs": 100}, "foo"])
     with pytest.raises(
         ValueError,
         match="All elements of 'job_params' must specify 'runs'",
@@ -318,6 +333,13 @@ def test_qpu_backend(sequence):
         ),
     ):
         qpu_backend.run(job_params=[{"runs": 100000}])
+
+    device = pulser.AnalogDevice
+
+    def fetch_available_devices():
+        return {device.name: device}
+
+    connection.fetch_available_devices = fetch_available_devices
 
     remote_results = qpu_backend.run(job_params=[{"runs": 10}])
 
@@ -371,7 +393,9 @@ def test_emulator_backend(sequence):
     class ConcreteEmulator(EmulatorBackend):
 
         default_config = EmulationConfig(
-            observables=(BitStrings(),), with_modulation=True
+            observables=(BitStrings(),),
+            with_modulation=True,
+            extra_param="foo",
         )
 
         def run(self):
@@ -382,17 +406,37 @@ def test_emulator_backend(sequence):
     ):
         ConcreteEmulator(sequence, config=EmulatorConfig)
 
-    emu = ConcreteEmulator(
-        sequence,
-        config=EmulationConfig(
-            observables=(BitStrings(),), default_evaluation_times="Full"
-        ),
+    concrete_config = EmulationConfig(
+        observables=(BitStrings(),),
+        default_evaluation_times="Full",
+        my_param="bar",
     )
-    assert emu._config.default_evaluation_times == "Full"
-    assert not emu._config.with_modulation
+    emu = ConcreteEmulator(sequence, config=concrete_config)
 
-    # Uses the default config
-    assert ConcreteEmulator(sequence)._config.with_modulation
+    # The adopted configuration, as given by validate_config
+    # (we use the abstract representation to compare them)
+    assert (
+        json.loads(emu._config.to_abstract_repr())
+        == json.loads(
+            ConcreteEmulator.validate_config(
+                concrete_config
+            ).to_abstract_repr()
+        )
+        == json.loads(
+            EmulationConfig(
+                # These come from the concrete config
+                observables=(BitStrings(),),
+                default_evaluation_times="Full",
+                my_param="bar",
+                # with_modulation is not True because EmulationConfig has it
+                # in the signature as `with_modulation=False``
+                with_modulation=False,
+                # But the parameter that's not in EmulationConfig's signature
+                # is still passed to the config
+                extra_param="foo",
+            ).to_abstract_repr()
+        )
+    )
 
 
 def test_backend_config():
@@ -536,6 +580,230 @@ def test_emulation_config():
         EmulationConfig._enforce_expected_kwargs = False
 
 
+def test_results_aggregation():
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    uids = [uuid.uuid4() for _ in range(4)]
+    agg_type = AggregationMethod.MEAN
+    results1._store_raw(
+        uuid=uids[0],
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results1._store_raw(
+        uuid=uids[0],
+        tag="dummy_result",
+        time=0.2,
+        value=2.0,
+        aggregation_method=agg_type,
+    )
+    results1._store_raw(
+        uuid=uids[1],
+        tag="dummy_result2",
+        time=0.7,
+        value=2.0,
+        aggregation_method=AggregationMethod.SKIP,
+    )
+    results2._store_raw(
+        uuid=uids[2],
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uids[2],
+        tag="dummy_result",
+        time=0.2,
+        value=4.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uids[3],
+        tag="dummy_result3",
+        time=0.5,
+        value=2.0,
+        aggregation_method=AggregationMethod.SKIP_WARN,
+    )
+    i = 0
+
+    def aggregator(values):
+        nonlocal i
+        i = i + 1
+        return sum(values) / len(values)
+
+    with patch("pulser.backend.results.AGGREGATOR_MAPPING") as mock_aggregator:
+        mock_aggregator.__getitem__.return_value = aggregator
+        agg = Results.aggregate([results1, results2])
+        mock_aggregator.__getitem__.assert_called_once_with(agg_type)
+    agg2 = Results.aggregate([results1, results2], dummy_result=aggregator)
+    assert (
+        i == 4
+    )  # twice in agg, twice in agg2, once each for the 2 results added above.
+    for ag in [agg, agg2]:
+        ag_uuid = ag._find_uuid("dummy_result")
+        for uid in uids:
+            assert ag_uuid != uid
+        assert ag._aggregation_methods[ag_uuid] == agg_type
+        assert ag.dummy_result == [2.0, 3.0]
+
+    assert Results.aggregate([results1]) is results1
+
+
+def test_results_aggregation_errors(caplog):
+    uid = uuid.uuid4()
+    agg_type = AggregationMethod.MEAN
+
+    with pytest.raises(ValueError, match="No results to aggregate.") as ex:
+        Results.aggregate([])
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.2,
+        value=3.0,
+        aggregation_method=agg_type,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "The Results come from incompatible simulations: "
+        "the times for `dummy_result` are not all the same."
+    )
+    results1._aggregation_methods = {}
+    with pytest.raises(NotImplementedError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate results from pulser<1.6,"
+        "aggregation is not supported in this case."
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result2",
+        time=0.1,
+        value=3.0,
+        aggregation_method=agg_type,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate incompatible results: "
+        "result `dummy_result` is not present in all results, "
+        "but it's not marked to be skipped."
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 2], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_method=agg_type,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate incompatible results: "
+        "they do not all have the same atom order."
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=200)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_method=agg_type,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate incompatible results: "
+        "they do not all have the same sequence duration."
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=agg_type,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_method=AggregationMethod.BAG_UNION,
+    )
+    with pytest.raises(ValueError) as ex:
+        Results.aggregate([results1, results2])
+    assert str(ex.value) == (
+        "You're trying to aggregate incompatible results: "
+        "they do not all contain the same aggregation functions."
+    )
+
+    results1 = Results(atom_order=[0, 1], total_duration=100)
+    results2 = Results(atom_order=[0, 1], total_duration=100)
+    results1._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=1.0,
+        aggregation_method=AggregationMethod.SKIP_WARN,
+    )
+    results2._store_raw(
+        uuid=uid,
+        tag="dummy_result",
+        time=0.1,
+        value=3.0,
+        aggregation_method=AggregationMethod.SKIP_WARN,
+    )
+    with pytest.warns(
+        UserWarning, match="Skipping aggregation of `dummy_result`."
+    ):
+        Results.aggregate([results1, results2])
+
+
 def test_results():
     res = Results(atom_order=(), total_duration=0)
     assert res.get_result_tags() == []
@@ -585,6 +853,49 @@ def test_results():
     )
     with pytest.raises(ValueError, match="not available at time 0.912"):
         res.get_result(obs, 0.912)
+
+
+def test_results_final_bistrings():
+    res = Results(atom_order=(), total_duration=0)
+    with pytest.raises(
+        RuntimeError, match="final bitstrings are not available"
+    ):
+        res.final_bitstrings
+
+    obs = BitStrings()
+    obs(
+        config=EmulationConfig(observables=(BitStrings(),)),
+        t=1.0,
+        state=QutipState.from_state_amplitudes(
+            eigenstates=("r", "g"), amplitudes={"rrr": 1.0}
+        ),
+        hamiltonian=QutipOperator.from_operator_repr(
+            eigenstates=("r", "g"), n_qudits=3, operations=[(1.0, [])]
+        ),
+        result=res,
+    )
+    assert res.final_bitstrings == res.get_result(obs, 1.0)
+
+
+def test_results_final_state():
+    res = Results(atom_order=(), total_duration=0)
+    with pytest.raises(RuntimeError, match="final state is not available"):
+        res.final_state
+
+    obs = StateResult()
+    state = QutipState.from_state_amplitudes(
+        eigenstates=("r", "g"), amplitudes={"rrr": 1.0}
+    )
+    obs(
+        config=EmulationConfig(observables=(obs,)),
+        t=1.0,
+        state=state,
+        hamiltonian=QutipOperator.from_operator_repr(
+            eigenstates=("r", "g"), n_qudits=3, operations=[(1.0, [])]
+        ),
+        result=res,
+    )
+    assert res.final_state == res.get_result(obs, 1.0) == state
 
 
 class TestObservables:
@@ -693,10 +1004,10 @@ class TestObservables:
         obs = StateResult()
         assert obs.apply(state=ghz_state) == ghz_state
 
-    @pytest.mark.parametrize("p_false_pos", [None, 0.4])
-    @pytest.mark.parametrize("p_false_neg", [None, 0.3])
-    @pytest.mark.parametrize("one_state", [None, "g"])
-    @pytest.mark.parametrize("num_shots", [None, 100])
+    @pytest.mark.parametrize("p_false_pos", [0, 0.4])
+    @pytest.mark.parametrize("p_false_neg", [0, 0.3])
+    @pytest.mark.parametrize("one_state", [0, "g"])
+    @pytest.mark.parametrize("num_shots", [0, 100])
     def test_bitstrings(
         self,
         config: EmulationConfig,

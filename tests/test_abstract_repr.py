@@ -18,8 +18,8 @@ import json
 import re
 from collections.abc import Callable
 from copy import deepcopy
-from dataclasses import replace
-from typing import Any, Type
+from dataclasses import asdict, replace
+from typing import Any, Type, cast
 from unittest.mock import patch
 
 import jsonschema
@@ -209,8 +209,13 @@ def test_register(reg: Register | Register3D):
     "noise_model",
     [
         NoiseModel(),
+        NoiseModel(disable_doppler=True),
         NoiseModel(laser_waist=100),
+        NoiseModel(laser_waist=100, disable_doppler=True),
         NoiseModel(temperature=100, runs=10, samples_per_run=1),
+        NoiseModel(
+            temperature=100, runs=10, samples_per_run=1, disable_doppler=True
+        ),
         NoiseModel(
             eff_noise_rates=(0.1,),
             eff_noise_opers=(((0, -1j), (1j, 0)),),
@@ -220,15 +225,73 @@ def test_register(reg: Register | Register3D):
             eff_noise_opers=(((0, -1j, 0), (1j, 0, 0), (0, 0, 1)),),
             with_leakage=True,
         ),
+        NoiseModel(
+            detuning_sigma=0.1,
+            runs=1,
+        ),
+        NoiseModel(
+            detuning_hf_psd=(1, 2, 3),
+            detuning_hf_omegas=(4, 5, 6),
+            runs=1,
+        ),
+        NoiseModel(
+            detuning_sigma=0.1,
+            detuning_hf_psd=(1, 2, 3),
+            detuning_hf_omegas=(4, 5, 6),
+            runs=1,
+        ),
+        NoiseModel(
+            temperature=50.0,
+            trap_depth=150.0,
+            trap_waist=1.0,
+            runs=1,
+            samples_per_run=1,
+        ),
+        NoiseModel(
+            temperature=50.0,
+            trap_depth=150.0,
+            trap_waist=1.0,
+            runs=1,
+            samples_per_run=1,
+            disable_doppler=True,
+        ),
+        NoiseModel(temperature=50.0, trap_depth=150.0, trap_waist=1.0, runs=1),
     ],
 )
 def test_noise_model(noise_model: NoiseModel):
     ser_noise_model_str = noise_model.to_abstract_repr()
     re_noise_model = NoiseModel.from_abstract_repr(ser_noise_model_str)
-    assert noise_model == re_noise_model
 
+    if noise_model.disable_doppler and noise_model.temperature == 0:
+        # Deserialization sets disable_doppler to False, because that was
+        # a non-necessary argument in initial NoiseModel
+        dict_noise_model = asdict(noise_model)
+        dict_re_noise_model = asdict(re_noise_model)
+        assert dict_noise_model.pop("disable_doppler") is True
+        assert dict_re_noise_model.pop("disable_doppler") is False
+        assert dict_re_noise_model == dict_noise_model
+    else:
+        assert noise_model == re_noise_model
+
+
+@pytest.mark.parametrize(
+    "noise_model",
+    [
+        NoiseModel(),
+        NoiseModel(laser_waist=100),
+        NoiseModel(temperature=100, runs=10, samples_per_run=1),
+        NoiseModel(
+            eff_noise_rates=(0.1,),
+            eff_noise_opers=(((0, -1j), (1j, 0)),),
+        ),
+    ],
+)
+def test_legacy_noise_model(noise_model: NoiseModel):
+    ser_noise_model_str = noise_model.to_abstract_repr()
+    re_noise_model = NoiseModel.from_abstract_repr(ser_noise_model_str)
     # Define parameters with defaults, like it was done before
     # pulser-core < 0.20, and check deserialization still works
+    # i.e. the obtained noise models are equivalent
     ser_noise_model_obj = json.loads(ser_noise_model_str)
     for param in ser_noise_model_obj:
         if param in _LEGACY_DEFAULTS and (
@@ -240,10 +303,32 @@ def test_noise_model(noise_model: NoiseModel):
             ser_noise_model_obj[param] = (
                 ser_noise_model_obj[param] or _LEGACY_DEFAULTS[param]
             )
-    assert (
-        NoiseModel.from_abstract_repr(json.dumps(ser_noise_model_obj))
-        == re_noise_model
+    legacy_noise_model = NoiseModel.from_abstract_repr(
+        json.dumps(ser_noise_model_obj)
     )
+    dict_legacy = asdict(legacy_noise_model)
+    dict_re_noise_model = asdict(re_noise_model)
+    # The noise models are equivalent: doppler isn't among noise types if
+    # temperature is now >0 whereas it was 0 in initial noise model.
+    disable_doppler = dict_legacy.pop("disable_doppler")
+    assert disable_doppler == (
+        dict_legacy["temperature"] > 0
+        and "doppler" not in re_noise_model.noise_types
+    )
+    dict_re_noise_model.pop("disable_doppler")
+    if disable_doppler:
+        # Temperature/runs have been updated if they were 0/None
+        temp = dict_legacy.pop("temperature")
+        assert temp == (
+            noise_model.temperature or _LEGACY_DEFAULTS["temperature"]
+        )
+        dict_re_noise_model.pop("temperature")
+        assert (
+            dict_legacy.pop("runs") == noise_model.runs
+            or _LEGACY_DEFAULTS["runs"]
+        )
+        dict_re_noise_model.pop("runs")
+    assert dict_legacy == dict_re_noise_model
 
     with pytest.raises(TypeError, match="must be given as a string"):
         NoiseModel.from_abstract_repr(ser_noise_model_obj)
@@ -284,7 +369,7 @@ class TestDevice:
             with pytest.raises(DeserializeDeviceError) as exc_info:
                 func(obj_str)
 
-            cause = exc_info.value.__cause__
+            cause = cast(DeserializeDeviceError, exc_info.value).__cause__
             assert isinstance(cause, original_err)
             assert re.search(re.escape(err_msg), str(cause)) is not None
             return cause
@@ -682,6 +767,7 @@ class TestSerialization:
 
         seq.delay(100, "digital")
         seq.add(pm_pulse, "digital")
+        seq.truncate(duration * 10)
         seq.measure("digital")
         return seq
 
@@ -731,7 +817,7 @@ class TestSerialization:
             "amps": {"type": "float", "value": [np.pi, 2 * np.pi]},
             "duration": {"type": "int", "value": [200]},
         }
-        assert len(abstract["operations"]) == 12
+        assert len(abstract["operations"]) == 13
         assert abstract["operations"][0] == {
             "op": "target",
             "channel": "digital",
@@ -831,6 +917,19 @@ class TestSerialization:
             },
             "post_phase_shift": 0.0,
             "protocol": "min-delay",
+        }
+
+        assert abstract["operations"][12] == {
+            "op": "truncate",
+            "duration": {
+                "expression": "mul",
+                "lhs": {
+                    "expression": "index",
+                    "lhs": {"variable": "duration"},
+                    "rhs": 0,
+                },
+                "rhs": 10,
+            },
         }
 
         assert abstract["measurement"] == "digital"
@@ -976,7 +1075,7 @@ class TestSerialization:
             post_phase_shift=1.0,
         )
 
-        method_call = parametrize(BlackmanWaveform.change_duration)(wf, var)
+        method_call = parametrize(BlackmanWaveform.with_new_duration)(wf, var)
         with pytest.raises(
             NotImplementedError,
             match="Instance or static method serialization is not supported.",
@@ -1815,6 +1914,7 @@ class TestDeserialization:
                     "stop": 5,
                 },
             },
+            {"op": "truncate", "duration": 1000},
         ],
         ids=_get_op,
     )
@@ -1866,6 +1966,9 @@ class TestDeserialization:
             assert pulse.post_phase_shift == op["post_phase_shift"]
             assert isinstance(pulse.amplitude, Waveform)
             assert isinstance(pulse.detuning, Waveform)
+        elif op["op"] == "truncate":
+            assert c.name == "truncate"
+            assert c.kwargs["duration"] == op["duration"]
         else:
             assert False, f"operation type \"{op['op']}\" is not valid"
 
@@ -2065,6 +2168,7 @@ class TestDeserialization:
                     "stop": 0,
                 },
             },
+            {"op": "truncate", "duration": var2},
         ],
         ids=_get_op,
     )
@@ -2136,6 +2240,9 @@ class TestDeserialization:
             assert issubclass(pulse.kwargs["amplitude"].cls, Waveform)
             assert isinstance(pulse.kwargs[time_domain_mod], ParamObj)
             assert issubclass(pulse.kwargs[time_domain_mod].cls, Waveform)
+        elif op["op"] == "truncate":
+            assert c.name == "truncate"
+            assert isinstance(c.kwargs["duration"], VariableItem)
         else:
             assert False, f"operation type \"{op['op']}\" is not valid"
 
@@ -2765,3 +2872,68 @@ class TestDeserialization:
             ),
         ):
             Sequence.from_abstract_repr(s)
+
+
+@pytest.mark.parametrize(
+    "det_hf_psd, det_hf_freqs",
+    [[(), ()], [(1.0, 2.0, 3.0), (4.0, 5.0, 6.0)]],
+)
+@pytest.mark.parametrize("detuning_sigma", [0.0, 1.0])
+@pytest.mark.parametrize(
+    "temperature,trap_depth, trap_waist",
+    [(0.0, None, 0.0), (50.0, 150.0, 1.0)],
+)
+def test_noise_optional_params(
+    detuning_sigma,
+    det_hf_psd,
+    det_hf_freqs,
+    temperature,
+    trap_depth,
+    trap_waist,
+):
+    noise = pulser.NoiseModel(
+        runs=1,  # TODO: connect this with MCArlo
+        samples_per_run=1,  # TODO: connect this with MCarlo or ignored
+        state_prep_error=0.1,
+        p_false_pos=0.1,
+        p_false_neg=0.15,
+        laser_waist=5,
+        amp_sigma=0.1,
+        detuning_sigma=detuning_sigma,
+        trap_waist=trap_waist,
+        trap_depth=trap_depth,
+        detuning_hf_psd=det_hf_psd,
+        detuning_hf_omegas=det_hf_freqs,
+        temperature=temperature,
+        with_leakage=True,
+        eff_noise_rates=(0.1,),
+        eff_noise_opers=(np.random.rand(3, 3),),
+        hyperfine_dephasing_rate=1.5,
+    )
+    repr = noise._to_abstract_repr()
+
+    if detuning_sigma != 0.0:
+        assert "detuning_sigma" in repr
+        assert repr["detuning_sigma"] == detuning_sigma
+    else:
+        assert "detuning_sigma" not in repr
+
+    if det_hf_psd != () and det_hf_freqs != ():
+        assert "detuning_hf" in repr
+        assert repr["detuning_hf"] == (list(zip(det_hf_psd, det_hf_freqs)))
+    else:
+        assert "detuning_hf" not in repr
+
+    if trap_depth is not None and trap_waist != 0.0:
+        assert "trap_waist" in repr
+        assert "trap_depth" in repr
+        assert "temperature" in repr
+        assert repr["trap_waist"] == trap_waist
+        assert repr["trap_depth"] == trap_depth
+        assert "register" in repr["noise_types"]
+        assert "doppler" in repr["noise_types"]
+    else:
+        assert "trap_waist" not in repr
+        assert "trap_depth" not in repr
+        assert "register" not in repr["noise_types"]
+        assert "doppler" not in repr["noise_types"]

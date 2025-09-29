@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import warnings
 from collections.abc import Collection, Sequence
-from dataclasses import asdict, dataclass, fields
+from dataclasses import dataclass, field, fields
 from typing import Any, Literal, Union, cast, get_args
 
 import numpy as np
@@ -26,6 +26,7 @@ from numpy.typing import ArrayLike
 import pulser.json.abstract_repr as pulser_abstract_repr
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
+from pulser.json.utils import get_dataclass_defaults
 
 __all__ = ["NoiseModel"]
 
@@ -33,6 +34,8 @@ NoiseTypes = Literal[
     "leakage",
     "doppler",
     "amplitude",
+    "detuning",
+    "register",
     "SPAM",
     "dephasing",
     "relaxation",
@@ -43,7 +46,9 @@ NoiseTypes = Literal[
 _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "leakage": ("with_leakage",),
     "doppler": ("temperature",),
+    "register": ("trap_waist", "trap_depth"),
     "amplitude": ("laser_waist", "amp_sigma"),
+    "detuning": ("detuning_sigma", "detuning_hf_psd", "detuning_hf_omegas"),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
     "dephasing": ("dephasing_rate", "hyperfine_dephasing_rate"),
     "relaxation": ("relaxation_rate",),
@@ -57,7 +62,6 @@ _PARAM_TO_NOISE_TYPE: dict[str, NoiseTypes] = {
     for param in params
 }
 
-# Parameter characterization
 
 _POSITIVE = {
     "dephasing_rate",
@@ -65,12 +69,10 @@ _POSITIVE = {
     "relaxation_rate",
     "depolarizing_rate",
     "temperature",
+    "detuning_sigma",
+    "trap_waist",
 }
-_STRICT_POSITIVE = {
-    "runs",
-    "samples_per_run",
-    "laser_waist",
-}
+_STRICT_POSITIVE = {"runs", "samples_per_run", "laser_waist", "trap_depth"}
 _PROBABILITY_LIKE = {
     "state_prep_error",
     "p_false_pos",
@@ -78,7 +80,7 @@ _PROBABILITY_LIKE = {
     "amp_sigma",
 }
 
-_BOOLEAN = {"with_leakage"}
+_BOOLEAN = {"with_leakage", "disable_doppler"}
 
 _LEGACY_DEFAULTS = {
     "runs": 15,
@@ -95,18 +97,26 @@ _LEGACY_DEFAULTS = {
     "depolarizing_rate": 0.05,
 }
 
+OPTIONAL_IN_ABSTR_REPR = (
+    "detuning_sigma",
+    "trap_waist",
+    "trap_depth",
+    "detuning_hf_psd",
+    "detuning_hf_omegas",
+)
 
-@dataclass(init=False, repr=False, frozen=True)
+
+@dataclass(init=True, repr=False, frozen=True)
 class NoiseModel:
-    """Specifies the noise model parameters for emulation.
+    r"""Specifies the noise model parameters for emulation.
 
-    Supported noise types:
+    **Supported noise types:**
 
     - **leakage**: Adds an error state 'x' to the computational
-        basis, that can interact with the other states via an
-        effective noise channel. Must be defined with an effective
-        noise channel, but is incompatible with dephasing and
-        depolarizing noise channels.
+      basis, that can interact with the other states via an
+      effective noise channel. Must be defined with an effective
+      noise channel, but is incompatible with dephasing and
+      depolarizing noise channels.
     - **relaxation**: Noise due to a decay from the Rydberg to
       the ground state (parametrized by ``relaxation_rate``),
       commonly characterized experimentally by the T1 time.
@@ -124,10 +134,36 @@ class NoiseModel:
       corresponding rates ``eff_noise_rates``.
     - **doppler**: Local atom detuning due to termal motion of the
       atoms and Doppler effect with respect to laser frequency.
-      Parametrized by the ``temperature`` field.
+      Parametrized by the ``temperature`` field. Can be disabled with
+      the ``disable_doppler`` field.
+    - **register**: Thermal fluctuations in the
+      register positions, parametrized by ``temperature``, ``trap_waist``
+      and, ``trap_depth``, which must all be defined.
+
+      (1) Plane standard deviation fluctuation given by:
+      :math:`\sigma^{xy} = \sqrt{\frac{T w²}{4 U_{trap}}}`, where T is
+      temperature, w is the trap waist and :math:`U_{trap}` is
+      the trap depth.
+
+      (2) Off plane standard deviation fluctuation given by:
+      :math:`\sigma^z = \frac{\pi}{\lambda}\sqrt{2} w \sigma^{xy}`, where
+      :math:`\lambda` is the trap wavelength with a constant value of 0.85 µm.
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
+    - **detuning**: Detuning fluctuations consisting of two
+      components:
+
+      (1) constant offset (zero-frequency), parameterized by
+      ``detuning_sigma``
+
+      (2) time-dependent high-frequency fluctuations, defined by the
+      power spectral density (PSD) ``detuning_hf_psd`` over the relevant
+      ``detuning_hf_omegas`` angular frequency support.
+      :math:`\delta_{hf}(t) = \sum_k \sqrt{2*\Delta \omega_k*\mathrm{PSD}_k}
+      * \cos(\omega_k * t + \phi_k)`
+      where :math:`\phi_k \backsim U[0, 2\pi)` (uniform random phase),
+      and :math:`\Delta \omega_k = \omega_{k+1} - \omega_k`.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
 
@@ -138,70 +174,88 @@ class NoiseModel:
             bitstring distribution is sampled when calculating bitstring
             counts.
         samples_per_run: Number of samples per noisy Hamiltonian. Useful
-            for cutting down on computing time, but unrealistic.
-        state_prep_error: The state preparation error probability.
-        p_false_pos: Probability of measuring a false positive.
-        p_false_neg: Probability of measuring a false negative.
+            for cutting down on computing time, but unrealistic. *Deprecated
+            since v1.6, use only `runs`.*
+        state_prep_error: The state preparation error probability. Defaults
+            to 0.
+        p_false_pos: Probability of measuring a false positive. Defaults to 0.
+        p_false_neg: Probability of measuring a false negative. Defaults to 0.
         temperature: Temperature, set in µK, of the atoms in the array.
             Also sets the standard deviation of the speed of the atoms.
+            Defaults to 0.
         laser_waist: Waist of the gaussian lasers, set in µm, for global
             pulses. Assumed to be the same for all global channels.
         amp_sigma: Dictates the fluctuation in amplitude of a channel from
             run to run as a standard deviation of a normal distribution
             centered in 1. Assumed to be the same for all channels (though
             each channel has its own randomly sampled value in each run).
+        detuning_sigma: Dictates the fluctuation in detuning (in rad/µs)
+            of a channel from run to run as a standard deviation of a normal
+            distribution centered in 0. Assumed to be the same for all
+            channels (though each channel has its own randomly sampled
+            value in each run). This noise is additive. Defaults to 0.
+        trap_waist: The waist of each optical trap at the focal point (in µm).
+            Defaults to 0.
+        trap_depth: The potential energy well depth that confines the atoms
+            (in µK). Defaults to None.
+        detuning_hf_psd: Power Spectral Density (PSD) is 1D tuple (in rad/µs)
+            provided together with `detuning_hf_omegas` define high frequency
+            noise contribution of time dependent detuning (in rad/µs).
+            Must either be empty or a tuple with at least two values,
+            matching the length of `detuning_hf_omegas`. Default is ().
+        detuning_hf_omegas: 1D tuple (in rad/µs) of relevant angular frequency
+            support for the PSD. Along with the PSD, it is required to define
+            high frequency noise contribution of time dependent detuning
+            (in rad/µs). Must either be empty or a tuple with at least two
+            values, matching the length of `detuning_hf_psd`. Default is ().
         relaxation_rate: The rate of relaxation from the Rydberg to the
-            ground state (in 1/µs). Corresponds to 1/T1.
+            ground state (in 1/µs). Corresponds to 1/T1. Defaults to 0.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
             Rydberg state superpostion. Only used if a Rydberg state is
-            involved. Corresponds to 1/T2*.
+            involved. Corresponds to 1/T2*. Defaults to 0.
         hyperfine_dephasing_rate: The rate of dephasing occuring (in 1/µs)
             between hyperfine ground states. Only used if the hyperfine
-            state is involved.
+            state is involved. Defaults to 0.
         depolarizing_rate: The rate (in 1/µs) at which a depolarizing
-            error occurs.
+            error occurs. Defaults to 0.
         eff_noise_rates: The rate associated to each effective noise operator
-            (in 1/µs).
+            (in 1/µs). Defaults to 0.
         eff_noise_opers: The operators for the effective noise model.
+            Defaults to 0.
         with_leakage: Whether or not to include an error state in the
             computations (default to False).
+        disable_doppler: Whether or not to disable the doppler noise,
+            even if the temperature is defined. In this way, 'register' noise
+            (which requires 'temperature') can be activated on its own (i.e
+            without doppler).
     """
 
-    noise_types: tuple[NoiseTypes, ...]
-    runs: int | None
-    samples_per_run: int | None
-    state_prep_error: float
-    p_false_pos: float
-    p_false_neg: float
-    temperature: float
-    laser_waist: float | None
-    amp_sigma: float
-    relaxation_rate: float
-    dephasing_rate: float
-    hyperfine_dephasing_rate: float
-    depolarizing_rate: float
-    eff_noise_rates: tuple[float, ...]
-    eff_noise_opers: tuple[ArrayLike, ...]
-    with_leakage: bool
+    noise_types: tuple[NoiseTypes, ...] = field(init=False)
+    runs: int | None = None
+    samples_per_run: int = 1
+    state_prep_error: float = 0.0
+    p_false_pos: float = 0.0
+    p_false_neg: float = 0.0
+    temperature: float = 0.0
+    laser_waist: float | None = None
+    amp_sigma: float = 0.0
+    detuning_sigma: float = 0.0
+    detuning_hf_psd: tuple[float, ...] = ()
+    detuning_hf_omegas: tuple[float, ...] = ()
+    relaxation_rate: float = 0.0
+    dephasing_rate: float = 0.0
+    # if the trap depth is not None the trap waist should be 0.0
+    trap_waist: float = 0.0
+    # Must be defined when trap_waist > 0
+    trap_depth: float | None = None
+    hyperfine_dephasing_rate: float = 0.0
+    depolarizing_rate: float = 0.0
+    eff_noise_rates: tuple[float, ...] = ()
+    eff_noise_opers: tuple[ArrayLike, ...] = ()
+    with_leakage: bool = False
+    disable_doppler: bool = False
 
-    def __init__(
-        self,
-        runs: int | None = None,
-        samples_per_run: int | None = None,
-        state_prep_error: float | None = None,
-        p_false_pos: float | None = None,
-        p_false_neg: float | None = None,
-        temperature: float | None = None,
-        laser_waist: float | None = None,
-        amp_sigma: float | None = None,
-        relaxation_rate: float | None = None,
-        dephasing_rate: float | None = None,
-        hyperfine_dephasing_rate: float | None = None,
-        depolarizing_rate: float | None = None,
-        eff_noise_rates: tuple[float, ...] = (),
-        eff_noise_opers: tuple[ArrayLike, ...] = (),
-        with_leakage: bool = False,
-    ) -> None:
+    def __post_init__(self) -> None:
         """Initializes a noise model."""
 
         def to_tuple(obj: tuple) -> tuple:
@@ -209,39 +263,46 @@ class NoiseModel:
                 obj = tuple(to_tuple(el) for el in obj)
             return obj
 
-        param_vals = dict(
-            runs=runs,
-            samples_per_run=samples_per_run,
-            state_prep_error=state_prep_error,
-            p_false_neg=p_false_neg,
-            p_false_pos=p_false_pos,
-            temperature=temperature,
-            laser_waist=laser_waist,
-            amp_sigma=amp_sigma,
-            relaxation_rate=relaxation_rate,
-            dephasing_rate=dephasing_rate,
-            hyperfine_dephasing_rate=hyperfine_dephasing_rate,
-            depolarizing_rate=depolarizing_rate,
-            eff_noise_rates=to_tuple(eff_noise_rates),
-            eff_noise_opers=to_tuple(eff_noise_opers),
-            with_leakage=with_leakage,
-        )
+        param_vals = {
+            field.name: getattr(self, field.name)
+            for field in fields(self)
+            if field.init
+        }
+
+        param_vals["eff_noise_rates"] = to_tuple(self.eff_noise_rates)
+        param_vals["eff_noise_opers"] = to_tuple(self.eff_noise_opers)
+
+        param_vals["detuning_hf_psd"] = to_tuple(self.detuning_hf_psd)
+        param_vals["detuning_hf_omegas"] = to_tuple(self.detuning_hf_omegas)
+
+        # Checking the type of provided positive and probability parameters
+        for p_, val in param_vals.items():
+            if p_ in _PROBABILITY_LIKE | _POSITIVE:
+                try:
+                    param_vals[p_] = float(val)
+                except (TypeError, ValueError):
+                    raise TypeError(
+                        f"{p_} should be castable to float, not of type"
+                        f" {type(val)}."
+                    )
+
         true_noise_types: set[NoiseTypes] = {
             _PARAM_TO_NOISE_TYPE[p_]
             for p_ in param_vals
             if param_vals[p_] and p_ in _PARAM_TO_NOISE_TYPE
         }
+
         self._check_leakage_noise(true_noise_types)
+        self._check_detuning_hf_noise(
+            param_vals["detuning_hf_psd"],
+            param_vals["detuning_hf_omegas"],
+        )
         self._check_eff_noise(
             cast(tuple, param_vals["eff_noise_rates"]),
             cast(tuple, param_vals["eff_noise_opers"]),
             "eff_noise" in true_noise_types,
             with_leakage=cast(bool, param_vals["with_leakage"]),
         )
-
-        # Get rid of unnecessary None's
-        for p_ in _POSITIVE | _PROBABILITY_LIKE:
-            param_vals[p_] = param_vals[p_] or 0.0
 
         relevant_params = self._find_relevant_params(
             true_noise_types,
@@ -257,6 +318,15 @@ class NoiseModel:
         }
         self._validate_parameters(relevant_param_vals)
 
+        self._check_register_noise_params(
+            true_noise_types,
+            cast(float, param_vals["trap_waist"]),
+            cast(Union[float, None], param_vals["trap_depth"]),
+            cast(float, param_vals["temperature"]),
+        )
+        if self.disable_doppler:
+            true_noise_types.discard("doppler")
+
         object.__setattr__(
             self, "noise_types", tuple(sorted(true_noise_types))
         )
@@ -265,13 +335,34 @@ class NoiseModel:
         ]
         for param_, val_ in param_vals.items():
             object.__setattr__(self, param_, val_)
-            if val_ and param_ not in relevant_params:
+            if (
+                # disable_doppler is not a noise parameter
+                param_ != "disable_doppler"
+                and param_ not in relevant_params
+                and (val_ if param_ != "samples_per_run" else val_ != 1)
+            ):
                 warnings.warn(
                     f"{param_!r} is not used by any active noise type "
                     f"in {self.noise_types} when the only defined parameters "
                     f"are {non_zero_relevant_params}.",
                     stacklevel=2,
                 )
+
+    @staticmethod
+    def _check_register_noise_params(
+        true_noise_types: Collection[NoiseTypes],
+        trap_waist: float,
+        trap_depth: float | None,
+        temperature: float,
+    ) -> None:
+        if "register" not in true_noise_types:
+            # trap_waist and trap_depth have default values
+            return
+        if trap_waist == 0.0 or trap_depth is None or temperature == 0.0:
+            raise ValueError(
+                "trap_waist, trap_depth, and temperature must be defined in "
+                "order to simulate register noise."
+            )
 
     @staticmethod
     def _find_relevant_params(
@@ -283,10 +374,14 @@ class NoiseModel:
         relevant_params: set[str] = set()
         for nt_ in noise_types:
             relevant_params.update(_NOISE_TYPE_PARAMS[nt_])
+            if nt_ == "register":
+                relevant_params.add("temperature")
             if (
                 nt_ == "doppler"
+                or nt_ == "detuning"
                 or (nt_ == "amplitude" and amp_sigma != 0.0)
                 or (nt_ == "SPAM" and state_prep_error != 0.0)
+                or nt_ == "register"
             ):
                 relevant_params.update(("runs", "samples_per_run"))
         # Disregard laser_waist when not defined
@@ -314,6 +409,52 @@ class NoiseModel:
                     + "Valid noise types: "
                     + ", ".join(get_args(NoiseTypes))
                 )
+
+    @staticmethod
+    def _check_detuning_hf_noise(
+        psd: tuple[float, ...],
+        freqs: tuple[float, ...],
+    ) -> None:
+        if (psd == ()) ^ (freqs == ()):
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_omegas` must either"
+                " both be empty tuples or both be provided."
+            )
+
+        if psd == ():
+            return
+
+        psd_a = np.asarray(psd)
+        freqs_a = np.asarray(freqs)
+
+        if psd_a.ndim != 1 or freqs_a.ndim != 1:
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_omegas`"
+                " are expected to be 1D tuples."
+            )
+
+        if psd_a.size != freqs_a.size:
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_omegas`"
+                " are expected to have the same length."
+            )
+
+        if psd_a.size <= 1:
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_omegas`"
+                " are expected to have length > 1."
+            )
+
+        if not (np.all(psd_a > 0) and np.all(freqs_a > 0)):
+            raise ValueError(
+                "`detuning_hf_psd` and `detuning_hf_omegas`"
+                " are expected to have positive values."
+            )
+
+        if np.any(np.diff(freqs_a) < 0):
+            raise ValueError(
+                "`detuning_hf_omegas` are expected to be monotonously growing."
+            )
 
     @staticmethod
     def _check_eff_noise(
@@ -398,13 +539,39 @@ class NoiseModel:
                 comp = "a boolean"
             if not is_valid:
                 raise ValueError(f"'{param}' must be {comp}, not {value}.")
+            if param == "samples_per_run" and value != 1:
+                warnings.warn(
+                    "Setting samples_per_run different to 1 is "
+                    "deprecated since pulser v1.6. Please use only "
+                    "`runs` to define the number of noisy simulations "
+                    "to perform.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
 
     def _to_abstract_repr(self) -> dict[str, Any]:
-        all_fields = asdict(self)
+        all_fields = {}
+        for f in fields(self):
+            value = getattr(self, f.name)
+            if (
+                f.name in OPTIONAL_IN_ABSTR_REPR
+                and get_dataclass_defaults((f,))[f.name] == value
+            ):
+                continue
+            all_fields[f.name] = value
+        # Removed fields that can be deduced from the noise_types
+        all_fields.pop("disable_doppler")
         all_fields.pop("with_leakage")
+        # Effective noise as a list of (rate, operator)
         eff_noise_rates = all_fields.pop("eff_noise_rates")
         eff_noise_opers = all_fields.pop("eff_noise_opers")
         all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
+
+        if "detuning_hf_psd" in all_fields:
+            det_hf_psd = all_fields.pop("detuning_hf_psd")
+            det_hf_freqs = all_fields.pop("detuning_hf_omegas")
+            all_fields["detuning_hf"] = list(zip(det_hf_psd, det_hf_freqs))
+
         return all_fields
 
     def __repr__(self) -> str:

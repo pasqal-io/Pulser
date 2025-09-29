@@ -64,23 +64,25 @@ def test_duration():
 
 
 def test_change_duration():
-    with pytest.raises(NotImplementedError):
+    with pytest.deprecated_call(
+        match=re.escape("'Waveform.change_duration()' has been deprecated")
+    ), pytest.raises(NotImplementedError):
         custom.change_duration(53)
 
-    new_cte = constant.change_duration(103)
+    new_cte = constant.with_new_duration(103)
     assert constant.duration == 100
     assert new_cte.duration == 103
 
-    new_blackman = blackman.change_duration(30)
+    new_blackman = blackman.with_new_duration(30)
     assert np.isclose(new_blackman.integral, blackman.integral)
     assert new_blackman != blackman
 
-    new_ramp = ramp.change_duration(100)
+    new_ramp = ramp.with_new_duration(100)
     assert new_ramp.duration == 100
     assert new_ramp != ramp
 
     assert interp.duration == 1000
-    new_interp = interp.change_duration(100)
+    new_interp = interp.with_new_duration(100)
     assert new_interp.duration == 100
 
 
@@ -269,7 +271,8 @@ def test_interpolated():
 
     # Init an InterpolatedWaveform that always fails at build fails
     seq = pulser.Sequence(
-        pulser.Register.square(2, 5), device=pulser.DigitalAnalogDevice
+        pulser.Register.square(2, 5, prefix="q"),
+        device=pulser.DigitalAnalogDevice,
     )
 
     values = seq.declare_variable("values", size=5)  # a Variable
@@ -352,10 +355,10 @@ def test_kaiser():
 
     # Check duration change
     new_duration = duration * 2
-    wf_change_duration = wf.change_duration(new_duration)
-    assert wf_change_duration.samples.size == new_duration
+    wf_with_new_duration = wf.with_new_duration(new_duration)
+    assert wf_with_new_duration.samples.size == new_duration
     assert np.isclose(
-        np.sum(wf_samples), np.sum(wf_change_duration.samples.as_array())
+        np.sum(wf_samples), np.sum(wf_with_new_duration.samples.as_array())
     )
 
     # Check __str__
@@ -551,7 +554,9 @@ def test_waveform_diff(
     assert wf[-1].requires_grad == requires_grad
 
     try:
-        assert wf.change_duration(1000).samples.requires_grad == requires_grad
+        assert (
+            wf.with_new_duration(1000).samples.requires_grad == requires_grad
+        )
     except NotImplementedError:
         pass
 
@@ -563,3 +568,19 @@ def test_waveform_diff(
     wf._to_dict()
     wf._to_abstract_repr()
     assert isinstance(wf.integral, float)
+
+
+@pytest.mark.parametrize(
+    "wf", [blackman, composite, custom, kaiser, ramp, interp]
+)
+def test_truncate(wf):
+    assert wf.truncated(wf.duration + 1) == wf
+    assert wf.truncated(wf.duration - 10) == CustomWaveform(wf.samples[:-10])
+
+
+def test_truncate_constant():
+    # Special case for constant waveform
+    assert constant.truncated(constant.duration + 1) == constant
+    assert constant.truncated(constant.duration // 2) == ConstantWaveform(
+        constant.duration // 2, constant[0]
+    )

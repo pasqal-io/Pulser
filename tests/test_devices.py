@@ -443,7 +443,7 @@ def test_validate_register(helpers, with_diff):
         [ValueError, PulserValueError, InvalidSequenceError, AtomsNumberError],
         match="The number of atoms",
     ):
-        DigitalAnalogDevice.validate_register(Register.square(50))
+        DigitalAnalogDevice.validate_register(Register.square(50, prefix="q"))
 
     with pytest.raises(TypeError):
         DigitalAnalogDevice.validate_register(bad_coords1)
@@ -452,7 +452,7 @@ def test_validate_register(helpers, with_diff):
         match="at most 50 μm away from the center",
     ):
         DigitalAnalogDevice.validate_register(
-            Register.from_coordinates(bad_coords1)
+            Register.from_coordinates(bad_coords1, prefix="q")
         )
 
     with helpers.raises_all(
@@ -466,7 +466,7 @@ def test_validate_register(helpers, with_diff):
         match="at most 2D vectors",
     ):
         DigitalAnalogDevice.validate_register(
-            Register3D(dict(enumerate(bad_coords2)))
+            Register3D.from_coordinates(bad_coords2, prefix="q")
         )
 
     with helpers.raises_all(
@@ -474,7 +474,9 @@ def test_validate_register(helpers, with_diff):
         match="The minimal distance between atoms",
     ):
         DigitalAnalogDevice.validate_register(
-            Register.triangular_lattice(3, 4, spacing=good_spacing // 2)
+            Register.triangular_lattice(
+                3, 4, spacing=good_spacing // 2, prefix="q"
+            )
         )
 
     with helpers.raises_all(
@@ -487,14 +489,16 @@ def test_validate_register(helpers, with_diff):
         )
 
     DigitalAnalogDevice.validate_register(
-        Register.rectangle(5, 10, spacing=good_spacing)
+        Register.rectangle(5, 10, spacing=good_spacing, prefix="q")
     )
 
 
 def test_validate_layout(helpers):
     coords = [(100, 0), (-100, 0)]
     with pytest.raises(TypeError):
-        DigitalAnalogDevice.validate_layout(Register.from_coordinates(coords))
+        DigitalAnalogDevice.validate_layout(
+            Register.from_coordinates(coords, prefix="q")
+        )
     with helpers.raises_all(
         [ValueError, PulserValueError, InvalidSequenceError, RadiusError],
         match="at most 50 μm away from the center",
@@ -542,7 +546,7 @@ def test_validate_layout(helpers):
 
     valid_layout = RegisterLayout(
         Register.square(
-            int(np.sqrt(DigitalAnalogDevice.max_atom_num * 2))
+            int(np.sqrt(DigitalAnalogDevice.max_atom_num * 2)), prefix="q"
         )._coords_arr
     )
     DigitalAnalogDevice.validate_layout(valid_layout)
@@ -632,7 +636,9 @@ def test_layout_filling_fail():
         match="'validate_layout_filling' can only be called for"
         " registers with a register layout.",
     ):
-        DigitalAnalogDevice.validate_layout_filling(Register.square(5))
+        DigitalAnalogDevice.validate_layout_filling(
+            Register.square(5, prefix="q")
+        )
 
 
 def test_calibrated_layouts(helpers):
@@ -677,7 +683,7 @@ def test_calibrated_layouts(helpers):
     assert TestDevice.register_is_from_calibrated_layout(register)
     # Checking a register not built from a layout returns False
     assert not TestDevice.register_is_from_calibrated_layout(
-        Register.triangular_lattice(4, 25, 6.8)
+        Register.triangular_lattice(4, 25, 6.8, prefix="q")
     )
     # Checking Layouts that don't match calibrated layouts returns False
     square_layout = SquareLatticeLayout(10, 10, 6.8)

@@ -33,6 +33,20 @@
         "depolarizing_rate": {
           "type": "number"
         },
+        "detuning_hf": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "detuning_sigma": {
+          "type": "number"
+        },
         "eff_noise": {
           "items": {
             "items": [
@@ -107,6 +121,15 @@
         },
         "temperature": {
           "type": "number"
+        },
+        "trap_depth": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "trap_waist": {
+          "type": "number"
         }
       },
       "required": [
@@ -130,13 +153,15 @@
     "NoiseType": {
       "enum": [
         "doppler",
+        "register",
         "amplitude",
         "SPAM",
         "relaxation",
         "dephasing",
         "depolarizing",
         "leakage",
-        "eff_noise"
+        "eff_noise",
+        "detuning"
       ],
       "type": "string"
     }

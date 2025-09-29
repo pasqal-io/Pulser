@@ -270,7 +270,7 @@ class ChannelSamples:
             mask = np.pad(mask, (0, len(new_samples) - len(mask)), mode="edge")
             if keep_end_values:
                 # Extracts the contiguous masked regions as [ti, tf] pairs
-                masked_regions = (
+                masked_regions: list = (
                     np.flatnonzero(
                         np.diff(
                             np.r_[

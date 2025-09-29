@@ -14,6 +14,7 @@
 """Defines the QutipBackend class."""
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 import numpy as np
@@ -22,13 +23,12 @@ import qutip
 import pulser
 from pulser.backend.abc import Backend, EmulatorBackend
 from pulser.backend.config import EmulationConfig, EmulatorConfig
-from pulser.backend.default_observables import StateResult
+from pulser.backend.default_observables import BitStrings, StateResult
 from pulser.backend.results import Results
 from pulser.noise_model import NoiseModel
 from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
-from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import CoherentResults, SimulationResults
 from pulser_simulation.simulation import QutipEmulator
 
@@ -37,7 +37,7 @@ class QutipBackend(Backend):
     """A backend for emulating the sequences using qutip.
 
     Warning:
-        Soon to be deprecated, please use ``QutipBackendV2``.
+        Deprecated in v1.6, please use ``pulser_simulation.QutipBackendV2``.
 
     Args:
         sequence: The sequence to emulate.
@@ -53,6 +53,14 @@ class QutipBackend(Backend):
         mimic_qpu: bool = False,
     ):
         """Initializes a new QutipBackend."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("once")
+            warnings.warn(
+                "'QutipBackend' is deprecated. Please use "
+                "'pulser_simulation.QutipBackendV2' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         super().__init__(sequence, mimic_qpu=mimic_qpu)
         if not isinstance(config, EmulatorConfig):
             raise TypeError(
@@ -63,13 +71,10 @@ class QutipBackend(Backend):
         noise_model: None | NoiseModel = None
         if self._config.prefer_device_noise_model:
             noise_model = sequence.device.default_noise_model
-        simconfig = SimConfig.from_noise_model(
-            noise_model or self._config.noise_model
-        )
         self._sim_obj = QutipEmulator.from_sequence(
             sequence,
             sampling_rate=self._config.sampling_rate,
-            config=simconfig,
+            noise_model=noise_model or self._config.noise_model,
             evaluation_times=self._config.evaluation_times,
             with_modulation=self._config.with_modulation,
         )
@@ -113,7 +118,9 @@ class QutipBackendV2(EmulatorBackend):
             execution on a QPU.
     """
 
-    default_config = QutipConfig(observables=[StateResult()])
+    default_config = QutipConfig(
+        observables=[BitStrings(evaluation_times=[1.0]), StateResult()]
+    )
     _config: QutipConfig
 
     def __init__(
@@ -129,11 +136,10 @@ class QutipBackendV2(EmulatorBackend):
         if self._config.prefer_device_noise_model:
             noise_model = sequence.device.default_noise_model
         noise_model = noise_model or self._config.noise_model
-        simconfig = SimConfig.from_noise_model(noise_model)
         self._sim_obj = QutipEmulator.from_sequence(
             sequence,
             sampling_rate=self._config.sampling_rate,
-            config=simconfig,
+            noise_model=noise_model,
             with_modulation=self._config.with_modulation,
         )
         self._sim_obj.set_evaluation_times(
@@ -155,14 +161,14 @@ class QutipBackendV2(EmulatorBackend):
         eigenstates = self._sim_obj.samples_obj.eigenbasis
 
         if (
-            ("doppler" not in self._sim_obj.config.noise)
+            ("doppler" not in self._sim_obj.noise_model.noise_types)
             and (
-                "amplitude" not in self._sim_obj.config.noise
-                or self._sim_obj.config.amp_sigma == 0.0
+                "amplitude" not in self._sim_obj.noise_model.noise_types
+                or self._sim_obj.noise_model.amp_sigma == 0.0
             )
             and (
-                "SPAM" not in self._sim_obj.config.noise
-                or self._sim_obj.config.eta == 0
+                "SPAM" not in self._sim_obj.noise_model.noise_types
+                or self._sim_obj.noise_model.state_prep_error == 0
             )
         ):
             # A single run is needed, regardless of self.config.runs
@@ -210,7 +216,7 @@ class QutipBackendV2(EmulatorBackend):
                             [
                                 qutip.Qobj(np.zeros((2, 2)))
                                 for _ in range(
-                                    self._sim_obj._hamiltonian._size
+                                    self._sim_obj._hamiltonian.nbqudits
                                 )
                             ]
                         )

@@ -153,7 +153,9 @@ class AbstractArray:
         dtype: None = None,
         copy: np.bool_ | None = None,
     ) -> np.ndarray:
-        if self.is_tensor or np.lib.NumpyVersion(np.__version__) < "2.0.0":
+        if (
+            self.is_tensor or np.lib.NumpyVersion(np.__version__) < "2.0.0"
+        ):  # pragma: no cover
             array: np.ndarray = self._array.__array__(dtype)
             if copy:
                 return np.copy(array)

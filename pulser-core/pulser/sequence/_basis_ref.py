@@ -22,13 +22,23 @@ import numpy as np
 class _QubitRef:
     def __init__(self) -> None:
         self.phase = _PhaseTracker(0)
-        self.last_used = 0
+        self._last_used_history = [0]
+
+    @property
+    def last_used(self) -> int:
+        return max(self._last_used_history)
 
     def increment_phase(self, phi: float) -> None:
         self.phase[self.last_used] = self.phase.last_phase + phi
 
     def update_last_used(self, new_t: int) -> None:
-        self.last_used = max(self.last_used, new_t)
+        self._last_used_history.append(new_t)
+
+    def truncate(self, t: int) -> None:
+        self.phase.truncate(t)
+        self._last_used_history = [
+            t_ for t_ in self._last_used_history if t_ <= t
+        ]
 
 
 class _PhaseTracker:
@@ -59,6 +69,17 @@ class _PhaseTracker:
         for i in range(start, end):
             change = self._phases[i] - self._phases[i - 1]
             yield (self._times[i] / time_scale, change)
+
+    def truncate(self, threshold: int) -> None:
+        new_times = []
+        new_phases = []
+        for t, ph in zip(self._times, self._phases):
+            if t > threshold:
+                continue
+            new_times.append(t)
+            new_phases.append(ph)
+        self._times = new_times
+        self._phases = new_phases
 
     def _format(self, phi: float) -> float:
         return phi % (2 * np.pi)

@@ -16,32 +16,19 @@
 from __future__ import annotations
 
 import math
+import warnings
 from dataclasses import dataclass, field, fields
 from typing import Any, Tuple, Type, TypeVar, Union, cast
 
 import qutip
 
+from pulser._hamiltonian_data.hamiltonian_data import (
+    SUPPORTED_NOISES,
+    doppler_sigma,
+)
 from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, NoiseTypes
 
-MASS = 1.45e-25  # kg
-KB = 1.38e-23  # J/K
-KEFF = 8.7  # µm^-1
-
 T = TypeVar("T", bound="SimConfig")
-
-SUPPORTED_NOISES: dict = {
-    "ising": {
-        "amplitude",
-        "dephasing",
-        "relaxation",
-        "depolarizing",
-        "doppler",
-        "eff_noise",
-        "SPAM",
-        "leakage",
-    },
-    "XY": {"dephasing", "depolarizing", "eff_noise", "SPAM", "leakage"},
-}
 
 # Maps the noise model parameters with a different name in SimConfig
 _DIFF_NOISE_PARAMS = {
@@ -52,18 +39,12 @@ _DIFF_NOISE_PARAMS = {
 }
 
 
-def doppler_sigma(temperature: float) -> float:
-    """Standard deviation for Doppler shifting due to thermal motion.
-
-    Arg:
-        temperature: The temperature in K.
-    """
-    return KEFF * math.sqrt(KB * temperature / MASS)
-
-
 @dataclass(frozen=True)
 class SimConfig:
     """Specifies a simulation's configuration.
+
+    Warning:
+        Deprecated in v1.6. ``NoiseModel`` should be used instead.
 
     Note:
         Being a frozen dataclass, the configuration chosen upon instantiation
@@ -103,6 +84,8 @@ class SimConfig:
             pulses.
         amp_sigma: Dictates the fluctuations in amplitude as a standard
             deviation of a normal distribution centered in 1.
+        detuning_sigma: Dictates the fluctuations in detuning as a standard
+            deviation of a normal distribution centered in 0.
         solver_options: Options for the qutip solver.
     """
 
@@ -112,6 +95,7 @@ class SimConfig:
     temperature: float = _LEGACY_DEFAULTS["temperature"]
     laser_waist: float = _LEGACY_DEFAULTS["laser_waist"]
     amp_sigma: float = _LEGACY_DEFAULTS["amp_sigma"]
+    detuning_sigma: float = 0.0
     eta: float = _LEGACY_DEFAULTS["state_prep_error"]
     epsilon: float = _LEGACY_DEFAULTS["p_false_pos"]
     epsilon_prime: float = _LEGACY_DEFAULTS["p_false_neg"]
@@ -173,6 +157,12 @@ class SimConfig:
         return NoiseModel(**kwargs)
 
     def __post_init__(self) -> None:
+        warnings.warn(
+            "'SimConfig' has been deprecated, please use `NoiseModel` "
+            "instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         # only one noise was given as argument : convert it to a tuple
         if isinstance(self.noise, str):
             self._change_attribute("noise", (self.noise,))
@@ -182,6 +172,7 @@ class SimConfig:
             raise TypeError(
                 f"'temperature' must be a float, not {type(self.temperature)}."
             )
+
         self._change_attribute("temperature", self.temperature / 1e6)
 
         NoiseModel._check_noise_types(cast(Tuple[NoiseTypes], self.noise))

@@ -292,3 +292,9 @@ class MaxNumberOfTrapsError(InvalidSequenceError):
             "or equal to the minimum number of layout traps "
             f"({self.device.min_layout_traps})."
         )
+
+
+class SwitchDeviceError(PulserValueError):
+    """Error trying to switch the device of a Sequence."""
+
+    pass

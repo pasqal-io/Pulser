@@ -37,7 +37,7 @@ def test_creation():
         Register(ids)
 
     with pytest.raises(ValueError, match="vectors of size 2"):
-        Register.from_coordinates([(0, 1, 0, 1)])
+        Register.from_coordinates([(0, 1, 0, 1)], prefix="q")
 
     with pytest.raises(
         NotImplementedError, match="a prefix and a set of labels"
@@ -45,7 +45,7 @@ def test_creation():
         Register.from_coordinates(coords, prefix="a", labels=["a", "b"])
 
     with pytest.raises(ValueError, match="vectors of size 3"):
-        Register3D.from_coordinates([((1, 0),), ((-1, 0),)])
+        Register3D.from_coordinates([((1, 0),), ((-1, 0),)], prefix="q")
 
     reg1 = Register(qubits)
     reg2 = Register.from_coordinates(coords, center=False, prefix="q")
@@ -73,14 +73,14 @@ def test_creation():
     assert np.all(reg3._coords == coords_)
     assert not np.all(coords_ == coords)
 
-    reg4 = Register.rectangle(1, 2, spacing=1)
+    reg4 = Register.rectangle(1, 2, spacing=1, prefix="q")
     assert np.all(reg4._coords == coords_)
 
-    reg5 = Register.square(2, spacing=2)
+    reg5 = Register.square(2, spacing=2, prefix="q")
     coords_ = np.array([(-1, -1), (1, -1), (-1, 1), (1, 1)], dtype=float)
     assert np.all(np.array(reg5._coords) == coords_)
 
-    reg6 = Register.triangular_lattice(2, 2, spacing=4)
+    reg6 = Register.triangular_lattice(2, 2, spacing=4, prefix="q")
     coords_ = np.array(
         [
             (-3, -np.sqrt(3)),
@@ -95,6 +95,12 @@ def test_creation():
         ValueError, match="must only be 'layout' and 'trap_ids'"
     ):
         Register(qubits, spacing=10, layout="square", trap_ids=(0, 1, 3))
+
+    with pytest.warns(
+        DeprecationWarning,
+        match="Usage of `int`s or any non-`str`types as `QubitId`s",
+    ):
+        Register.from_coordinates([(0, 0)])
 
 
 def test_repr():
@@ -174,7 +180,7 @@ def test_hexagon():
         Register.hexagon(1, spacing=-1.0)
 
     # Check small hexagon (1 layer)
-    reg = Register.hexagon(1, spacing=1.0)
+    reg = Register.hexagon(1, spacing=1.0, prefix="q")
     assert len(reg.qubits) == 7
     atoms = list(reg.qubits.values())
     crest_y = np.sqrt(3) / 2
@@ -187,7 +193,7 @@ def test_hexagon():
     assert np.all(np.isclose(atoms[6], [-1.0, 0.0]))
 
     # Check a few atoms for a bigger hexagon (2 layers)
-    reg = Register.hexagon(2, spacing=1.0)
+    reg = Register.hexagon(2, spacing=1.0, prefix="q")
     assert len(reg.qubits) == 19
     atoms = list(reg.qubits.values())
     crest_y = np.sqrt(3) / 2.0
@@ -220,10 +226,14 @@ def test_max_connectivity():
         reg = Register.max_connectivity(max_atom_num + 1, device)
 
     # Check spacing
-    reg = Register.max_connectivity(max_atom_num, device, spacing=spacing)
+    reg = Register.max_connectivity(
+        max_atom_num, device, spacing=spacing, prefix="q"
+    )
     with pytest.raises(ValueError, match="Spacing "):
         Register.max_connectivity(max_atom_num, device, spacing=spacing - 1.0)
-    reg = Register.max_connectivity(max_atom_num, MockDevice, spacing=spacing)
+    reg = Register.max_connectivity(
+        max_atom_num, MockDevice, spacing=spacing, prefix="q"
+    )
     with pytest.raises(
         NotImplementedError,
         match="Maximum connectivity layouts are not well defined for a "
@@ -232,7 +242,7 @@ def test_max_connectivity():
         Register.max_connectivity(1e9, MockDevice)
 
     # Check 1 atom
-    reg = Register.max_connectivity(1, device)
+    reg = Register.max_connectivity(1, device, prefix="q")
     assert len(reg.qubits) == 1
     atoms = list(reg.qubits.values())
     assert np.all(np.isclose(atoms[0], [0.0, 0.0]))
@@ -249,10 +259,10 @@ def test_max_connectivity():
                 (-0.5, -crest_y),
             ]
         )
-        reg = Register.max_connectivity(i, device)
+        reg = Register.max_connectivity(i, device, prefix="q")
         device.validate_register(reg)
         reg2 = Register.from_coordinates(
-            spacing * hex_coords[:i], center=False
+            spacing * hex_coords[:i], center=False, prefix="q"
         )
         assert len(reg.qubits) == i
         atoms = list(reg.qubits.values())
@@ -261,7 +271,7 @@ def test_max_connectivity():
             assert np.all(np.isclose(atoms[k], atoms2[k]))
 
     # Check full layers on a small hexagon (1 layer)
-    reg = Register.max_connectivity(7, device)
+    reg = Register.max_connectivity(7, device, prefix="q")
     device.validate_register(reg)
     assert len(reg.qubits) == 7
     atoms = list(reg.qubits.values())
@@ -274,7 +284,7 @@ def test_max_connectivity():
     assert np.all(np.isclose(atoms[6], [-1.0 * spacing, 0.0]))
 
     # Check full layers for a bigger hexagon (2 layers)
-    reg = Register.max_connectivity(19, device)
+    reg = Register.max_connectivity(19, device, prefix="q")
     device.validate_register(reg)
     assert len(reg.qubits) == 19
     atoms = list(reg.qubits.values())
@@ -289,7 +299,7 @@ def test_max_connectivity():
 
     # Check extra atoms (2 full layers + 7 extra atoms)
     # for C3 symmetry, C6 symmetry and offset for next atoms
-    reg = Register.max_connectivity(26, device)
+    reg = Register.max_connectivity(26, device, prefix="q")
     device.validate_register(reg)
     assert len(reg.qubits) == 26
     atoms = list(reg.qubits.values())
@@ -313,7 +323,7 @@ def test_max_connectivity():
 
 
 def test_rotation():
-    reg = Register.square(2, spacing=np.sqrt(2))
+    reg = Register.square(2, spacing=np.sqrt(2), prefix="q")
     rot_reg = reg.rotated(45)
     new_coords_ = np.array([(0, -1), (1, 0), (-1, 0), (0, 1)], dtype=float)
     np.testing.assert_allclose(
@@ -332,21 +342,21 @@ draw_params = [
 @pytest.mark.parametrize("draw_params", draw_params)
 def test_drawing(draw_params, patch_plt_show):
     with pytest.raises(ValueError, match="Blockade radius"):
-        reg = Register.from_coordinates([(1, 0), (0, 1)])
+        reg = Register.from_coordinates([(1, 0), (0, 1)], prefix="q")
         reg.draw(blockade_radius=0.0, draw_half_radius=True, **draw_params)
 
-    reg = Register.from_coordinates([(1, 0), (0, 1)])
+    reg = Register.from_coordinates([(1, 0), (0, 1)], prefix="q")
     reg.draw(blockade_radius=0.1, draw_graph=True, **draw_params)
     with pytest.raises(ValueError, match="The register must have"):
         reg.draw(draw_empty_sites=True)
 
-    reg = Register.triangular_lattice(3, 8)
+    reg = Register.triangular_lattice(3, 8, prefix="q")
     reg.draw(**draw_params)
 
     with patch("matplotlib.pyplot.savefig"):
         reg.draw(fig_name="my_register.pdf")
 
-    reg = Register.rectangle(1, 8)
+    reg = Register.rectangle(1, 8, prefix="q")
     reg.draw(
         blockade_radius=5,
         draw_half_radius=True,
@@ -357,7 +367,7 @@ def test_drawing(draw_params, patch_plt_show):
     with pytest.raises(ValueError, match="'blockade_radius' to draw."):
         reg.draw(draw_half_radius=True, **draw_params)
 
-    reg = Register.square(1)
+    reg = Register.square(1, prefix="q")
     with pytest.raises(NotImplementedError, match="Needs more than one atom"):
         reg.draw(blockade_radius=5, draw_half_radius=True, **draw_params)
 
@@ -370,43 +380,43 @@ def test_drawing(draw_params, patch_plt_show):
 def test_orthorombic():
     # Check rows
     with pytest.raises(ValueError, match="The number of rows"):
-        Register3D.cuboid(0, 2, 2)
+        Register3D.cuboid(0, 2, 2, prefix="q")
 
     # Check columns
     with pytest.raises(ValueError, match="The number of columns"):
-        Register3D.cuboid(2, 0, 2)
+        Register3D.cuboid(2, 0, 2, prefix="q")
 
     # Check layers
     with pytest.raises(ValueError, match="The number of layers"):
-        Register3D.cuboid(2, 2, 0)
+        Register3D.cuboid(2, 2, 0, prefix="q")
 
     # Check spacing
     with pytest.raises(ValueError, match="Spacing"):
-        Register3D.cuboid(2, 2, 2, 0.0)
+        Register3D.cuboid(2, 2, 2, 0.0, prefix="q")
 
 
 def test_cubic():
     # Check side
     with pytest.raises(ValueError, match="The number of atoms per side"):
-        Register3D.cubic(0)
+        Register3D.cubic(0, prefix="q")
 
     # Check spacing
     with pytest.raises(ValueError, match="Spacing"):
-        Register3D.cubic(2, 0.0)
+        Register3D.cubic(2, 0.0, prefix="q")
 
 
 @pytest.mark.parametrize("draw_params", draw_params)
 def test_drawing3D(draw_params, patch_plt_show):
     with pytest.raises(ValueError, match="Blockade radius"):
-        reg = Register3D.from_coordinates([(1, 0, 0), (0, 0, 1)])
+        reg = Register3D.from_coordinates([(1, 0, 0), (0, 0, 1)], prefix="q")
         reg.draw(blockade_radius=0.0, **draw_params)
 
-    reg = Register3D.cubic(3, 8)
+    reg = Register3D.cubic(3, 8, prefix="q")
 
     with patch("matplotlib.pyplot.savefig"):
         reg.draw(fig_name="my_register.pdf", **draw_params)
 
-    reg = Register3D.cuboid(1, 8, 2)
+    reg = Register3D.cuboid(1, 8, 2, prefix="q")
     reg.draw(
         blockade_radius=5,
         draw_half_radius=True,
@@ -417,7 +427,7 @@ def test_drawing3D(draw_params, patch_plt_show):
     with pytest.raises(ValueError, match="'blockade_radius' to draw."):
         reg.draw(draw_half_radius=True, **draw_params)
 
-    reg = Register3D.cuboid(2, 2, 2)
+    reg = Register3D.cuboid(2, 2, 2, prefix="q")
     reg.draw(
         blockade_radius=5,
         draw_half_radius=True,
@@ -435,18 +445,18 @@ def test_drawing3D(draw_params, patch_plt_show):
         **draw_params,
     )
 
-    reg = Register3D.cubic(1)
+    reg = Register3D.cubic(1, prefix="q")
     with pytest.raises(NotImplementedError, match="Needs more than one atom"):
         reg.draw(blockade_radius=5, draw_half_radius=True, **draw_params)
 
 
 def test_to_2D():
-    reg = Register3D.cuboid(2, 2, 2)
+    reg = Register3D.cuboid(2, 2, 2, prefix="q")
     with pytest.raises(ValueError, match="Atoms are not coplanar"):
         reg.to_2D()
     reg.to_2D(tol_width=6)
 
-    reg = Register3D.cuboid(2, 2, 1)
+    reg = Register3D.cuboid(2, 2, 1, prefix="q")
     reg.to_2D()
 
 
@@ -505,17 +515,17 @@ def test_coords_hash():
     assert reg1.coords_hex_hash() == reg2.coords_hex_hash()
 
     # Same coords but in inverse order
-    reg3 = Register.from_coordinates(coords1[::-1])
+    reg3 = Register.from_coordinates(coords1[::-1], prefix="q")
     assert reg1.coords_hex_hash() == reg3.coords_hex_hash()
 
     # Modify a coordinate below precision
     coords1[0][0] += 1e-10
-    reg4 = Register.from_coordinates(coords1)
+    reg4 = Register.from_coordinates(coords1, prefix="q")
     assert reg1.coords_hex_hash() == reg4.coords_hex_hash()
 
     # Modify a coordinate above precision
     coords1[0][1] += 1e-6
-    reg5 = Register.from_coordinates(coords1)
+    reg5 = Register.from_coordinates(coords1, prefix="q")
     assert reg1.coords_hex_hash() != reg5.coords_hex_hash()
 
 
@@ -548,8 +558,10 @@ def test_custom_register_torch(register_type, coords, patch_plt_show):
     assert reg1 == reg2
 
     # Also check that centering keeps the grad
-    reg3 = register_type.from_coordinates([diff_qubit, coords[1]], center=True)
-    assert torch.all(reg3.qubits[0].as_tensor() == diff_qubit / 2)
+    reg3 = register_type.from_coordinates(
+        [diff_qubit, coords[1]], center=True, prefix="q"
+    )
+    assert torch.all(reg3.qubits["q0"].as_tensor() == diff_qubit / 2)
 
     for r in [reg1, reg2, reg3]:
         _assert_reg_requires_grad(r)
@@ -565,7 +577,7 @@ def test_custom_register_torch(register_type, coords, patch_plt_show):
 
     # check that generating with long type works
     reg4 = register_type.from_coordinates(
-        [torch.tensor(coord, dtype=torch.long) for coord in coords]
+        [torch.tensor(coord, dtype=torch.long) for coord in coords], prefix="q"
     )
     assert reg4 == reg3
 
@@ -607,6 +619,7 @@ def test_register_recipes_torch(
     torch = pytest.importorskip("torch")
     kwargs = {
         param_name: torch.tensor(6.0, requires_grad=requires_grad),
+        "prefix": "q",
         **extra_params,
     }
     reg = reg_classmethod(**kwargs)
@@ -625,7 +638,8 @@ def test_register_recipes_torch(
                     np.array([2.50157, 0.003283]),
                     np.array([-2.501571, 5.0]),
                     np.array([2.50157, 5.1]),
-                ]
+                ],
+                prefix="q",
             ),
             8,
         ),
@@ -636,7 +650,8 @@ def test_register_recipes_torch(
                     np.array([2.50157, 0.003283], dtype=np.float32),
                     np.array([-2.501571, 5.0], dtype=np.float32),
                     np.array([2.50157, 5.1], dtype=np.float32),
-                ]
+                ],
+                prefix="q",
             ),
             8,
         ),
@@ -647,7 +662,8 @@ def test_register_recipes_torch(
                     np.array([2.50157, 0.003283], dtype=np.float32),
                     np.array([-2.501571, 5.0], dtype=np.float64),
                     np.array([2.50157, 5.1], dtype=np.float64),
-                ]
+                ],
+                prefix="q",
             ),
             8,
         ),
@@ -734,7 +750,7 @@ def test_automatic_layout(optimal_filling, reg, max_atom_num):
         )
 
     # The Register is larger than max_traps
-    big_reg = Register.square(8, spacing=5)
+    big_reg = Register.square(8, spacing=5, prefix="q")
     min_traps = np.ceil(len(big_reg.qubit_ids) / max_layout_filling)
     with pytest.raises(
         RuntimeError, match="Failed to find a site for 2 traps"
@@ -756,5 +772,5 @@ def test_automatic_layout_diff():
         match="does not support registers with differentiable coordinates",
     ):
         Register.square(
-            2, spacing=torch.tensor(10.0, requires_grad=True)
+            2, spacing=torch.tensor(10.0, requires_grad=True), prefix="q"
         ).with_automatic_layout(AnalogDevice)

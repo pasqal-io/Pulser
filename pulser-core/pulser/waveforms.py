@@ -166,7 +166,7 @@ class Waveform(ABC):
             )
         plt.show()
 
-    def change_duration(self, new_duration: int) -> Waveform:
+    def with_new_duration(self, new_duration: int) -> Waveform:
         """Returns a new waveform with modified duration.
 
         Args:
@@ -175,6 +175,43 @@ class Waveform(ABC):
         raise NotImplementedError(
             f"{self.__class__.__name__} does not support"
             " modifications to its duration."
+        )
+
+    def change_duration(self, new_duration: int) -> Waveform:
+        """Returns a new waveform with modified duration.
+
+        Warning:
+            Deprecated since v1.6. Please use `Waveform.with_new_duration()`
+            instead.
+
+        Args:
+            new_duration: The duration of the new waveform.
+        """
+        warnings.warn(
+            "'Waveform.change_duration()' has been deprecated and replaced by "
+            "'Waveform.with_new_duration()'.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.with_new_duration(new_duration)
+
+    def truncated(self, new_duration: int) -> Waveform:
+        """Returns a new waveform, truncated to a new duration.
+
+        If the new duration is above this waveform's duration, a copy is
+        returned instead.
+
+        Args:
+            new_duration: The duration of the truncated waveform.
+
+        Returns:
+            The truncated waveform (if applicable).
+        """
+        if new_duration >= self.duration:
+            # Basically an identical copy
+            return self * 1.0
+        return CustomWaveform(
+            self.samples[: _cast_check(int, new_duration, "new_duration")]
         )
 
     def modulated_samples(
@@ -534,7 +571,7 @@ class ConstantWaveform(Waveform):
         """
         return self._value * np.ones(self.duration)
 
-    def change_duration(self, new_duration: int) -> ConstantWaveform:
+    def with_new_duration(self, new_duration: int) -> ConstantWaveform:
         """Returns a new waveform with modified duration.
 
         Args:
@@ -544,6 +581,20 @@ class ConstantWaveform(Waveform):
             The new waveform with the given duration.
         """
         return ConstantWaveform(new_duration, self._value)
+
+    def truncated(self, new_duration: int) -> ConstantWaveform:
+        """Returns a new waveform, truncated to a new duration.
+
+        If the new duration is above this waveform's duration, a copy is
+        returned instead.
+
+        Args:
+            new_duration: The duration of the truncated waveform.
+
+        Returns:
+            The truncated waveform (if applicable).
+        """
+        return self.with_new_duration(min(new_duration, self.duration))
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._value)
@@ -615,7 +666,7 @@ class RampWaveform(Waveform):
         r"""Slope of the ramp, in [waveform units] / ns."""
         return float(self._slope)
 
-    def change_duration(self, new_duration: int) -> RampWaveform:
+    def with_new_duration(self, new_duration: int) -> RampWaveform:
         """Returns a new waveform with modified duration.
 
         Args:
@@ -757,7 +808,7 @@ class BlackmanWaveform(Waveform):
         """
         return self._norm_samples * self._scaling
 
-    def change_duration(self, new_duration: int) -> BlackmanWaveform:
+    def with_new_duration(self, new_duration: int) -> BlackmanWaveform:
         """Returns a new waveform with modified duration.
 
         Args:
@@ -939,7 +990,7 @@ class InterpolatedWaveform(Waveform):
         """Points (t[ns], value[arb. units]) that define the interpolation."""
         return self._data_pts.copy()
 
-    def change_duration(self, new_duration: int) -> InterpolatedWaveform:
+    def with_new_duration(self, new_duration: int) -> InterpolatedWaveform:
         """Returns a new waveform with modified duration.
 
         Args:
@@ -1107,7 +1158,7 @@ class KaiserWaveform(Waveform):
         # Compute the ratio area / duration for a long duration
         # and use this value for a first guess of the best duration
 
-        ratio: float = max_val * np.sum(np.kaiser(100, beta)) / 100
+        ratio: np.floating = max_val * np.sum(np.kaiser(100, beta)) / 100
         duration_guess: int = int(area_float * 1000.0 / ratio)
 
         duration_best: int = 0
@@ -1116,13 +1167,13 @@ class KaiserWaveform(Waveform):
             # Because of the seesawing effect on short durations,
             # all solutions must be tested to find the best one
 
-            max_val_best: float = 0
+            max_val_best = 0.0
             for duration in range(1, 16):
                 kaiser_temp = np.kaiser(duration, beta)
                 scaling_temp = 1000 * area_float / np.sum(kaiser_temp)
                 max_val_temp = np.max(kaiser_temp) * scaling_temp
                 if max_val_best < max_val_temp <= max_val:
-                    max_val_best = max_val_temp
+                    max_val_best = float(max_val_temp)
                     duration_best = duration
 
         else:
@@ -1162,7 +1213,7 @@ class KaiserWaveform(Waveform):
         """
         return self._norm_samples * self._scaling
 
-    def change_duration(self, new_duration: int) -> KaiserWaveform:
+    def with_new_duration(self, new_duration: int) -> KaiserWaveform:
         """Returns a new waveform with modified duration.
 
         Args:

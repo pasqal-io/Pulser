@@ -39,9 +39,62 @@ from pulser.parametrized import Parametrized
 if TYPE_CHECKING:
     from pulser.parametrized import Variable
 
+# The full list of numpy ufuncs can be found at
+# https://numpy.org/devdocs//reference/ufuncs.html#math-operations
+
+# Mapping between ufunc and OpSupport method names, for those
+# that don't share the same name or require a dunder method
+# Note that for binary method we use the reverse method and invert
+# the input order accordingly
+_UFUNC_MAP = {
+    # Binary methods
+    "add": "add",
+    "subtract": "sub",
+    "multiply": "mul",
+    "divide": "truediv",
+    "true_divide": "truediv",
+    "floor_divide": "floordiv",
+    "power": "pow",
+    "float_power": "pow",
+    "remainder": "mod",
+    "mod": "mod",
+    "fmod": "mod",
+    # Special unary methods
+    "negative": "neg",
+    "absolute": "abs",
+    "fabs": "abs",
+    "floor": "floor",
+    "ceil": "ceil",
+}
+
 
 class OpSupport:
     """Methods for supporting operators on parametrized objects."""
+
+    def __array_ufunc__(
+        self, ufunc: np.ufunc, method: str, *inputs: Any, **kwargs: Any
+    ) -> Any:
+        if method != "__call__" or len(inputs) > 2:
+            return NotImplemented
+
+        ufunc_name = ufunc.__name__
+        if ufunc_name in _UFUNC_MAP:
+            root_name = _UFUNC_MAP[ufunc_name]
+            if len(inputs) == 2 and inputs[1] is self:
+                # Use reverse method and inputs
+                root_name = "r" + root_name
+                inputs = inputs[::-1]
+            method_name = f"__{root_name}__"
+        else:
+            method_name = ufunc_name
+
+        if inputs[0] is self:  # Make sure self is involved
+            try:
+                # Works for both unary and binary methods
+                return getattr(self, method_name)(*inputs[1:], **kwargs)
+            except AttributeError:
+                pass
+        return NotImplemented
 
     # Unary operators
     def __neg__(self) -> ParamObj:

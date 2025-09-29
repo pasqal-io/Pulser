@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import dataclasses
+import re
 from collections import Counter
 from unittest.mock import patch
 
@@ -20,12 +21,14 @@ import numpy as np
 import pytest
 import qutip
 
-from pulser import NoiseModel, Pulse, Register, Sequence
+from pulser import Pulse, Register, Sequence
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
+from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 from pulser_simulation import QutipEmulator, SimConfig
+from pulser_simulation.simresults import NoisyResults
 
 
 @pytest.fixture
@@ -103,7 +106,9 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
     with pytest.raises(TypeError, match="sequence has to be a valid"):
         QutipEmulator.from_sequence(fake_sequence)
     with pytest.raises(TypeError, match="sequence has to be a valid"):
-        QutipEmulator(fake_sequence, Register.square(2), mod_device)
+        QutipEmulator(
+            fake_sequence, Register.square(2, prefix="q"), mod_device
+        )
     # Simulation cannot be run on a register not defining "control1"
     with pytest.raises(
         ValueError,
@@ -118,6 +123,14 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
                 }
             ),
             MockDevice,
+        )
+    with pytest.deprecated_call():
+        _config = SimConfig()
+    with pytest.raises(
+        ValueError, match="'noise_model' and 'config' cannot both be provided"
+    ):
+        QutipEmulator.from_sequence(
+            seq, config=_config, noise_model=NoiseModel()
         )
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.011)
     sampled_seq = sampler.sample(seq)
@@ -149,10 +162,12 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
             for ch in sampled_seq.channels
         ]
     )
-    assert Register(sim._hamiltonian._qdict) == Register(seq.qubit_info)
-    assert sim._hamiltonian._size == len(seq.qubit_info)
+    assert Register(sim._hamiltonian.data.register.qubits) == Register(
+        seq.qubit_info
+    )
+    assert sim._hamiltonian.nbqudits == len(seq.qubit_info)
     assert sim._tot_duration == 9000  # seq has 9 pulses of 1µs
-    assert sim._hamiltonian._qid_index == {
+    assert sim._hamiltonian.data._qid_index == {
         "control1": 0,
         "target": 1,
         "control2": 2,
@@ -199,7 +214,11 @@ def test_extraction_of_sequences(seq):
         if addr == "Global":
             for slot in seq._schedule[channel]:
                 if isinstance(slot.type, Pulse):
-                    samples = sim._hamiltonian.samples[addr][basis]
+                    samples = (
+                        sim._hamiltonian.data.noisy_samples.to_nested_dict()[
+                            addr
+                        ][basis]
+                    )
                     assert np.all(
                         samples["amp"][slot.ti : slot.tf]
                         == slot.type.amplitude.samples
@@ -216,7 +235,10 @@ def test_extraction_of_sequences(seq):
             for slot in seq._schedule[channel]:
                 if isinstance(slot.type, Pulse):
                     for qubit in slot.targets:  # TO DO: multiaddressing??
-                        samples = sim._hamiltonian.samples[addr][basis][qubit]
+                        data = sim._hamiltonian.data
+                        samples = data.noisy_samples.to_nested_dict()[addr][
+                            basis
+                        ][qubit]
                         assert np.all(
                             samples["amp"][slot.ti : slot.tf]
                             == slot.type.amplitude.samples
@@ -234,20 +256,20 @@ def test_extraction_of_sequences(seq):
 @pytest.mark.parametrize("leakage", [False, True])
 def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     # All three levels:
-    def _config(dim):
+    def _noise_model(dim):
         return (
-            SimConfig(
-                ("leakage", "eff_noise"),
-                eff_noise_opers=[qutip.qeye(dim)],
+            NoiseModel(
+                with_leakage=True,
+                eff_noise_opers=[np.eye(dim)],
                 eff_noise_rates=[0.0],
             )
             if leakage
-            else SimConfig()
+            else NoiseModel()
         )
 
     dim = 3 + leakage
     sim = QutipEmulator.from_sequence(
-        seq, sampling_rate=0.01, config=_config(dim)
+        seq, sampling_rate=0.01, noise_model=_noise_model(dim)
     )
     assert sim.basis_name == "all" + ("_with_error" if leakage else "")
     assert sim.dim == dim
@@ -296,7 +318,7 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     seq2.add(pi_pls, "global")
     dim = 2 + leakage
     sim2 = QutipEmulator.from_sequence(
-        seq2, sampling_rate=0.01, config=_config(dim)
+        seq2, sampling_rate=0.01, noise_model=_noise_model(dim)
     )
     assert sim2.basis_name == "ground-rydberg" + (
         "_with_error" if leakage else ""
@@ -324,7 +346,7 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     seq2b.declare_channel("local", "raman_local", "target")
     seq2b.add(pi_pls, "local")
     sim2b = QutipEmulator.from_sequence(
-        seq2b, sampling_rate=0.01, config=_config(dim)
+        seq2b, sampling_rate=0.01, noise_model=_noise_model(dim)
     )
     assert sim2b.basis_name == "digital" + ("_with_error" if leakage else "")
     assert sim2b.dim == dim
@@ -351,7 +373,7 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     seq2c.declare_channel("local_ryd", "rydberg_local", "target")
     seq2c.add(pi_pls, "local_ryd")
     sim2c = QutipEmulator.from_sequence(
-        seq2c, sampling_rate=0.01, config=_config(dim)
+        seq2c, sampling_rate=0.01, noise_model=_noise_model(dim)
     )
     assert sim2c.basis_name == "ground-rydberg" + (
         "_with_error" if leakage else ""
@@ -385,7 +407,7 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     ):
         QutipEmulator(sampler.sample(seq2), seq2.register, DigitalAnalogDevice)
     sim2 = QutipEmulator.from_sequence(
-        seq2, sampling_rate=0.01, config=_config(dim)
+        seq2, sampling_rate=0.01, noise_model=_noise_model(dim)
     )
     assert sim2.basis_name == "XY" + ("_with_error" if leakage else "")
     assert sim2.dim == dim
@@ -429,11 +451,26 @@ def test_empty_sequences(reg):
         QutipEmulator.from_sequence(seq)
 
     seq.delay(100, "test")
-    emu = QutipEmulator.from_sequence(seq, config=SimConfig(noise="SPAM"))
-    assert not emu._hamiltonian.samples["Global"]
-    for basis in emu._hamiltonian.samples["Local"]:
-        for q in emu._hamiltonian.samples["Local"][basis]:
-            for qty_values in emu._hamiltonian.samples["Local"][basis][
+    emu = QutipEmulator.from_sequence(
+        seq,
+        noise_model=NoiseModel(
+            runs=15,
+            samples_per_run=1,
+            state_prep_error=0.005,
+            p_false_pos=0.01,
+            p_false_neg=0.05,
+        ),
+    )
+    assert not emu._hamiltonian.data.noisy_samples.to_nested_dict()["Global"]
+    for basis in emu._hamiltonian.data.noisy_samples.to_nested_dict()["Local"]:
+        for q in emu._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+            basis
+        ]:
+            for (
+                qty_values
+            ) in emu._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+                basis
+            ][
                 q
             ].values():
                 np.testing.assert_equal(qty_values, 0)
@@ -461,7 +498,8 @@ def test_get_hamiltonian():
 
     np.random.seed(123)
     simple_sim_noise = QutipEmulator.from_sequence(
-        simple_seq, config=SimConfig(noise="doppler", temperature=20000)
+        simple_seq,
+        noise_model=NoiseModel(runs=15, samples_per_run=1, temperature=20000),
     )
     simple_ham_noise = simple_sim_noise.get_hamiltonian(144)
     np.testing.assert_allclose(
@@ -495,7 +533,57 @@ def test_get_hamiltonian():
         144, noiseless=True
     )
     simple_ham_noiseless_expected = QutipEmulator.from_sequence(
-        simple_seq, config=SimConfig()
+        simple_seq
+    ).get_hamiltonian(144)
+    np.testing.assert_allclose(
+        simple_ham_noiseless.full(), simple_ham_noiseless_expected.full()
+    )
+
+    np.random.seed(456)
+    simple_sim_noise = QutipEmulator.from_sequence(
+        simple_seq,
+        noise_model=NoiseModel(
+            runs=1,
+            samples_per_run=1,
+            temperature=50.0,
+            trap_depth=150.0,
+            trap_waist=1.0,
+        ),
+    )
+    simple_ham_noise = simple_sim_noise.get_hamiltonian(144)
+
+    np.testing.assert_allclose(
+        simple_ham_noise.full(),
+        np.array(
+            [
+                [
+                    4.92294305 + 0.0j,
+                    0.09606404 + 0.0j,
+                    0.09606404 + 0.0j,
+                    0.0 + 0.0j,
+                ],
+                [
+                    0.09606404 + 0.0j,
+                    -0.59902269 + 0.0j,
+                    0.0 + 0.0j,
+                    0.09606404 + 0.0j,
+                ],
+                [
+                    0.09606404 + 0.0j,
+                    0.0 + 0.0j,
+                    -0.70099956 + 0.0j,
+                    0.09606404 + 0.0j,
+                ],
+                [0.0 + 0.0j, 0.09606404 + 0.0j, 0.09606404 + 0.0j, 0.0 + 0.0j],
+            ]
+        ),
+    )
+
+    simple_ham_noiseless = simple_sim_noise.get_hamiltonian(
+        144, noiseless=True
+    )
+    simple_ham_noiseless_expected = QutipEmulator.from_sequence(
+        simple_seq
     ).get_hamiltonian(144)
     np.testing.assert_allclose(
         simple_ham_noiseless.full(), simple_ham_noiseless_expected.full()
@@ -503,7 +591,7 @@ def test_get_hamiltonian():
 
 
 def test_single_atom_simulation():
-    one_reg = Register.from_coordinates([(0, 0)], "atom")
+    one_reg = Register.from_coordinates([(0, 0)], prefix="atom")
     one_seq = Sequence(one_reg, DigitalAnalogDevice)
     one_seq.declare_channel("ch0", "rydberg_global")
     one_seq.add(
@@ -511,14 +599,14 @@ def test_single_atom_simulation():
     )
     one_sim = QutipEmulator.from_sequence(one_seq)
     one_res = one_sim.run()
-    assert one_res._size == one_sim._hamiltonian._size
+    assert one_res._size == one_sim._hamiltonian.nbqudits
     one_sim = QutipEmulator.from_sequence(one_seq, evaluation_times="Minimal")
     one_resb = one_sim.run()
-    assert one_resb._size == one_sim._hamiltonian._size
+    assert one_resb._size == one_sim._hamiltonian.nbqudits
 
 
 def test_add_max_step_and_delays():
-    reg = Register.from_coordinates([(0, 0)])
+    reg = Register.from_coordinates([(0, 0)], prefix="q")
     seq = Sequence(reg, DigitalAnalogDevice)
     seq.declare_channel("ch", "rydberg_global")
     seq.delay(1500, "ch")
@@ -538,18 +626,23 @@ def test_add_max_step_and_delays():
 
 
 def test_run(seq, patch_plt_show):
-    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
-    sim.set_config(SimConfig("SPAM", eta=0.0))
+    sim = QutipEmulator.from_sequence(
+        seq,
+        sampling_rate=0.01,
+        noise_model=NoiseModel(p_false_pos=0.01, p_false_neg=0.05),
+    )
     with patch("matplotlib.pyplot.savefig"):
         sim.draw(draw_phase_area=True, fig_name="my_fig.pdf")
     bad_initial = np.array([1.0])
     good_initial_array = np.r_[
-        1, np.zeros(sim.dim**sim._hamiltonian._size - 1)
+        1, np.zeros(sim.dim**sim._hamiltonian.nbqudits - 1)
     ]
     good_initial_qobj = qutip.tensor(
-        [qutip.basis(sim.dim, 0) for _ in range(sim._hamiltonian._size)]
+        [qutip.basis(sim.dim, 0) for _ in range(sim._hamiltonian.nbqudits)]
     )
-    good_initial_qobj_no_dims = qutip.basis(sim.dim**sim._hamiltonian._size, 2)
+    good_initial_qobj_no_dims = qutip.basis(
+        sim.dim**sim._hamiltonian.nbqudits, 2
+    )
 
     with pytest.raises(
         ValueError, match="Incompatible shape of initial state"
@@ -583,7 +676,14 @@ def test_run(seq, patch_plt_show):
     ):
         sim.run(progress_bar=1)
 
-    sim.set_config(SimConfig("SPAM", eta=0.1))
+    sim = QutipEmulator.from_sequence(
+        seq,
+        sampling_rate=0.01,
+        noise_model=NoiseModel(
+            runs=1, samples_per_run=1, state_prep_error=0.1
+        ),
+    )
+    sim.set_initial_state(good_initial_qobj_no_dims)
     with pytest.raises(
         NotImplementedError,
         match="Can't combine state preparation errors with an initial state "
@@ -689,6 +789,13 @@ def test_eval_times(seq):
     )
 
 
+@pytest.mark.filterwarnings(
+    "ignore:Supplying a 'SimConfig' to QutipEmulator:DeprecationWarning"
+)
+@pytest.mark.filterwarnings(
+    "ignore:'SimConfig' has been deprecated:DeprecationWarning"
+)
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_config(matrices):
     np.random.seed(123)
     reg = Register.from_coordinates([(0, 0), (0, 5)], prefix="q")
@@ -697,7 +804,11 @@ def test_config(matrices):
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
     seq.add(pulse, "ch0")
-    sim = QutipEmulator.from_sequence(seq, config=SimConfig(noise="SPAM"))
+    config = SimConfig(noise="SPAM")
+    with pytest.deprecated_call(
+        match="Supplying a 'SimConfig' to QutipEmulator"
+    ):
+        sim = QutipEmulator.from_sequence(seq, config=config)
     sim.reset_config()
     assert sim.config == SimConfig()
     sim.show_config()
@@ -705,7 +816,10 @@ def test_config(matrices):
         sim.set_config("bad_config")
     clean_ham = sim.get_hamiltonian(123)
     new_cfg = SimConfig(noise="doppler", temperature=10000)
-    sim.set_config(new_cfg)
+    with pytest.deprecated_call(
+        match="Supplying a 'SimConfig' to QutipEmulator"
+    ):
+        sim.set_config(new_cfg)
     assert sim.config == new_cfg
     noisy_ham = sim.get_hamiltonian(123)
     assert (
@@ -719,7 +833,7 @@ def test_config(matrices):
         and noisy_amp_ham[0, 1] != clean_ham[0, 1]
     )
     assert sim._initial_state == qutip.tensor(
-        [qutip.basis(2, 1) for _ in range(2)]
+        *(qutip.basis(2, 1) for _ in range(2))
     )
     # Currently in ground state => initial state is extended without warning
     sim.set_config(
@@ -730,47 +844,68 @@ def test_config(matrices):
         )
     )
     assert sim._initial_state == qutip.tensor(
-        [qutip.basis(3, 1) for _ in range(2)]
+        *(qutip.basis(3, 1) for _ in range(2))
     )
     # Otherwise initial state is set to ground-state
-    sim.set_initial_state(qutip.tensor([qutip.basis(3, 0) for _ in range(2)]))
+    sim.set_initial_state(qutip.tensor(*(qutip.basis(3, 0) for _ in range(2))))
     with pytest.warns(
         UserWarning,
         match="Current initial state's dimension does not match new dim",
     ):
         sim.set_config(SimConfig(noise="SPAM", eta=0.5))
     assert sim._initial_state == qutip.tensor(
-        [qutip.basis(2, 1) for _ in range(2)]
+        *(qutip.basis(2, 1) for _ in range(2))
     )
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_noise(seq, matrices):
     np.random.seed(3)
     sim2 = QutipEmulator.from_sequence(
-        seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.9)
+        seq,
+        sampling_rate=0.01,
+        noise_model=NoiseModel(
+            runs=15,
+            samples_per_run=5,
+            p_false_pos=0.01,
+            p_false_neg=0.05,
+            state_prep_error=0.9,
+        ),
     )
-    assert sim2.run().sample_final_state() == Counter(
-        {"000": 824, "100": 92, "110": 56, "001": 28}
-    )
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "'SampledResult.get_samples()' resamples a sampling distribution"
+        ),
+    ):
+        assert sim2.run().sample_final_state() == Counter(
+            {"000": 837, "100": 55, "110": 69, "001": 14, "010": 25}
+        )
     with pytest.raises(NotImplementedError, match="Cannot include"):
-        sim2.set_config(SimConfig(noise="depolarizing"))
-    assert sim2.config.spam_dict == {
-        "eta": 0.9,
-        "epsilon": 0.01,
-        "epsilon_prime": 0.05,
-    }
-    assert sim2._hamiltonian.samples["Global"] == {}
-    assert any(sim2._hamiltonian._bad_atoms.values())
+        QutipEmulator.from_sequence(
+            seq, noise_model=NoiseModel(depolarizing_rate=0.05)
+        )
+    assert (
+        sim2._hamiltonian.data.noisy_samples.to_nested_dict()["Global"] == {}
+    )
+    assert any(sim2._hamiltonian.data.noise_trajectory.bad_atoms.values())
     for basis in ("ground-rydberg", "digital"):
-        for t in sim2._hamiltonian._bad_atoms:
-            if not sim2._hamiltonian._bad_atoms[t]:
+        for t in sim2._hamiltonian.data.noise_trajectory.bad_atoms:
+            if not sim2._hamiltonian.data.noise_trajectory.bad_atoms[t]:
                 continue
             for qty in ("amp", "det", "phase"):
                 assert np.all(
-                    sim2._hamiltonian.samples["Local"][basis][t][qty] == 0.0
+                    sim2._hamiltonian.data.noisy_samples.to_nested_dict()[
+                        "Local"
+                    ][basis][t][qty]
+                    == 0.0
                 )
 
 
+@pytest.mark.filterwarnings(
+    "ignore:'SimConfig' has been deprecated:DeprecationWarning"
+)
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_noise_with_zero_epsilons(seq, matrices):
     np.random.seed(3)
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
@@ -778,9 +913,9 @@ def test_noise_with_zero_epsilons(seq, matrices):
     sim2 = QutipEmulator.from_sequence(
         seq,
         sampling_rate=0.01,
-        config=SimConfig(
+        noise_model=SimConfig(
             noise=("SPAM"), eta=0.0, epsilon=0.0, epsilon_prime=0.0
-        ),
+        ).to_noise_model(),
     )
     assert sim2.config.noise == ()
 
@@ -790,13 +925,13 @@ def test_noise_with_zero_epsilons(seq, matrices):
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
-        ("dephasing", {"0": 571, "1": 429}, 1),
-        ("relaxation", {"0": 571, "1": 429}, 1),
-        ("eff_noise", {"0": 571, "1": 429}, 1),
-        ("depolarizing", {"0": 560, "1": 440}, 3),
-        (("dephasing", "depolarizing", "relaxation"), {"0": 561, "1": 439}, 5),
-        (("eff_noise", "dephasing"), {"0": 572, "1": 428}, 2),
-        (("eff_noise", "leakage"), {"0": 571, "1": 429}, 1),
+        (("dephasing",), {"0": 572, "1": 428}, 1),
+        (("relaxation",), {"0": 572, "1": 428}, 1),
+        (("eff_noise",), {"0": 572, "1": 428}, 1),
+        (("depolarizing",), {"0": 561, "1": 439}, 3),
+        (("dephasing", "depolarizing", "relaxation"), {"0": 562, "1": 438}, 5),
+        (("eff_noise", "dephasing"), {"0": 573, "1": 427}, 2),
+        (("eff_noise", "leakage"), {"0": 572, "1": 428}, 1),
     ],
 )
 def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
@@ -808,21 +943,34 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
     seq.add(pulse, "ch0")
+    params = {
+        p: _LEGACY_DEFAULTS[p]
+        for p in NoiseModel._find_relevant_params(
+            [n for n in noise if n not in ["leakage", "eff_noise"]],
+            state_prep_error=_LEGACY_DEFAULTS["state_prep_error"],
+            amp_sigma=_LEGACY_DEFAULTS["amp_sigma"],
+            laser_waist=_LEGACY_DEFAULTS["laser_waist"],
+        )
+    }
+    with_leakage = "leakage" in noise
+    if with_leakage or "eff_noise" in noise:
+        params["eff_noise_opers"] = [
+            (
+                qutip.Qobj([[1, 0, 0], [0, 0, 0], [0, 0, 0]]).full()
+                if with_leakage
+                else matrices["Z"].full()
+            )
+        ]
+        params["eff_noise_rates"] = [0.1 if with_leakage else 0.025]
     sim = QutipEmulator.from_sequence(
         seq,
         sampling_rate=0.01,
-        config=SimConfig(
-            noise=noise,
-            eff_noise_opers=[
-                (
-                    qutip.Qobj([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
-                    if "leakage" in noise
-                    else matrices["Z"]
-                )
-            ],
-            eff_noise_rates=[0.1 if "leakage" in noise else 0.025],
+        noise_model=NoiseModel(
+            with_leakage=with_leakage,
+            **params,
         ),
     )
+    assert set(sim.noise_model.noise_types) == set(noise)
     assert [
         op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops
     ]
@@ -844,8 +992,9 @@ def test_relaxation_noise():
     seq.add(Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi), 0, 0), "ryd")
     seq.delay(10000, "ryd")
 
-    sim = QutipEmulator.from_sequence(seq)
-    sim.add_config(SimConfig(noise="relaxation", relaxation_rate=0.1))
+    sim = QutipEmulator.from_sequence(
+        seq, noise_model=NoiseModel(relaxation_rate=0.1)
+    )
     assert [
         op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops
     ]
@@ -862,8 +1011,8 @@ def test_relaxation_noise():
 
 deph_res = {"111": 978, "110": 12, "011": 7, "101": 3}
 depo_res = {
-    "111": 829,
-    "101": 62,
+    "111": 828,
+    "101": 63,
     "011": 58,
     "110": 40,
     "010": 5,
@@ -872,8 +1021,8 @@ depo_res = {
     "100": 1,
 }
 deph_depo_res = {
-    "111": 809,
-    "101": 63,
+    "111": 808,
+    "101": 64,
     "011": 59,
     "110": 56,
     "001": 5,
@@ -887,9 +1036,9 @@ eff_deph_res = {"111": 961, "101": 15, "110": 14, "011": 9, "001": 1}
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
-        ("dephasing", deph_res, 1),
-        ("eff_noise", deph_res, 1),
-        ("depolarizing", depo_res, 3),
+        (("dephasing",), deph_res, 1),
+        (("eff_noise",), deph_res, 1),
+        (("depolarizing",), depo_res, 3),
         (("dephasing", "depolarizing"), deph_depo_res, 4),
         (("eff_noise", "dephasing"), eff_deph_res, 2),
         (("eff_noise", "leakage"), deph_res, 1),
@@ -899,22 +1048,36 @@ eff_deph_res = {"111": 961, "101": 15, "110": 14, "011": 9, "001": 1}
 def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
     np.random.seed(123)
     # Test with Digital Sequence
+    params = {
+        p: _LEGACY_DEFAULTS[p]
+        for p in NoiseModel._find_relevant_params(
+            [n for n in noise if n not in ["leakage", "eff_noise"]],
+            state_prep_error=_LEGACY_DEFAULTS["state_prep_error"],
+            amp_sigma=_LEGACY_DEFAULTS["amp_sigma"],
+            laser_waist=_LEGACY_DEFAULTS["laser_waist"],
+        )
+    }
+    if "dephasing" in noise:
+        params["hyperfine_dephasing_rate"] = 0.05
+    with_leakage = "leakage" in noise
+    if with_leakage or "eff_noise" in noise:
+        params["eff_noise_opers"] = [
+            (
+                qutip.Qobj([[0, 0, 0], [0, 1, 0], [0, 0, 0]]).full()
+                if with_leakage
+                else matrices["Z"].full()
+            )
+        ]
+        params["eff_noise_rates"] = [0.1 if with_leakage else 0.025]
     sim = QutipEmulator.from_sequence(
-        seq_digital,  # resulting state should be hhh
+        seq_digital,
         sampling_rate=0.01,
-        config=SimConfig(
-            noise=noise,
-            hyperfine_dephasing_rate=0.05,
-            eff_noise_opers=[
-                (
-                    qutip.Qobj([[0, 0, 0], [0, 1, 0], [0, 0, 0]])
-                    if "leakage" in noise
-                    else matrices["Z"]
-                )
-            ],
-            eff_noise_rates=[0.1 if "leakage" in noise else 0.025],
+        noise_model=NoiseModel(
+            with_leakage=with_leakage,
+            **params,
         ),
     )
+    assert set(sim.noise_model.noise_types) == set(noise)
     assert [
         op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops
     ]
@@ -922,7 +1085,10 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
         ValueError,
         match="'relaxation' noise requires addressing of the 'ground-rydberg'",
     ):
-        sim.set_config(SimConfig(noise="relaxation"))
+        QutipEmulator.from_sequence(
+            seq_digital,
+            noise_model=NoiseModel(relaxation_rate=0.01),
+        )
 
     res = sim.run()
     res_samples = res.sample_final_state()
@@ -945,17 +1111,17 @@ res_deph_relax = {"000": 451, "010": 205, "001": 170, "100": 168, "101": 6}
     "noise, result, n_collapse_ops",
     [
         (
-            "dephasing",
+            ("dephasing",),
             {"111": 961, "101": 15, "110": 14, "011": 9, "001": 1},
             2,
         ),
         (
-            "eff_noise",
+            ("eff_noise",),
             {"111": 961, "101": 15, "110": 14, "011": 9, "001": 1},
             2,
         ),
         (
-            "relaxation",
+            ("relaxation",),
             {"000": 459, "010": 202, "001": 168, "100": 167, "101": 4},
             1,
         ),
@@ -972,8 +1138,9 @@ res_deph_relax = {"000": 451, "010": 205, "001": 170, "100": 168, "101": 6}
         ),
     ],
 )
-def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
+def test_noises_all(matrices, noise, result, n_collapse_ops, seq):
     # Test with Digital+Rydberg Sequence
+    params = {}
     if "relaxation" in noise:
         # Bring the states to ggg
         seq.target("control1", "raman")
@@ -987,7 +1154,9 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
         seq.add(twopi_pulse, "ryd_glob")
         # Measure in the rydberg basis
         seq.measure()
-    if "leakage" in noise:
+        params["relaxation_rate"] = 1.0
+    with_leakage = "leakage" in noise
+    if with_leakage:
         deph_op = qutip.Qobj(
             [[1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
         )
@@ -997,18 +1166,22 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
     else:
         deph_op = qutip.Qobj([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
         hyp_deph_op = qutip.Qobj([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
+
+    if "dephasing" in noise:
+        params["hyperfine_dephasing_rate"] = 0.1
+        params["dephasing_rate"] = 0.1
+    if with_leakage or "eff_noise" in noise:
+        params["eff_noise_opers"] = [deph_op.full(), hyp_deph_op.full()]
+        params["eff_noise_rates"] = [0.2, 0.2]
     sim = QutipEmulator.from_sequence(
         seq,  # resulting state should be hhh
         sampling_rate=0.01,
-        config=SimConfig(
-            noise=noise,
-            dephasing_rate=0.1,
-            hyperfine_dephasing_rate=0.1,
-            relaxation_rate=1.0,
-            eff_noise_opers=[deph_op, hyp_deph_op],
-            eff_noise_rates=[0.2, 0.2],
+        noise_model=NoiseModel(
+            with_leakage=with_leakage,
+            **params,
         ),
     )
+    assert set(sim.noise_model.noise_types) == set(noise)
     assert [
         op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops
     ]
@@ -1017,19 +1190,24 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
         match="Incompatible shape for effective noise operator n°0.",
     ):
         # Only raised if 'eff_noise' in noise
-        sim.set_config(
-            SimConfig(
-                noise=("eff_noise",),
-                eff_noise_opers=[matrices["Z"]],
+        QutipEmulator.from_sequence(
+            seq,
+            noise_model=NoiseModel(
+                eff_noise_opers=[matrices["Z"].full()],
                 eff_noise_rates=[1.0],
-            )
+            ),
         )
 
     with pytest.raises(
         NotImplementedError,
         match="Cannot include depolarizing noise in all-basis.",
     ):
-        sim.set_config(SimConfig(noise="depolarizing"))
+        QutipEmulator.from_sequence(
+            seq,
+            noise_model=NoiseModel(
+                depolarizing_rate=1.0,
+            ),
+        )
 
     assert len(sim._hamiltonian._collapse_ops) == n_collapse_ops * len(
         seq.register.qubits
@@ -1046,6 +1224,13 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
         assert np.all(np.isclose(state[:, 3], np.zeros_like(state[:, 3])))
 
 
+@pytest.mark.filterwarnings(
+    "ignore:Supplying a 'SimConfig' to QutipEmulator:DeprecationWarning"
+)
+@pytest.mark.filterwarnings(
+    "ignore:'SimConfig' has been deprecated:DeprecationWarning"
+)
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_add_config(matrices):
     reg = Register.from_coordinates([(0, 0)], prefix="q")
     seq = Sequence(reg, DigitalAnalogDevice)
@@ -1053,9 +1238,14 @@ def test_add_config(matrices):
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
     seq.add(pulse, "ch0")
-    sim = QutipEmulator.from_sequence(
-        seq, sampling_rate=0.01, config=SimConfig(noise="SPAM", eta=0.5)
-    )
+    with pytest.deprecated_call(
+        match="Supplying a 'SimConfig' to QutipEmulator"
+    ):
+        sim = QutipEmulator.from_sequence(
+            seq,
+            sampling_rate=0.01,
+            config=SimConfig(noise="SPAM", eta=0.5),
+        )
     with pytest.raises(ValueError, match="is not a valid"):
         sim.add_config("bad_cfg")
     config = SimConfig(
@@ -1068,7 +1258,10 @@ def test_add_config(matrices):
         eff_noise_rates=[0.4, 0.6],
         temperature=20000,
     )
-    sim.add_config(config)
+    with pytest.deprecated_call(
+        match="Supplying a 'SimConfig' to QutipEmulator"
+    ):
+        sim.add_config(config)
     assert (
         "doppler" in sim.config.noise
         and "SPAM" in sim.config.noise
@@ -1111,16 +1304,20 @@ def test_add_config(matrices):
         UserWarning,
         match="Current initial state's dimension does not match new dim",
     ):
-        sim.add_config(
-            SimConfig(
-                noise=("leakage", "eff_noise"),
-                eff_noise_opers=[matrices["Z3"]],
-                eff_noise_rates=[0.1],
+        with pytest.deprecated_call(
+            match="Setting samples_per_run different to 1 is"
+        ):
+            sim.add_config(
+                SimConfig(
+                    noise=("leakage", "eff_noise"),
+                    eff_noise_opers=[matrices["Z3"]],
+                    eff_noise_rates=[0.1],
+                )
             )
-        )
     assert sim._initial_state == qutip.basis(3, 1)
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_concurrent_pulses():
     reg = Register({"q0": (0, 0)})
     seq = Sequence(reg, DigitalAnalogDevice)
@@ -1137,9 +1334,10 @@ def test_concurrent_pulses():
     sim_no_noise = QutipEmulator.from_sequence(seq)
 
     # Noisy simulation
-    sim_with_noise = QutipEmulator.from_sequence(seq)
-    config_doppler = SimConfig(noise=("doppler"))
-    sim_with_noise.set_config(config_doppler)
+    sim_with_noise = QutipEmulator.from_sequence(
+        seq,
+        noise_model=NoiseModel(runs=15, samples_per_run=5, temperature=50.0),
+    )
 
     for t in sim_no_noise.evaluation_times:
         ham_no_noise = sim_no_noise.get_hamiltonian(t)
@@ -1198,10 +1396,10 @@ def test_run_xy():
     sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.01)
 
     good_initial_array = np.r_[
-        1, np.zeros(sim.dim**sim._hamiltonian._size - 1)
+        1, np.zeros(sim.dim**sim._hamiltonian.nbqudits - 1)
     ]
     good_initial_qobj = qutip.tensor(
-        [qutip.basis(sim.dim, 0) for _ in range(sim._hamiltonian._size)]
+        [qutip.basis(sim.dim, 0) for _ in range(sim._hamiltonian.nbqudits)]
     )
     sim.set_initial_state(good_initial_array)
     assert sim.initial_state == good_initial_qobj
@@ -1216,19 +1414,15 @@ def test_run_xy():
     assert sim.samples_obj._measurement == "XY"
 
 
-res1 = {"0000": 907, "0100": 24, "0001": 41, "0010": 8, "1000": 20}
 res2 = {
-    "0000": 907,
-    "0010": 15,
-    "1000": 34,
-    "0100": 22,
-    "0001": 12,
-    "0101": 10,
+    "0000": 956,
+    "0100": 24,
+    "0101": 20,
 }
-res3 = {"0000": 907, "0100": 24, "1000": 20, "0010": 8, "0001": 41}
-res4 = {"0000": 907, "0100": 24, "1000": 20, "0010": 8, "0001": 41}
+res1 = {"0000": 956, "0100": 34, "0001": 10}
 
 
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 @pytest.mark.parametrize(
     "masked_qubit, noise, result, n_collapse_ops",
     [
@@ -1236,8 +1430,8 @@ res4 = {"0000": 907, "0100": 24, "1000": 20, "0010": 8, "0001": 41}
         (None, "eff_noise", res1, 1),
         (None, "leakage", res1, 1),
         (None, "depolarizing", res2, 3),
-        ("atom0", "dephasing", res3, 1),
-        ("atom1", "dephasing", res4, 1),
+        ("atom0", "dephasing", res1, 1),
+        ("atom1", "dephasing", res1, 1),
     ],
 )
 def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
@@ -1252,40 +1446,37 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
         seq.config_slm_mask([masked_qubit])
     seq.add(rise, "ch0")
 
-    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.1)
-    with pytest.raises(
-        NotImplementedError, match="mode 'XY' does not support simulation of"
-    ):
-        sim.set_config(SimConfig(("SPAM", "doppler")))
-    with pytest.raises(ValueError, match="is not a valid"):
-        sim._hamiltonian.set_config(SimConfig(("SPAM", "doppler")))
-    with pytest.raises(
-        NotImplementedError, match="mode 'XY' does not support simulation of"
-    ):
-        sim._hamiltonian.set_config(
-            SimConfig(("SPAM", "doppler")).to_noise_model()
-        )
-    with pytest.raises(
-        NotImplementedError, match="simulation of noise types: amplitude"
-    ):
-        sim.add_config(SimConfig("amplitude"))
-
     # SPAM simulation is implemented:
-    sim.set_config(
-        SimConfig(
-            (
-                ("SPAM", noise)
-                if noise != "leakage"
-                else ("SPAM", "leakage", "eff_noise")
-            ),
-            eta=0.4,
+    params = {}
+    with_leakage = noise == "leakage"
+    if with_leakage or noise == "eff_noise":
+        params = dict(
             eff_noise_opers=[
-                matrices["Z"] if noise != "leakage" else matrices["Z3"]
+                (matrices["Z3"] if with_leakage else matrices["Z"]).full()
             ],
             eff_noise_rates=[0.025],
         )
+    else:
+        params[f"{noise}_rate"] = _LEGACY_DEFAULTS[f"{noise}_rate"]
+    sim = QutipEmulator.from_sequence(
+        seq,
+        sampling_rate=0.1,
+        noise_model=NoiseModel(
+            runs=15,
+            samples_per_run=5,
+            with_leakage=with_leakage,
+            state_prep_error=0.4,
+            p_false_pos=0.01,
+            p_false_neg=0.05,
+            **params,
+        ),
     )
-    assert sim._hamiltonian._bad_atoms == {
+    assert set(sim.noise_model.noise_types) == (
+        {"SPAM", noise}
+        if not with_leakage
+        else {"SPAM", "leakage", "eff_noise"}
+    )
+    assert sim._hamiltonian.data.noise_trajectory.bad_atoms == {
         "atom0": True,
         "atom1": False,
         "atom2": True,
@@ -1295,7 +1486,53 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
         len(sim._hamiltonian._collapse_ops) // len(simple_reg.qubits)
         == n_collapse_ops
     )
-    assert sim.run().sample_final_state() == Counter(result)
+    r = sim.run()
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "'SampledResult.get_samples()' resamples a sampling distribution"
+        ),
+    ):
+        assert r.sample_final_state() == Counter(result)
+
+    with pytest.raises(
+        NotImplementedError, match="mode 'XY' does not support simulation of"
+    ):
+        QutipEmulator.from_sequence(
+            seq,
+            noise_model=NoiseModel(runs=1, samples_per_run=1, temperature=50),
+        )
+    with pytest.raises(ValueError, match="is not a valid"):
+        sim._hamiltonian.set_config("SimConfig")
+    with pytest.raises(
+        NotImplementedError, match="mode 'XY' does not support simulation of"
+    ):
+        sim._hamiltonian.set_config(
+            NoiseModel(runs=1, samples_per_run=1, temperature=50)
+        )
+    with pytest.raises(
+        NotImplementedError, match="simulation of noise types: amplitude"
+    ):
+        QutipEmulator.from_sequence(
+            seq,
+            noise_model=NoiseModel(runs=1, samples_per_run=1, amp_sigma=0.1),
+        )
+    with pytest.deprecated_call(), pytest.raises(
+        NotImplementedError, match="mode 'XY' does not support simulation of"
+    ):
+        sim.set_config(
+            SimConfig.from_noise_model(
+                NoiseModel(runs=1, samples_per_run=1, temperature=50)
+            )
+        )
+    with pytest.deprecated_call(), pytest.raises(
+        NotImplementedError, match="mode 'XY' does not support simulation of"
+    ):
+        sim.add_config(
+            SimConfig.from_noise_model(
+                NoiseModel(runs=1, samples_per_run=1, temperature=50)
+            )
+        )
 
 
 def test_mask_nopulses():
@@ -1427,49 +1664,70 @@ def test_mask_local_channel():
     assert seq_._slm_mask_targets == {"q0", "q3"}
     sim = QutipEmulator.from_sequence(seq_)
     assert np.array_equal(
-        sim._hamiltonian.samples["Global"]["ground-rydberg"]["amp"],
+        sim._hamiltonian.data.noisy_samples.to_nested_dict()["Global"][
+            "ground-rydberg"
+        ]["amp"],
         np.concatenate((pulse.amplitude.samples, [0])),
     )
     assert np.array_equal(
-        sim._hamiltonian.samples["Global"]["ground-rydberg"]["det"],
+        sim._hamiltonian.data.noisy_samples.to_nested_dict()["Global"][
+            "ground-rydberg"
+        ]["det"],
         np.concatenate((pulse.detuning.samples, [0])),
     )
     assert np.all(
-        sim._hamiltonian.samples["Global"]["ground-rydberg"]["phase"] == 0.0
+        sim._hamiltonian.data.noisy_samples.to_nested_dict()["Global"][
+            "ground-rydberg"
+        ]["phase"]
+        == 0.0
     )
     qubits = ["q0", "q1", "q2", "q3"]
     masked_qubits = ["q0", "q3"]
     for q in qubits:
         if q in masked_qubits:
             assert np.array_equal(
-                sim._hamiltonian.samples["Local"]["ground-rydberg"][q]["det"],
+                sim._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+                    "ground-rydberg"
+                ][q]["det"],
                 np.concatenate((-10 * pulse.amplitude.samples, [0])),
             )
         else:
             assert np.all(
-                sim._hamiltonian.samples["Local"]["ground-rydberg"][q]["det"]
+                sim._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+                    "ground-rydberg"
+                ][q]["det"]
                 == 0.0
             )
         assert np.all(
-            sim._hamiltonian.samples["Local"]["ground-rydberg"][q]["amp"]
+            sim._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+                "ground-rydberg"
+            ][q]["amp"]
             == 0.0
         )
         assert np.all(
-            sim._hamiltonian.samples["Local"]["ground-rydberg"][q]["phase"]
+            sim._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+                "ground-rydberg"
+            ][q]["phase"]
             == 0.0
         )
 
     assert np.array_equal(
-        sim._hamiltonian.samples["Local"]["digital"]["q0"]["amp"],
+        sim._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+            "digital"
+        ]["q0"]["amp"],
         np.concatenate((pulse2.amplitude.samples, [0])),
     )
     assert np.array_equal(
-        sim._hamiltonian.samples["Local"]["digital"]["q0"]["det"],
+        sim._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+            "digital"
+        ]["q0"]["det"],
         np.concatenate((pulse2.detuning.samples, [0])),
     )
     assert np.all(
         np.isclose(
-            sim._hamiltonian.samples["Local"]["digital"]["q0"]["phase"],
+            sim._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+                "digital"
+            ]["q0"]["phase"],
             np.concatenate((np.pi * np.ones(1000), [0])),
         )
     )
@@ -1485,9 +1743,18 @@ def test_effective_size_intersection():
         seq.add(rise, "ch0")
         seq.config_slm_mask(["atom0"])
 
-        sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
-        sim.set_config(SimConfig("SPAM", eta=0.4))
-        assert sim._hamiltonian._bad_atoms == {
+        sim = QutipEmulator.from_sequence(
+            seq,
+            sampling_rate=0.01,
+            noise_model=NoiseModel(
+                runs=15,
+                samples_per_run=1,
+                state_prep_error=0.4,
+                p_false_pos=0.01,
+                p_false_neg=0.05,
+            ),
+        )
+        assert sim._hamiltonian.data.noise_trajectory.bad_atoms == {
             "atom0": True,
             "atom1": False,
             "atom2": True,
@@ -1506,6 +1773,7 @@ def test_effective_size_intersection():
         "raman_global",
     ],
 )
+@pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_effective_size_disjoint(channel_type):
     simple_reg = Register.square(2, prefix="atom")
     amp = 1
@@ -1516,9 +1784,18 @@ def test_effective_size_disjoint(channel_type):
     seq.add(rise, "ch0")
     seq.config_slm_mask(["atom1"])
     assert seq._slm_mask_time == [0, 1500]
-    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
-    sim.set_config(SimConfig("SPAM", eta=0.4))
-    assert sim._hamiltonian._bad_atoms == {
+    sim = QutipEmulator.from_sequence(
+        seq,
+        sampling_rate=0.01,
+        noise_model=NoiseModel(
+            runs=15,
+            samples_per_run=5,
+            state_prep_error=0.4,
+            p_false_pos=0.01,
+            p_false_neg=0.05,
+        ),
+    )
+    assert sim._hamiltonian.data.noise_trajectory.bad_atoms == {
         "atom0": True,
         "atom1": False,
         "atom2": True,
@@ -1533,28 +1810,43 @@ def test_effective_size_disjoint(channel_type):
             "ground-rydberg" if channel_type == "rydberg_global" else "digital"
         )
         assert np.array_equal(
-            sim._hamiltonian.samples["Local"][basis]["atom1"]["amp"],
+            sim._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+                basis
+            ]["atom1"]["amp"],
             np.concatenate((rise.amplitude.samples, [0])),
         )
         assert np.array_equal(
-            sim._hamiltonian.samples["Local"][basis]["atom3"]["amp"],
+            sim._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+                basis
+            ]["atom3"]["amp"],
             np.concatenate((rise.amplitude.samples, [0])),
         )
         # SLM
         assert np.all(
-            sim._hamiltonian.samples["Local"]["ground-rydberg"]["atom1"]["det"]
+            sim._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+                "ground-rydberg"
+            ]["atom1"]["det"]
             == -10 * np.concatenate((rise.amplitude.samples, [0]))
         )
         if channel_type == "raman_global":
             assert np.all(
-                sim._hamiltonian.samples["Local"][basis]["atom1"]["det"] == 0.0
+                sim._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+                    basis
+                ]["atom1"]["det"]
+                == 0.0
             )
         assert np.all(
-            sim._hamiltonian.samples["Local"][basis]["atom3"]["det"] == 0.0
+            sim._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+                basis
+            ]["atom3"]["det"]
+            == 0.0
         )
         for q in ["atom1", "atom3"]:
             assert np.all(
-                sim._hamiltonian.samples["Local"][basis][q]["phase"] == 0.0
+                sim._hamiltonian.data.noisy_samples.to_nested_dict()["Local"][
+                    basis
+                ][q]["phase"]
+                == 0.0
             )
 
 
@@ -1596,15 +1888,19 @@ def test_simulation_with_modulation(
     mod_dt = pulse1.duration + pulse1.fall_time(ch1_obj)
     assert pulse1_mod_samples.size == mod_dt
 
-    sim_config = SimConfig(("amplitude", "doppler"), amp_sigma=0)
+    noise_model = NoiseModel(
+        runs=15, samples_per_run=1, temperature=50, laser_waist=175.0
+    )
     sim = QutipEmulator.from_sequence(
-        seq, with_modulation=True, config=sim_config
+        seq, with_modulation=True, noise_model=noise_model
     )
 
     assert (
-        sim._hamiltonian.samples["Global"] == {}
+        sim._hamiltonian.data.noisy_samples.to_nested_dict()["Global"] == {}
     )  # All samples stored in local
-    raman_samples = sim._hamiltonian.samples["Local"]["digital"]
+    raman_samples = sim._hamiltonian.data.noisy_samples.to_nested_dict()[
+        "Local"
+    ]["digital"]
     # Local pulses
     for qid, time_slice in [
         ("target", slice(0, mod_dt)),
@@ -1617,7 +1913,7 @@ def test_simulation_with_modulation(
         )
         np.testing.assert_equal(
             raman_samples[qid]["det"][time_slice],
-            sim._hamiltonian._doppler_detune[qid],
+            sim._hamiltonian.data.noise_trajectory.doppler_detune[qid],
         )
         np.testing.assert_allclose(
             raman_samples[qid]["phase"][time_slice], float(pulse1.phase)
@@ -1635,12 +1931,14 @@ def test_simulation_with_modulation(
             assert propagation_dir == (0, 0, 1)
             r = np.linalg.norm(reg.qubits[qid].as_array())
 
-        w0 = sim_config.laser_waist
+        w0 = noise_model.laser_waist
         return np.exp(-((r / w0) ** 2))
 
     # Global pulse
     time_slice = slice(2 * mod_dt, 3 * mod_dt)
-    rydberg_samples = sim._hamiltonian.samples["Local"]["ground-rydberg"]
+    rydberg_samples = sim._hamiltonian.data.noisy_samples.to_nested_dict()[
+        "Local"
+    ]["ground-rydberg"]
     noise_amp_base = rydberg_samples["target"]["amp"][time_slice] / (
         pulse1_mod_samples * pos_factor("target")
     )
@@ -1651,7 +1949,7 @@ def test_simulation_with_modulation(
         )
         np.testing.assert_equal(
             rydberg_samples[qid]["det"][time_slice],
-            sim._hamiltonian._doppler_detune[qid],
+            sim._hamiltonian.data.noise_trajectory.doppler_detune[qid],
         )
         np.testing.assert_allclose(
             rydberg_samples[qid]["phase"][time_slice], float(pulse1.phase)
@@ -1713,16 +2011,14 @@ def test_amp_sigma_noise():
 
     sim = QutipEmulator.from_sequence(
         seq,
-        config=SimConfig.from_noise_model(
-            NoiseModel(amp_sigma=0.1, runs=1, samples_per_run=1)
-        ),
+        noise_model=NoiseModel(amp_sigma=0.1, runs=1, samples_per_run=1),
     )
 
     noiseless_samples = QutipEmulator.from_sequence(
         seq
     ).samples_obj.to_nested_dict(all_local=True)
     # All samples are local (because of the noise)
-    sim_samples = sim._hamiltonian.samples
+    sim_samples = sim._hamiltonian.data.noisy_samples.to_nested_dict()
     amp_factors = {}
     assert sim_samples["Global"] == {}
 
@@ -1768,3 +2064,198 @@ def test_amp_sigma_noise():
     np.testing.assert_equal(
         expected_q1_dig_samples, dig_samples_dict["q1"]["amp"]
     )
+
+
+def test_detuning_noise():
+    duration = 10
+    np.random.seed(1337)
+    reg = Register({"q0": (0, 0), "q1": (10, 10)})
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="q0")
+    seq.declare_channel("ch2", "raman_local", initial_target="q1")
+
+    pulse1 = Pulse.ConstantPulse(duration, 0, 0, 0)
+    # Added twice to check the fluctuation doesn't change from pulse to pulse
+    seq.add(pulse1, "ch0")
+    seq.add(pulse1, "ch0")
+    # The two local channels target alternating qubits on the same basis
+    seq.add(pulse1, "ch1", protocol="no-delay")
+    seq.add(pulse1, "ch2", protocol="no-delay")
+
+    sim = QutipEmulator.from_sequence(
+        seq,
+        noise_model=NoiseModel(detuning_sigma=0.1, runs=1, samples_per_run=1),
+    )
+    sim_samples = sim._hamiltonian.data.noisy_samples.to_nested_dict()
+
+    rydberg_0 = sim_samples["Local"]["ground-rydberg"]["q0"]["det"]
+    rydberg_1 = sim_samples["Local"]["ground-rydberg"]["q1"]["det"]
+    digital_0 = sim_samples["Local"]["digital"]["q0"]["det"]
+    digital_1 = sim_samples["Local"]["digital"]["q1"]["det"]
+    assert np.allclose(
+        rydberg_0, np.array([-0.04902824] * (2 * duration) + [0.0])
+    )
+    assert np.allclose(
+        rydberg_1, np.array([-0.04902824] * (2 * duration) + [0.0])
+    )
+    assert np.allclose(
+        digital_0,
+        np.array([-0.17550787] * (duration) + [0.0] * (duration + 1)),
+    )
+    assert np.allclose(
+        digital_1,
+        np.array([-0.20112646] * (duration) + [0.0] * (duration + 1)),
+    )
+
+
+def test_detuning_hf_noise(monkeypatch):
+    # Pulse creation
+    np.random.seed(1337)
+    duration = 10
+    reg = Register({"q0": (0, 0), "q1": (10, 10)})
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="q0")
+    seq.declare_channel("ch2", "raman_local", initial_target="q1")
+
+    pulse1 = Pulse.ConstantPulse(duration, 0, 0, 0)
+    # Added twice to check the fluctuation doesn't change from pulse to pulse
+    seq.add(pulse1, "ch0")
+    seq.add(pulse1, "ch0")
+    # The two local channels target alternating qubits on the same basis
+    seq.add(pulse1, "ch1", protocol="no-delay")
+    seq.add(pulse1, "ch2", protocol="no-delay")
+
+    noise_mod = NoiseModel(
+        detuning_hf_psd=2.0 * np.pi * np.array([1, 2, 3]),
+        detuning_hf_omegas=2.0 * np.pi * np.array([4, 5, 6]),
+        runs=1,
+    )
+    sim = QutipEmulator.from_sequence(seq, noise_model=noise_mod)
+    sim_samples = sim._hamiltonian.data.noisy_samples.to_nested_dict()
+
+    rydberg_0 = sim_samples["Local"]["ground-rydberg"]["q0"]["det"]
+    rydberg_1 = sim_samples["Local"]["ground-rydberg"]["q1"]["det"]
+    digital_0 = sim_samples["Local"]["digital"]["q0"]["det"]
+    digital_1 = sim_samples["Local"]["digital"]["q1"]["det"]
+
+    rydberg_expected = [
+        -17.09974803,
+        -17.62331808,
+        -18.12297186,
+        -18.59816646,
+        -19.04839245,
+        -19.47317443,
+        -19.87207157,
+        -20.24467805,
+        -20.59062348,
+        -20.9095733,
+        -21.20122904,
+        -21.46532868,
+        -21.70164676,
+        -21.90999467,
+        -22.09022068,
+        -22.24221006,
+        -22.36588509,
+        -22.46120504,
+        -22.52816608,
+        -22.56680119,
+        0.0,
+    ]
+    assert np.allclose(rydberg_0, rydberg_expected)
+    assert np.allclose(rydberg_1, rydberg_expected)
+
+    digital_0_expected = [
+        -20.70981369,
+        -20.9854774,
+        -21.23382708,
+        -21.4546608,
+        -21.64781307,
+        -21.81315499,
+        -21.95059426,
+        -22.06007519,
+        -22.1415786,
+        -22.19512177,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    ]
+    assert np.allclose(digital_0, digital_0_expected)
+
+    digital_1_expected = [
+        -20.13322478,
+        -19.96053451,
+        -19.76371088,
+        -19.54313969,
+        -19.29923617,
+        -19.03244438,
+        -18.74323637,
+        -18.43211151,
+        -18.09959565,
+        -17.74624031,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    ]
+    assert np.allclose(digital_1, digital_1_expected)
+
+
+@pytest.mark.parametrize(
+    ("noise"),
+    (
+        {"detuning_sigma": 1.0},
+        {"amp_sigma": 1.0},
+        {
+            "temperature": 10,
+        },
+        {
+            "temperature": 10,
+            "disable_doppler": True,
+            "trap_depth": 1000,
+            "trap_waist": 0.1,
+        },
+        {"detuning_hf_psd": [1.0, 2.0], "detuning_hf_omegas": [3.0, 4.0]},
+    ),
+)
+def test_noisy_runs(noise):
+    np.random.seed(1337)
+    duration = 10
+    reg = Register({"q0": (0, 0), "q1": (10, 10)})
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="q0")
+    seq.declare_channel("ch2", "raman_local", initial_target="q1")
+
+    pulse1 = Pulse.ConstantPulse(duration, 0, 0, 0)
+    # Added twice to check the fluctuation doesn't change from pulse to pulse
+    seq.add(pulse1, "ch0")
+    seq.add(pulse1, "ch0")
+    # The two local channels target alternating qubits on the same basis
+    seq.add(pulse1, "ch1", protocol="no-delay")
+    seq.add(pulse1, "ch2", protocol="no-delay")
+    nruns = 2
+    noise_mod = NoiseModel(runs=nruns, **noise)
+    sim = QutipEmulator.from_sequence(seq, noise_model=noise_mod)
+    with patch.object(
+        QutipEmulator, "_run_solver", wraps=sim._run_solver
+    ) as mock_run_solver:
+        result = sim.run()
+        assert mock_run_solver.call_count == nruns
+        assert isinstance(result, NoisyResults)

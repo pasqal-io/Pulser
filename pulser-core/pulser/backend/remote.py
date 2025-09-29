@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import logging
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum, auto
@@ -261,7 +262,15 @@ class RemoteConnection(ABC):
         Returns:
             The Sequence, with the latest version for the targeted Device.
         """
-        available_devices = self.fetch_available_devices()
+        try:
+            available_devices = self.fetch_available_devices()
+        except NotImplementedError:
+            logging.warning(
+                "The selected connection doesn't give access to the latest "
+                "device specs. Execution might fail if the sequence is "
+                "incompatible with the device."
+            )
+            return sequence
         available_device_names = {
             dev.name: key for key, dev in available_devices.items()
         }
@@ -280,7 +289,7 @@ class RemoteConnection(ABC):
             new_device := available_devices[available_device_names[name]]
         ):
             try:
-                sequence = sequence.switch_device(new_device, strict=True)
+                sequence = sequence.with_new_device(new_device, strict=True)
             except Exception as e:
                 raise ValueError(
                     "The sequence is not compatible with the latest "
@@ -339,6 +348,12 @@ class RemoteBackend(Backend):
             The results, which can be accessed once all sequences have been
             successfully executed.
         """
+        if self._mimic_qpu:
+            sequence = self._connection.update_sequence_device(self._sequence)
+            self.validate_job_params(job_params, sequence.device.max_runs)
+        elif job_params is not None:
+            self._type_check_job_params(job_params)
+
         return self._connection.submit(
             self._sequence,
             job_params=job_params,
@@ -370,6 +385,26 @@ class RemoteBackend(Backend):
                 "Unable to execute open_batch using this remote connection"
             )
         return _OpenBatchContextManager(self)
+
+    @staticmethod
+    def validate_job_params(
+        job_params: list[JobParams] | None, max_runs: int | None
+    ) -> None:
+        """Validates a list of job parameters prior to submission."""
+        suffix = " when executing a sequence on a real QPU."
+        if not job_params:
+            raise ValueError("'job_params' must be specified" + suffix)
+        RemoteBackend._type_check_job_params(job_params)
+        for j in job_params:
+            if "runs" not in j:
+                raise ValueError(
+                    "All elements of 'job_params' must specify 'runs'" + suffix
+                )
+            if max_runs is not None and j["runs"] > max_runs:
+                raise ValueError(
+                    "All 'runs' must be below the maximum allowed by the "
+                    f"device ({max_runs})" + suffix
+                )
 
 
 class _OpenBatchContextManager:

@@ -20,13 +20,18 @@ instances defined within it should be importable via this module, like so::
     import pulser.backends as backends
 
     backends.QPUBackend  # Same as pulser.QPUBackend
-    backends.QutipBackend  # Same as pulser_simulation.QutipBackend
+    backends.QutipBackendV2  # Same as pulser_simulation.QutipBackendV2
 
 Attributes:
     QPUBackend: See :py:class:`pulser.backend.QPUBackend`.
     QutipBackend: See :py:class:`pulser_simulation.QutipBackend`.
+    QutipBackendV2: See :py:class:`pulser_simulation.QutipBackendV2`.
     EmuFreeBackend: See :py:class:`pulser_pasqal.EmuFreeBackend`.
+    EmuFreeBackendV2: See :py:class:`pulser_pasqal.EmuFreeBackendV2`.
     EmuTNBackend: See :py:class:`pulser_pasqal.EmuTNBackend`.
+    EmuMPSBackend: See :py:class:`pulser_pasqal.EmuMPSBackend`.
+    MPSBackend: See `emu_mps.MPSBackend <https://pypi.org/project/emu-mps/>`_.
+    SVBackend: See `emu_sv.SVBackend <https://pypi.org/project/emu-sv/>`_.
 
 """
 from __future__ import annotations
@@ -37,14 +42,19 @@ from typing import TYPE_CHECKING, Type
 if TYPE_CHECKING:
     from pulser.backend import QPUBackend as QPUBackend
     from pulser.backend.abc import Backend
-    from pulser_simulation import QutipBackend as QutipBackend
+    from pulser_simulation import QutipBackendV2 as QutipBackendV2
+
 
 _BACKENDS = {
     "QPUBackend": "pulser.backend",
     "QutipBackend": "pulser_simulation",
     "QutipBackendV2": "pulser_simulation",
     "EmuFreeBackend": "pulser_pasqal",
+    "EmuFreeBackendV2": "pulser_pasqal",
     "EmuTNBackend": "pulser_pasqal",
+    "EmuMPSBackend": "pulser_pasqal",
+    "MPSBackend": "emu_mps",
+    "SVBackend": "emu_sv",
 }
 
 

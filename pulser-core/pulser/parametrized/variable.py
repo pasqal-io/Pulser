@@ -128,8 +128,8 @@ class Variable(Parametrized, OpSupport):
 
         return VariableItem(self, key)
 
-    # NOTE: __len__ cannot be defined because it makes numpy.ufuncs convert a
-    # Variable into an array of VariableItem's
+    def __len__(self) -> int:
+        return self.size
 
     def __iter__(self) -> Iterator[VariableItem]:
         for i in range(self.size):

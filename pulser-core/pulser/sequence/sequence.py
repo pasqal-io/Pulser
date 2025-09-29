@@ -621,7 +621,7 @@ class Sequence(Generic[DeviceType]):
         self._slm_mask_targets = targets
 
     @seq_decorators.store
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def config_detuning_map(
         self,
         detuning_map: DetuningMap,
@@ -690,7 +690,7 @@ class Sequence(Generic[DeviceType]):
         # DMM has Global addressing
         self._add_to_schedule(dmm_name, _TimeSlot("target", -1, 0, self._qids))
 
-    def switch_register(
+    def with_new_register(
         self, new_register: BaseRegister | MappableRegister
     ) -> Sequence:
         """Replicate the sequence with a different register.
@@ -729,7 +729,44 @@ class Sequence(Generic[DeviceType]):
             getattr(new_seq, call.name)(*call.args, **call.kwargs)
         return new_seq
 
-    def switch_device(
+    def switch_register(
+        self, new_register: BaseRegister | MappableRegister
+    ) -> Sequence:
+        """Replicate the sequence with a different register.
+
+        Warning:
+            Deprecated since v1.6. Please use `Sequence.with_new_register()`
+            instead.
+
+        The new sequence is reconstructed with the provided register by
+        replicating all the instructions used to build the original sequence.
+        This means that operations referecing specific qubits IDs
+        (eg. `Sequence.target()`) expect to find the same qubit IDs in the new
+        register. By the same token, switching from a register to a mappable
+        register might fail if one of the instructions does not work with
+        mappable registers (e.g. `Sequence.configure_slm_mask()`).
+
+        Warns:
+            UserWarning: If the sequence is configuring a detuning map, a
+                warning is raised to remind the user that the detuning map is
+                unchanged and might no longer be aligned with the qubits in
+                the new register.
+
+        Args:
+            new_register: The new register to give the sequence.
+
+        Returns:
+            The sequence with the new register.
+        """
+        warnings.warn(
+            "'Sequence.switch_register()' has been deprecated and replaced by "
+            "'Sequence.with_new_register()'.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.with_new_register(new_register)
+
+    def with_new_device(
         self, new_device: DeviceType, strict: bool = False
     ) -> Sequence:
         """Replicate the sequence with a different device.
@@ -750,7 +787,38 @@ class Sequence(Generic[DeviceType]):
         """
         return switch_device(self, new_device, strict)
 
-    @seq_decorators.block_if_measured
+    def switch_device(
+        self, new_device: DeviceType, strict: bool = False
+    ) -> Sequence:
+        """Replicate the sequence with a different device.
+
+        Warning:
+            Deprecated since v1.6. Please use `Sequence.with_new_device()`
+            instead.
+
+        This method is designed to replicate the sequence with as few changes
+        to the original contents as possible.
+        If the `strict` option is chosen, the device switch will fail whenever
+        it cannot guarantee that the new sequence's contents will not be
+        modified in the process.
+
+        Args:
+            new_device: The target device instance.
+            strict: Enforce a strict match between devices and channels to
+                guarantee the pulse sequence is left unchanged.
+
+        Returns:
+            The sequence on the new device.
+        """
+        warnings.warn(
+            "'Sequence.switch_device()' has been deprecated and replaced by "
+            "'Sequence.with_new_device()'.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.with_new_device(new_device, strict)
+
+    @seq_decorators.conditionally_block()
     def declare_channel(
         self,
         name: str,
@@ -921,7 +989,7 @@ class Sequence(Generic[DeviceType]):
             return var
 
     @seq_decorators.verify_parametrization
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def enable_eom_mode(
         self,
         channel: str,
@@ -1030,7 +1098,7 @@ class Sequence(Generic[DeviceType]):
         )
 
     @seq_decorators.store
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def disable_eom_mode(
         self, channel: str, correct_phase_drift: bool = False
     ) -> None:
@@ -1076,7 +1144,7 @@ class Sequence(Generic[DeviceType]):
                 )
 
     @seq_decorators.verify_parametrization
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def modify_eom_setpoint(
         self,
         channel: str,
@@ -1173,7 +1241,7 @@ class Sequence(Generic[DeviceType]):
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def add_eom_pulse(
         self,
         channel: str,
@@ -1257,7 +1325,7 @@ class Sequence(Generic[DeviceType]):
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def add(
         self,
         pulse: Union[Pulse, Parametrized],
@@ -1303,7 +1371,7 @@ class Sequence(Generic[DeviceType]):
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def add_dmm_detuning(
         self,
         waveform: Union[Waveform, Parametrized],
@@ -1494,7 +1562,49 @@ class Sequence(Generic[DeviceType]):
         return next_time_slot.ti - last.tf
 
     @seq_decorators.store
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
+    def truncate(self, duration: int | Parametrized) -> None:
+        """Truncate a sequence's contents to (at most) the given duration.
+
+        As in other instructions, the given duration must be valid for every
+        channel involved. Note that the resulting sequence's duration might not
+        exactly match the requested duration, particularly when:
+
+        - The 'duration' is not a multiple of a given channel's clock
+          period, in which case it is rounded down to its closest multiple.
+
+        - The resulting truncated instruction would have a length below the
+          `Channel.min_duration`, in which case it is ommited altogether.
+
+        - The instruction to truncate corresponds to a `target()`,
+          `enable_eom_mode()` or `disable_eom_mode()` call, in which case it is
+          ommited as well. When the sequence is parametrized, the presence of
+          one of these calls also forces `truncate()` to be the last
+          instruction in the `Sequence` before measurement.
+
+        Warning:
+            A truncated Pulse is assumed to be incomplete so its
+            `post_phase_shift` value is always set to zero.
+
+        Args:
+            duration: The duration (in ns) to truncate to.
+        """
+        if not isinstance(duration, Parametrized):
+            for ch_obj in self.declared_channels.values():
+                # Just preemptive validation, no adjustment done here
+                duration_ = ch_obj.validate_duration(duration, round_up=False)
+
+        if self.is_parametrized():
+            return
+
+        # Adjust the phase reference of all qubits
+        for basis_ref in self._basis_ref.values():
+            for qubit_ref in basis_ref.values():
+                qubit_ref.truncate(duration_)
+        self._schedule.truncate(duration_)
+
+    @seq_decorators.store
+    @seq_decorators.conditionally_block(if_parametrized_truncated=False)
     def measure(self, basis: str = "ground-rydberg") -> None:
         """Measures in a valid basis.
 
@@ -1589,7 +1699,7 @@ class Sequence(Generic[DeviceType]):
         self._phase_shift(phi, *specific_targets, basis=basis, _index=True)
 
     @seq_decorators.store
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def align(self, *channels: str, at_rest: bool = True) -> None:
         """Aligns multiple channels in time.
 
@@ -2077,7 +2187,7 @@ class Sequence(Generic[DeviceType]):
                 np.max(pulse.amplitude.samples),
             )
 
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def _target(
         self,
         qubits: Union[Collection[QubitId | int], QubitId | int, Parametrized],
@@ -2162,7 +2272,7 @@ class Sequence(Generic[DeviceType]):
             )
         return ids
 
-    @seq_decorators.block_if_measured
+    @seq_decorators.conditionally_block()
     def _delay(
         self,
         duration: Union[int, Parametrized],
@@ -2335,8 +2445,8 @@ class Sequence(Generic[DeviceType]):
         new_phase = pulse.phase + (phase_ref if phase_ref else 0)
         if _duration != pulse.duration:
             try:
-                new_amp = pulse.amplitude.change_duration(_duration)
-                new_det = pulse.detuning.change_duration(_duration)
+                new_amp = pulse.amplitude.with_new_duration(_duration)
+                new_det = pulse.detuning.with_new_duration(_duration)
             except NotImplementedError:
                 raise TypeError(
                     "Failed to automatically adjust one of the pulse's "

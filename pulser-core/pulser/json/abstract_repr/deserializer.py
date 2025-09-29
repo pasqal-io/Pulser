@@ -333,6 +333,8 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
             detuning_map=_deserialize_det_map(op["detuning_map"]),
             dmm_id=op["dmm_id"],
         )
+    elif op["op"] == "truncate":
+        seq.truncate(duration=_deserialize_parameter(op["duration"], vars))
 
 
 def _deserialize_channel(obj: dict[str, Any]) -> Channel:
@@ -443,8 +445,12 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
 
     noise_types = noise_model_obj.pop("noise_types")
     with_leakage = "leakage" in noise_types
+    disable_doppler = (
+        noise_model_obj["temperature"] > 0 and "doppler" not in noise_types
+    )
     relevant_params = pulser.NoiseModel._find_relevant_params(
-        noise_types,
+        # doppler parameters are relevant even if doppler is disabled
+        noise_types + (["doppler"] if disable_doppler else []),
         noise_model_obj["state_prep_error"],
         noise_model_obj["amp_sigma"],
         noise_model_obj["laser_waist"],
@@ -453,11 +459,30 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
         "eff_noise_opers",
         "with_leakage",
     }
+
+    detuning_sigma = noise_model_obj.get("detuning_sigma", 0)
+    relevant_params -= {"detuning_sigma"}  # Handled separately, optional arg
+
+    detuning_hf_psd = []
+    detuning_hf_omegas = []
+    if "detuning_hf" in noise_model_obj:
+        for psd, freq in noise_model_obj.pop("detuning_hf"):
+            detuning_hf_psd.append(psd)
+            detuning_hf_omegas.append(freq)
+    relevant_params -= {  # Handled separately
+        "detuning_hf_psd",
+        "detuning_hf_omegas",
+    }
+
     noise_model = pulser.NoiseModel(
         **{param: noise_model_obj[param] for param in relevant_params},
         eff_noise_rates=tuple(eff_noise_rates),
         eff_noise_opers=tuple(eff_noise_opers),
         with_leakage=with_leakage,
+        disable_doppler=disable_doppler,
+        detuning_hf_psd=tuple(detuning_hf_psd),
+        detuning_hf_omegas=tuple(detuning_hf_omegas),
+        detuning_sigma=detuning_sigma,
     )
     assert set(noise_model.noise_types) == set(noise_types)
     return noise_model

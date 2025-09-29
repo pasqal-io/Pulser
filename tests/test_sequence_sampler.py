@@ -39,9 +39,11 @@ from pulser.waveforms import BlackmanWaveform, RampWaveform
 def assert_same_samples_as_sim(seq: pulser.Sequence) -> None:
     """Check against the legacy sample extraction in the simulation module."""
     got = sample(seq).to_nested_dict()
-    want = pulser_simulation.QutipEmulator.from_sequence(
-        seq
-    )._hamiltonian.samples.copy()
+    want = (
+        pulser_simulation.QutipEmulator.from_sequence(seq)
+        ._hamiltonian.data.noisy_samples.to_nested_dict()
+        .copy()
+    )
 
     def truncate_samples(samples_dict):
         for key, value in samples_dict.items():
@@ -74,14 +76,15 @@ def assert_nested_dict_equality(got: dict, want: dict) -> None:
 # Tests
 
 
-def test_init_error(seq_rydberg):
-    var = seq_rydberg.declare_variable("var")
-    seq_rydberg.delay(var, "ch0")
-    assert seq_rydberg.is_parametrized()
+def test_init_error():
+    seq = seq_rydberg()
+    var = seq.declare_variable("var")
+    seq.delay(var, "ch0")
+    assert seq.is_parametrized()
     with pytest.raises(
         NotImplementedError, match="Parametrized sequences can't be sampled."
     ):
-        sample(seq_rydberg)
+        sample(seq)
 
 
 @pytest.mark.parametrize("local_only", [True, False])
@@ -244,7 +247,7 @@ def test_modulation_local(mod_device):
 
 @pytest.mark.parametrize("disable_eom", [True, False])
 def test_eom_modulation(mod_device, disable_eom):
-    seq = pulser.Sequence(pulser.Register.square(2), mod_device)
+    seq = pulser.Sequence(pulser.Register.square(2, prefix="q"), mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     seq.enable_eom_mode("ch0", amp_on=1, detuning_on=0.0)
     seq.add_eom_pulse("ch0", 100, 0.0)
@@ -321,7 +324,7 @@ def test_seq_with_DMM_and_map_reg():
 
 
 def seq_with_SLM(
-    ch_name: Literal["mw_global", "rydberg_global"]
+    ch_name: Literal["mw_global", "rydberg_global"],
 ) -> pulser.Sequence:
     q_dict = {
         "batman": np.array([-4.0, 0.0]),  # sometimes masked
@@ -399,8 +402,8 @@ def test_SLM_against_simulation():
     assert_same_samples_as_sim(seq_with_SLM("rydberg_global"))
 
 
-def test_samples_repr(seq_rydberg):
-    samples = sample(seq_rydberg)
+def test_samples_repr():
+    samples = sample(seq_rydberg())
     assert repr(samples) == "\n\n".join(
         [
             f"ch0:\n{samples.samples_list[0]!r}",
@@ -410,8 +413,8 @@ def test_samples_repr(seq_rydberg):
 
 
 @pytest.mark.parametrize("with_custom_centered_phase", [False, True])
-def test_extend_duration(seq_rydberg, with_custom_centered_phase):
-    samples = sample(seq_rydberg)
+def test_extend_duration(with_custom_centered_phase):
+    samples = sample(seq_rydberg())
     short, long = samples.samples_list
     if with_custom_centered_phase:
         short = replace(short, _centered_phase=short.centered_phase)
@@ -517,7 +520,9 @@ def test_phase_modulation(off_center, with_diff):
         pulser.ConstantWaveform(full_phase.duration, 1), full_phase
     )
 
-    seq = pulser.Sequence(pulser.Register.square(1), pulser.MockDevice)
+    seq = pulser.Sequence(
+        pulser.Register.square(1, prefix="q"), pulser.MockDevice
+    )
     seq.declare_channel("rydberg_global", "rydberg_global")
     seq.add(pulse, "rydberg_global")
     seq_samples = sample(seq).channel_samples["rydberg_global"]
@@ -604,7 +609,7 @@ def test_to_nested_dict_samples_type(mod_seq, samples_type, all_local):
 
 
 @pytest.fixture
-def seqs(seq_rydberg) -> list[pulser.Sequence]:
+def seqs() -> list[pulser.Sequence]:
     seqs: list[pulser.Sequence] = []
 
     pulse = Pulse(
@@ -620,12 +625,11 @@ def seqs(seq_rydberg) -> list[pulser.Sequence]:
     seq.measure(basis="digital")
     seqs.append(deepcopy(seq))
 
-    seqs.append(seq_rydberg)
+    seqs.append(seq_rydberg())
 
     return seqs
 
 
-@pytest.fixture
 def seq_rydberg() -> pulser.Sequence:
     reg = pulser.Register.from_coordinates(
         np.array([[0.0, 0.0], [2.0, 0.0]]), prefix="q"

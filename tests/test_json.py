@@ -168,7 +168,7 @@ def test_mappable_register():
 
 
 def test_rare_cases(patch_plt_show, helpers):
-    reg = Register.square(4)
+    reg = Register.square(4, prefix="q")
     seq = Sequence(reg, DigitalAnalogDevice)
     var = seq.declare_variable("var")
 
@@ -209,7 +209,7 @@ def test_rare_cases(patch_plt_show, helpers):
 
 
 def test_support(helpers):
-    seq = Sequence(Register.square(2), DigitalAnalogDevice)
+    seq = Sequence(Register.square(2, prefix="q"), DigitalAnalogDevice)
     var = seq.declare_variable("var")
 
     obj_dict = BlackmanWaveform.from_max_val(1, var)._to_dict()
@@ -246,7 +246,7 @@ def test_support(helpers):
 
 def test_sequence_module():
     # Check that the sequence module is backwards compatible after refactoring
-    seq = Sequence(Register.square(2), DigitalAnalogDevice)
+    seq = Sequence(Register.square(2, prefix="q"), DigitalAnalogDevice)
 
     obj_dict = json.loads(seq._serialize())
     assert obj_dict["__module__"] == "pulser.sequence"
@@ -263,7 +263,7 @@ def test_sequence_module():
 
 
 def test_type_error():
-    s = Sequence(Register.square(1), MockDevice)._serialize()
+    s = Sequence(Register.square(1, prefix="q"), MockDevice)._serialize()
     with pytest.raises(
         TypeError,
         match=re.escape(
@@ -281,7 +281,7 @@ def test_numpy_types():
 
 
 def test_deprecated_device_args():
-    seq = Sequence(Register.square(1), MockDevice)
+    seq = Sequence(Register.square(1, prefix="q"), MockDevice)
 
     seq_dict = json.loads(seq._serialize())
     dev_dict = seq_dict["__kwargs__"]["device"]
