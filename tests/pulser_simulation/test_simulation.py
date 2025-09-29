@@ -2235,14 +2235,6 @@ def test_detuning_hf_noise(monkeypatch):
     ),
 )
 def test_noisy_runs(noise):
-    count = 0
-    old_run = QutipEmulator._run_solver
-
-    def mock_run_solver(self, progress_bar: bool = False, **options):
-        nonlocal count
-        count += 1
-        return old_run(self, progress_bar, **options)
-
     np.random.seed(1337)
     duration = 10
     reg = Register({"q0": (0, 0), "q1": (10, 10)})
@@ -2260,8 +2252,10 @@ def test_noisy_runs(noise):
     seq.add(pulse1, "ch2", protocol="no-delay")
     nruns = 2
     noise_mod = NoiseModel(runs=nruns, **noise)
-    with patch.object(QutipEmulator, "_run_solver", new=mock_run_solver):
-        sim = QutipEmulator.from_sequence(seq, noise_model=noise_mod)
+    sim = QutipEmulator.from_sequence(seq, noise_model=noise_mod)
+    with patch.object(
+        QutipEmulator, "_run_solver", wraps=sim._run_solver
+    ) as mock_run_solver:
         result = sim.run()
-        assert count == nruns
+        assert mock_run_solver.call_count == nruns
         assert isinstance(result, NoisyResults)
