@@ -63,6 +63,9 @@ jobs:
 
   check-release:
     needs: deploy
+    env:
+      # Set Matplotlib backend to fix flaky execution on Windows
+      MPLBACKEND: Agg
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
