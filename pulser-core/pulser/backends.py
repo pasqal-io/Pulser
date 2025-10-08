@@ -20,7 +20,7 @@ instances defined within it should be importable via this module, like so::
     import pulser.backends as backends
 
     backends.QPUBackend  # Same as pulser.QPUBackend
-    backends.QutipBackendV2  # Same as pulser_simulation.QutipBackendV2 
+    backends.QutipBackendV2  # Same as pulser_simulation.QutipBackendV2
 
 Attributes:
     QPUBackend: See :py:class:`pulser.backend.QPUBackend`.
