@@ -1,10 +1,10 @@
 jsonschema >= 4.17.3, < 5
 referencing  # A dependency of jsonschema we use. We let jsonschema set the version
 matplotlib < 4
-# This is a dependency from matplotlib that raises a DeprecationWarning from 11.3
-# TODO: Remove when matplolib >= 3.10.4 and replace by
-# pillow < 11.3.0; python_version <= '3.9'
-pillow < 11.3.0 
+# Matplotlib 3.10 dropped support for python 3.9, we can only do this from python 3.10
+matplotlib >= 3.10.5; python_version >= '3.10'
+# Dependency from matplotlib < 3.10.5 that raises a DeprecationWarning from 11.3
+pillow < 11.3.0; python_version <= '3.9'
 packaging   # This is already required by matplotlib but we use it too
 # Numpy 1.20 introduces type hints, 1.24.0 breaks matplotlib < 3.6.1
 numpy >= 1.20, != 1.24.0
