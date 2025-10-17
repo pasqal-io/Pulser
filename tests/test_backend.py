@@ -46,6 +46,7 @@ from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
     BatchStatus,
     JobStatus,
+    RemoteBackend,
     RemoteConnection,
     RemoteResults,
     RemoteResultsError,
@@ -270,7 +271,7 @@ def test_update_sequence_device(sequence):
     assert connection.update_sequence_device(sequence).device == device
 
 
-def test_qpu_backend(sequence):
+def test_remote_backend(sequence):
     connection = _MockConnection()
 
     with pytest.raises(
@@ -304,14 +305,21 @@ def test_qpu_backend(sequence):
         QPUBackend(seq, "fake_connection")
 
     qpu_backend = QPUBackend(seq, connection)
+    remote_backend = RemoteBackend(seq, connection)
+    # Generic remote backend can run without job_params
+    assert remote_backend.run().batch_id == "abcd"
+    # But QPUBackend requires job_params
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         qpu_backend.run()
-    with pytest.raises(TypeError, match="'job_params' must be a list"):
-        qpu_backend.run(job_params={"runs": 100})
-    with pytest.raises(
-        TypeError, match="All elements of 'job_params' must be dictionaries"
-    ):
-        qpu_backend.run(job_params=[{"runs": 100}, "foo"])
+    for backend in [qpu_backend, remote_backend]:
+        # Remote Backend only checks that the type is correct
+        with pytest.raises(TypeError, match="'job_params' must be a list"):
+            backend.run(job_params={"runs": 100})
+        with pytest.raises(
+            TypeError,
+            match="All elements of 'job_params' must be dictionaries",
+        ):
+            backend.run(job_params=[{"runs": 100}, "foo"])
     with pytest.raises(
         ValueError,
         match="All elements of 'job_params' must specify 'runs'",

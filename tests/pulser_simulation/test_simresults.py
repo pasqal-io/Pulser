@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
 from collections import Counter
 from typing import cast
 
@@ -286,7 +287,7 @@ def test_expect(results, pi_pulse, reg):
         results_single._calc_pseudo_density(-1).full(),
         np.array([[1, 0], [0, 0]]),
     )
-
+    # With SPAM errors
     noise_model = NoiseModel(p_false_pos=0.01, p_false_neg=0.05)
     sim_single = QutipEmulator.from_sequence(
         seq_single, noise_model=noise_model
@@ -310,6 +311,27 @@ def test_expect(results, pi_pulse, reg):
             [[1 - noise_model.p_false_neg, 0], [0, noise_model.p_false_neg]]
         ),
     )
+    # With leakage
+    eff_rate = [0.5]
+    eff_ops = [qutip.basis(3, 2) @ qutip.basis(3, 1).dag()]
+    noise_model = NoiseModel(
+        eff_noise_rates=eff_rate,
+        eff_noise_opers=eff_ops,
+        with_leakage=True,
+    )
+    sim_single = QutipEmulator.from_sequence(
+        seq_single,
+        noise_model=noise_model,
+        sampling_rate=0.1,
+    )
+    sim_single.set_evaluation_times(0.5)
+    res = sim_single.run()
+    assert isinstance(res, CoherentResults)
+    # define an observable for the state
+    assert np.isclose(
+        res.expect([qutip.basis(3, 0).proj()])[0][-1], 0.7804005, atol=1e-6
+    )  # ground state projector
+
     seq3dim = Sequence(reg, DigitalAnalogDevice)
     seq3dim.declare_channel("ryd", "rydberg_global")
     seq3dim.declare_channel("ram", "raman_local", initial_target="A")
@@ -375,9 +397,15 @@ def test_sample_final_state_three_level(seq_no_meas, pi_pulse):
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_sample_final_state_noisy(seq_no_meas, results_noisy):
     np.random.seed(123)
-    assert results_noisy.sample_final_state(N_samples=1234) == Counter(
-        {"11": 588, "10": 250, "01": 270, "00": 126}
-    )
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "'SampledResult.get_samples()' resamples a sampling distribution"
+        ),
+    ):
+        assert results_noisy.sample_final_state(N_samples=1234) == Counter(
+            {"11": 588, "10": 250, "01": 270, "00": 126}
+        )
     res_3level = QutipEmulator.from_sequence(
         seq_no_meas,
         noise_model=NoiseModel(
