@@ -111,6 +111,7 @@ def serialize_abstract_sequence(
     seq_name: str = "pulser-exported",
     json_dumps_options: dict[str, Any] = {},
     skip_validation: bool = False,
+    metadata: Any = None,
     **defaults: Any,
 ) -> str:
     """Serializes the Sequence into an abstract JSON object.
@@ -149,6 +150,7 @@ def serialize_abstract_sequence(
         "variables": {},
         "operations": [],
         "measurement": None,
+        "metadata": metadata
     }
 
     for var in seq._variables.values():
