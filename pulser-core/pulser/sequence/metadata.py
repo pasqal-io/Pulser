@@ -25,27 +25,23 @@ _extra: contextvars.ContextVar[dict[str, Any]] = contextvars.ContextVar(
     "_extra", default={}
 )
 
-_metadata: contextvars.ContextVar[dict[str, dict[str, Any]]] = (
-    contextvars.ContextVar("_metadata", default={})
-)
-
-
-def _update_metadata() -> None:
-    _metadata.set(
-        {"package_versions": _package_versions.get(), "extra": _extra.get()}
-    )
-
 
 def _get_metadata() -> dict[str, dict[str, Any]]:
     """Gets all the existing Sequence metadata."""
-    return _metadata.get()
+    package_versions = _package_versions.get()
+    extra = _extra.get()
+    if package_versions or extra:
+        return {
+            "package_versions": package_versions,
+            "extra": extra,
+        }
+    return {}
 
 
 def _reset_metadata() -> None:
     """Deletes all exisiting metadata."""
     _package_versions.set({})
     _extra.set({})
-    _metadata.set({})
 
 
 def store_package_version_metadata(
@@ -55,10 +51,8 @@ def store_package_version_metadata(
     _package_versions.set(
         _package_versions.get() | {package_name: package_version}
     )
-    _update_metadata()
 
 
 def store_extra_metadata(extra_metadata: dict) -> None:
     """Store any extra metadata in the Sequence metadata."""
     _extra.set(_extra.get() | extra_metadata)
-    _update_metadata()
