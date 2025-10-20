@@ -17,7 +17,6 @@ from __future__ import annotations
 import contextvars
 from typing import Any
 
-
 _package_versions: contextvars.ContextVar[dict[str, str]] = (
     contextvars.ContextVar("_package_versions", default={})
 )
@@ -26,7 +25,9 @@ _extra: contextvars.ContextVar[dict[str, Any]] = contextvars.ContextVar(
     "_extra", default={}
 )
 
-_metadata = contextvars.ContextVar("_metadata", default={})
+_metadata: contextvars.ContextVar[dict[str, dict[str, Any]]] = (
+    contextvars.ContextVar("_metadata", default={})
+)
 
 
 def _update_metadata() -> None:
