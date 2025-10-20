@@ -150,8 +150,12 @@ def serialize_abstract_sequence(
         "variables": {},
         "operations": [],
         "measurement": None,
-        "metadata": metadata or {},
     }
+
+    if metadata:
+        # Add metadata only if it is defined to avoid failing validation on
+        # previous versions
+        res["metadata"] = metadata
 
     for var in seq._variables.values():
         res["variables"][var.name] = dict(type=var.dtype.__name__)

@@ -17,25 +17,16 @@ from __future__ import annotations
 import contextvars
 from typing import Any
 
-import pulser
 
 _package_versions: contextvars.ContextVar[dict[str, str]] = (
-    contextvars.ContextVar(
-        "_package_versions", default={"pulser-core": pulser.__version__}
-    )
+    contextvars.ContextVar("_package_versions", default={})
 )
 
 _extra: contextvars.ContextVar[dict[str, Any]] = contextvars.ContextVar(
     "_extra", default={}
 )
 
-_metadata = contextvars.ContextVar(
-    "_metadata",
-    default={
-        "package_versions": _package_versions.get(),
-        "extra": _extra.get(),
-    },
-)
+_metadata = contextvars.ContextVar("_metadata", default={})
 
 
 def _update_metadata() -> None:
@@ -47,6 +38,13 @@ def _update_metadata() -> None:
 def _get_metadata() -> dict[str, dict[str, Any]]:
     """Gets all the existing Sequence metadata."""
     return _metadata.get()
+
+
+def _reset_metadata() -> None:
+    """Deletes all exisiting metadata."""
+    _package_versions.set({})
+    _extra.set({})
+    _metadata.set({})
 
 
 def store_package_version_metadata(
