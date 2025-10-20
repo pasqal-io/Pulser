@@ -15,7 +15,6 @@
 
 from __future__ import annotations
 
-import contextvars
 import copy
 import json
 import os
@@ -71,20 +70,12 @@ from pulser.sequence._schedule import (
 from pulser.sequence._seq_drawer import Figure, draw_sequence
 from pulser.sequence.helpers._seq_str import seq_to_str
 from pulser.sequence.helpers._switch_device import switch_device
+from pulser.sequence.metadata import _get_metadata
 from pulser.waveforms import Waveform
 
 DeviceType = TypeVar("DeviceType", bound=BaseDevice)
 
 PROTOCOLS = Literal["min-delay", "no-delay", "wait-for-all"]
-
-_metadata = contextvars.ContextVar("metadata", default={"library": "pulser", "pulser_version": pulser.__version__})
-
-def set_sequence_metadata(metadata: dict):
-    token = _metadata.set(_metadata.get() | metadata)
-    return token
-
-def get_sequence_metadata():
-    return _metadata.get()
 
 
 class Sequence(Generic[DeviceType]):
@@ -1897,7 +1888,7 @@ class Sequence(Generic[DeviceType]):
                 seq_name=seq_name,
                 json_dumps_options=json_dumps_options,
                 skip_validation=skip_validation,
-                metadata=get_sequence_metadata(),
+                metadata=_get_metadata(),
                 **defaults,
             )
         except jsonschema.exceptions.ValidationError as e:

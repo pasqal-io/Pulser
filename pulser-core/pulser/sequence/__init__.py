@@ -13,8 +13,14 @@
 # limitations under the License.
 """Module containing the sequence class definition."""
 
+from pulser.sequence.metadata import (
+    store_package_version_metadata,
+    store_extra_metadata,
+)
 from pulser.sequence.sequence import Sequence
 
 __all__ = [
     "Sequence",
+    "store_package_version_metadata",
+    "store_extra_metadata",
 ]
