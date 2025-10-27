@@ -329,7 +329,7 @@ class RegDrawer:
                             coords[0],
                             coords[1],
                             coords[2],
-                            q,  # type: ignore[arg-type]
+                            q,
                             fontsize=12,
                             ha="left",
                             va="bottom",
@@ -352,7 +352,7 @@ class RegDrawer:
                         y = radius * np.sin(u) * np.sin(v) + y0
                         z = radius * np.cos(v) + z0
                         # alpha controls opacity
-                        ax.plot_surface(  # type: ignore[attr-defined]
+                        ax.plot_surface(
                             x,
                             y,
                             z,
@@ -366,7 +366,7 @@ class RegDrawer:
 
                 ax.set_xlabel("x (µm)")
                 ax.set_ylabel("y (µm)")
-                ax.set_zlabel("z (µm)")  # type: ignore[attr-defined]
+                ax.set_zlabel("z (µm)")
 
     @staticmethod
     def _register_dims(
