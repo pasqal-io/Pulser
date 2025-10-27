@@ -99,6 +99,7 @@ jobs:
         if: ${{ matrix.with-torch != 'with-torch'}}
         run: pytest --cov
       - name: Test validation with legacy jsonschema
+        if: ${{ matrix.python-version != '3.14'}}
         run: |
           pip install jsonschema==4.17.3
           pytest tests/test_abstract_repr.py -W ignore::DeprecationWarning
