@@ -11,21 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains the HamiltonianData class and related classes.
+"""Definition of a set of Lindblad collapse operators."""
+from dataclasses import dataclass
+from typing import Literal
 
-HamiltonianData contains information about a sequence,
-and a list of noise trajectories.
-"""
+from pulser.channels.base_channel import States
 
-from pulser._hamiltonian_data.hamiltonian_data import (
-    HamiltonianData as HamiltonianData,
-)
-from pulser._hamiltonian_data.noise_trajectory import (
-    NoiseTrajectory as NoiseTrajectory,
-)
-from pulser._hamiltonian_data.basis_data import (
-    BasisData as BasisData,
-)
-from pulser._hamiltonian_data.lindblad_data import (
-    LindbladData as LindbladData,
-)
+
+@dataclass(frozen=True)
+class BasisData:
+    dim: int
+    basis_name: str
+    interaction_type: Literal["XY", "ising"]
+    eigenbasis: list[States]

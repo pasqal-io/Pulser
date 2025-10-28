@@ -30,7 +30,10 @@ from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simresults import CoherentResults, SimulationResults
-from pulser_simulation.simulation import QutipEmulator
+from pulser_simulation.simulation import (
+    QutipEmulator,
+    _has_shot_to_shot_except_spam,
+)
 
 
 class QutipBackend(Backend):
@@ -159,29 +162,19 @@ class QutipBackendV2(EmulatorBackend):
             total_duration=self._sim_obj.total_duration_ns,
         )
         eigenstates = self._sim_obj.samples_obj.eigenbasis
-
         if (
-            ("doppler" not in self._sim_obj.noise_model.noise_types)
-            and (
-                "amplitude" not in self._sim_obj.noise_model.noise_types
-                or self._sim_obj.noise_model.amp_sigma == 0.0
-            )
-            and (
-                "SPAM" not in self._sim_obj.noise_model.noise_types
-                or self._sim_obj.noise_model.state_prep_error == 0
-            )
-        ):
+            "SPAM" not in self._config.noise_model.noise_types
+            or self._config.noise_model.state_prep_error == 0
+        ) and not _has_shot_to_shot_except_spam(self._sim_obj.noise_model):
             # A single run is needed, regardless of self.config.runs
-            single_res = self._sim_obj._run_solver(progress_bar=False)
+            single_res = self._sim_obj.run()
             assert isinstance(single_res, CoherentResults)
 
             for qutip_res in single_res:
                 t = qutip_res.evaluation_time
                 state = QutipState(qutip_res.state, eigenstates=eigenstates)
                 ham: QutipOperator = QutipOperator(
-                    self._sim_obj.get_hamiltonian(
-                        t * res.total_duration, noiseless=True
-                    ),
+                    self._sim_obj.get_hamiltonian(t * res.total_duration),
                     eigenstates=eigenstates,
                 )
                 for callback in self._config.callbacks:
@@ -216,7 +209,7 @@ class QutipBackendV2(EmulatorBackend):
                             [
                                 qutip.Qobj(np.zeros((2, 2)))
                                 for _ in range(
-                                    self._sim_obj._hamiltonian.nbqudits
+                                    self._sim_obj._current_hamiltonian.nbqudits
                                 )
                             ]
                         )

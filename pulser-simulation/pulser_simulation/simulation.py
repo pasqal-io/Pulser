@@ -29,6 +29,7 @@ from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
 from pulser import Sequence
+from pulser._hamiltonian_data import HamiltonianData
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
@@ -36,7 +37,6 @@ from pulser.register.base_register import BaseRegister
 from pulser.result import SampledResult
 from pulser.sampler.samples import ChannelSamples, SequenceSamples
 from pulser.sequence._seq_drawer import draw_samples
-from pulser._hamiltonian_data import HamiltonianData
 from pulser_simulation.hamiltonian import Hamiltonian
 from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simconfig import SimConfig
@@ -45,6 +45,18 @@ from pulser_simulation.simresults import (
     NoisyResults,
     SimulationResults,
 )
+
+
+def _has_shot_to_shot_except_spam(noise_model: NoiseModel) -> bool:
+    return (
+        "doppler" in noise_model.noise_types
+        or (
+            "amplitude" in noise_model.noise_types
+            and noise_model.amp_sigma != 0.0
+        )
+        or "detuning" in noise_model.noise_types
+        or "register" in noise_model.noise_types
+    )
 
 
 class QutipEmulator:
@@ -178,6 +190,9 @@ class QutipEmulator:
             self._device,
             noise_model or NoiseModel(),
         )
+        # I don't like this, since the iterator is lost, but I don't
+        # want to write logic to store and invalidate the iterator either
+        # (e.g. if doing run multiple times).
         self._current_hamiltonian = next(self._hamiltonians)[0]
         # Initializing evaluation times
         self._eval_times_array: np.ndarray
@@ -194,18 +209,28 @@ class QutipEmulator:
 
     @cached_property
     def _noiseless_hamiltonian(self) -> Hamiltonian:
+        noiseless_data = HamiltonianData(
+            self.samples_obj,
+            self._register,
+            self._device,
+            NoiseModel(),
+        )
         return Hamiltonian(
-            self._hamiltonian_data,
-            self._hamiltonian_data.samples,
+            noiseless_data.samples,
+            noiseless_data.noise_trajectories[0][0],
+            noiseless_data.basis_data,
+            noiseless_data.lindblad_data,
             self._sampling_rate,
         )
-    
+
     @property
     def _hamiltonians(self) -> Iterator[tuple[Hamiltonian, int]]:
-        for noisy_samples, n in self._hamiltonian_data.noisy_samples:
+        for traj, noisy_samples, n in self._hamiltonian_data.noisy_samples:
             yield Hamiltonian(
-                self._hamiltonian_data,
                 noisy_samples,
+                traj,
+                self._hamiltonian_data.basis_data,
+                self._hamiltonian_data.lindblad_data,
                 self._sampling_rate,
             ), n
 
@@ -217,12 +242,12 @@ class QutipEmulator:
     @property
     def dim(self) -> int:
         """The dimension of the basis."""
-        return self._hamiltonian_data.dim
+        return self._hamiltonian_data.basis_data.dim
 
     @property
     def basis_name(self) -> str:
         """The name of the basis."""
-        return self._hamiltonian_data.basis_name
+        return self._hamiltonian_data.basis_data.basis_name
 
     @property
     def basis(self) -> dict[States, Any]:
@@ -265,11 +290,14 @@ class QutipEmulator:
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
         not_supported = (
             set(cfg.noise)
-            - cfg.supported_noises[self._hamiltonian_data._interaction]
+            - cfg.supported_noises[
+                self._hamiltonian_data.basis_data.interaction_type
+            ]
         )
         if not_supported:
+            v = self._hamiltonian_data.basis_data.interaction_type
             raise NotImplementedError(
-                f"Interaction mode '{self._hamiltonian_data._interaction}' "
+                f"Interaction mode '{v}' "
                 "does not support simulation of noise types:"
                 f"{', '.join(not_supported)}."
             )
@@ -288,7 +316,12 @@ class QutipEmulator:
         if self._initial_state != qutip.tensor(
             [
                 former_basis[
-                    "u" if self._hamiltonian_data._interaction == "XY" else "g"
+                    (
+                        "u"
+                        if self._hamiltonian_data.basis_data.interaction_type
+                        == "XY"
+                        else "g"
+                    )
                 ]
                 for _ in range(self._hamiltonian_data.nbqudits)
             ]
@@ -327,11 +360,14 @@ class QutipEmulator:
 
         not_supported = (
             set(config.noise)
-            - config.supported_noises[self._hamiltonian_data._interaction]
+            - config.supported_noises[
+                self._hamiltonian_data.basis_data.interaction_type
+            ]
         )
         if not_supported:
+            v = self._hamiltonian_data.basis_data.interaction_type
             raise NotImplementedError(
-                f"Interaction mode '{self._hamiltonian_data._interaction}' "
+                f"Interaction mode '{v}' "
                 "does not support simulation of noise types: "
                 f"{', '.join(not_supported)}."
             )
@@ -351,7 +387,7 @@ class QutipEmulator:
             param_dict[param] = getattr(noise_model, param)
         # set config with the new parameters:
         param_dict.pop("noise_types")
-        self.set_config(SimConfig.from_noise_model(NoiseModel(**param_dict)))        
+        self.set_config(SimConfig.from_noise_model(NoiseModel(**param_dict)))
 
     def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""
@@ -359,7 +395,7 @@ class QutipEmulator:
 
     def reset_config(self) -> None:
         """Resets configuration to default."""
-        self._hamiltonian.set_config(SimConfig().to_noise_model())
+        self.set_config(SimConfig())
 
     @property
     def initial_state(self) -> qutip.Qobj:
@@ -381,15 +417,10 @@ class QutipEmulator:
         """
         self._initial_state: qutip.Qobj
         if isinstance(state, str) and state == "all-ground":
+            v = self._hamiltonian_data.basis_data.interaction_type
             self._initial_state = qutip.tensor(
                 [
-                    self.basis[
-                        (
-                            "u"
-                            if self._hamiltonian_data._interaction == "XY"
-                            else "g"
-                        )
-                    ]
+                    self.basis[("u" if v == "XY" else "g")]
                     for _ in range(self._hamiltonian_data.nbqudits)
                 ]
             )
@@ -397,10 +428,12 @@ class QutipEmulator:
             state = cast(Union[np.ndarray, qutip.Qobj], state)
             shape = state.shape[0]
             legal_shape = (
-                self._hamiltonian_data.dim**self._hamiltonian_data.nbqudits
+                self._hamiltonian_data.basis_data.dim
+                ** self._hamiltonian_data.nbqudits
             )
             legal_dims = [
-                [self._hamiltonian_data.dim] * self._hamiltonian_data.nbqudits,
+                [self._hamiltonian_data.basis_data.dim]
+                * self._hamiltonian_data.nbqudits,
                 [1] * self._hamiltonian_data.nbqudits,
             ]
             if shape != legal_shape:
@@ -438,7 +471,9 @@ class QutipEmulator:
         """
         if isinstance(value, str):
             if value == "Full":
-                eval_times = np.copy(self._noiseless_hamiltonian.sampling_times)
+                eval_times = np.copy(
+                    self._noiseless_hamiltonian.sampling_times
+                )
             elif value == "Minimal":
                 eval_times = np.array([])
             else:
@@ -506,7 +541,7 @@ class QutipEmulator:
         Returns:
             The final operator.
         """
-        return self._hamiltonian.build_operator(operations)
+        return self._current_hamiltonian.build_operator(operations)
 
     def get_hamiltonian(
         self, time: float, noiseless: bool = False
@@ -573,7 +608,10 @@ class QutipEmulator:
         return min(min_variations)
 
     def _run_solver(
-        self, progress_bar: bool = False, **options: Any
+        self,
+        hamiltonian: Hamiltonian,
+        progress_bar: bool = False,
+        **options: Any,
     ) -> CoherentResults:
         """Returns CoherentResults: Object containing evolution results."""
         # Decide if progress bar will be fed to QuTiP solver
@@ -593,17 +631,17 @@ class QutipEmulator:
             or "eff_noise" in self.noise_model.noise_types
         ):
             result = qutip.mesolve(
-                self._hamiltonian._hamiltonian,
+                hamiltonian._hamiltonian,
                 self.initial_state,
                 self._eval_times_array,
-                self._hamiltonian._collapse_ops,
+                hamiltonian._collapse_ops,
                 options=dict(
                     progress_bar=p_bar, normalize_output=False, **options
                 ),
             )
         else:
             result = qutip.sesolve(
-                self._hamiltonian._hamiltonian,
+                hamiltonian._hamiltonian,
                 self.initial_state,
                 self._eval_times_array,
                 options=dict(
@@ -654,18 +692,13 @@ class QutipEmulator:
         )
 
         if "SPAM" in self.noise_model.noise_types:
+            v = self._hamiltonian_data.basis_data.interaction_type
             if (
                 self.noise_model.state_prep_error > 0
                 and self.initial_state
                 != qutip.tensor(
                     [
-                        self.basis[
-                            (
-                                "u"
-                                if self._hamiltonian_data._interaction == "XY"
-                                else "g"
-                            )
-                        ]
+                        self.basis[("u" if v == "XY" else "g")]
                         for _ in range(self._hamiltonian_data.nbqudits)
                     ]
                 )
@@ -701,14 +734,13 @@ class QutipEmulator:
         self._validate_options(options)
 
         if (
-            "amplitude" not in self.noise_model.noise_types
-            or self.noise_model.amp_sigma == 0.0
-        ) and (
             "SPAM" not in self.noise_model.noise_types
             or self.noise_model.state_prep_error == 0
-        ):
+        ) and not _has_shot_to_shot_except_spam(self.noise_model):
             # A single run is needed, regardless of self.config.runs
-            return self._run_solver(progress_bar, **options)
+            return self._run_solver(
+                self._current_hamiltonian, progress_bar, **options
+            )
 
         # Will return NoisyResults
         total_count = np.array([Counter() for _ in self._eval_times_array])
@@ -749,65 +781,10 @@ class QutipEmulator:
     def _noisy_runs(
         self, progress_bar: bool, **options: Any
     ) -> Iterator[tuple[SimulationResults, int]]:
-        if (
-            "doppler" in self.noise_model.noise_types
-            or (
-                "amplitude" in self.noise_model.noise_types
-                and self.noise_model.amp_sigma != 0.0
-            )
-            or "detuning" in self.noise_model.noise_types
-            or "register" in self.noise_model.noise_types
-        ):
-            loop_runs = cast(int, self.noise_model.runs)
-            update_ham = True
-        else:
-            # Only state preparation noise for monte-carlo:
-            # a single run is needed
-            # for all identical sets of random dark qubits.
-
-            assert self.noise_model.state_prep_error != 0
-
-            initial_configs = Counter(
-                "".join(
-                    (
-                        np.random.uniform(
-                            size=len(self._hamiltonian_data._qid_index)
-                        )
-                        < self.noise_model.state_prep_error
-                    )
-                    .astype(int)
-                    .astype(str)  # Turns bool->int->str
-                )
-                for _ in range(cast(int, self.noise_model.runs))
-            ).most_common()
-            loop_runs = len(initial_configs)
-            update_ham = False
-
-        for i in range(loop_runs):
-            if update_ham:
-                reps = 1
-            else:
-                initial_state, reps = initial_configs[i]
-                # We load the initial state manually
-                old_traj = self._hamiltonian_data.noise_trajectories[0]
-                self._hamiltonian_data.noise_trajectories[0] = (
-                    replace(
-                        old_traj[0],
-                        bad_atoms=dict(
-                            zip(
-                                self._hamiltonian_data._qid_index,
-                                # "0110..." -> array([0, 1, 1, 0, ...])
-                                # -> array([False, True, True, False, ...])
-                                np.array(
-                                    list(initial_state), dtype=int
-                                ).astype(bool),
-                            )
-                        ),
-                    ),
-                    old_traj[1],
-                )
+        for ham, reps in self._hamiltonians:
+            self._current_hamiltonian = ham
             # Yield CoherentResults instance from sequence with added noise:
-            yield self._run_solver(progress_bar, **options), reps
+            yield self._run_solver(ham, progress_bar, **options), reps
 
     def draw(
         self,
