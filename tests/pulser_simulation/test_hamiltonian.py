@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 
-from pulser import MockDevice, NoiseModel, Pulse, Sequence
+from pulser import MockDevice, Pulse, Sequence
+from pulser._hamiltonian_data import HamiltonianData
 from pulser.register import Register, Register3D
-from pulser.sampler import sample
 from pulser_simulation.hamiltonian import Hamiltonian
 
 
@@ -42,14 +42,15 @@ def test_register_2d(reg2d):
     # The two local channels target alternating qubits on the same basis
     seq.add(pulse1, "ch1", protocol="no-delay")
     seq.add(pulse1, "ch2", protocol="no-delay")
-
-    Hamiltonian(
-        sample(seq),
-        reg2d,
-        seq.device,
-        sampling_rate,
-        NoiseModel(),
-    )
+    data = HamiltonianData.from_sequence(seq)
+    for traj, noisy_samples, n in data.noisy_samples:
+        Hamiltonian(
+            noisy_samples,
+            traj,
+            data.basis_data,
+            data.lindblad_data,
+            sampling_rate,
+        )
 
 
 def test_register_3d(reg3d):
@@ -68,11 +69,12 @@ def test_register_3d(reg3d):
     # The two local channels target alternating qubits on the same basis
     seq.add(pulse1, "ch1", protocol="no-delay")
     seq.add(pulse1, "ch2", protocol="no-delay")
-
-    Hamiltonian(
-        sample(seq),
-        reg3d,
-        seq.device,
-        sampling_rate,
-        NoiseModel(),
-    )
+    data = HamiltonianData.from_sequence(seq)
+    for traj, noisy_samples, n in data.noisy_samples:
+        Hamiltonian(
+            noisy_samples,
+            traj,
+            data.basis_data,
+            data.lindblad_data,
+            sampling_rate,
+        )
