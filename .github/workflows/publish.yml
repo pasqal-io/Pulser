@@ -60,9 +60,11 @@ jobs:
             echo "Failed to download from PyPI, will wait for upload and retry."
             sleep 30
           done
-
   check-release:
     needs: deploy
+    env:
+      # Set Matplotlib backend to fix flaky execution on Windows
+      MPLBACKEND: Agg
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

@@ -162,12 +162,16 @@ class QutipBackendV2(EmulatorBackend):
             total_duration=self._sim_obj.total_duration_ns,
         )
         eigenstates = self._sim_obj.samples_obj.eigenbasis
+        options: dict = {}
+        self._sim_obj._validate_options(
+            options
+        )  # setup the default qutip options
         if (
             "SPAM" not in self._config.noise_model.noise_types
             or self._config.noise_model.state_prep_error == 0
         ) and not _has_shot_to_shot_except_spam(self._sim_obj.noise_model):
             # A single run is needed, regardless of self.config.runs
-            single_res = self._sim_obj.run()
+            single_res = self._sim_obj.run(**options)
             assert isinstance(single_res, CoherentResults)
 
             for qutip_res in single_res:
@@ -198,7 +202,7 @@ class QutipBackendV2(EmulatorBackend):
             density_matrices: dict[float, qutip.Qobj] = {}
             total_reps = 0
             for cleanres_noisyseq, reps in self._sim_obj._noisy_runs(
-                progress_bar=False
+                progress_bar=False, **options
             ):
                 total_reps += reps
                 for index, qutip_res in enumerate(cleanres_noisyseq):

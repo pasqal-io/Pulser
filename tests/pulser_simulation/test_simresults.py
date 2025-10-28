@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
 from collections import Counter
 from typing import cast
 
@@ -396,9 +397,15 @@ def test_sample_final_state_three_level(seq_no_meas, pi_pulse):
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_sample_final_state_noisy(seq_no_meas, results_noisy):
     np.random.seed(123)
-    assert results_noisy.sample_final_state(N_samples=1234) == Counter(
-        {"11": 588, "10": 250, "01": 270, "00": 126}
-    )
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "'SampledResult.get_samples()' resamples a sampling distribution"
+        ),
+    ):
+        assert results_noisy.sample_final_state(N_samples=1234) == Counter(
+            {"11": 588, "10": 250, "01": 270, "00": 126}
+        )
     res_3level = QutipEmulator.from_sequence(
         seq_no_meas,
         noise_model=NoiseModel(

@@ -179,7 +179,7 @@ def test_noisy_register_torch(register2D):
 def test_init_errors():
     seq = seq_with_SLM("rydberg_global")
     seq_samples = sample(seq)
-    register = pulser.Register.square(3, spacing=6)
+    register = pulser.Register.square(3, spacing=6, prefix="")
     with pytest.raises(
         TypeError,
         match=(
@@ -323,7 +323,8 @@ def test_int_qubit_ids():
         0: [-4.0, 0.0],
         1: [4.0, 0.0],
     }
-    reg = pulser.Register(q_dict)
+    with pytest.deprecated_call():
+        reg = pulser.Register(q_dict)
     seq = pulser.Sequence(reg, pulser.MockDevice)
 
     seq.declare_channel("ch0", "rydberg_global")
