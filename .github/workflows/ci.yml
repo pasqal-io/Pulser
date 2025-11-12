@@ -69,7 +69,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.13"]
+        python-version: ["3.10", "3.14"]
         with-torch: ["with-torch", "no-torch"]
         numpy: ["numpy-v1", "numpy-v2"]
         include:
@@ -77,8 +77,8 @@ jobs:
             with-torch: "with-torch"
             numpy: "numpy-v1"
         exclude:
-          # Numpy v1 does not support Python 3.13
-          - python-version: "3.13"
+          # Numpy v1 does not support Python 3.14
+          - python-version: "3.14"
             numpy: "numpy-v1"
           - numpy: "numpy-v1"
             with-torch: "no-torch"
@@ -99,6 +99,7 @@ jobs:
         if: ${{ matrix.with-torch != 'with-torch'}}
         run: pytest --cov
       - name: Test validation with legacy jsonschema
+        if: ${{ matrix.python-version != '3.14'}}
         run: |
           pip install jsonschema==4.17.3
           pytest tests/test_abstract_repr.py -W ignore::DeprecationWarning
