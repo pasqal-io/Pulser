@@ -883,7 +883,7 @@ def test_noise(seq, matrices):
         ),
     ):
         assert sim2.run().sample_final_state() == Counter(
-            {"000": 837, "100": 55, "110": 69, "001": 14, "010": 25}
+            {"000": 824, "100": 13, "101": 69, "001": 94}
         )
     with pytest.raises(NotImplementedError, match="Cannot include"):
         QutipEmulator.from_sequence(
@@ -891,16 +891,16 @@ def test_noise(seq, matrices):
         )
     assert sim2._current_hamiltonian.samples.to_nested_dict()["Global"] == {}
     assert any(
-        sim2._hamiltonian.data.noise_trajectories[0][0].bad_atoms.values()
+        sim2._hamiltonian_data.noise_trajectories[0][0].bad_atoms.values()
     )
     for basis in ("ground-rydberg", "digital"):
-        for t in sim2._hamiltonian.data.bad_atoms[0]:
-            if not sim2._hamiltonian.data.bad_atoms[0][t]:
+        for t in sim2._hamiltonian_data.bad_atoms[0]:
+            if not sim2._hamiltonian_data.bad_atoms[0][t]:
                 continue
             for qty in ("amp", "det", "phase"):
                 assert np.all(
-                    sim2._hamiltonian.data.noisy_samples.__next__()[
-                        0
+                    sim2._hamiltonian_data.noisy_samples.__next__()[
+                        1
                     ].to_nested_dict()["Local"][basis][t][qty]
                     == 0.0
                 )

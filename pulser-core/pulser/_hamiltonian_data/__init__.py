@@ -19,6 +19,7 @@ and a list of noise trajectories.
 
 from pulser._hamiltonian_data.hamiltonian_data import (
     HamiltonianData as HamiltonianData,
+    has_shot_to_shot_except_spam,
 )
 from pulser._hamiltonian_data.noise_trajectory import (
     NoiseTrajectory as NoiseTrajectory,

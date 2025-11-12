@@ -69,6 +69,18 @@ SUPPORTED_NOISES: dict = {
 }
 
 
+def has_shot_to_shot_except_spam(noise_model: NoiseModel) -> bool:
+    return (
+        "doppler" in noise_model.noise_types
+        or (
+            "amplitude" in noise_model.noise_types
+            and noise_model.amp_sigma != 0.0
+        )
+        or "detuning" in noise_model.noise_types
+        or "register" in noise_model.noise_types
+    )
+
+
 def doppler_sigma(temperature: float) -> float:
     """Standard deviation for Doppler shifting due to thermal motion.
 
@@ -736,19 +748,10 @@ class HamiltonianData:
         """
         self.noise_trajectories: list[tuple[NoiseTrajectory, int]] = []
         ntrajs = self.noise_model.runs or 1
-        collapsable_noise = not (
-            "doppler" in self.noise_model.noise_types
-            or (
-                "amplitude" in self.noise_model.noise_types
-                and self.noise_model.amp_sigma != 0.0
-            )
-            or "detuning" in self.noise_model.noise_types
-            or "register" in self.noise_model.noise_types
-        )  # only SPAM and effective noise
         amp_fluctuations: dict[str, float] = {}
         det_fluctuations: dict[str, float] = {}
         det_phases: dict[str, np.ndarray] = {}
-        if collapsable_noise:
+        if not has_shot_to_shot_except_spam(self.noise_model):
             initial_configs = Counter(
                 "".join(
                     (
@@ -765,7 +768,7 @@ class HamiltonianData:
             for ch in self._samples.channel_samples:
                 amp_fluctuations[ch] = max(
                     0, np.random.normal(1.0, self.noise_model.amp_sigma)
-                )
+                )  # amp_sigma = 0
                 det_fluctuations[ch] = 0.0
                 det_phases[ch] = np.array(0.0)
             for bool_string, n in initial_configs:

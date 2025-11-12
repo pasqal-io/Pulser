@@ -18,7 +18,7 @@ from __future__ import annotations
 import warnings
 from collections import Counter
 from collections.abc import Iterator
-from dataclasses import asdict, replace
+from dataclasses import asdict
 from functools import cached_property
 from typing import Any, Optional, Union, cast
 
@@ -29,7 +29,10 @@ from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
 from pulser import Sequence
-from pulser._hamiltonian_data import HamiltonianData
+from pulser._hamiltonian_data import (
+    HamiltonianData,
+    has_shot_to_shot_except_spam,
+)
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
@@ -45,18 +48,6 @@ from pulser_simulation.simresults import (
     NoisyResults,
     SimulationResults,
 )
-
-
-def _has_shot_to_shot_except_spam(noise_model: NoiseModel) -> bool:
-    return (
-        "doppler" in noise_model.noise_types
-        or (
-            "amplitude" in noise_model.noise_types
-            and noise_model.amp_sigma != 0.0
-        )
-        or "detuning" in noise_model.noise_types
-        or "register" in noise_model.noise_types
-    )
 
 
 class QutipEmulator:
@@ -127,33 +118,9 @@ class QutipEmulator:
                 "The ids of qubits targeted in SLM mask"
                 " should be defined in register."
             )
-        samples_list = []
-        for ch, ch_samples in sampled_seq.channel_samples.items():
-            if sampled_seq._ch_objs[ch].addressing == "Local":
-                # Check that targets of Local Channels are defined
-                # in register
-                if not set().union(
-                    *(slot.targets for slot in ch_samples.slots)
-                ) <= set(register.qubit_ids):
-                    raise ValueError(
-                        "The ids of qubits targeted in Local channels"
-                        " should be defined in register."
-                    )
-                samples_list.append(ch_samples)
-            else:
-                # Replace targets of Global channels by qubits of register
-                samples_list.append(
-                    replace(
-                        ch_samples,
-                        slots=[
-                            replace(slot, targets=set(register.qubit_ids))
-                            for slot in ch_samples.slots
-                        ],
-                    )
-                )
-        _sampled_seq = replace(sampled_seq, samples_list=samples_list)
-        self._tot_duration = _sampled_seq.max_duration
-        self.samples_obj = _sampled_seq.extend_duration(self._tot_duration + 1)
+
+        self._tot_duration = sampled_seq.max_duration
+        self.samples_obj = sampled_seq.extend_duration(self._tot_duration + 1)
 
         # Testing sampling
         if not (0 < sampling_rate <= 1.0):
@@ -736,7 +703,7 @@ class QutipEmulator:
         if (
             "SPAM" not in self.noise_model.noise_types
             or self.noise_model.state_prep_error == 0
-        ) and not _has_shot_to_shot_except_spam(self.noise_model):
+        ) and not has_shot_to_shot_except_spam(self.noise_model):
             # A single run is needed, regardless of self.config.runs
             return self._run_solver(
                 self._current_hamiltonian, progress_bar, **options

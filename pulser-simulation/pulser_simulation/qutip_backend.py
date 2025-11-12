@@ -21,6 +21,7 @@ import numpy as np
 import qutip
 
 import pulser
+from pulser._hamiltonian_data import has_shot_to_shot_except_spam
 from pulser.backend.abc import Backend, EmulatorBackend
 from pulser.backend.config import EmulationConfig, EmulatorConfig
 from pulser.backend.default_observables import BitStrings, StateResult
@@ -30,10 +31,7 @@ from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simresults import CoherentResults, SimulationResults
-from pulser_simulation.simulation import (
-    QutipEmulator,
-    _has_shot_to_shot_except_spam,
-)
+from pulser_simulation.simulation import QutipEmulator
 
 
 class QutipBackend(Backend):
@@ -169,7 +167,7 @@ class QutipBackendV2(EmulatorBackend):
         if (
             "SPAM" not in self._config.noise_model.noise_types
             or self._config.noise_model.state_prep_error == 0
-        ) and not _has_shot_to_shot_except_spam(self._sim_obj.noise_model):
+        ) and not has_shot_to_shot_except_spam(self._sim_obj.noise_model):
             # A single run is needed, regardless of self.config.runs
             single_res = self._sim_obj.run(**options)
             assert isinstance(single_res, CoherentResults)
