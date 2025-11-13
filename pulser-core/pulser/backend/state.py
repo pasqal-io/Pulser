@@ -186,6 +186,8 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
             return "1"
         if eigenstates == {"r", "g"}:
             return "r"
+        if eigenstates == {"r", "g", "x"}:
+            return "r"
         if eigenstates == {"g", "h"}:
             return "h"
         if eigenstates == {"u", "d"}:

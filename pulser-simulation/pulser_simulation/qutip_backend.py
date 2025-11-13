@@ -30,7 +30,10 @@ from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simresults import CoherentResults, SimulationResults
-from pulser_simulation.simulation import QutipEmulator
+from pulser_simulation.simulation import (
+    QutipEmulator,
+    _has_shot_to_shot_except_spam,
+)
 
 
 class QutipBackend(Backend):
@@ -158,22 +161,15 @@ class QutipBackendV2(EmulatorBackend):
             atom_order=tuple(self._sequence.qubit_info),
             total_duration=self._sim_obj.total_duration_ns,
         )
-        eigenstates = self._sim_obj.samples_obj.eigenbasis
+        eigenstates = self._sim_obj._hamiltonian.data.eigenbasis
         options: dict = {}
         self._sim_obj._validate_options(
             options
         )  # setup the default qutip options
         if (
-            ("doppler" not in self._sim_obj.noise_model.noise_types)
-            and (
-                "amplitude" not in self._sim_obj.noise_model.noise_types
-                or self._sim_obj.noise_model.amp_sigma == 0.0
-            )
-            and (
-                "SPAM" not in self._sim_obj.noise_model.noise_types
-                or self._sim_obj.noise_model.state_prep_error == 0
-            )
-        ):
+            "SPAM" not in self._sim_obj.noise_model.noise_types
+            or self._sim_obj.noise_model.state_prep_error == 0
+        ) and not _has_shot_to_shot_except_spam(self._sim_obj.noise_model):
             # A single run is needed, regardless of self.config.runs
             single_res = self._sim_obj._run_solver(
                 progress_bar=False, **options
@@ -185,7 +181,7 @@ class QutipBackendV2(EmulatorBackend):
                 state = QutipState(qutip_res.state, eigenstates=eigenstates)
                 ham: QutipOperator = QutipOperator(
                     self._sim_obj.get_hamiltonian(
-                        t * res.total_duration, noiseless=True
+                        t * res.total_duration, noiseless=False
                     ),
                     eigenstates=eigenstates,
                 )
