@@ -244,7 +244,8 @@ def test_qutip_backend_v2_eval_times_rounding():
         assert len(result) == n_points
 
 
-def test_leakage():
+@pytest.mark.parametrize("amp_sigma", [0.0, 1.0])
+def test_leakage(amp_sigma):
     natoms = 2
     reg = pulser.Register.rectangle(1, natoms, spacing=1000.0, prefix="q")
 
@@ -263,11 +264,12 @@ def test_leakage():
     eff_rate = [rate, rate]
     eff_ops = [basisx @ basisr.T, basisx @ basisg.T]  # |x><r| and |x><g|
 
-    # eff_ops must be a torch.tensor if you want to work with emu_mps
     noise_model = pulser.NoiseModel(
         eff_noise_rates=eff_rate,
         eff_noise_opers=eff_ops,
         with_leakage=True,
+        amp_sigma=amp_sigma,
+        runs=int(amp_sigma) or None,
     )
 
     eval_times = [1.0]
@@ -327,7 +329,6 @@ def test_register_detuning_detection():
     pulse = pulser.Pulse.ConstantPulse(duration, np.pi, 0.0, 0.0)
     seq.add(pulse, "ch0")
 
-    # eff_ops must be a torch.tensor if you want to work with emu_mps
     noise_model = pulser.NoiseModel(
         trap_depth=1.0,
         trap_waist=1.0,
@@ -336,6 +337,8 @@ def test_register_detuning_detection():
         detuning_sigma=5.0,
         runs=10,
     )
+
+    assert set(noise_model.noise_types) == {"register", "detuning"}
 
     eval_times = [1.0]
     qutip_config = QutipConfig(

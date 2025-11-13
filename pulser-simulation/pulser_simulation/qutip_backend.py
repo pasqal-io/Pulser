@@ -181,7 +181,7 @@ class QutipBackendV2(EmulatorBackend):
                 state = QutipState(qutip_res.state, eigenstates=eigenstates)
                 ham: QutipOperator = QutipOperator(
                     self._sim_obj.get_hamiltonian(
-                        t * res.total_duration, noiseless=False
+                        t * res.total_duration, noiseless=True
                     ),
                     eigenstates=eigenstates,
                 )
@@ -205,17 +205,18 @@ class QutipBackendV2(EmulatorBackend):
         else:
             density_matrices: dict[float, qutip.Qobj] = {}
             total_reps = 0
+            dim = len(self._sim_obj.basis)
             for cleanres_noisyseq, reps in self._sim_obj._noisy_runs(
                 progress_bar=False, **options
             ):
                 total_reps += reps
-                for index, qutip_res in enumerate(cleanres_noisyseq):
+                for qutip_res in cleanres_noisyseq:
                     t = qutip_res.evaluation_time
 
                     if t not in density_matrices:
                         density_matrices[t] = qutip.tensor(
                             [
-                                qutip.Qobj(np.zeros((2, 2)))
+                                qutip.Qobj(np.zeros((dim, dim)))
                                 for _ in range(
                                     self._sim_obj._hamiltonian.nbqudits
                                 )
