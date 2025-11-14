@@ -181,7 +181,7 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         Only works when the eigenstates form a known eigenbasis with
         a well-defined "one state".
         """
-        eigenstates = set(self.eigenstates)
+        eigenstates = set(self.eigenstates) - {"x"}
         if eigenstates == {"0", "1"}:
             return "1"
         if eigenstates == {"r", "g"}:
