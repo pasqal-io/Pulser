@@ -58,7 +58,12 @@ from pulser.parametrized.paramobj import ParamObj
 from pulser.parametrized.variable import Variable, VariableItem
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import TriangularLatticeLayout
+from pulser.sequence import (
+    store_extra_metadata,
+    store_package_version_metadata,
+)
 from pulser.sequence._call import _Call
+from pulser.sequence.metadata import _reset_metadata
 from pulser.waveforms import (
     BlackmanWaveform,
     CompositeWaveform,
@@ -1525,6 +1530,48 @@ class TestSerialization:
                 mock.assert_not_called()
             else:
                 mock.assert_called_once()
+
+    def test_metadata(self, sequence):
+        try:
+            abstract = json.loads(sequence.to_abstract_repr())
+            # The default
+            assert "metadata" not in abstract
+
+            # Add some package version
+            store_package_version_metadata("my-package", "0.0.1")
+            abstract = json.loads(sequence.to_abstract_repr())
+            assert abstract["metadata"] == {
+                "package_versions": {
+                    # pulser-core is added by default
+                    "my-package": "0.0.1",
+                },
+                "extra": {},
+            }
+
+            # Add another
+            store_package_version_metadata("my-package2", "0.0.1")
+            abstract = json.loads(sequence.to_abstract_repr())
+            assert abstract["metadata"] == {
+                "package_versions": {
+                    "my-package": "0.0.1",
+                    "my-package2": "0.0.1",
+                },
+                "extra": {},
+            }
+
+            # Add some extra metadata
+            store_extra_metadata({"whatever": "I want"})
+            abstract = json.loads(sequence.to_abstract_repr())
+            assert abstract["metadata"] == {
+                "package_versions": {
+                    "my-package": "0.0.1",
+                    "my-package2": "0.0.1",
+                },
+                "extra": {"whatever": "I want"},
+            }
+        finally:
+            # Clean up to avoid affecting subsequent tests
+            _reset_metadata()
 
 
 def _get_serialized_seq(
