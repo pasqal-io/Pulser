@@ -201,8 +201,12 @@ class QutipEmulator:
                 self._meas_basis = self.basis_name.replace("_with_error", "")
         self.set_initial_state("all-ground")
 
+    @property
+    def _noiseless_hamiltonian(self) -> Hamiltonian:
+        return self._get_noiseless_hamiltonian(False)
+
     @lru_cache(maxsize=2)
-    def _noiseless_hamiltonian(self, leakage: bool) -> Hamiltonian:
+    def _get_noiseless_hamiltonian(self, leakage: bool) -> Hamiltonian:
         """The garbage state IS INCLUDED if leakage is in the noise model."""
         if leakage:
             eff_rate = (0.0,)
@@ -570,9 +574,7 @@ class QutipEmulator:
             )
 
         if noiseless:
-            return self._noiseless_hamiltonian(
-                self.noise_model.with_leakage
-            )._hamiltonian(time / 1000)
+            return self._noiseless_hamiltonian._hamiltonian(time / 1000)
 
         return self._hamiltonian._hamiltonian(
             time / 1000

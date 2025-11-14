@@ -180,9 +180,9 @@ class QutipBackendV2(EmulatorBackend):
                 t = qutip_res.evaluation_time
                 state = QutipState(qutip_res.state, eigenstates=eigenstates)
                 ham: QutipOperator = QutipOperator(
-                    self._sim_obj.get_hamiltonian(
-                        t * res.total_duration, noiseless=True
-                    ),
+                    self._sim_obj._get_noiseless_hamiltonian(
+                        self._config.noise_model.with_leakage
+                    )._hamiltonian(t * res.total_duration / 1000),
                     eigenstates=eigenstates,
                 )
                 for callback in self._config.callbacks:
@@ -237,9 +237,9 @@ class QutipBackendV2(EmulatorBackend):
             for t, dm in density_matrices.items():
                 state = QutipState(dm, eigenstates=eigenstates)
                 ham = QutipOperator(
-                    self._sim_obj.get_hamiltonian(
-                        t * res.total_duration, noiseless=True
-                    ),
+                    self._sim_obj._get_noiseless_hamiltonian(
+                        self._config.noise_model.with_leakage
+                    )._hamiltonian(t * res.total_duration / 1000),
                     eigenstates=eigenstates,
                 )
                 for callback in self._config.callbacks:
