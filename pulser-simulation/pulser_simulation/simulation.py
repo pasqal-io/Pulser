@@ -207,7 +207,11 @@ class QutipEmulator:
 
     @lru_cache(maxsize=2)
     def _get_noiseless_hamiltonian(self, leakage: bool) -> Hamiltonian:
-        """The garbage state IS INCLUDED if leakage is in the noise model."""
+        """Get the noiseless Hamiltonian.
+
+        Args:
+            leakage: whether to include the leakage state in the basis.
+        """
         if leakage:
             eff_rate = (0.0,)
             eff_ops = (np.zeros((3, 3)),)
