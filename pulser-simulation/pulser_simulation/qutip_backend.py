@@ -114,6 +114,9 @@ class QutipBackendV2(EmulatorBackend):
 
     Conforms to the generic API from pulser.backend.
 
+    Dedicated ``EmulationConfig`` class:
+    :py:class:`pulser_simulation.QutipConfig`.
+
     Args:
         sequence: The sequence to emulate.
         config: The configuration for the Qutip emulator.
@@ -188,7 +191,7 @@ class QutipBackendV2(EmulatorBackend):
                 for callback in self._config.callbacks:
                     callback(
                         config=self._config,
-                        t=t,
+                        t=float(t),
                         state=state,
                         hamiltonian=ham,
                         result=res,
@@ -196,7 +199,7 @@ class QutipBackendV2(EmulatorBackend):
                 for obs in self._config.observables:
                     obs(
                         config=self._config,
-                        t=t,
+                        t=float(t),
                         state=state,
                         hamiltonian=ham,
                         result=res,
@@ -245,7 +248,7 @@ class QutipBackendV2(EmulatorBackend):
                 for callback in self._config.callbacks:
                     callback(
                         config=self._config,
-                        t=t,
+                        t=float(t),
                         state=state,
                         hamiltonian=ham,
                         result=res,
@@ -253,7 +256,7 @@ class QutipBackendV2(EmulatorBackend):
                 for obs in self._config.observables:
                     obs(
                         config=self._config,
-                        t=t,
+                        t=float(t),
                         state=state,
                         hamiltonian=ham,
                         result=res,

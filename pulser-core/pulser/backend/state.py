@@ -259,21 +259,20 @@ class StateRepr(State):
 
     Allows the user to define a quantum state with the usual dedicated class
     method `from_state_amplitudes`, which requires:
+
     - eigenstates: The basis states (e.g., ('r', 'g')).
     - amplitudes: A mapping between basis state combinations and
-        complex amplitudes (e.g., {"rgr": 0.5, "grg": 0.5}).
+      complex amplitudes (e.g., {"rgr": 0.5, "grg": 0.5}).
 
     The created state, supports de/serialization methods for remote backend
     execution.
 
-    Example:
-    ```python
-    eigenstates = ("r", "g")
-    amplitudes = {"rgr"=0.5, "grg"=0.5}
-    state = StateRepr.from_state_amplitudes(
-        eigenstates=eigenstates, amplitudes=amplitudes
-    )
-    ```
+    Examples:
+        >>> eigenstates = ("r", "g")
+        >>> amplitudes = {"rgr": 0.5, "grg": 0.5}
+        >>> state = StateRepr.from_state_amplitudes(
+        >>>     eigenstates=eigenstates, amplitudes=amplitudes
+        >>> )
     """
 
     _n_qudits: int
