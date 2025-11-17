@@ -188,7 +188,7 @@ class QutipBackendV2(EmulatorBackend):
                 for callback in self._config.callbacks:
                     callback(
                         config=self._config,
-                        t=t,
+                        t=float(t),
                         state=state,
                         hamiltonian=ham,
                         result=res,
@@ -196,7 +196,7 @@ class QutipBackendV2(EmulatorBackend):
                 for obs in self._config.observables:
                     obs(
                         config=self._config,
-                        t=t,
+                        t=float(t),
                         state=state,
                         hamiltonian=ham,
                         result=res,
@@ -245,7 +245,7 @@ class QutipBackendV2(EmulatorBackend):
                 for callback in self._config.callbacks:
                     callback(
                         config=self._config,
-                        t=t,
+                        t=float(t),
                         state=state,
                         hamiltonian=ham,
                         result=res,
@@ -253,7 +253,7 @@ class QutipBackendV2(EmulatorBackend):
                 for obs in self._config.observables:
                     obs(
                         config=self._config,
-                        t=t,
+                        t=float(t),
                         state=state,
                         hamiltonian=ham,
                         result=res,
