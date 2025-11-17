@@ -71,8 +71,9 @@ class QutipState(State[SupportsComplex, float]):
     def overlap(self, other: QutipState) -> float:
         """Compute the overlap between this state and another of the same type.
 
-        Generally computes Tr[AB] for mixed states A and B, which
-        corresponds to |<a|b>|^2 for pure states A=|a><a| and B=|b><b|.
+        Generally computes ``Tr[AB]`` for mixed states ``A`` and ``B``, which
+        corresponds to ``|<a|b>|^2`` for pure states
+        ``A=|a><a|`` and ``B=|b><b|``.
 
         Args:
             other: The other state.
