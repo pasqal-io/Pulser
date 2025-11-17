@@ -114,6 +114,8 @@ class QutipBackendV2(EmulatorBackend):
 
     Conforms to the generic API from pulser.backend.
 
+    Dedicated `EmulationConfig` class: `pulser_simulation.QutipConfig`.
+
     Args:
         sequence: The sequence to emulate.
         config: The configuration for the Qutip emulator.

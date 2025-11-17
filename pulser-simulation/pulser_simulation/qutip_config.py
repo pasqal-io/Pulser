@@ -27,6 +27,9 @@ from pulser_simulation.qutip_state import QutipState
 class QutipConfig(EmulationConfig[QutipState]):
     """The configuration of a QutipBackendV2.
 
+    - Dedicated `State` class: `pulser_simulation.QutipState`.
+    - Dedicated `Operator` class:  `pulser_simulation.QutipOperator`.
+
     Args:
         observables: A sequence of observables to compute at specific
             evaluation times. The observables without specified evaluation
