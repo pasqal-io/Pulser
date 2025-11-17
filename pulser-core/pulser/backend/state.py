@@ -269,7 +269,7 @@ class StateRepr(State):
 
     Examples:
         >>> eigenstates = ("r", "g")
-        >>> amplitudes = {"rgr"=0.5, "grg"=0.5}
+        >>> amplitudes = {"rgr": 0.5, "grg": 0.5}
         >>> state = StateRepr.from_state_amplitudes(
         >>>     eigenstates=eigenstates, amplitudes=amplitudes
         >>> )
