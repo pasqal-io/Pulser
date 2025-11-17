@@ -12,6 +12,8 @@ Classes
    QutipBackend
    QutipBackendV2
    QutipConfig
+   QutipState
+   QutipOperator
    QutipEmulator
    SimConfig
 
