@@ -12,6 +12,8 @@ Classes
    QutipBackend
    QutipBackendV2
    QutipConfig
+   QutipState
+   QutipOperator
    QutipEmulator
    SimConfig
 
@@ -23,5 +25,7 @@ Modules
 
    pulser_simulation.qutip_backend
    pulser_simulation.qutip_config
+   pulser_simulation.qutip_state
+   pulser_simulation.qutip_op
    pulser_simulation.qutip_result
    pulser_simulation.simresults

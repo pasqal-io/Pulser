@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Definition of QutipState and QutipOperator."""
+"""Definition of QutipState."""
 from __future__ import annotations
 
 import math
@@ -71,8 +71,9 @@ class QutipState(State[complex, float]):
     def overlap(self, other: QutipState) -> float:
         """Compute the overlap between this state and another of the same type.
 
-        Generally computes Tr[AB] for mixed states A and B, which
-        corresponds to |<a|b>|^2 for pure states A=|a><a| and B=|b><b|.
+        Generally computes ``Tr[AB]`` for mixed states ``A`` and ``B``, which
+        corresponds to ``|<a|b>|^2`` for pure states
+        ``A=|a><a|`` and ``B=|b><b|``.
 
         Args:
             other: The other state.
@@ -193,7 +194,7 @@ class QutipState(State[complex, float]):
         probs = np.array(list(map(float, bitstring_probs.values())))
         indices = multinomial(num_shots, probs)
         if p_false_pos == 0.0 and p_false_neg == 0.0:
-            return Counter(bitstrings[indices])
+            return Counter(bitstrings[indices].tolist())
 
         # Convert bitstrings to a 2D array
         bitstr_arr = np.array(
