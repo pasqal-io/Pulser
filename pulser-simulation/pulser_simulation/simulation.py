@@ -18,7 +18,7 @@ from __future__ import annotations
 import warnings
 from collections import Counter
 from collections.abc import Iterator
-from dataclasses import asdict, replace
+from dataclasses import asdict
 from functools import lru_cache
 from typing import Any, Optional, Union, cast
 
@@ -195,12 +195,10 @@ class QutipEmulator:
             )
         else:
             noise = NoiseModel()
-        
+
         noiseless_data = HamiltonianData(
-            self.samples_obj,
-            self._register,
-            self._device,
-            noise)
+            self.samples_obj, self._register, self._device, noise
+        )
         return Hamiltonian(
             noiseless_data.samples,
             noiseless_data.noise_trajectories[0][0],

@@ -245,6 +245,7 @@ def test_qutip_backend_v2_eval_times_rounding():
 
         assert len(result) == n_points
 
+
 @pytest.mark.parametrize("amp_sigma", [0.0, 1.0])
 def test_leakage(amp_sigma):
     natoms = 2
