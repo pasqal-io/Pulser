@@ -101,12 +101,13 @@ class TestQutipState:
         assert state.to_qobj() == two_qutrit_dm
 
     @pytest.mark.parametrize(
-        "eigenstates", [("g", "r"), ("g", "h"), ("u", "d"), ("0", "1")]
+        "eigenstates",
+        [("g", "r"), ("g", "r", "x"), ("g", "h"), ("u", "d"), ("0", "1")],
     )
     def test_infer_one_state(self, eigenstates):
         assert (
             QutipState(
-                qutip.basis(2, 0), eigenstates=eigenstates
+                qutip.basis(len(eigenstates), 0), eigenstates=eigenstates
             ).infer_one_state()
             == eigenstates[1]
         )

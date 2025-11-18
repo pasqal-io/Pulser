@@ -18,8 +18,8 @@ from __future__ import annotations
 import warnings
 from collections import Counter
 from collections.abc import Iterator
-from dataclasses import asdict
-from functools import cached_property
+from dataclasses import asdict, replace
+from functools import lru_cache
 from typing import Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
@@ -174,14 +174,33 @@ class QutipEmulator:
                 self._meas_basis = self.basis_name.replace("_with_error", "")
         self.set_initial_state("all-ground")
 
-    @cached_property
+    @property
     def _noiseless_hamiltonian(self) -> Hamiltonian:
+        return self._get_noiseless_hamiltonian(False)
+
+    @lru_cache(maxsize=2)
+    def _get_noiseless_hamiltonian(self, leakage: bool) -> Hamiltonian:
+        """Get the noiseless Hamiltonian.
+
+        Args:
+            leakage: whether to include the leakage state in the basis.
+        """
+        if leakage:
+            eff_rate = (0.0,)
+            eff_ops = (np.zeros((3, 3)),)
+            noise = NoiseModel(
+                eff_noise_opers=eff_ops,  # feed zero op because needed
+                eff_noise_rates=eff_rate,
+                with_leakage=leakage,
+            )
+        else:
+            noise = NoiseModel()
+        
         noiseless_data = HamiltonianData(
             self.samples_obj,
             self._register,
             self._device,
-            NoiseModel(),
-        )
+            noise)
         return Hamiltonian(
             noiseless_data.samples,
             noiseless_data.noise_trajectories[0][0],

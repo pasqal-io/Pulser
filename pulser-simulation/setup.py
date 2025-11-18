@@ -53,7 +53,7 @@ setup(
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     author="Pulser Development Team",
-    python_requires=">=3.9",
+    python_requires=">=3.10",
     license="Apache 2.0",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
