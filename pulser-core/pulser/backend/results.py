@@ -19,6 +19,7 @@ import json
 import typing
 import uuid
 import warnings
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Callable, TypeVar, cast, overload
 
@@ -103,12 +104,10 @@ class Results:
         raise AttributeError(f"{name!r} is not in the results.")
 
     @property
-    def final_bitstrings(self) -> dict[str, int]:
+    def final_bitstrings(self) -> Counter[str]:
         """Returns the bitstrings at the end of the sequence, if available."""
         try:
-            return cast(
-                typing.Dict[str, int], self.get_result("bitstrings", time=1.0)
-            )
+            return cast(Counter[str], self.get_result("bitstrings", time=1.0))
         except ValueError:
             raise RuntimeError(
                 "The final bitstrings are not available. Please make sure "

@@ -14,7 +14,7 @@
 
 """Defines aggregation functions for use in `Results.aggregate`."""
 
-import collections
+from collections import Counter
 from typing import Callable, Sequence, TypeVar, cast
 
 import numpy as np
@@ -91,10 +91,10 @@ def _mean_aggregator(
 
 
 def _bag_union_aggregator(
-    values: list[collections.Counter],
-) -> collections.Counter:
+    values: list[Counter],
+) -> Counter:
     """Join a list of Counter objects."""
-    return sum(values, start=collections.Counter())
+    return sum(Counter(values), start=Counter())
 
 
 AGGREGATOR_MAPPING: dict[AggregationMethod, Callable] = {
