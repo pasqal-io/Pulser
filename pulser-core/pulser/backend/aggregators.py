@@ -94,7 +94,7 @@ def _bag_union_aggregator(
     values: list[Counter],
 ) -> Counter:
     """Join a list of Counter objects."""
-    return sum((Counter(x) for x in values), start=Counter())
+    return sum(map(Counter, values), start=Counter())
 
 
 AGGREGATOR_MAPPING: dict[AggregationMethod, Callable] = {
