@@ -176,18 +176,22 @@ def switch_device(
         if not strict:
             return ("", "")
 
-        params_to_check = [
-            "mod_bandwidth",
-            "fixed_retarget_t",
-            "clock_period",
-        ]
-        if check_retarget(old_ch_obj) or check_retarget(new_ch_obj):
-            params_to_check.append("min_retarget_interval")
-        for param_ in params_to_check:
-            if getattr(new_ch_obj, param_) != getattr(old_ch_obj, param_):
-                return ("", f" with the same {param_}.")
-        else:
-            return ("", "")
+        if seq.is_parametrized():
+            # These parameters only need to be checked when the sequence is
+            # parametrized because their effects appear in the time slots check
+            # when the sequence is built
+            timing_params_to_check = [
+                "mod_bandwidth",
+                "fixed_retarget_t",
+                "clock_period",
+                "phase_jump_time",
+            ]
+            if check_retarget(old_ch_obj) or check_retarget(new_ch_obj):
+                timing_params_to_check.append("min_retarget_interval")
+            for param_ in timing_params_to_check:
+                if getattr(new_ch_obj, param_) != getattr(old_ch_obj, param_):
+                    return ("", f" with the same {param_}.")
+        return ("", "")
 
     def is_good_match(
         channel_match: dict[str, str],
