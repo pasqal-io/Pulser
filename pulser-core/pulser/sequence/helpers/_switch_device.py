@@ -275,6 +275,7 @@ def switch_device(
     ) -> Sequence:
         # Initialize the new sequence (works for Sequence subclasses too)
         new_seq = type(seq)(register=seq._register, device=new_device)
+        old_to_new_ch_name = {}
         dmm_calls: list[str] = []
         # Copy the variables to the new sequence
         new_seq._variables = seq.declared_variables
@@ -322,10 +323,13 @@ def switch_device(
                     dmm_called = _get_dmm_name(sw_channel_args[1], dmm_calls)
                     sw_channel_args[1] = channel_match[dmm_called]
                 dmm_calls.append(dmm_called)
-                channel_match[dmm_called] = _get_dmm_name(
+                new_dmm_name = _get_dmm_name(
                     channel_match[dmm_called],
                     list(new_seq.declared_channels.keys()),
                 )
+                # Override channel match to use the new attributed dmm name
+                channel_match[dmm_called] = new_dmm_name
+                old_to_new_ch_name[dmm_called] = new_dmm_name
             getattr(new_seq, call.name)(*sw_channel_args, **sw_channel_kw_args)
 
         if strict:
@@ -348,6 +352,20 @@ def switch_device(
                         " EOM configuration that does not change the"
                         " samples."
                     )
+            if not seq.is_parametrized():
+                for old_ch_name in seq._schedule:
+                    # Use the same name for the old and new by default
+                    new_ch_name = old_to_new_ch_name.setdefault(
+                        old_ch_name, old_ch_name
+                    )
+                    if (
+                        new_seq._schedule[new_ch_name].slots
+                        != seq._schedule[old_ch_name].slots
+                    ):
+                        raise SwitchDeviceError(
+                            "Changing the device produced a sequence with "
+                            f"different samples for channel {old_ch_name!r}."
+                        )
         return new_seq
 
     # Channel match
