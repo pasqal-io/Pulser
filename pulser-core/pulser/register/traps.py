@@ -54,7 +54,7 @@ class Traps(ABC, CoordsCollection):
         except ValueError as e:
             raise array_type_error_msg from e
 
-        shape = coords_arr.shape
+        shape = np.shape(coords_arr)
         if len(shape) != 2:
             raise array_type_error_msg
 

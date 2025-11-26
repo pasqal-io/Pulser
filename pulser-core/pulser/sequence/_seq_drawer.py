@@ -871,7 +871,7 @@ def _draw_channel_content(
                 )
                 for ax in axes:
                     ax.axvline(t_, **conf)
-                msg = "\u27F2 " + phase_str(delta)
+                msg = "\u27f2 " + phase_str(delta)
                 axes[0].text(
                     t_ - final_t * 8e-3,
                     tgt_txt_ymax,
@@ -1178,16 +1178,20 @@ def _draw_qubit_content(
                 )
                 # Add targets to legend if qubits are defined
                 if plot_index == 0 and qubits:
-                    ax_leg = (
-                        axes_legend
-                        if n_quantities == 1
-                        else cast(list, axes_legend)[subplot_index]
+                    ax_leg = cast(
+                        Axes,
+                        (
+                            axes_legend
+                            if n_quantities == 1
+                            else cast(list, axes_legend)[subplot_index]
+                        ),
                     )
                     targeted_atoms = {t: qubits[t] for t in target}
                     pos = np.array(list(targeted_atoms.values()))
                     if dimensionality_3d:
                         for sub_ax_leg, (ix, iy) in zip(
-                            ax_leg, combinations(np.arange(3), 2)
+                            cast(Iterable, ax_leg),
+                            combinations(np.arange(3), 2),
                         ):
                             Register._draw_2D(
                                 ax=sub_ax_leg,

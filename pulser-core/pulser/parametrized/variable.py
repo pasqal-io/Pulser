@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import collections.abc as abc  # To use collections.abc.Sequence
 import dataclasses
-from typing import Any, Iterator, Union
+from typing import Any, Iterator, Union, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -87,7 +87,7 @@ class Variable(Parametrized, OpSupport):
         self.value: pm.AbstractArray | None
         if self.value is None:
             raise ValueError(f"No value assigned to variable '{self.name}'.")
-        return self.value
+        return cast(pm.AbstractArray, self.value)
 
     def _to_dict(self) -> dict[str, Any]:
         d = obj_to_dict(self, _build=False)

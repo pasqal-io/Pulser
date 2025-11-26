@@ -782,12 +782,15 @@ class BlackmanWaveform(Waveform):
         # According to the documentation for numpy.blackman(), "the value one
         # appears only if the number of samples is odd". Hence, the previous
         # even duration can reach a maximal value closer to max_val.
+        _arr_max = float(np.max(wf.samples.as_array(detach=True)))
         if (
             previous_wf is not None
             and duration % 2 == 1
-            and np.max(wf.samples.as_array(detach=True))
-            < np.max(previous_wf.samples.as_array(detach=True))
-            <= max_val
+            and (
+                _arr_max
+                < np.max(previous_wf.samples.as_array(detach=True))
+                <= max_val
+            )
         ):
             wf = previous_wf
 
@@ -936,7 +939,6 @@ class InterpolatedWaveform(Waveform):
         if times is None or isinstance(times, Parametrized):
             return
         try:
-            times = cast(ArrayLike, times)
             times_ = np.array(times, dtype=float)
         except TypeError as e:
             raise TypeError(_err_message("times")) from e
@@ -1266,5 +1268,5 @@ def _copy_func(f: FunctionType) -> FunctionType:
 
 for m in inspect.getmembers(sys.modules[__name__], inspect.isclass):
     if m[1].__module__ == __name__:
-        _new = _copy_func(m[1].__new__)
+        _new = _copy_func(m[1].__new__)  # type: ignore
         m[1].__new__ = functools.update_wrapper(_new, m[1].__init__)

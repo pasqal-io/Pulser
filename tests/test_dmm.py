@@ -79,7 +79,7 @@ class TestDetuningMap:
                     ValueError,
                     match="'trap_coordinates' must be an array or list",
                 ):
-                    reg.define_detuning_map(bad_key)  # type: ignore
+                    reg.define_detuning_map(bad_key)
                 continue
             with pytest.raises(
                 ValueError,
@@ -88,7 +88,7 @@ class TestDetuningMap:
                     " in [0, 3]."
                 ),
             ):
-                reg.define_detuning_map(bad_key)  # type: ignore
+                reg.define_detuning_map(bad_key)
         with pytest.raises(
             ValueError,
             match=(
@@ -213,9 +213,8 @@ class TestDetuningMap:
                     reg_det_map_dict = cast(
                         dict[Union[int, str], float], detuning_map_dict
                     )
-                detuning_map = cast(
-                    DetuningMap,
-                    reg.define_detuning_map(reg_det_map_dict),  # type: ignore
+                detuning_map = reg.define_detuning_map(
+                    reg_det_map_dict  # type: ignore
                 )
                 assert np.all(
                     [

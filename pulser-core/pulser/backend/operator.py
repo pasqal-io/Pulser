@@ -240,39 +240,38 @@ class OperatorRepr(Operator):
 
     Allows the user to define a quantum operator with the dedicated class
     method `from_operator_repr`, which requires:
+
     - eigenstates: The basis states (e.g., ('r', 'g')).
     - n_qudits: Number of qudits in the system.
     - operations: A sequence of tuples weight, tensor operators on each qudit,
-        as described in `from_operator_repr`.
+      as described in `from_operator_repr`.
 
     The created operator, supports de/serialization methods for remote backend
     execution.
 
-    Example:
-    ```python
-    eigenstates = ("r", "g")
-    n_qudits = 4
-    # define X,Y,Z
-    X = {"gr": 1.0, "rg": 1.0}
-    Y = {"gr": 1.0j, "rg": -1.0j}
-    Z = {"rr": 1.0, "gg": -1.0}
-    # build for example 0.5*X0Y1X2Z3
-    operations = [
-        (
-            0.5,
-            [
-                (X, [0, 2]), # acts on qudit 0 and 2
-                (Y, [1]),
-                (Z, [3]),
-            ],
-        )
-    ]
-    op = OperatorRepr.from_operator_repr(
-        eigenstates=eigenstates,
-        n_qudits=n_qudits,
-        operations=operations
-    )
-    ```
+    Examples:
+        >>> eigenstates = ("r", "g")
+        >>> n_qudits = 4
+        >>> # define X,Y,Z
+        >>> X = {"gr": 1.0, "rg": 1.0}
+        >>> Y = {"gr": 1.0j, "rg": -1.0j}
+        >>> Z = {"rr": 1.0, "gg": -1.0}
+        >>> # build for example 0.5*X0Y1X2Z3
+        >>> operations = [
+        >>>     (
+        >>>         0.5,
+        >>>         [
+        >>>             (X, [0, 2]), # acts on qudit 0 and 2
+        >>>             (Y, [1]),
+        >>>             (Z, [3]),
+        >>>         ],
+        >>>     )
+        >>> ]
+        >>> op = OperatorRepr.from_operator_repr(
+        >>>     eigenstates=eigenstates,
+        >>>     n_qudits=n_qudits,
+        >>>     operations=operations
+        >>> )
     """
 
     @classmethod

@@ -25,6 +25,7 @@ from pulser.backend.default_observables import Energy, Occupation, StateResult
 from pulser.backend.observable import Callback
 from pulser_simulation.qutip_backend import QutipBackendV2
 from pulser_simulation.qutip_config import QutipConfig
+from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simulation import QutipEmulator
 
@@ -241,3 +242,111 @@ def test_qutip_backend_v2_eval_times_rounding():
         result = backend.run().state
 
         assert len(result) == n_points
+
+
+@pytest.mark.parametrize("amp_sigma", [0.0, 1.0])
+def test_leakage(amp_sigma):
+    natoms = 2
+    reg = pulser.Register.rectangle(1, natoms, spacing=1000.0, prefix="q")
+
+    seq = pulser.Sequence(reg, pulser.MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    duration = 500
+    pulse = pulser.Pulse.ConstantPulse(duration, np.pi, 0.0, 0.0)
+    seq.add(pulse, "ch0")
+
+    # pulser convention of basis
+    basisx = np.array([0.0, 0.0, 1.0]).reshape(3, 1)
+    basisg = np.array([0.0, 1.0, 0.0]).reshape(3, 1)
+    basisr = np.array([1.0, 0.0, 0.0]).reshape(3, 1)
+
+    rate = 0.5
+    eff_rate = [rate, rate]
+    eff_ops = [basisx @ basisr.T, basisx @ basisg.T]  # |x><r| and |x><g|
+
+    noise_model = pulser.NoiseModel(
+        eff_noise_rates=eff_rate,
+        eff_noise_opers=eff_ops,
+        with_leakage=True,
+        amp_sigma=amp_sigma,
+        runs=int(amp_sigma) or None,
+    )
+
+    eval_times = [1.0]
+    qutip_config = QutipConfig(
+        default_evaluation_times=eval_times,
+        observables=[StateResult(evaluation_times=eval_times)],
+        noise_model=noise_model,
+    )
+
+    qutip_sim = QutipBackendV2(seq, config=qutip_config)
+    result_qut = qutip_sim.run()
+    eigenstates = ("r", "g", "x")
+
+    both_leaked = QutipOperator(
+        qutip.tensor(
+            [qutip.Qobj(basisx @ basisx.T), qutip.Qobj(basisx @ basisx.T)]
+        ),
+        eigenstates,
+    )
+
+    p_no_leaked = np.zeros((3, 3))
+    p_no_leaked[0, 0] = 1.0
+    p_no_leaked[1, 1] = 1.0
+
+    one_leaked = QutipOperator(
+        qutip.tensor([qutip.Qobj(basisx @ basisx.T), qutip.Qobj(p_no_leaked)]),
+        eigenstates,
+    ) + QutipOperator(
+        qutip.tensor([qutip.Qobj(p_no_leaked), qutip.Qobj(basisx @ basisx.T)]),
+        eigenstates,
+    )
+    no_leaked = QutipOperator(
+        qutip.tensor([qutip.Qobj(p_no_leaked), qutip.Qobj(p_no_leaked)]),
+        eigenstates,
+    )
+
+    assert one_leaked.expect(result_qut.final_state) == pytest.approx(
+        2
+        * (1 - math.exp(-rate * duration / 1000))
+        * math.exp(-rate * duration / 1000)
+    )
+    assert no_leaked.expect(result_qut.final_state) == pytest.approx(
+        math.exp(-2 * rate * duration / 1000)
+    )
+    assert both_leaked.expect(result_qut.final_state) == pytest.approx(
+        (1 - math.exp(-rate * duration / 1000)) ** 2
+    )
+
+
+def test_register_detuning_detection():
+    natoms = 2
+    reg = pulser.Register.rectangle(1, natoms, spacing=1000.0, prefix="q")
+
+    seq = pulser.Sequence(reg, pulser.MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    duration = 500
+    pulse = pulser.Pulse.ConstantPulse(duration, np.pi, 0.0, 0.0)
+    seq.add(pulse, "ch0")
+
+    noise_model = pulser.NoiseModel(
+        trap_depth=1.0,
+        trap_waist=1.0,
+        temperature=50.0,
+        disable_doppler=True,
+        detuning_sigma=5.0,
+        runs=10,
+    )
+
+    assert set(noise_model.noise_types) == {"register", "detuning"}
+
+    eval_times = [1.0]
+    qutip_config = QutipConfig(
+        default_evaluation_times=eval_times,
+        observables=[StateResult(evaluation_times=eval_times)],
+        noise_model=noise_model,
+    )
+
+    qutip_sim = QutipBackendV2(seq, config=qutip_config)
+    result_qut = qutip_sim.run()
+    assert result_qut.final_state._state.shape == (4, 4)  # density matrix
