@@ -7,7 +7,7 @@ from pulser.backend.aggregators import _bag_union_aggregator, _mean_aggregator
 
 
 def test_bag_union():
-    counter1 = Counter({"1010": 5, "0101": 7, "0000": 2})
+    counter1 = {"1010": 5, "0101": 7, "0000": 2}
     counter2 = Counter({"1010": 3, "0101": 9, "1111": 4})
 
     union = _bag_union_aggregator([counter1, counter2])

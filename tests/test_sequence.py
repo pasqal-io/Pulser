@@ -2472,8 +2472,14 @@ def test_hardware_constraints(reg, align_at_rest, patch_plt_show):
     tf_ = seq.get_duration("ch0")
     seq.align("ch0", "ch1", at_rest=align_at_rest)
     fall_time = black_pls.fall_time(rydberg_global)
-    assert seq.get_duration() == seq._schedule["ch0"].adjust_duration(
-        tf_ + fall_time * align_at_rest
+    assert fall_time > 0
+    assert (
+        seq.get_duration()
+        == seq.get_duration("ch1")
+        == seq.get_duration("ch0")
+        == seq._schedule["ch0"].adjust_duration(
+            tf_ + fall_time * align_at_rest
+        )
     )
 
     with pytest.raises(ValueError, match="'mode' must be one of"):
