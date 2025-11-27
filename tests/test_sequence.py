@@ -733,9 +733,15 @@ def test_switch_device_down(
         # Can't find a match for the 2nd raman_local
         seq.with_new_device(phys_Chadoq2, strict=True)
 
-    with helpers.raises_all(
-        [ValueError, SwitchDeviceError],
-        match="No match for channel raman_1 with the same clock_period.",
+    with (
+        helpers.raises_all(
+            [ValueError, SwitchDeviceError],
+            match="No match for channel raman_1 with the same clock_period.",
+        )
+        if parametrized
+        # can switch when not parametrized since sequence contains only
+        # channel declaration
+        else contextlib.nullcontext()
     ):
         # Can't find a match for the 2nd rydberg_local
         seq.with_new_device(
@@ -936,9 +942,13 @@ def test_switch_device_down(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    with helpers.raises_all(
-        [ValueError, SwitchDeviceError],
-        match="No match for channel ising with the same clock_period.",
+    with (
+        helpers.raises_all(
+            [ValueError, SwitchDeviceError],
+            match="No match for channel ising with the same clock_period.",
+        )
+        if parametrized
+        else contextlib.nullcontext()
     ):
         seq.with_new_device(devices[1], True)
 
@@ -952,16 +962,24 @@ def test_switch_device_down(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    with helpers.raises_all(
-        [ValueError, SwitchDeviceError],
-        match="No match for channel digital with the same mod_bandwidth.",
+    with (
+        helpers.raises_all(
+            [ValueError, SwitchDeviceError],
+            match="No match for channel digital with the same mod_bandwidth.",
+        )
+        if parametrized
+        else contextlib.nullcontext()
     ):
         seq.with_new_device(devices[0], True)
 
-    with helpers.raises_all(
-        [ValueError, SwitchDeviceError],
-        match="No match for channel digital"
-        + " with the same fixed_retarget_t.",
+    with (
+        helpers.raises_all(
+            [ValueError, SwitchDeviceError],
+            match="No match for channel digital"
+            + " with the same fixed_retarget_t.",
+        )
+        if parametrized
+        else contextlib.nullcontext()
     ):
         seq.with_new_device(devices[1], True)
 
@@ -975,10 +993,14 @@ def test_switch_device_down(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    with helpers.raises_all(
-        [ValueError, SwitchDeviceError],
-        match="No match for channel digital"
-        + " with the same min_retarget_interval.",
+    with (
+        helpers.raises_all(
+            [ValueError, SwitchDeviceError],
+            match="No match for channel digital"
+            + " with the same min_retarget_interval.",
+        )
+        if parametrized
+        else contextlib.nullcontext()
     ):
         seq.with_new_device(DigitalAnalogDevice, True)
 
@@ -1025,6 +1047,7 @@ def test_switch_device_up(
     # Strict: Jump_phase_time & CLock-period criteria
     # Jump_phase_time check 1: phase not null
     mod_wvf = ConstantWaveform(100, -10)
+    use_slm_mask = parametrized and not mappable_reg
     seq1 = init_seq(
         reg,
         devices[device_ind],
@@ -1034,6 +1057,7 @@ def test_switch_device_up(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
         config_det_map=config_det_map,
+        prefer_slm_mask=use_slm_mask,
     )
     if config_det_map:
         seq1.add_dmm_detuning(mod_wvf, "dmm_0")
@@ -1046,6 +1070,7 @@ def test_switch_device_up(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
         config_det_map=config_det_map,
+        prefer_slm_mask=use_slm_mask,
     )
     if config_det_map:
         seq2.add_dmm_detuning(mod_wvf, "dmm_0")
@@ -1092,7 +1117,7 @@ def test_switch_device_up(
                         nested_s_loc[:100]
                         == (-10.0 if trap_id in mod_trap_ids else 0)
                     )
-                else:
+                elif use_slm_mask:
                     # first pulse is covered by SLM Mask
                     np.all(
                         nested_s_loc[:252]
@@ -1363,6 +1388,144 @@ def test_switch_device_eom(
 
     # Test drawing in eom mode
     (seq.build(**build_kwargs) if build_kwargs else seq).draw()
+
+
+def test_switch_device_strict_time_slots_check(reg):
+    """Test that strict device switch verifies time slots are preserved."""
+    # Create a device with specific timing parameters
+    base_device = DigitalAnalogDevice
+
+    # Create a modified device with different clock_period that will
+    # cause time slots to differ
+    modified_device = dataclasses.replace(
+        base_device,
+        channel_objects=(
+            dataclasses.replace(
+                base_device.channels["rydberg_global"],
+                clock_period=5,  # Different from default (4)
+            ),
+        ),
+        channel_ids=("rydberg_global",),
+    )
+
+    # Test case 1: Non-parametrized sequence should fail when slots differ
+    seq = Sequence(reg, base_device)
+    seq.declare_channel("ryd", "rydberg_global")
+    # Use a pulse duration (103ns) that's not aligned with clock_period
+    # to force different rounding: 104ns (clock=4) vs 105ns (clock=5)
+    pulse = Pulse.ConstantPulse(103, 1.0, -1.0, 0.0)
+    seq.add(pulse, "ryd")
+
+    # The modified device has different clock_period, which changes how
+    # the sequence is built and creates different time slots
+    with pytest.raises(
+        SwitchDeviceError,
+        match=re.escape(
+            "Changing the device produced a sequence with "
+            "different samples for channel 'ryd'."
+        ),
+    ):
+        seq.with_new_device(modified_device, strict=True)
+
+    # Test case 2: Parametrized sequence should NOT check time slots
+    # (the check only applies to non-parametrized sequences)
+    seq_param = Sequence(reg, base_device)
+    seq_param.declare_channel("ryd", "rydberg_global")
+    delay_var = seq_param.declare_variable("delay", dtype=int)
+    seq_param.delay(delay_var, "ryd")
+
+    # For parametrized sequences, the time slots check is skipped
+    # because timing parameters are checked differently (lines 179-192)
+    # So we should get a different error about timing parameter mismatch
+    with pytest.raises(
+        SwitchDeviceError,
+        match="No match for channel ryd with the same clock_period.",
+    ):
+        seq_param.with_new_device(modified_device, strict=True)
+
+    # Test case 3: Successful switch when devices are compatible
+    compatible_device = dataclasses.replace(
+        base_device,
+        channel_objects=(base_device.channels["rydberg_global"],),
+        channel_ids=("rydberg_global",),
+    )
+
+    seq_compatible = Sequence(reg, base_device)
+    seq_compatible.declare_channel("ryd", "rydberg_global")
+    # Use an aligned pulse for successful switch
+    aligned_pulse = Pulse.ConstantPulse(100, 1.0, -1.0, 0.0)
+    seq_compatible.add(aligned_pulse, "ryd")
+
+    # This should succeed because the devices have identical timing params
+    new_seq = seq_compatible.with_new_device(compatible_device, strict=True)
+
+    # Verify that the time slots are indeed identical
+    assert (
+        new_seq._schedule["ryd"].slots == seq_compatible._schedule["ryd"].slots
+    )
+
+    # Test case 4: Parametrized sequence with different phase_jump_time
+    seq_phase = Sequence(reg, base_device)
+    seq_phase.declare_channel("ryd", "rydberg_global")
+    phase_var = seq_phase.declare_variable("phase", dtype=float)
+    seq_phase.add(aligned_pulse, "ryd")
+    # Use pytest.warns to handle the phase_shift warning
+    phase_shift_warns = pytest.warns(
+        UserWarning, match="behavior of `Sequence.phase_shift`"
+    )
+    with phase_shift_warns:
+        seq_phase.phase_shift(phase_var, basis="ground-rydberg")
+    seq_phase.add(aligned_pulse, "ryd")
+
+    # Create device with different phase_jump_time
+    modified_phase_device = dataclasses.replace(
+        base_device,
+        channel_objects=(
+            dataclasses.replace(
+                base_device.channels["rydberg_global"],
+                custom_phase_jump_time=200,  # Different from default
+            ),
+        ),
+        channel_ids=("rydberg_global",),
+    )
+
+    # For parametrized sequences, phase_jump_time differences should be caught
+    with pytest.raises(
+        SwitchDeviceError,
+        match="No match for channel ryd with the same phase_jump_time.",
+    ):
+        seq_phase.with_new_device(modified_phase_device, strict=True)
+
+    # Test case 5: Test with multiple channels including DMM
+    seq_multi = Sequence(reg, base_device)
+    seq_multi.declare_channel("ryd", "rydberg_global")
+    # Use misaligned pulse to trigger different slots
+    seq_multi.add(pulse, "ryd")
+
+    det_map = reg.define_detuning_map(
+        {f"q{i}": (1.0 if i < 3 else 0) for i in range(6)}
+    )
+    seq_multi.config_detuning_map(det_map, "dmm_0")
+    # Use misaligned waveform duration
+    seq_multi.add_dmm_detuning(ConstantWaveform(107, -5), "dmm_0")
+
+    # Create device with modified DMM timing
+    modified_dmm_device = dataclasses.replace(
+        base_device,
+        dmm_objects=(
+            dataclasses.replace(
+                base_device.dmm_channels["dmm_0"],
+                clock_period=5,
+            ),
+        ),
+    )
+
+    # Should fail because time slots differ for both channels
+    with pytest.raises(
+        SwitchDeviceError,
+        match=re.escape("Changing the device produced a sequence with "),
+    ):
+        seq_multi.with_new_device(modified_dmm_device, strict=True)
 
 
 def test_target(reg, device):
@@ -2309,8 +2472,14 @@ def test_hardware_constraints(reg, align_at_rest, patch_plt_show):
     tf_ = seq.get_duration("ch0")
     seq.align("ch0", "ch1", at_rest=align_at_rest)
     fall_time = black_pls.fall_time(rydberg_global)
-    assert seq.get_duration() == seq._schedule["ch0"].adjust_duration(
-        tf_ + fall_time * align_at_rest
+    assert fall_time > 0
+    assert (
+        seq.get_duration()
+        == seq.get_duration("ch1")
+        == seq.get_duration("ch0")
+        == seq._schedule["ch0"].adjust_duration(
+            tf_ + fall_time * align_at_rest
+        )
     )
 
     with pytest.raises(ValueError, match="'mode' must be one of"):
