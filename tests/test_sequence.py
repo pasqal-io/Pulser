@@ -739,6 +739,8 @@ def test_switch_device_down(
             match="No match for channel raman_1 with the same clock_period.",
         )
         if parametrized
+        # can switch when not parametrized since sequence contains only
+        # channel declaration
         else contextlib.nullcontext()
     ):
         # Can't find a match for the 2nd rydberg_local
@@ -1389,12 +1391,7 @@ def test_switch_device_eom(
 
 
 def test_switch_device_strict_time_slots_check(reg):
-    """Test that strict device switch verifies time slots are preserved.
-
-    This test specifically checks the logic at lines 355-368 in
-    _switch_device.py that ensures when switching devices in strict mode
-    for non-parametrized sequences, the time slots remain identical.
-    """
+    """Test that strict device switch verifies time slots are preserved."""
     # Create a device with specific timing parameters
     base_device = DigitalAnalogDevice
 
