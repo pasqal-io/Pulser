@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pprint
 import re
 from dataclasses import FrozenInstanceError, replace
 from unittest.mock import patch
@@ -357,7 +358,7 @@ def test_device_specs(device):
         )
 
         channel_str = "\nChannels:\n" + "\n".join(
-            f" - '{name}': {ch!r}"
+            f" - '{name}': {pprint.pformat(ch)}"
             for name, ch in {**dev.channels, **dev.dmm_channels}.items()
         )
 
