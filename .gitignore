@@ -19,3 +19,4 @@ env*
 *.egg-info/
 __venv__/
 venv
+CLAUDE.md
