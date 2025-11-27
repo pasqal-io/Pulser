@@ -54,12 +54,23 @@ def test_get_samples():
 
 
 def test_sampled_result(patch_plt_show):
-    samples = Counter({"000": 50, "111": 50})
+    samples_dict = {"000": 50, "111": 50}
+    result_from_dict = SampledResult(
+        atom_order=("a", "b", "c"),
+        meas_basis="ground-rydberg",
+        bitstring_counts=samples_dict,
+    )
+
+    samples = Counter(samples_dict)
     result = SampledResult(
         atom_order=("a", "b", "c"),
         meas_basis="ground-rydberg",
         bitstring_counts=samples,
     )
+    assert result.final_bitstrings == result_from_dict.final_bitstrings
+    assert isinstance(result.final_bitstrings, Counter)
+    assert isinstance(result_from_dict.final_bitstrings, Counter)
+
     assert result.n_samples == 100
     assert result.sampling_dist == {"000": 0.5, "111": 0.5}
     sampling_err = np.sqrt(0.5**2 / 100)

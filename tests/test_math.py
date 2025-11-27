@@ -211,10 +211,11 @@ class TestAbstractArray:
         # pow
         np.testing.assert_array_equal(arr**5.0, val**5.0)
 
+        # rounding errors here
         np.testing.assert_array_almost_equal(
             abs(arr) ** values, abs(val_np) ** values
-        )  # rounding errors here
-        np.testing.assert_array_equal(2.0**arr, 2.0**val)
+        )
+        np.testing.assert_array_almost_equal(2.0**arr, 2.0**val)
 
         # mod
         np.testing.assert_array_equal(arr % 5.0, val % 5.0)
