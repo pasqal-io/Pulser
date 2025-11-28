@@ -170,7 +170,7 @@ class SampledResult(Result):
         self._store(
             observable=bitstrings_obs,
             time=self.evaluation_time,
-            value=self.bitstring_counts,
+            value=Counter(self.bitstring_counts),
         )
 
     @property

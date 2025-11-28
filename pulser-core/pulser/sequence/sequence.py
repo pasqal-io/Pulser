@@ -1729,14 +1729,14 @@ class Sequence(Generic[DeviceType]):
         if self.is_parametrized():
             return
 
-        last_ts = {
-            id: self.get_duration(id, include_fall_time=at_rest)
-            for id in channels
-        }
-        tf = max(last_ts.values())
+        # The time to align each channel with
+        tf = max(
+            self.get_duration(id, include_fall_time=at_rest) for id in channels
+        )
 
         for id in channels:
-            delta = tf - last_ts[id]
+            # The amount of time to delay the channel by
+            delta = tf - self.get_duration(id)
             if delta > 0:
                 self._delay(
                     self._schedule[id].adjust_duration(delta),
