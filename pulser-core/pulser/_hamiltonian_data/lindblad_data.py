@@ -19,6 +19,8 @@ import numpy as np
 
 @dataclass(frozen=True)
 class LindbladData:
+    """Some data about the Lindblad operators used by the simulation."""
+
     op_matrix_names: list[str]
     local_collapse_ops: list[tuple[int | float | complex, str | np.ndarray]]
     depolarizing_pauli_2ds: dict[str, list[tuple[int | complex, str]]]

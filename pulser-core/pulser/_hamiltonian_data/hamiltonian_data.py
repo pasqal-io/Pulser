@@ -70,6 +70,11 @@ SUPPORTED_NOISES: dict = {
 
 
 def has_shot_to_shot_except_spam(noise_model: NoiseModel) -> bool:
+    """Whether the noise model contains stochastic noise, excepting SPAM.
+
+    Arg:
+        noise_model: The noise model to check.
+    """
     return (
         "doppler" in noise_model.noise_types
         or (
@@ -261,17 +266,14 @@ class HamiltonianData:
             )
 
         self._samples = self._delocalize_samples(samples)
-        # Type hints for attributes defined outside of __init__
-        self._noise_model = noise_model
 
-        # Initializing qubit infos
         self._size = len(self.register.qubits)
         self._qid_index = {
             qid: i for i, qid in enumerate(self.register.qubits)
         }
 
-        self._check_noise_model(noise_model)
         self._noise_model = noise_model
+        self._check_noise_model(noise_model)
 
         self.local_noises = True
         if set(self.noise_model.noise_types).issubset(
@@ -321,6 +323,7 @@ class HamiltonianData:
 
     @functools.cached_property
     def basis_data(self) -> BasisData:
+        """Get the BasisData defining this Hamiltonian."""
         interaction: Literal["XY", "ising"] = (
             "XY" if self.samples._in_xy else "ising"
         )
@@ -335,6 +338,7 @@ class HamiltonianData:
 
     @functools.cached_property
     def lindblad_data(self) -> LindbladData:
+        """Get the LindbladData defining this Hamiltonian."""
         basis_data = self.basis_data
         op_matrix_names = self._get_projectors(basis_data.eigenbasis)
         local_collapse_ops, paulis = self._build_local_collapse_operators(
@@ -590,6 +594,7 @@ class HamiltonianData:
 
     @property
     def noisy_interaction_matrices(self) -> list[pm.AbstractArray]:
+        """Get the noisy interaction matrix for each noise trajectory"""
         return [x[0].interaction_matrix for x in self.noise_trajectories]
 
     def _noisy_interaction_matrix(

@@ -20,6 +20,8 @@ from pulser.channels.base_channel import States
 
 @dataclass(frozen=True)
 class BasisData:
+    """Some data about the basis used by the simulation."""
+
     dim: int
     basis_name: str
     interaction_type: Literal["XY", "ising"]

@@ -221,6 +221,14 @@ def test_init_errors():
             sample(seq_rydberg()), register, pulser.DigitalAnalogDevice, None
         )
 
+    with pytest.raises(
+        ValueError,
+        match=("Object None is not a valid `NoiseModel`."),
+    ):
+        HamiltonianData(
+            seq_samples, seq.register, pulser.DigitalAnalogDevice, None
+        )
+
     seq = pulser.Sequence(register, pulser.AnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
     with pytest.raises(ValueError, match="SequenceSamples is empty."):
