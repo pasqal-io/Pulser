@@ -594,7 +594,7 @@ class HamiltonianData:
 
     @property
     def noisy_interaction_matrices(self) -> list[pm.AbstractArray]:
-        """Get the noisy interaction matrix for each noise trajectory"""
+        """Get the noisy interaction matrix for each noise trajectory."""
         return [x[0].interaction_matrix for x in self.noise_trajectories]
 
     def _noisy_interaction_matrix(
