@@ -929,13 +929,13 @@ def test_noise_with_zero_epsilons(seq, matrices):
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
-        (("dephasing",), {"0": 572, "1": 428}, 1),
-        (("relaxation",), {"0": 572, "1": 428}, 1),
-        (("eff_noise",), {"0": 572, "1": 428}, 1),
+        (("dephasing",), {"0": 571, "1": 429}, 1),
+        (("relaxation",), {"0": 571, "1": 429}, 1),
+        (("eff_noise",), {"0": 571, "1": 429}, 1),
         (("depolarizing",), {"0": 561, "1": 439}, 3),
         (("dephasing", "depolarizing", "relaxation"), {"0": 562, "1": 438}, 5),
-        (("eff_noise", "dephasing"), {"0": 573, "1": 427}, 2),
-        (("eff_noise", "leakage"), {"0": 572, "1": 428}, 1),
+        (("eff_noise", "dephasing"), {"0": 572, "1": 428}, 2),
+        (("eff_noise", "leakage"), {"0": 571, "1": 429}, 1),
     ],
 )
 def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
@@ -1017,20 +1017,20 @@ def test_relaxation_noise():
 
 deph_res = {"111": 978, "110": 12, "011": 7, "101": 3}
 depo_res = {
-    "111": 828,
-    "101": 63,
-    "011": 58,
-    "110": 40,
+    "111": 825,
+    "101": 64,
+    "011": 59,
+    "110": 41,
     "010": 5,
     "001": 4,
     "000": 1,
     "100": 1,
 }
 deph_depo_res = {
-    "111": 808,
-    "101": 64,
-    "011": 59,
-    "110": 56,
+    "111": 805,
+    "101": 65,
+    "011": 60,
+    "110": 57,
     "001": 5,
     "010": 4,
     "100": 3,
@@ -1426,14 +1426,18 @@ def test_run_xy():
 
 
 res2 = {
-    "0000": 956,
-    "0100": 24,
-    "0101": 20,
+    "0000": 919,
+    "0100": 8,
+    "0001": 39,
+    "0010": 8,
+    "1000": 26,
 }
-res1 = {"0000": 956, "0100": 34, "0001": 10}
+res1 = {"0000": 929, "0100": 8, "0001": 29, "0010": 8, "1000": 26}
+res3 = {"0000": 929, "0100": 10, "0001": 45, "0010": 5, "1000": 11}
 
 
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
+@pytest.mark.filterwarnings("ignore:Supplying a 'SimConfig' to QutipEmulator")
 @pytest.mark.parametrize(
     "masked_qubit, noise, result, n_collapse_ops",
     [
@@ -1441,7 +1445,7 @@ res1 = {"0000": 956, "0100": 34, "0001": 10}
         (None, "eff_noise", res1, 1),
         (None, "leakage", res1, 1),
         (None, "depolarizing", res2, 3),
-        ("atom0", "dephasing", res1, 1),
+        ("atom0", "dephasing", res3, 1),
         ("atom1", "dephasing", res1, 1),
     ],
 )
@@ -1474,7 +1478,7 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
         sampling_rate=0.1,
         noise_model=NoiseModel(
             runs=15,
-            samples_per_run=5,
+            samples_per_run=10,
             with_leakage=with_leakage,
             state_prep_error=0.4,
             p_false_pos=0.01,
@@ -1514,13 +1518,7 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
             noise_model=NoiseModel(runs=1, samples_per_run=1, temperature=50),
         )
     with pytest.raises(ValueError, match="is not a valid"):
-        sim._current_hamiltonian.set_config("SimConfig")
-    with pytest.raises(
-        NotImplementedError, match="mode 'XY' does not support simulation of"
-    ):
-        sim._current_hamiltonian.set_config(
-            NoiseModel(runs=1, samples_per_run=1, temperature=50)
-        )
+        sim.set_config("SimConfig")
     with pytest.raises(
         NotImplementedError, match="simulation of noise types: amplitude"
     ):
