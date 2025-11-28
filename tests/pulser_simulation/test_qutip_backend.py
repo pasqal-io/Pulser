@@ -114,5 +114,5 @@ def test_collapse_op(sequence, collapse_op):
         )
     assert all(
         op.dtype == qutip.core.data.CSR
-        for op in backend._sim_obj._hamiltonian._collapse_ops
+        for op in backend._sim_obj._current_hamiltonian._collapse_ops
     )

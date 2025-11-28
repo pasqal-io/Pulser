@@ -17,16 +17,18 @@ from __future__ import annotations
 
 import functools
 import math
-from collections import defaultdict
+from collections import Counter
 from collections.abc import Mapping
 from dataclasses import replace
-from typing import Literal, cast
+from typing import Iterator, Literal, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial.distance import cdist
 
 import pulser.math as pm
+from pulser._hamiltonian_data.basis_data import BasisData
+from pulser._hamiltonian_data.lindblad_data import LindbladData
 from pulser._hamiltonian_data.noise_trajectory import NoiseTrajectory
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import STATES_RANK, Channel, States
@@ -65,6 +67,23 @@ SUPPORTED_NOISES: dict = {
         "register",
     },
 }
+
+
+def has_shot_to_shot_except_spam(noise_model: NoiseModel) -> bool:
+    """Whether the noise model contains stochastic noise, excepting SPAM.
+
+    Arg:
+        noise_model: The noise model to check.
+    """
+    return (
+        "doppler" in noise_model.noise_types
+        or (
+            "amplitude" in noise_model.noise_types
+            and noise_model.amp_sigma != 0.0
+        )
+        or "detuning" in noise_model.noise_types
+        or "register" in noise_model.noise_types
+    )
 
 
 def doppler_sigma(temperature: float) -> float:
@@ -174,6 +193,26 @@ def _generate_detuning_fluctuations(
     return det_cst_term + det_hf
 
 
+def _distances(register: BaseRegister) -> pm.AbstractArray:
+    r"""Distances between each qubits (in :math:`\mu m`)."""
+    positions = list(register.qubits.values())
+    if not positions[0].is_tensor:
+        return pm.AbstractArray(
+            np.round(
+                cast(
+                    np.ndarray,
+                    cdist(positions, positions, metric="euclidean"),
+                ),
+                COORD_PRECISION,
+            ),
+        )
+    else:
+        ten = pm.torch.stack(
+            [cast(pm.torch.Tensor, x._array) for x in positions]
+        )
+        return pm.AbstractArray(pm.torch.cdist(ten, ten))
+
+
 class HamiltonianData:
     r"""Information that can be used to generate an Hamiltonian.
 
@@ -225,6 +264,35 @@ class HamiltonianData:
                 "The ids of qubits targeted in SLM mask"
                 " should be defined in register."
             )
+
+        self._samples = self._delocalize_samples(samples)
+
+        self._size = len(self.register.qubits)
+        self._qid_index = {
+            qid: i for i, qid in enumerate(self.register.qubits)
+        }
+
+        self._noise_model = noise_model
+        self._check_noise_model(noise_model)
+
+        self.local_noises = True
+        if set(self.noise_model.noise_types).issubset(
+            {
+                "dephasing",
+                "relaxation",
+                "SPAM",
+                "depolarizing",
+                "eff_noise",
+                "leakage",
+            }
+        ):
+            self.local_noises = (
+                "SPAM" in self.noise_model.noise_types
+                and self.noise_model.state_prep_error > 0
+            )
+        self._create_noise_trajectories()
+
+    def _delocalize_samples(self, samples: SequenceSamples) -> SequenceSamples:
         samples_list = []
         for ch, ch_samples in samples.channel_samples.items():
             if samples._ch_objs[ch].addressing == "Local":
@@ -251,64 +319,39 @@ class HamiltonianData:
                         ],
                     )
                 )
-        self._samples = replace(samples, samples_list=samples_list)
+        return replace(samples, samples_list=samples_list)
 
-        # Type hints for attributes defined outside of __init__
-        self.basis_name: str
-        self._noise_model: NoiseModel
-        self.op_matrix_names: list[str]
-        self.dim: int
-
-        # Define interaction
-        self._interaction: Literal["XY", "ising"] = (
+    @functools.cached_property
+    def basis_data(self) -> BasisData:
+        """Get the BasisData defining this Hamiltonian."""
+        interaction: Literal["XY", "ising"] = (
             "XY" if self.samples._in_xy else "ising"
         )
-
-        # Initializing qubit infos
-        self._size = len(self.register.qubits)
-        self._qid_index = {
-            qid: i for i, qid in enumerate(self.register.qubits)
-        }
-
-        self._local_collapse_ops: list[
-            tuple[int | float | complex, str | np.ndarray]
-        ] = []
-        self._depolarizing_pauli_2ds: dict[
-            str, list[tuple[int | complex, str]]
-        ] = {}
-
-        self._check_noise_model(noise_model)
-        basis_name = self._get_basis_name(noise_model.with_leakage)
-        eigenbasis = self._get_eigenbasis(noise_model.with_leakage)
-        op_matrix_names = self._get_projectors(eigenbasis)
-        self.basis_name = basis_name
-        self.eigenbasis = eigenbasis
-        self.op_matrix_names = op_matrix_names
-        self.dim = len(eigenbasis)
-        self.operators: dict[str, defaultdict[str, dict]] = {
-            addr: defaultdict(dict) for addr in ["Global", "Local"]
-        }
-        self._build_local_collapse_operators(
-            noise_model, self.basis_name, self.eigenbasis, self.op_matrix_names
+        basis_name = self._get_basis_name(self.noise_model.with_leakage)
+        eigenbasis = self._get_eigenbasis(self.noise_model.with_leakage)
+        return BasisData(
+            dim=len(eigenbasis),
+            basis_name=basis_name,
+            eigenbasis=eigenbasis,
+            interaction_type=interaction,
         )
-        self._noise_model = noise_model
 
-        self.local_noises = True
-        if set(self.noise_model.noise_types).issubset(
-            {
-                "dephasing",
-                "relaxation",
-                "SPAM",
-                "depolarizing",
-                "eff_noise",
-                "leakage",
-            }
-        ):
-            self.local_noises = (
-                "SPAM" in self.noise_model.noise_types
-                and self.noise_model.state_prep_error > 0
-            )
-        self._create_noise_trajectory()
+    @functools.cached_property
+    def lindblad_data(self) -> LindbladData:
+        """Get the LindbladData defining this Hamiltonian."""
+        basis_data = self.basis_data
+        op_matrix_names = self._get_projectors(basis_data.eigenbasis)
+        local_collapse_ops, paulis = self._build_local_collapse_operators(
+            self.noise_model,
+            basis_data.basis_name,
+            basis_data.eigenbasis,
+            op_matrix_names,
+        )
+        return LindbladData(
+            op_matrix_names=op_matrix_names,
+            local_collapse_ops=local_collapse_ops,
+            depolarizing_pauli_2ds=paulis,
+        )
 
     @classmethod
     def from_sequence(
@@ -365,6 +408,11 @@ class HamiltonianData:
             noise_model or NoiseModel(),
         )
 
+    @functools.cached_property
+    def nbqudits(self) -> int:
+        """Number of qudits in the Register."""
+        return self._size
+
     @property
     def samples(self) -> SequenceSamples:
         """The samples without noise."""
@@ -404,7 +452,7 @@ class HamiltonianData:
                         # Default to an optical axis along y
                         prop_dir = propagation_dir or (0.0, 1.0, 0.0)
                         amp_fraction *= self._finite_waist_amp_fraction(
-                            tuple(self.noisy_register.qubits[qid].as_array()),
+                            tuple(traj.register.qubits[qid].as_array()),
                             tuple(prop_dir),
                             self.noise_model.laser_waist,
                         )
@@ -481,20 +529,18 @@ class HamiltonianData:
             return self._samples
 
     @property
-    def noisy_samples(self) -> SequenceSamples:
+    def noisy_samples(
+        self,
+    ) -> Iterator[tuple[NoiseTrajectory, SequenceSamples, int]]:
         """The noiseless samples modified by the noise trajectory."""
         # TODO: store mutiple trajectories and return iterator
-        return self._sample_with_trajectory(self.noise_trajectory)
+        for traj, n in self.noise_trajectories:
+            yield traj, self._sample_with_trajectory(traj), n
 
     @property
     def register(self) -> BaseRegister:
         """The noiseless register used."""
         return self._register
-
-    @property
-    def noisy_register(self) -> BaseRegister:
-        """The noiseless register modified by the noise trajectory."""
-        return self.noise_trajectory.register
 
     @property
     def device(self) -> BaseDevice:
@@ -507,55 +553,19 @@ class HamiltonianData:
         return self._noise_model
 
     @property
-    def local_collapse_operators(
-        self,
-    ) -> list[tuple[int | float | complex, str | np.ndarray]]:
-        """The 1-qudit collapse operators, as string or array."""
-        return self._local_collapse_ops
-
-    @property
-    def interaction_type(self) -> Literal["XY", "ising"]:
-        """The interaction associated with the used samples."""
-        return self._interaction
-
-    @property
-    def bad_atoms(self) -> dict[str, bool]:
+    def bad_atoms(self) -> list[dict[str, bool]]:
         """The badly prepared atoms at the beginning of the run."""
-        return self.noise_trajectory.bad_atoms
+        return [traj[0].bad_atoms for traj in self.noise_trajectories]
 
-    @property
-    def noisy_distances(self) -> pm.AbstractArray:
-        r"""Distances between each qubits (in :math:`\mu m`)."""
-        positions = list(self.noisy_register.qubits.values())
-        if not positions[0].is_tensor:
-            return pm.AbstractArray(
-                np.round(
-                    cast(
-                        np.ndarray,
-                        cdist(positions, positions, metric="euclidean"),
-                    ),
-                    COORD_PRECISION,
-                ),
-            )
-        else:
-            ten = pm.torch.stack(
-                [cast(pm.torch.Tensor, x._array) for x in positions]
-            )
-            return pm.AbstractArray(pm.torch.cdist(ten, ten))
-
-    @functools.cached_property
-    def nbqudits(self) -> int:
-        """Number of qudits in the Register."""
-        return self._size
-
-    @property
-    def _interaction_matrix(self) -> "pm.torch.Tensor" | np.ndarray:
+    def _interaction_matrix(
+        self, register: BaseRegister
+    ) -> "pm.torch.Tensor" | np.ndarray:
         r"""C6/C3 Interactions between the qubits (in :math:`rad/\mu s`)."""
-        # TODO: Include masked qubits in XY + bad atoms in the interaction
-        d = self.noisy_distances
+        # SLM mask is not included, because it's time-dependent
+        d = _distances(register)
         interactions = pm.zeros_like(d)._array
-        if self.interaction_type == "XY":
-            positions = list(self.noisy_register.qubits.values())
+        if self.basis_data.interaction_type == "XY":
+            positions = list(register.qubits.values())
             assert self.samples._magnetic_field is not None
             assert self._device.interaction_coeff_xy is not None
             mag_arr = pm.AbstractArray(self.samples._magnetic_field)
@@ -583,12 +593,18 @@ class HamiltonianData:
         return interactions
 
     @property
-    def noisy_interaction_matrix(self) -> pm.AbstractArray:
+    def noisy_interaction_matrices(self) -> list[pm.AbstractArray]:
+        """Get the noisy interaction matrix for each noise trajectory."""
+        return [x[0].interaction_matrix for x in self.noise_trajectories]
+
+    def _noisy_interaction_matrix(
+        self, register: BaseRegister, bad_atoms: dict
+    ) -> pm.AbstractArray:
         """Return the noisy interaction matrix."""
         mask = [False for _ in range(self.nbqudits)]
-        for ind, value in enumerate(self.bad_atoms.values()):
+        for ind, value in enumerate(bad_atoms.values()):
             mask[ind] = True if value else False  # convert to python bool
-        imat = self._interaction_matrix
+        imat = self._interaction_matrix(register)
         if isinstance(imat, np.ndarray):
             arr = np.array(mask)
             mask2 = arr.reshape(1, -1) | arr.reshape(-1, 1)
@@ -608,11 +624,15 @@ class HamiltonianData:
         basis_name: str,
         eigenbasis: list[States],
         op_matrix: list[str],
-    ) -> None:
+    ) -> tuple[
+        list[tuple[int | float | complex, str | np.ndarray]],
+        dict[str, list[tuple[int | complex, str]]],
+    ]:
 
         local_collapse_ops: list[
             tuple[int | float | complex, str | np.ndarray]
         ] = []
+        depolarizing_pauli_2ds: dict[str, list[tuple[int | complex, str]]] = {}
         if "dephasing" in noise_model.noise_types:
             dephasing_rates = {
                 "d": noise_model.dephasing_rate,
@@ -645,20 +665,20 @@ class HamiltonianData:
                 )
             # NOTE: These operators only make sense when basis != "all"
             b, a = eigenbasis[:2]
-            self._depolarizing_pauli_2ds["x"] = [
+            depolarizing_pauli_2ds["x"] = [
                 (1, f"sigma_{a}{b}"),
                 (1, f"sigma_{b}{a}"),
             ]
-            self._depolarizing_pauli_2ds["y"] = [
+            depolarizing_pauli_2ds["y"] = [
                 (1j, f"sigma_{a}{b}"),
                 (-1j, f"sigma_{b}{a}"),
             ]
-            self._depolarizing_pauli_2ds["z"] = [
+            depolarizing_pauli_2ds["z"] = [
                 (1, f"sigma_{b}{b}"),
                 (-1, f"sigma_{a}{a}"),
             ]
             coeff = np.sqrt(noise_model.depolarizing_rate / 4)
-            for pauli_label in self._depolarizing_pauli_2ds.keys():
+            for pauli_label in depolarizing_pauli_2ds.keys():
                 local_collapse_ops.append((coeff, pauli_label))
 
         if "eff_noise" in noise_model.noise_types:
@@ -682,7 +702,7 @@ class HamiltonianData:
                     )
                 local_collapse_ops.append((np.sqrt(rate), operator))
         # Building collapse operators
-        self._local_collapse_ops = local_collapse_ops
+        return local_collapse_ops, depolarizing_pauli_2ds
 
     def _check_noise_model(self, noise_model: NoiseModel) -> None:
         """Checks that the provided noise_model is a NoiseModel."""
@@ -692,11 +712,11 @@ class HamiltonianData:
             )
         not_supported = (
             set(noise_model.noise_types)
-            - SUPPORTED_NOISES[self.interaction_type]
+            - SUPPORTED_NOISES[self.basis_data.interaction_type]
         )
         if not_supported:
             raise NotImplementedError(
-                f"Interaction mode '{self.interaction_type}' "
+                f"Interaction mode '{self.basis_data.interaction_type}' "
                 "does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
@@ -725,62 +745,119 @@ class HamiltonianData:
         # by the propagation direction), ie
         return float(np.exp(-((dist / laser_waist) ** 2)))
 
-    def _create_noise_trajectory(self) -> None:
+    def _create_noise_trajectories(self) -> None:
         """Updates noise random parameters.
 
         Used at the start of each run. If SPAM isn't in chosen noises, all
         atoms are set to be correctly prepared.
         """
+        self.noise_trajectories: list[tuple[NoiseTrajectory, int]] = []
+        ntrajs = self.noise_model.runs or 1
         amp_fluctuations: dict[str, float] = {}
         det_fluctuations: dict[str, float] = {}
         det_phases: dict[str, np.ndarray] = {}
-        register: BaseRegister = self._register
-        if (
-            "SPAM" in self.noise_model.noise_types
-            and self.noise_model.state_prep_error > 0
-        ):
-            dist = (
-                np.random.uniform(size=len(self._qid_index))
-                < self.noise_model.state_prep_error
-            )
-            bad_atoms = dict(zip(self._qid_index, dist))
-        else:
-            bad_atoms = {qid: False for qid in self._qid_index}
-        if "doppler" in self.noise_model.noise_types:
-            temp = self.noise_model.temperature * 1e-6
-            detune = np.random.normal(
-                0, doppler_sigma(temp), size=len(self._qid_index)
-            )
-            doppler_detune = dict(zip(self._qid_index, detune))
-        else:
-            doppler_detune = {qid: 0.0 for qid in self._qid_index}
-        for ch in self._samples.channel_samples:
-            amp_fluctuations[ch] = max(
-                0, np.random.normal(1.0, self.noise_model.amp_sigma)
-            )
-            det_fluctuations[ch] = (
-                np.random.normal(0.0, self.noise_model.detuning_sigma)
-                if self.noise_model.detuning_sigma
-                else 0.0
-            )
-            if self._noise_model.detuning_hf_omegas:
-                det_phases[ch] = np.random.uniform(
-                    0.0,
-                    2 * np.pi,
-                    size=len(self._noise_model.detuning_hf_omegas) - 1,
+        if not has_shot_to_shot_except_spam(self.noise_model):
+            initial_configs = Counter(
+                "".join(
+                    (
+                        np.random.uniform(size=len(self._qid_index))
+                        < self.noise_model.state_prep_error
+                    )
+                    .astype(int)
+                    .astype(str)  # Turns bool->int->str
                 )
-            else:
+                for _ in range(ntrajs)
+            ).most_common()
+
+            doppler_detune = {qid: 0.0 for qid in self._qid_index}
+            for ch in self._samples.channel_samples:
+                amp_fluctuations[ch] = max(
+                    0, np.random.normal(1.0, self.noise_model.amp_sigma)
+                )  # amp_sigma = 0
+                det_fluctuations[ch] = 0.0
                 det_phases[ch] = np.array(0.0)
-        if "register" in self._noise_model.noise_types:
-            register = _noisy_register(self.register.qubits, self._noise_model)
-        self.noise_trajectory = NoiseTrajectory(
-            bad_atoms,
-            doppler_detune,
-            amp_fluctuations,
-            det_fluctuations,
-            det_phases,
-            register,
-        )
+            for bool_string, n in initial_configs:
+                bad_atoms = dict(
+                    zip(self._qid_index, map(lambda x: x == "1", bool_string))
+                )
+                self.noise_trajectories.append(
+                    (
+                        NoiseTrajectory(
+                            bad_atoms,
+                            doppler_detune,
+                            amp_fluctuations,
+                            det_fluctuations,
+                            det_phases,
+                            self._register,
+                            self._noisy_interaction_matrix(
+                                self._register, bad_atoms
+                            ),
+                        ),
+                        n,
+                    )
+                )
+        else:
+            for _ in range(ntrajs):
+                amp_fluctuations = {}
+                det_fluctuations = {}
+                det_phases = {}
+                register: BaseRegister = self._register
+                if (
+                    "SPAM" in self.noise_model.noise_types
+                    and self.noise_model.state_prep_error > 0
+                ):
+                    dist = (
+                        np.random.uniform(size=len(self._qid_index))
+                        < self.noise_model.state_prep_error
+                    )
+                    bad_atoms = dict(zip(self._qid_index, dist))
+                else:
+                    bad_atoms = {qid: False for qid in self._qid_index}
+                if "doppler" in self.noise_model.noise_types:
+                    temp = self.noise_model.temperature * 1e-6
+                    detune = np.random.normal(
+                        0, doppler_sigma(temp), size=len(self._qid_index)
+                    )
+                    doppler_detune = dict(zip(self._qid_index, detune))
+                else:
+                    doppler_detune = {qid: 0.0 for qid in self._qid_index}
+                for ch in self._samples.channel_samples:
+                    amp_fluctuations[ch] = max(
+                        0, np.random.normal(1.0, self.noise_model.amp_sigma)
+                    )
+                    det_fluctuations[ch] = (
+                        np.random.normal(0.0, self.noise_model.detuning_sigma)
+                        if self.noise_model.detuning_sigma
+                        else 0.0
+                    )
+                    if self._noise_model.detuning_hf_omegas:
+                        det_phases[ch] = np.random.uniform(
+                            0.0,
+                            2 * np.pi,
+                            size=len(self._noise_model.detuning_hf_omegas) - 1,
+                        )
+                    else:
+                        det_phases[ch] = np.array(0.0)
+                if "register" in self._noise_model.noise_types:
+                    register = _noisy_register(
+                        self.register.qubits, self._noise_model
+                    )
+                self.noise_trajectories.append(
+                    (
+                        NoiseTrajectory(
+                            bad_atoms,
+                            doppler_detune,
+                            amp_fluctuations,
+                            det_fluctuations,
+                            det_phases,
+                            register,
+                            self._noisy_interaction_matrix(
+                                register, bad_atoms
+                            ),
+                        ),
+                        1,
+                    )
+                )
 
     def _get_basis_name(self, with_leakage: bool) -> str:
         if len(self._samples.used_bases) == 0:
