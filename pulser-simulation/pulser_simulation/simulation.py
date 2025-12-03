@@ -623,13 +623,9 @@ class QutipEmulator:
         else:
             raise ValueError("`progress_bar` must be a bool.")
 
-        if (
-            # TODO: Check that the relevant dephasing parameter is > 0.
-            "dephasing" in self.noise_model.noise_types
-            or "relaxation" in self.noise_model.noise_types
-            or "depolarizing" in self.noise_model.noise_types
-            or "eff_noise" in self.noise_model.noise_types
-        ):
+        ### My work
+        # TODO: Check that the relevant dephasing parameter is > 0.
+        if all(ntype == "eff_noise" for ntype in self.noise_model.noise_types):
             result = qutip.mesolve(
                 self._hamiltonian._hamiltonian,
                 self.initial_state,
@@ -639,7 +635,7 @@ class QutipEmulator:
                     progress_bar=p_bar, normalize_output=False, **options
                 ),
             )
-        else:
+        elif "eff_noise" not in self.noise_model.noise_types:
             result = qutip.sesolve(
                 self._hamiltonian._hamiltonian,
                 self.initial_state,
@@ -648,6 +644,19 @@ class QutipEmulator:
                     progress_bar=p_bar, normalize_output=False, **options
                 ),
             )
+        else:
+            result = qutip.mcsolve(
+                self._hamiltonian._hamiltonian,
+                self.initial_state,
+                self._eval_times_array,
+                self._hamiltonian._collapse_ops,
+                None,
+                1,
+                options=dict(
+                    progress_bar=p_bar, normalize_output=False, **options
+                ),
+            )
+
         results = [
             QutipResult(
                 tuple(self._hamiltonian.data.register.qubits),

@@ -28,6 +28,7 @@ from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 from pulser_simulation import QutipEmulator, SimConfig
+import pulser_simulation.simulation as sim_module
 from pulser_simulation.simresults import NoisyResults
 
 
@@ -1104,9 +1105,6 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
         assert np.all(np.isclose(state[:, 2], np.zeros_like(state[:, 2])))
 
 
-res_deph_relax = {"000": 451, "010": 205, "001": 170, "100": 168, "101": 6}
-
-
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
@@ -1114,6 +1112,7 @@ res_deph_relax = {"000": 451, "010": 205, "001": 170, "100": 168, "101": 6}
             ("dephasing",),
             {"111": 961, "101": 15, "110": 14, "011": 9, "001": 1},
             2,
+
         ),
         (
             ("eff_noise",),
@@ -1125,7 +1124,11 @@ res_deph_relax = {"000": 451, "010": 205, "001": 170, "100": 168, "101": 6}
             {"000": 459, "010": 202, "001": 168, "100": 167, "101": 4},
             1,
         ),
-        (("dephasing", "relaxation"), res_deph_relax, 3),
+        (
+            ("dephasing", "relaxation"),
+            {"000": 451, "010": 205, "001": 170, "100": 168, "101": 6},
+            3
+        ),
         (
             ("eff_noise", "dephasing"),
             {"111": 932, "101": 28, "011": 24, "110": 15, "001": 1},
@@ -1138,7 +1141,7 @@ res_deph_relax = {"000": 451, "010": 205, "001": 170, "100": 168, "101": 6}
         ),
     ],
 )
-def test_noises_all(matrices, noise, result, n_collapse_ops, seq):
+def test_noises_all(matrices, noise, result, n_collapse_ops,  seq):
     # Test with Digital+Rydberg Sequence
     params = {}
     if "relaxation" in noise:
@@ -2259,3 +2262,79 @@ def test_noisy_runs(noise):
         result = sim.run()
         assert mock_run_solver.call_count == nruns
         assert isinstance(result, NoisyResults)
+
+
+@pytest.mark.parametrize(
+    "noisemodel, expected_solver",
+    [
+        (
+            NoiseModel(
+                eff_noise_rates=(0.1,),
+                eff_noise_opers=(((0, -1j), (1j, 0)),),
+            ),
+            "master_eq"
+        ),
+        #(
+        #    NoiseModel(
+        #        eff_noise_rates=(0.1,),
+        #        eff_noise_opers=(((0, -1j, 0), (1j, 0, 0), (0, 0, 1)),),
+        #        with_leakage=True,
+        #    ),
+        #    "master_eq"
+        #),
+        (
+            NoiseModel(
+                detuning_sigma=0.1,
+                runs=1,
+            ),
+            "schrodinger_eq"
+        ),
+        (
+            NoiseModel(
+                detuning_sigma=0.1,
+                eff_noise_rates=(0.1,),
+                eff_noise_opers=(((0, -1j, 0), (1j, 0, 0), (0, 0, 1)),),
+                with_leakage=True,
+                runs=10,
+            ),
+            "monte_carlo"
+        ),
+    ],
+    ids=[
+        "eff_noise",
+        #"eff_noise with_leakage",
+        "stochastic noise",
+        "eff_noise + stochastic noise",
+    ]
+)
+def test_qutip_solver_call(noisemodel, expected_solver):
+    with patch("pulser_simulation.simulation.qutip.mesolve") as me, \
+        patch("pulser_simulation.simulation.qutip.sesolve") as se, \
+        patch("pulser_simulation.simulation.qutip.mcsolve") as mc:
+
+        for qutip_solver in (me, se, mc):
+            qutip_solver.side_effect = RuntimeError("stop after solver")
+
+        with pytest.raises(RuntimeError, match="stop after solver"):
+            duration = 10
+            reg = Register({"q0": (0, 0), "q1": (10, 10)})
+            seq = Sequence(reg, MockDevice)
+            seq.declare_channel("ch0", "rydberg_global")
+            seq.declare_channel("ch1", "raman_local", initial_target="q0")
+            seq.declare_channel("ch2", "raman_local", initial_target="q1")
+
+            pulse1 = Pulse.ConstantPulse(duration, 0, 0, 0)
+            seq.add(pulse1, "ch0")
+            seq.add(pulse1, "ch1", protocol="no-delay")
+            seq.add(pulse1, "ch2", protocol="no-delay")
+
+            sim = QutipEmulator.from_sequence(seq, noise_model=noisemodel)
+            result = sim.run()
+
+
+        solvers = {"master_eq": me, "schrodinger_eq": se, "monte_carlo": mc}
+        for name, mock in solvers.items():
+            if name == expected_solver:
+                mock.assert_called_once()
+            else:
+                mock.assert_not_called()
