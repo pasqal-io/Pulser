@@ -23,8 +23,8 @@ from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import EIGENSTATES, STATES_RANK
 from pulser.channels.eom import BaseEOM, RydbergBeam, RydbergEOM
 from pulser.channels.modulation import (
-    calculate_mod_bandwidth_from_amplitude_rise_time,
     calculate_amplitude_rise_time,
+    calculate_mod_bandwidth_from_amplitude_rise_time,
 )
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform
 

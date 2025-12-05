@@ -24,11 +24,10 @@ import numpy as np
 
 import pulser.math as pm
 from pulser.channels.modulation import (
-    validate_mod_bandwidth,
     calculate_amplitude_rise_time,
+    validate_mod_bandwidth,
 )
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
-
 
 OPTIONAL_ABSTR_EOM_FIELDS = (
     "multiple_beam_control",

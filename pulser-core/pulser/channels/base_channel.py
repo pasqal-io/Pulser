@@ -27,9 +27,9 @@ from numpy.typing import ArrayLike
 import pulser.math as pm
 from pulser.channels.eom import BaseEOM
 from pulser.channels.modulation import (
-    validate_mod_bandwidth,
     calculate_amplitude_rise_time,
     calculate_mod_bandwidth_from_amplitude_rise_time,
+    validate_mod_bandwidth,
 )
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 from pulser.pulse import Pulse
