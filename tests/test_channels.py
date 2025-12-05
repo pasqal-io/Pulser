@@ -21,7 +21,11 @@ import pulser
 from pulser import Pulse
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import EIGENSTATES, STATES_RANK
-from pulser.channels.eom import MODBW_TO_TR, BaseEOM, RydbergBeam, RydbergEOM
+from pulser.channels.eom import BaseEOM, RydbergBeam, RydbergEOM
+from pulser.channels.modulation import (
+    calculate_mod_bandwidth_from_amplitude_rise_time,
+    calculate_amplitude_rise_time,
+)
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform
 
 
@@ -34,7 +38,10 @@ from pulser.waveforms import BlackmanWaveform, ConstantWaveform
         ("min_duration", 0),
         ("max_duration", 0),
         ("mod_bandwidth", 0),
-        ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
+        (
+            "mod_bandwidth",
+            calculate_mod_bandwidth_from_amplitude_rise_time(1) + 1,
+        ),
         ("min_avg_amp", -1e-3),
         ("propagation_dir", (0, 0, 0)),
         ("propagation_dir", [1, 0]),
@@ -64,7 +71,10 @@ def test_bad_init_global_channel(bad_param, bad_value):
         ("min_duration", -2),
         ("max_duration", -1),
         ("mod_bandwidth", -1e4),
-        ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
+        (
+            "mod_bandwidth",
+            calculate_mod_bandwidth_from_amplitude_rise_time(1) + 1,
+        ),
         ("min_avg_amp", -1e-3),
         ("propagation_dir", (1, 0, 0)),
         ("custom_phase_jump_time", -0.5),
@@ -303,6 +313,17 @@ def test_modulation(channel, tr, eom, side_buffer_len, requires_grad):
         side_buffer_len,
     )
     assert out_.requires_grad == requires_grad
+
+
+def test_rise_time_consistency():
+    mod_bw = 5.0  # MHz
+    channel = Rydberg.Global(
+        max_abs_detuning=100,
+        max_amp=50,
+        mod_bandwidth=mod_bw,
+    )
+    expected_rise_time = calculate_amplitude_rise_time(mod_bw)
+    assert channel.rise_time == expected_rise_time
 
 
 @pytest.mark.parametrize(
