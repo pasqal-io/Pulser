@@ -56,8 +56,9 @@ class DMM(Channel):
         min_duration: The shortest duration an instruction can take.
         max_duration: The longest duration an instruction can take.
         min_avg_amp: The minimum average amplitude of a pulse (when not zero).
-        mod_bandwidth: The modulation bandwidth at -3dB (50% reduction), in
-            MHz.
+        mod_bandwidth: The modulation bandwidth (in MHz), following Pulser's
+            non-standard definition (2x the -3dB bandwidth, or the frequency at
+            75% amplitude attenuation).
     """
 
     bottom_detuning: float | None = None

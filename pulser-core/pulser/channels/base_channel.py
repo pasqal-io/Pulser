@@ -25,7 +25,12 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.math as pm
-from pulser.channels.eom import MODBW_TO_TR, BaseEOM
+from pulser.channels.eom import BaseEOM
+from pulser.channels.modulation import (
+    validate_mod_bandwidth,
+    calculate_amplitude_rise_time,
+    calculate_mod_bandwidth_from_amplitude_rise_time,
+)
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 from pulser.pulse import Pulse
 
@@ -80,8 +85,10 @@ class Channel(ABC):
         min_duration: The shortest duration an instruction can take.
         max_duration: The longest duration an instruction can take.
         min_avg_amp: The minimum average amplitude of a pulse (when not zero).
-        mod_bandwidth: The modulation bandwidth at -3dB (50% reduction), in
-            MHz.
+        mod_bandwidth: The modulation bandwidth (in MHz). Note that this
+            follows a non-standard definition corresponding to 2x the -3dB
+            bandwidth, or equivalently, the frequency at which the amplitude
+            is attenuated by 75%.
         custom_phase_jump_time: An optional custom value for the phase jump
             time that overrides the default value estimated from the modulation
             bandwidth. It is not enforced in EOM mode.
@@ -249,13 +256,8 @@ class Channel(ABC):
                 " greater than or equal to 'min_duration'"
                 f"({self.min_duration})."
             )
-        if (
-            self.mod_bandwidth is not None
-            and self.mod_bandwidth > MODBW_TO_TR * 1e3
-        ):
-            raise NotImplementedError(
-                f"'mod_bandwidth' must be lower than {MODBW_TO_TR*1e3} MHz"
-            )
+        if self.mod_bandwidth is not None:
+            validate_mod_bandwidth(self.mod_bandwidth)
 
         if self.eom_config is not None and self.mod_bandwidth is None:
             raise ValueError(
@@ -277,13 +279,19 @@ class Channel(ABC):
 
     @property
     def rise_time(self) -> int:
-        """The rise time (in ns).
+        """The amplitude rise time (in ns).
 
-        Defined as the time taken to go from 10% to 90% output in response to
-        a step change in the input.
+        The time taken to go from 10% to 90% output amplitude in response to a
+        step change in the input.
+
+        Warning:
+            Not to be confused with the intensity rise time, which is what
+            is usually measured experimentally and is defined as the time
+            taken to go from 10% to 90% output power in response to a step
+            change in the input.
         """
         if self.mod_bandwidth:
-            return int(MODBW_TO_TR / self.mod_bandwidth * 1e3)
+            return calculate_amplitude_rise_time(self.mod_bandwidth)
         else:
             return 0
 
@@ -349,7 +357,9 @@ class Channel(ABC):
             max_duration(Optional[int], default=10000000): The longest
                 duration an instruction can take.
             mod_bandwidth(Optional[float], default=None): The modulation
-                bandwidth at -3dB (50% reduction), in MHz.
+                bandwidth (in MHz), following Pulser's non-standard definition
+                (2x the -3dB bandwidth, or the frequency at 75% amplitude
+                attenuation).
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
             custom_phase_jump_time: An optional custom value for the phase jump
@@ -398,7 +408,9 @@ class Channel(ABC):
             max_duration(Optional[int], default=10000000): The longest
                 duration an instruction can take.
             mod_bandwidth(Optional[float], default=None): The modulation
-                bandwidth at -3dB (50% reduction), in MHz.
+                bandwidth (in MHz), following Pulser's non-standard definition
+                (2x the -3dB bandwidth, or the frequency at 75% amplitude
+                attenuation).
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
             custom_phase_jump_time: An optional custom value for the phase jump
@@ -560,13 +572,13 @@ class Channel(ABC):
 
         Args:
             input_samples: The samples to modulate.
-            mod_bandwidth: The modulation bandwidth at -3dB (50% reduction),
-                in MHz.
+            mod_bandwidth: The modulation bandwidth (in MHz), following Pulser's
+                non-standard definition (2x the -3dB bandwidth).
         """
         # The cutoff frequency (fc) and the modulation transfer function
         # are defined in https://tinyurl.com/bdeumc8k
         input_samples = pm.AbstractArray(input_samples)
-        fc = mod_bandwidth * 1e-3 / np.sqrt(np.log(2))
+        fc = mod_bandwidth * 1e-3 / np.sqrt(2 * np.log(2))
         freqs = pm.fftfreq(input_samples.size)
         modulation = pm.exp(-(freqs**2) / fc**2)
         return pm.ifft(pm.fft(input_samples) * modulation).real
@@ -639,8 +651,10 @@ class Channel(ABC):
     @property
     def _eom_buffer_mod_bandwidth(self) -> float:
         # Takes half of the buffer time as the rise time
-        rise_time_us = self._eom_buffer_time / 2 * 1e-3
-        return MODBW_TO_TR / rise_time_us
+        amplitude_rise_time_ns = self._eom_buffer_time / 2
+        return calculate_mod_bandwidth_from_amplitude_rise_time(
+            amplitude_rise_time_ns
+        )
 
     def __str__(self) -> str:
         config = (
@@ -687,3 +701,22 @@ class Channel(ABC):
             if params[p] == defaults[p]:
                 params.pop(p, None)
         return {"id": id, "basis": self.basis, **params}
+
+
+def __getattr__(name: str) -> Any:
+    """Intercept module-level attribute access to provide deprecation warnings.
+
+    This allows us to warn users when they import deprecated constants
+    like MODBW_TO_TR directly from this module.
+    """
+    if name == "MODBW_TO_TR":
+        warnings.warn(
+            "Importing 'MODBW_TO_TR' from 'pulser.channels.base_channel' is "
+            "deprecated and will be removed in a future version. ",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        # Still return the value for backwards compatibility
+        return 0.48
+
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
