@@ -17,6 +17,9 @@ from pulser.channels.channels import Microwave, Raman, Rydberg
 from pulser.channels.dmm import DMM
 from pulser.channels.eom import BaseEOM, RydbergEOM, RydbergBeam
 
+# Expose the modulation submodule
+from pulser.channels import modulation as modulation
+
 __all__ = [
     "Microwave",
     "Raman",
