@@ -572,8 +572,8 @@ class Channel(ABC):
 
         Args:
             input_samples: The samples to modulate.
-            mod_bandwidth: The modulation bandwidth (in MHz), following Pulser's
-                non-standard definition (2x the -3dB bandwidth).
+            mod_bandwidth: The modulation bandwidth (in MHz), following
+                Pulser's non-standard definition (2x the -3dB bandwidth).
         """
         # The cutoff frequency (fc) and the modulation transfer function
         # are defined in https://tinyurl.com/bdeumc8k
