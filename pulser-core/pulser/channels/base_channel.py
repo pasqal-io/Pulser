@@ -651,7 +651,7 @@ class Channel(ABC):
     @property
     def _eom_buffer_mod_bandwidth(self) -> float:
         # Takes half of the buffer time as the rise time
-        amplitude_rise_time_ns = self._eom_buffer_time / 2
+        amplitude_rise_time_ns = self._eom_buffer_time // 2
         return calculate_mod_bandwidth_from_amplitude_rise_time(
             amplitude_rise_time_ns
         )
