@@ -229,7 +229,9 @@ def test_modulation_local(mod_device):
     # Check that the target slots account for fall time
     out_slots = out_ch_samples.slots
     # The first slot should extend to the second
-    assert out_slots[0].tf == pulse1.duration + partial_fall
+    assert out_slots[0].tf == pulse1.duration + seq._schedule[
+        "ch0"
+    ].adjust_duration(partial_fall)
     assert out_slots[0].tf == out_slots[1].ti
     # The next slots should fully account for fall time
     for slot, pulse in zip(out_slots[1:], (pulse2, pulse1)):
@@ -245,8 +247,20 @@ def test_modulation_local(mod_device):
         np.testing.assert_array_equal(getattr(out_ch_samples, qty), combined)
 
 
+@pytest.mark.parametrize("custom_eom_buffer", [None, 400])
 @pytest.mark.parametrize("disable_eom", [True, False])
-def test_eom_modulation(mod_device, disable_eom):
+def test_eom_modulation(mod_device, disable_eom, custom_eom_buffer):
+    if custom_eom_buffer is not None:
+        # Replace the EOM config with one that has custom_buffer_time
+        ryd_ch = mod_device.channels["rydberg_global"]
+        assert custom_eom_buffer > ryd_ch.eom_config.rise_time * 2
+        new_eom_config = replace(
+            ryd_ch.eom_config, custom_buffer_time=custom_eom_buffer
+        )
+        new_ch = replace(ryd_ch, eom_config=new_eom_config)
+        mod_device = replace(
+            mod_device, channel_objects=(new_ch,), channel_ids=None
+        )
     seq = pulser.Sequence(pulser.Register.square(2, prefix="q"), mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     seq.enable_eom_mode("ch0", amp_on=1, detuning_on=0.0)
@@ -259,13 +273,15 @@ def test_eom_modulation(mod_device, disable_eom):
         seq.add(Pulse.ConstantPulse(500, 1, 0, 0), "ch0")
 
     full_duration = seq.get_duration(include_fall_time=True)
-    eom_mask = np.zeros(full_duration, dtype=bool)
-    eom_mask[:end_of_eom] = True
-    ext_eom_mask = np.zeros_like(eom_mask)
+    eom_block = seq._schedule["ch0"].eom_blocks[-1]
     eom_config = seq.declared_channels["ch0"].eom_config
-    ext_eom_mask[end_of_eom : end_of_eom + 2 * eom_config.rise_time] = True
-
-    det_off = seq._schedule["ch0"].eom_blocks[-1].detuning_off
+    det_off = eom_block.detuning_off
+    # When finishing in EOM mode (block.tf is None), end = full_duration
+    eom_end = full_duration if eom_block.tf is None else end_of_eom
+    eom_mask = np.zeros(full_duration, dtype=bool)
+    eom_mask[:eom_end] = True
+    ext_eom_mask = np.zeros_like(eom_mask)
+    ext_eom_mask[eom_end : eom_end + 2 * eom_config.rise_time] = True
 
     input_samples = sample(
         seq, extended_duration=full_duration
@@ -273,6 +289,13 @@ def test_eom_modulation(mod_device, disable_eom):
     assert input_samples.in_eom_mode(input_samples.slots[-1]) == (
         not disable_eom
     )
+
+    # Build eom_buffers_mask from the sampled channel's buffer regions
+    eom_buffers_mask = np.zeros(full_duration, dtype=bool)
+    for start, end in input_samples.eom_end_buffers:
+        eom_buffers_mask[start:end] = True
+    eom_buffers_mask = eom_buffers_mask & ~ext_eom_mask
+
     mod_samples = sample(seq, modulation=True, extended_duration=full_duration)
     chan = seq.declared_channels["ch0"]
     for qty in ("amp", "det"):
@@ -286,18 +309,37 @@ def test_eom_modulation(mod_device, disable_eom):
         eom_input = samples.copy()
         eom_input[ext_eom_mask] = aom_output[ext_eom_mask]
         if qty == "det":
-            if not disable_eom:
-                eom_input[end_of_eom:] = det_off
+            if eom_block.tf is None:
+                # When finishing in EOM mode, set last fall_time to det_off
+                eom_fall_time = 2 * eom_config.rise_time
+                eom_input[-eom_fall_time:] = det_off
             eom_input = np.insert(eom_input, 0, det_off)
             eom_output = chan.modulate(eom_input, eom=True, keep_ends=True)[1:]
+            eom_output = eom_output[:full_duration]
+
+            aom_output[eom_mask + ext_eom_mask + eom_buffers_mask] = 0.0
+            eom_output[~(eom_mask + ext_eom_mask)] = 0.0
+
+            # Buffer modulation for detuning
+            buffer_ch_obj = replace(
+                chan, mod_bandwidth=chan._eom_buffer_mod_bandwidth
+            )
+            buffer_input = aom_input.copy()
+            buffer_input[~(eom_mask + eom_buffers_mask)] = 0.0
+            buffer_output = buffer_ch_obj.modulate(
+                buffer_input, keep_ends=True
+            )[:full_duration]
+            buffer_output[~eom_buffers_mask] = 0.0
+
+            want = eom_output + aom_output + buffer_output
         else:
             eom_output = chan.modulate(eom_input, eom=True)
-        eom_output = eom_output[:full_duration]
+            eom_output = eom_output[:full_duration]
 
-        aom_output[eom_mask + ext_eom_mask] = 0.0
-        eom_output[~(eom_mask + ext_eom_mask)] = 0.0
+            aom_output[eom_mask + ext_eom_mask] = 0.0
+            eom_output[~(eom_mask + ext_eom_mask)] = 0.0
 
-        want = eom_output + aom_output
+            want = eom_output + aom_output
 
         # Check that modulation through sample() = sample() + modulation
         got = getattr(mod_samples.channel_samples["ch0"], qty).as_array()
@@ -305,7 +347,7 @@ def test_eom_modulation(mod_device, disable_eom):
             input_samples.modulate(chan, full_duration), qty
         ).as_array()
         np.testing.assert_array_equal(got, alt_got)
-        np.testing.assert_allclose(want.as_array(), got, atol=1e-10)
+        np.testing.assert_allclose(want.as_array(), got, atol=1e-15)
 
 
 def test_seq_with_DMM_and_map_reg():
