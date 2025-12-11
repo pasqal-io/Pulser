@@ -221,6 +221,14 @@ def test_init_errors():
             sample(seq_rydberg()), register, pulser.DigitalAnalogDevice, None
         )
 
+    with pytest.raises(
+        ValueError,
+        match=("Object None is not a valid `NoiseModel`."),
+    ):
+        HamiltonianData(
+            seq_samples, seq.register, pulser.DigitalAnalogDevice, None
+        )
+
     seq = pulser.Sequence(register, pulser.AnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
     with pytest.raises(ValueError, match="SequenceSamples is empty."):
@@ -302,7 +310,7 @@ def test_from_sequence():
 
     ham = HamiltonianData.from_sequence(seq, noise_model=noise_model)
     noiseless = ham.samples.to_nested_dict(all_local=True)
-    full = ham.noisy_samples.to_nested_dict()
+    full = ham.noisy_samples.__next__()[1].to_nested_dict()
     diff = (
         noiseless["Local"]["ground-rydberg"]["superman"]["det"]
         - full["Local"]["ground-rydberg"]["superman"]["det"]
@@ -354,7 +362,7 @@ def test_bad_atoms():
     noise = pulser.NoiseModel(state_prep_error=1.0, runs=1)
     ham = HamiltonianData.from_sequence(seq, noise_model=noise)
     for key in seq.register.qubit_ids:
-        assert ham.bad_atoms[key]
+        assert ham.bad_atoms[0][key]
 
 
 @pytest.mark.parametrize("channel_type", ["rydberg_global", "mw_global"])
@@ -379,13 +387,13 @@ def test_interaction_matrix(channel_type):
     if channel_type == "rydberg_global":
         interaction_size = ham._device.interaction_coeff / 8**6
         assert np.allclose(
-            ham._interaction_matrix,
+            ham._interaction_matrix(ham.noise_trajectories[0][0].register),
             np.array([[0.0, interaction_size], [interaction_size, 0.0]]),
         )
     elif channel_type == "mw_global":
         interaction_size = ham._device.interaction_coeff_xy / 8**3
         assert np.allclose(
-            ham._interaction_matrix,
+            ham._interaction_matrix(ham.noise_trajectories[0][0].register),
             np.array([[0.0, interaction_size], [interaction_size, 0.0]]),
         )
     else:
@@ -418,14 +426,17 @@ def test_interaction_matrix_torch(channel_type):
     if channel_type == "rydberg_global":
         interaction_size = ham._device.interaction_coeff / 8**6
         assert torch.allclose(
-            ham._interaction_matrix,
+            ham._interaction_matrix(ham.noise_trajectories[0][0].register),
             torch.tensor(
                 [[0.0, interaction_size], [interaction_size, 0.0]],
                 dtype=torch.float64,
             ),
         )
         gr = torch.autograd.grad(
-            ham._interaction_matrix[0, 1], q_dict["superman"]
+            ham._interaction_matrix(ham.noise_trajectories[0][0].register)[
+                0, 1
+            ],
+            q_dict["superman"],
         )
         assert torch.allclose(
             gr[0],
@@ -437,14 +448,17 @@ def test_interaction_matrix_torch(channel_type):
     elif channel_type == "mw_global":
         interaction_size = ham._device.interaction_coeff_xy / 8**3
         assert torch.allclose(
-            ham._interaction_matrix,
+            ham._interaction_matrix(ham.noise_trajectories[0][0].register),
             torch.tensor(
                 [[0.0, interaction_size], [interaction_size, 0.0]],
                 dtype=torch.float64,
             ),
         )
         gr = torch.autograd.grad(
-            ham._interaction_matrix[0, 1], q_dict["superman"]
+            ham._interaction_matrix(ham.noise_trajectories[0][0].register)[
+                0, 1
+            ],
+            q_dict["superman"],
         )
         assert torch.allclose(
             gr[0],
@@ -479,14 +493,15 @@ def test_noisy_interaction_matrix():
     noise = pulser.NoiseModel(state_prep_error=0.5, runs=1)
     ham = HamiltonianData.from_sequence(seq, noise_model=noise)
 
-    assert ham.bad_atoms == {
+    assert ham.bad_atoms[0] == {
         "batman": True,
         "superman": False,
         "ironman": False,
         "aquaman": True,
     }
 
-    actual = ham.noisy_interaction_matrix._array
+    assert len(ham.noisy_interaction_matrices) == 1
+    actual = ham.noisy_interaction_matrices[0]._array
     assert np.allclose(
         actual,
         np.array(
@@ -498,7 +513,10 @@ def test_noisy_interaction_matrix():
             ]
         ),
     )
-    assert actual[1, 2] == ham._interaction_matrix[1, 2]
+    assert (
+        actual[1, 2]
+        == ham._interaction_matrix(ham.noise_trajectories[0][0].register)[1, 2]
+    )
 
 
 def test_noisy_interaction_matrix_torch():
@@ -523,13 +541,14 @@ def test_noisy_interaction_matrix_torch():
     )
     noise = pulser.NoiseModel(state_prep_error=0.5, runs=1)
     ham = HamiltonianData.from_sequence(seq, noise_model=noise)
-    assert ham.bad_atoms == {
+    assert ham.bad_atoms[0] == {
         "batman": True,
         "superman": False,
         "ironman": False,
         "aquaman": True,
     }
-    actual = ham.noisy_interaction_matrix._array
+    assert len(ham.noisy_interaction_matrices) == 1
+    actual = ham.noisy_interaction_matrices[0]._array
     assert torch.allclose(
         actual,
         torch.tensor(
@@ -543,7 +562,10 @@ def test_noisy_interaction_matrix_torch():
         ),
     )
 
-    assert actual[1, 2] == ham._interaction_matrix[1, 2]
+    assert (
+        actual[1, 2]
+        == ham._interaction_matrix(ham.noise_trajectories[0][0].register)[1, 2]
+    )
 
 
 def test_noise_hf_detuning_generation():
