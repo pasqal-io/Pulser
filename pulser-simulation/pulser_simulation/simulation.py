@@ -58,6 +58,22 @@ def _has_shot_to_shot_except_spam(noise_model: NoiseModel) -> bool:
     )
 
 
+def _has_stochastic_noise_or_state_prep_error(noise_model: NoiseModel) -> bool:
+    return _has_shot_to_shot_except_spam(noise_model) or (
+        "SPAM" in noise_model.noise_types and noise_model.state_prep_error != 0
+    )
+
+
+def _has_effective_noise(noise_model: NoiseModel) -> bool:
+    # TODO: Check that the relevant dephasing parameter is > 0.
+    return (
+        "dephasing" in noise_model.noise_types
+        or "relaxation" in noise_model.noise_types
+        or "depolarizing" in noise_model.noise_types
+        or "eff_noise" in noise_model.noise_types
+    )
+
+
 class QutipEmulator:
     r"""Emulator of a pulse sequence using QuTiP.
 
@@ -623,9 +639,10 @@ class QutipEmulator:
         else:
             raise ValueError("`progress_bar` must be a bool.")
 
-        ### My work
         # TODO: Check that the relevant dephasing parameter is > 0.
-        if all(ntype == "eff_noise" for ntype in self.noise_model.noise_types):
+        if _has_effective_noise(
+            self.noise_model
+        ) and not _has_stochastic_noise_or_state_prep_error(self.noise_model):
             result = qutip.mesolve(
                 self._hamiltonian._hamiltonian,
                 self.initial_state,
@@ -635,7 +652,9 @@ class QutipEmulator:
                     progress_bar=p_bar, normalize_output=False, **options
                 ),
             )
-        elif "eff_noise" not in self.noise_model.noise_types:
+        elif _has_stochastic_noise_or_state_prep_error(
+            self.noise_model
+        ) and not _has_effective_noise(self.noise_model):
             result = qutip.sesolve(
                 self._hamiltonian._hamiltonian,
                 self.initial_state,
@@ -650,11 +669,8 @@ class QutipEmulator:
                 self.initial_state,
                 self._eval_times_array,
                 self._hamiltonian._collapse_ops,
-                None,
-                1,
-                options=dict(
-                    progress_bar=p_bar, normalize_output=False, **options
-                ),
+                ntraj=1,
+                options=dict(progress_bar=p_bar, **options),
             )
 
         results = [
