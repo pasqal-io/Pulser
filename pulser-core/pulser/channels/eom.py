@@ -14,6 +14,7 @@
 """Configuration parameters for a channel's EOM."""
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, fields
 from enum import Flag
 from itertools import chain
@@ -22,11 +23,12 @@ from typing import Any, Literal, cast, overload
 import numpy as np
 
 import pulser.math as pm
+from pulser.channels.modulation import (
+    calculate_amplitude_rise_time,
+    validate_mod_bandwidth,
+)
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 
-# Conversion factor from modulation bandwith to rise time
-# For more info, see https://tinyurl.com/bdeumc8k
-MODBW_TO_TR = 0.48
 OPTIONAL_ABSTR_EOM_FIELDS = (
     "multiple_beam_control",
     "custom_buffer_time",
@@ -71,21 +73,14 @@ class BaseEOM(_BaseEOMDefaults, _BaseEOM):
     """A base class for the EOM configuration.
 
     Args:
-        mod_bandwidth: The EOM modulation bandwidth at -3dB (50% reduction),
-            in MHz.
+        mod_bandwidth: The EOM modulation bandwidth (in MHz), following
+            Pulser's non-standard definition (2x the -3dB bandwidth, or the
+            frequency at 75% amplitude attenuation).
         custom_buffer_time: A custom wait time to enforce during EOM buffers.
     """
 
     def __post_init__(self) -> None:
-        if self.mod_bandwidth <= 0.0:
-            raise ValueError(
-                "'mod_bandwidth' must be greater than zero, not"
-                f" {self.mod_bandwidth}."
-            )
-        elif self.mod_bandwidth > MODBW_TO_TR * 1e3:
-            raise NotImplementedError(
-                f"'mod_bandwidth' must be lower than {MODBW_TO_TR*1e3} MHz"
-            )
+        validate_mod_bandwidth(self.mod_bandwidth)
 
         if (
             self.custom_buffer_time is not None
@@ -98,12 +93,12 @@ class BaseEOM(_BaseEOMDefaults, _BaseEOM):
 
     @property
     def rise_time(self) -> int:
-        """The rise time (in ns).
+        """The EOM amplitude rise time (in ns).
 
         Defined as the time taken to go from 10% to 90% output in response to
         a step change in the input.
         """
-        return int(MODBW_TO_TR / self.mod_bandwidth * 1e3)
+        return calculate_amplitude_rise_time(self.mod_bandwidth)
 
     def _to_dict(self) -> dict[str, Any]:
         params = {
@@ -152,8 +147,9 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
             in rad/µs.
         intermediate_detuning: The detuning between the two beams, in rad/µs.
         controlled_beams: The beams that can be switched on/off with an EOM.
-        mod_bandwidth: The EOM modulation bandwidth at -3dB (50% reduction),
-            in MHz.
+        mod_bandwidth: The EOM modulation bandwidth (in MHz), following
+            Pulser's non-standard definition (2x the -3dB bandwidth, or the
+            frequency at 75% amplitude attenuation).
         custom_buffer_time: A custom wait time to enforce during EOM buffers.
         multiple_beam_control: Whether both EOMs can be used simultaneously.
             Ignored when only one beam can be controlled.
@@ -335,3 +331,22 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
             * rabi_frequency
             / self.max_limiting_amp,
         }
+
+
+def __getattr__(name: str) -> Any:
+    """Intercept module-level attribute access to provide deprecation warnings.
+
+    This allows us to warn users when they import deprecated constants
+    like MODBW_TO_TR directly from this module.
+    """
+    if name == "MODBW_TO_TR":
+        warnings.warn(
+            "Importing 'MODBW_TO_TR' from 'pulser.channels.eom' is "
+            "deprecated and will be removed in a future version. ",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        # Still return the value for backwards compatibility
+        return 0.48
+
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

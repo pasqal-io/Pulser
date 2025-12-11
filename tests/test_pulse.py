@@ -18,6 +18,7 @@ import pytest
 
 from pulser.channels import Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
+from pulser.channels.modulation import calculate_amplitude_rise_time
 from pulser.parametrized import ParamObj, Variable
 from pulser.pulse import PHASE_PRECISION, Pulse
 from pulser.waveforms import (
@@ -104,12 +105,17 @@ def eom_channel():
 
 
 def test_fall_time(eom_channel):
-    assert eom_channel.eom_config.rise_time == 20
-    assert eom_channel.rise_time == 120
+    eom_rise_time = calculate_amplitude_rise_time(
+        eom_channel.eom_config.mod_bandwidth
+    )
+    aom_rise_time = calculate_amplitude_rise_time(eom_channel.mod_bandwidth)
+
+    assert eom_channel.eom_config.rise_time == eom_rise_time
+    assert eom_channel.rise_time == aom_rise_time
 
     pulse = Pulse.ConstantPulse(1000, 1, 0, 0)
-    assert pulse.fall_time(eom_channel, in_eom_mode=False) == 240
-    assert pulse.fall_time(eom_channel, in_eom_mode=True) == 40
+    assert pulse.fall_time(eom_channel, in_eom_mode=False) == 2 * aom_rise_time
+    assert pulse.fall_time(eom_channel, in_eom_mode=True) == 2 * eom_rise_time
 
 
 def test_full_duration(eom_channel):
