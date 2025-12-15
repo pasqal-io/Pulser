@@ -2278,66 +2278,86 @@ def test_noisy_runs(noise):
 
 
 @pytest.mark.parametrize(
-    "noise_types, amp_sigma, expected",
+    "noise_data, expected",
     [
-        ({"doppler"}, 0.0, True),
-        ({"amplitude"}, 1.0, True),
-        ({"amplitude"}, 0.0, False),
-        ({"detuning"}, 0.0, True),
-        ({"register"}, 0.0, True),
-        ({"SPAM"}, 1.0, False),
-        ({"other"}, 0.0, False),
-        ({"other", "doppler"}, 0.0, True),
+        (dict(noise_types="doppler"), True),
+        (dict(noise_types="amplitude", amp_sigma=1), True),
+        (dict(noise_types="amplitude", amp_sigma=0), False),
+        (dict(noise_types="detuning"), True),
+        (dict(noise_types="register"), True),
+        (dict(noise_types="SPAM"), False),
+        (dict(noise_types="other"), False),
+        (dict(noise_types={"other", "doppler"}), True),
+    ],
+    ids=[
+        "doppler",
+        "amplitude",
+        "amplitude with no amp_sigma",
+        "detuning",
+        "register",
+        "SPAM",
+        "not shot to shot noise",
+        "doppler + other noise",
     ],
 )
-def test_has_shot_to_shot_except_spam(noise_types, amp_sigma, expected):
-    fake_noise_model = SimpleNamespace(
-        noise_types=noise_types,
-        amp_sigma=amp_sigma,
-    )
+def test_has_shot_to_shot_except_spam(noise_data, expected):
+    fake_noise_model = SimpleNamespace(**noise_data)
     assert _has_shot_to_shot_except_spam(fake_noise_model) is expected
 
 
 @pytest.mark.parametrize(
-    "noise_types, amp_sigma, state_prep_error, expected",
+    "noise_data, expected",
     [
-        ({"doppler"}, 0.0, 0.0, True),
-        ({"amplitude"}, 1.0, 0.0, True),
-        ({"amplitude"}, 0.0, 0.0, False),
-        ({"detuning"}, 0.0, 0.0, True),
-        ({"register"}, 0.0, 0.0, True),
-        ({"SPAM"}, 1.0, 0.0, False),
-        ({"SPAM"}, 0.0, 1.0, True),
-        ({"other"}, 0.0, 0.0, False),
-        ({"other", "detuning"}, 0.0, 0.0, True),
+        (dict(noise_types="doppler"), True),
+        (dict(noise_types="amplitude", amp_sigma=1.0), True),
+        (dict(noise_types="amplitude", amp_sigma=0.0), False),
+        (dict(noise_types="detuning"), True),
+        (dict(noise_types="register"), True),
+        (dict(noise_types="SPAM", state_prep_error=0.0), False),
+        (dict(noise_types="SPAM", state_prep_error=1.0), True),
+        (dict(noise_types="other"), False),
+        (dict(noise_types={"other", "detuning"}), True),
+    ],
+    ids=[
+        "doppler",
+        "amplitude",
+        "amplitude=0",
+        "detuning",
+        "register",
+        "SPAM, state_prep_error=1",
+        "SPAM, state_prep_error=0",
+        "not shot_to_shot and not SPAM noise",
+        "detuning + other noise",
     ],
 )
-def test_has_stochastic_noise_or_state_prep_error(
-    noise_types, amp_sigma, state_prep_error, expected
-):
-    fake_noise_model = SimpleNamespace(
-        noise_types=noise_types,
-        amp_sigma=amp_sigma,
-        state_prep_error=state_prep_error,
-    )
+def test_has_stochastic_noise_or_state_prep_error(noise_data, expected):
+    fake_noise_model = SimpleNamespace(**noise_data)
     assert (
         _has_stochastic_noise_or_state_prep_error(fake_noise_model) is expected
     )
 
 
 @pytest.mark.parametrize(
-    "noise_types, expected",
+    "noise_data, expected",
     [
-        ({"dephasing"}, True),
-        ({"relaxation"}, True),
-        ({"depolarizing"}, True),
-        ({"eff_noise"}, True),
-        ({"other"}, False),
-        ({"other", "eff_noise"}, True),
+        (dict(noise_types="dephasing"), True),
+        (dict(noise_types="relaxation"), True),
+        (dict(noise_types="depolarizing"), True),
+        (dict(noise_types="eff_noise"), True),
+        (dict(noise_types="other"), False),
+        (dict(noise_types={"other", "eff_noise"}), True),
+    ],
+    ids=[
+        "dephasing",
+        "relaxation",
+        "depolarizing",
+        "eff_noise",
+        "not effective noise",
+        "eff_noise + other",
     ],
 )
-def test_has_effective_noise(noise_types, expected):
-    fake_noise_model = SimpleNamespace(noise_types=noise_types)
+def test_has_effective_noise(noise_data, expected):
+    fake_noise_model = SimpleNamespace(**noise_data)
     assert _has_effective_noise(fake_noise_model) is expected
 
 
