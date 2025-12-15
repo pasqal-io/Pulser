@@ -1625,7 +1625,7 @@ def test_delay_at_rest(in_eom, at_rest, delay_duration):
     assert (extra_delay := pulse.fall_time(ch_obj, in_eom_mode=in_eom)) > 0
     seq.delay(delay_duration, "ryd", at_rest=at_rest)
     assert seq.get_duration() == pulse.duration + delay_duration + (
-        extra_delay * at_rest
+        seq._schedule["ryd"].adjust_duration(extra_delay) * at_rest
     )
 
 
@@ -1809,8 +1809,8 @@ def test_str(reg, device, mod_device, det_map):
     msg_ch0 = (
         "Channel: ch0\nt: 0 | Initial targets: q0 | Phase Reference: 0.0 "
         + "\nt: 0->500 | Pulse(Amp=2 rad/µs, Detuning=-10 rad/µs, Phase=0) "
-        + "| Targets: q0\nt: 500->800 | Delay \nt: 800->800 | Target: q7 | "
-        + "Phase Reference: 0.0"
+        + "| Targets: q0\nt: 500->800 | Delay \nt: 800->840 | Delay "
+        + "\nt: 840->840 | Target: q7 | Phase Reference: 0.0"
     )
     targets = ", ".join(sorted(reg.qubit_ids))
     msg_ch1 = (
@@ -2000,7 +2000,9 @@ def test_estimate_added_delay(eom, custom_phase_jump_time):
     )
     if not eom:
         assert ising_obj.phase_jump_time == phase_jump_time
-    delay = pulse_0.fall_time(ising_obj, eom) + phase_jump_time
+    delay = seq._schedule["ising"].adjust_duration(
+        pulse_0.fall_time(ising_obj, eom) + phase_jump_time
+    )
     assert seq.estimate_added_delay(pulse_pi_2, "ising") == delay
     seq._add(pulse_pi_2, "ising", "min-delay")
     second_pulse = seq._last("ising")
