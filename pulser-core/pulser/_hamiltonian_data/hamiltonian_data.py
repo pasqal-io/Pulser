@@ -47,11 +47,15 @@ from pulser.sequence import Sequence
 
 
 class TrajectoryWithReps(NamedTuple):
+    """A NoiseTrajectory and the number of times it should be simulated."""
+
     trajectory: NoiseTrajectory
     reps: int
 
 
 class SamplesWithReps(NamedTuple):
+    """A trajectory, samples and how often they should be simulated."""
+
     trajectory: NoiseTrajectory
     samples: SequenceSamples
     reps: int

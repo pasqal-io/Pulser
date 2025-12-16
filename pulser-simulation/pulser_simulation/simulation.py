@@ -51,6 +51,8 @@ from pulser_simulation.simresults import (
 
 
 class HamiltonianWithReps(NamedTuple):
+    """A Hamiltonian and the number of times it should be simulated."""
+
     hamiltonian: Hamiltonian
     reps: int
 
@@ -175,10 +177,6 @@ class QutipEmulator:
             else:
                 self._meas_basis = self.basis_name.replace("_with_error", "")
         self.set_initial_state("all-ground")
-
-    @property
-    def register(self) -> BaseRegister:
-        return self._hamiltonian_data.register
 
     @property
     def device(self) -> BaseDevice:
