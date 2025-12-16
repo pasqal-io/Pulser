@@ -180,6 +180,7 @@ class QutipEmulator:
 
     @property
     def device(self) -> BaseDevice:
+        """The device being simulated."""
         return self._hamiltonian_data.device
 
     @property
