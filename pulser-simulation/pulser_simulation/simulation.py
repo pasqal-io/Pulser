@@ -20,7 +20,7 @@ from collections import Counter
 from collections.abc import Iterator
 from dataclasses import asdict
 from functools import lru_cache
-from typing import Any, Optional, Union, cast
+from typing import Any, NamedTuple, Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -48,6 +48,11 @@ from pulser_simulation.simresults import (
     NoisyResults,
     SimulationResults,
 )
+
+
+class HamiltonianWithReps(NamedTuple):
+    hamiltonian: Hamiltonian
+    reps: int
 
 
 class QutipEmulator:
@@ -101,7 +106,6 @@ class QutipEmulator:
         # Check compatibility of register and device
         self._sampling_rate = sampling_rate
         device.validate_register(register)
-        self._device = device
         self._register = register
         # Check compatibility of samples and device:
         if sampled_seq._slm_mask.end > 0 and not device.supports_slm_mask:
@@ -150,12 +154,10 @@ class QutipEmulator:
                     stacklevel=2,
                 )
             noise_model = config.to_noise_model()
-
+        if not noise_model:
+            noise_model = NoiseModel()
         self._hamiltonian_data = HamiltonianData(
-            self.samples_obj,
-            self._register,
-            self._device,
-            noise_model or NoiseModel(),
+            self.samples_obj, register, device, noise_model, noise_model.runs
         )
         # I don't like this, since the iterator is lost, but I don't
         # want to write logic to store and invalidate the iterator either
@@ -173,6 +175,14 @@ class QutipEmulator:
             else:
                 self._meas_basis = self.basis_name.replace("_with_error", "")
         self.set_initial_state("all-ground")
+
+    @property
+    def register(self) -> BaseRegister:
+        return self._hamiltonian_data.register
+
+    @property
+    def device(self) -> BaseDevice:
+        return self._hamiltonian_data.device
 
     @property
     def _noiseless_hamiltonian(self) -> Hamiltonian:
@@ -197,7 +207,7 @@ class QutipEmulator:
             noise = NoiseModel()
 
         noiseless_data = HamiltonianData(
-            self.samples_obj, self._register, self._device, noise
+            self.samples_obj, self._register, self.device, noise, noise.runs
         )
         return Hamiltonian(
             noiseless_data.samples,
@@ -208,15 +218,18 @@ class QutipEmulator:
         )
 
     @property
-    def _hamiltonians(self) -> Iterator[tuple[Hamiltonian, int]]:
-        for traj, noisy_samples, n in self._hamiltonian_data.noisy_samples:
-            yield Hamiltonian(
-                noisy_samples,
-                traj,
-                self._hamiltonian_data.basis_data,
-                self._hamiltonian_data.lindblad_data,
-                self._sampling_rate,
-            ), n
+    def _hamiltonians(self) -> Iterator[HamiltonianWithReps]:
+        for traj, noisy_samples, reps in self._hamiltonian_data.noisy_samples:
+            yield HamiltonianWithReps(
+                Hamiltonian(
+                    noisy_samples,
+                    traj,
+                    self._hamiltonian_data.basis_data,
+                    self._hamiltonian_data.lindblad_data,
+                    self._sampling_rate,
+                ),
+                reps,
+            )
 
     @property
     def sampling_times(self) -> np.ndarray:
@@ -287,11 +300,13 @@ class QutipEmulator:
             )
         former_dim = self.dim
         former_basis = self.basis
+        noise_model = cfg.to_noise_model()
         self._hamiltonian_data = HamiltonianData(
             self.samples_obj,
             self._register,
-            self._device,
-            cfg.to_noise_model(),
+            self.device,
+            noise_model,
+            noise_model.runs,
         )
         self._current_hamiltonian = next(self._hamiltonians)[0]
         if self.dim == former_dim:
@@ -307,7 +322,7 @@ class QutipEmulator:
                         else "g"
                     )
                 ]
-                for _ in range(self._hamiltonian_data.nbqudits)
+                for _ in range(self._hamiltonian_data.n_qudits)
             ]
         ):
             warnings.warn(
@@ -405,7 +420,7 @@ class QutipEmulator:
             self._initial_state = qutip.tensor(
                 [
                     self.basis[("u" if v == "XY" else "g")]
-                    for _ in range(self._hamiltonian_data.nbqudits)
+                    for _ in range(self._hamiltonian_data.n_qudits)
                 ]
             )
         else:
@@ -413,12 +428,12 @@ class QutipEmulator:
             shape = state.shape[0]
             legal_shape = (
                 self._hamiltonian_data.basis_data.dim
-                ** self._hamiltonian_data.nbqudits
+                ** self._hamiltonian_data.n_qudits
             )
             legal_dims = [
                 [self._hamiltonian_data.basis_data.dim]
-                * self._hamiltonian_data.nbqudits,
-                [1] * self._hamiltonian_data.nbqudits,
+                * self._hamiltonian_data.n_qudits,
+                [1] * self._hamiltonian_data.n_qudits,
             ]
             if shape != legal_shape:
                 raise ValueError(
@@ -654,7 +669,7 @@ class QutipEmulator:
 
         return CoherentResults(
             results,
-            self._hamiltonian_data.nbqudits,
+            self._hamiltonian_data.n_qudits,
             self.basis_name,
             self._eval_times_array,
             self._meas_basis,
@@ -683,7 +698,7 @@ class QutipEmulator:
                 != qutip.tensor(
                     [
                         self.basis[("u" if v == "XY" else "g")]
-                        for _ in range(self._hamiltonian_data.nbqudits)
+                        for _ in range(self._hamiltonian_data.n_qudits)
                     ]
                 )
             ):
@@ -756,7 +771,7 @@ class QutipEmulator:
         ]
         return NoisyResults(
             results,
-            self._hamiltonian_data.nbqudits,
+            self._hamiltonian_data.n_qudits,
             self.basis_name,
             self._eval_times_array,
             n_measures,

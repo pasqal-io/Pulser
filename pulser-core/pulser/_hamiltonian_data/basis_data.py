@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Definition of a set of Lindblad collapse operators."""
+"""Definition of the basis used by the Sequence."""
 from dataclasses import dataclass
 from typing import Literal
 

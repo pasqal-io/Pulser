@@ -217,7 +217,7 @@ class QutipBackendV2(EmulatorBackend):
                             [
                                 qutip.Qobj(np.zeros((dim, dim)))
                                 for _ in range(
-                                    self._sim_obj._current_hamiltonian.nbqudits
+                                    self._sim_obj._current_hamiltonian.n_qudits
                                 )
                             ]
                         )

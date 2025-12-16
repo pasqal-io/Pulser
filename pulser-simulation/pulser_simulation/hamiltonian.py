@@ -25,6 +25,7 @@ import qutip
 from pulser._hamiltonian_data import BasisData, LindbladData, NoiseTrajectory
 from pulser.channels.base_channel import States
 from pulser.register import QubitId
+from pulser.register.base_register import BaseRegister
 from pulser.sampler.samples import SequenceSamples
 
 
@@ -54,7 +55,7 @@ class Hamiltonian:
         self.noise_trajectory = noise_trajectory
         self._sampling_rate = sampling_rate
         self._qid_index = {
-            qid: i for i, qid in enumerate(noise_trajectory.register.qubits)
+            qid: i for i, qid in enumerate(self._register.qubits)
         }
         self.basis_data = basis_data
         self.lindblad_data = lindblad_data
@@ -73,11 +74,15 @@ class Hamiltonian:
 
         # Stores the qutip operators used in building the Hamiltonian
         self._collapse_ops: list[qutip.Qobj] = []
-        self.operators: dict[str, defaultdict[str, dict]] = {
+        self._operators: dict[str, defaultdict[str, dict]] = {
             addr: defaultdict(dict) for addr in ["Global", "Local"]
         }
 
         self._set_config()
+
+    @property
+    def _register(self) -> BaseRegister:
+        return self.noise_trajectory.register
 
     def _adapt_to_sampling_rate(self, full_array: np.ndarray) -> np.ndarray:
         """Adapt list to correspond to sampling rate."""
@@ -115,7 +120,7 @@ class Hamiltonian:
                 operator = coeff * qutip.Qobj(collapse_op).full()
             self._collapse_ops += [
                 self._build_operator([(operator, [qid])], self.op_matrix)
-                for qid in self.noise_trajectory.register.qubit_ids
+                for qid in self._register.qubit_ids
             ]
 
     def _set_config(self) -> None:
@@ -161,7 +166,7 @@ class Hamiltonian:
         Returns:
             The final operator.
         """
-        op_list = [op_matrix["I"] for j in range(self.nbqudits)]
+        op_list = [op_matrix["I"] for j in range(self.n_qudits)]
 
         if not isinstance(operations, list):
             operations = [operations]
@@ -170,17 +175,15 @@ class Hamiltonian:
             if qubits == "global":
                 return sum(
                     self._build_operator([(operator, [q_id])], op_matrix)
-                    for q_id in self.noise_trajectory.register.qubits
+                    for q_id in self._register.qubits
                 )
             else:
                 qubits_set = set(qubits)
                 if len(qubits_set) < len(qubits):
                     raise ValueError("Duplicate atom ids in argument list.")
-                if not qubits_set.issubset(
-                    self.noise_trajectory.register.qubits.keys()
-                ):
+                if not qubits_set.issubset(self._register.qubits.keys()):
                     v = qubits_set
-                    v -= self.noise_trajectory.register.qubits.keys()
+                    v -= self._register.qubits.keys()
                     raise ValueError("Invalid qubit names: " f"{v}")
                 if isinstance(operator, str):
                     try:
@@ -197,9 +200,9 @@ class Hamiltonian:
         return qutip.tensor(op_list)
 
     @property
-    def nbqudits(self) -> int:
+    def n_qudits(self) -> int:
         """Number of qudits in the Register."""
-        return len(self.noise_trajectory.register.qubit_ids)
+        return len(self._register.qubit_ids)
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non-trivial actions on some qubits.
@@ -288,7 +291,7 @@ class Hamiltonian:
         def make_interaction_term(masked: bool = False) -> qutip.Qobj:
             if masked:
                 # Calculate the total number of good, unmasked qubits
-                effective_size = self.nbqudits - sum(
+                effective_size = self.n_qudits - sum(
                     self.noise_trajectory.bad_atoms.values()
                 )
                 for q in self.samples._slm_mask.targets:
@@ -300,7 +303,7 @@ class Hamiltonian:
             # make interaction term
             dipole_interaction = cast(qutip.Qobj, 0)
             for q1, q2 in itertools.combinations(
-                self.noise_trajectory.register.qubits.keys(), r=2
+                self._register.qubits.keys(), r=2
             ):
                 if (
                     self.noise_trajectory.bad_atoms[q1]
@@ -327,7 +330,7 @@ class Hamiltonian:
         ) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
             samples = samples_dict[addr][basis]
-            operators = self.operators[addr][basis]
+            operators = self._operators[addr][basis]
             # Choose operator names according to addressing:
             if basis == "ground-rydberg":
                 op_ids = ["sigma_gr", "sigma_rr"]
@@ -377,12 +380,12 @@ class Hamiltonian:
                                     self._adapt_to_sampling_rate(coeff),
                                 ]
                             )
-            self.operators[addr][basis] = operators
+            self._operators[addr][basis] = operators
             return terms
 
         qobj_list = []
         # Time independent term:
-        effective_size = self.nbqudits - sum(
+        effective_size = self.n_qudits - sum(
             self.noise_trajectory.bad_atoms.values()
         )
         if "digital" not in self.basis_data.basis_name and effective_size > 1:

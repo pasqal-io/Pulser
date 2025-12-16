@@ -20,7 +20,7 @@ import math
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import replace
-from typing import Iterator, Literal, cast
+from typing import Iterator, List, Literal, NamedTuple, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -44,6 +44,18 @@ from pulser.sampler.samples import (
     _PulseTargetSlot,
 )
 from pulser.sequence import Sequence
+
+
+class TrajectoryWithReps(NamedTuple):
+    trajectory: NoiseTrajectory
+    reps: int
+
+
+class SamplesWithReps(NamedTuple):
+    trajectory: NoiseTrajectory
+    samples: SequenceSamples
+    reps: int
+
 
 SUPPORTED_NOISES: dict = {
     "ising": {
@@ -225,6 +237,7 @@ class HamiltonianData:
         device: The device specifications.
         register: The noiseless register.
         noise_model: NoiseModel to be used to generate noise.
+        n_trajectories: The number of noise trajectories to sample.
     """
 
     def __init__(
@@ -233,6 +246,7 @@ class HamiltonianData:
         register: BaseRegister,
         device: BaseDevice,
         noise_model: NoiseModel,
+        n_trajectories: int | None,
     ) -> None:
         """Instantiates a Hamiltonian object."""
         # Initializing the samples obj
@@ -274,6 +288,11 @@ class HamiltonianData:
 
         self._noise_model = noise_model
         self._check_noise_model(noise_model)
+        # TODO: get rid of NoiseModel.runs
+        if n_trajectories is not noise_model.runs:
+            raise ValueError("n_trajectories should equal noise_model.runs")
+        if not n_trajectories:
+            n_trajectories = 1
 
         self.local_noises = True
         if set(self.noise_model.noise_types).issubset(
@@ -290,7 +309,9 @@ class HamiltonianData:
                 "SPAM" in self.noise_model.noise_types
                 and self.noise_model.state_prep_error > 0
             )
-        self._create_noise_trajectories()
+        self.noise_trajectories = self._create_noise_trajectories(
+            n_trajectories
+        )
 
     def _delocalize_samples(self, samples: SequenceSamples) -> SequenceSamples:
         samples_list = []
@@ -321,7 +342,7 @@ class HamiltonianData:
                 )
         return replace(samples, samples_list=samples_list)
 
-    @functools.cached_property
+    @property
     def basis_data(self) -> BasisData:
         """Get the BasisData defining this Hamiltonian."""
         interaction: Literal["XY", "ising"] = (
@@ -336,7 +357,7 @@ class HamiltonianData:
             interaction_type=interaction,
         )
 
-    @functools.cached_property
+    @property
     def lindblad_data(self) -> LindbladData:
         """Get the LindbladData defining this Hamiltonian."""
         basis_data = self.basis_data
@@ -360,6 +381,7 @@ class HamiltonianData:
         *,
         with_modulation: bool = False,
         noise_model: NoiseModel | None = None,
+        n_trajectories: int | None = None,
     ) -> HamiltonianData:
         r"""Simulation of a pulse sequence using QuTiP.
 
@@ -370,6 +392,7 @@ class HamiltonianData:
                 programmed input or the expected output.
             noise_model: The noise model for the simulation. Replaces and
                 should be preferred over 'noise_model'.
+            n_trajectories: The number of noise trajectories to sample.
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
@@ -406,10 +429,11 @@ class HamiltonianData:
             sequence.register,
             sequence.device,
             noise_model or NoiseModel(),
+            n_trajectories,
         )
 
     @functools.cached_property
-    def nbqudits(self) -> int:
+    def n_qudits(self) -> int:
         """Number of qudits in the Register."""
         return self._size
 
@@ -531,11 +555,13 @@ class HamiltonianData:
     @property
     def noisy_samples(
         self,
-    ) -> Iterator[tuple[NoiseTrajectory, SequenceSamples, int]]:
+    ) -> Iterator[SamplesWithReps]:
         """The noiseless samples modified by the noise trajectory."""
         # TODO: store mutiple trajectories and return iterator
-        for traj, n in self.noise_trajectories:
-            yield traj, self._sample_with_trajectory(traj), n
+        for traj, reps in self.noise_trajectories:
+            yield SamplesWithReps(
+                traj, self._sample_with_trajectory(traj), reps
+            )
 
     @property
     def register(self) -> BaseRegister:
@@ -552,15 +578,20 @@ class HamiltonianData:
         """The current NoiseModel used."""
         return self._noise_model
 
-    @property
-    def bad_atoms(self) -> list[dict[str, bool]]:
-        """The badly prepared atoms at the beginning of the run."""
-        return [traj[0].bad_atoms for traj in self.noise_trajectories]
-
     def _interaction_matrix(
         self, register: BaseRegister
     ) -> "pm.torch.Tensor" | np.ndarray:
-        r"""C6/C3 Interactions between the qubits (in :math:`rad/\mu s`)."""
+        r"""C6/C3 Interactions between the qudits (in :math:`rad/\mu s`).
+
+        Uses data from self to determine the type of interaction and C6/C3.
+
+        Args:
+            register: The register for which to compute the interactions.
+
+        Returns:
+            The pairwise interaction coefficients, taking into account
+            Device specs and the Sequence type.
+        """
         # SLM mask is not included, because it's time-dependent
         d = _distances(register)
         interactions = pm.zeros_like(d)._array
@@ -571,8 +602,8 @@ class HamiltonianData:
             mag_arr = pm.AbstractArray(self.samples._magnetic_field)
             mag_norm = pm.norm(mag_arr)
             assert mag_norm > 0, "There must be a magnetic field in XY mode."
-            for i in range(self.nbqudits):
-                for j in range(i + 1, self.nbqudits):
+            for i in range(self.n_qudits):
+                for j in range(i + 1, self.n_qudits):
                     diff = positions[i] - positions[j]
                     if len(diff) == 2:
                         diff = pm.hstack(
@@ -585,8 +616,8 @@ class HamiltonianData:
                         / d._array[i, j] ** 3
                     )
         else:
-            for i in range(self.nbqudits):
-                for j in range(i + 1, self.nbqudits):
+            for i in range(self.n_qudits):
+                for j in range(i + 1, self.n_qudits):
                     interactions[[i, j], [j, i]] = (
                         self._device.interaction_coeff / d._array[i, j] ** 6
                     )
@@ -600,8 +631,20 @@ class HamiltonianData:
     def _noisy_interaction_matrix(
         self, register: BaseRegister, bad_atoms: dict
     ) -> pm.AbstractArray:
-        """Return the noisy interaction matrix."""
-        mask = [False for _ in range(self.nbqudits)]
+        r"""C6/C3 Interactions between the qudits (in :math:`rad/\mu s`).
+
+        Masks out missing qudits from the interaction.
+        Uses data from self to determine the type of interaction and C6/C3.
+
+        Args:
+            register: The register for which to compute the interactions.
+            bad_atoms: Which qudits are missing from the register.
+
+        Returns:
+            The pairwise interaction coefficients, taking into account
+            Device specs, the Sequence type and missing atoms.
+        """
+        mask = [False for _ in range(self.n_qudits)]
         for ind, value in enumerate(bad_atoms.values()):
             mask[ind] = True if value else False  # convert to python bool
         imat = self._interaction_matrix(register)
@@ -745,14 +788,15 @@ class HamiltonianData:
         # by the propagation direction), ie
         return float(np.exp(-((dist / laser_waist) ** 2)))
 
-    def _create_noise_trajectories(self) -> None:
+    def _create_noise_trajectories(
+        self, ntrajs: int
+    ) -> List[TrajectoryWithReps]:
         """Updates noise random parameters.
 
         Used at the start of each run. If SPAM isn't in chosen noises, all
         atoms are set to be correctly prepared.
         """
-        self.noise_trajectories: list[tuple[NoiseTrajectory, int]] = []
-        ntrajs = self.noise_model.runs or 1
+        noise_trajectories: list[TrajectoryWithReps] = []
         amp_fluctuations: dict[str, float] = {}
         det_fluctuations: dict[str, float] = {}
         det_phases: dict[str, np.ndarray] = {}
@@ -771,17 +815,16 @@ class HamiltonianData:
 
             doppler_detune = {qid: 0.0 for qid in self._qid_index}
             for ch in self._samples.channel_samples:
-                amp_fluctuations[ch] = max(
-                    0, np.random.normal(1.0, self.noise_model.amp_sigma)
-                )  # amp_sigma = 0
+                assert self.noise_model.amp_sigma == 0.0
+                amp_fluctuations[ch] = 1.0
                 det_fluctuations[ch] = 0.0
                 det_phases[ch] = np.array(0.0)
             for bool_string, n in initial_configs:
                 bad_atoms = dict(
                     zip(self._qid_index, map(lambda x: x == "1", bool_string))
                 )
-                self.noise_trajectories.append(
-                    (
+                noise_trajectories.append(
+                    TrajectoryWithReps(
                         NoiseTrajectory(
                             bad_atoms,
                             doppler_detune,
@@ -842,8 +885,8 @@ class HamiltonianData:
                     register = _noisy_register(
                         self.register.qubits, self._noise_model
                     )
-                self.noise_trajectories.append(
-                    (
+                noise_trajectories.append(
+                    TrajectoryWithReps(
                         NoiseTrajectory(
                             bad_atoms,
                             doppler_detune,
@@ -858,6 +901,7 @@ class HamiltonianData:
                         1,
                     )
                 )
+        return noise_trajectories
 
     def _get_basis_name(self, with_leakage: bool) -> str:
         if len(self._samples.used_bases) == 0:

@@ -165,7 +165,7 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
     assert Register(
         sim._current_hamiltonian.noise_trajectory.register.qubits
     ) == Register(seq.qubit_info)
-    assert sim._current_hamiltonian.nbqudits == len(seq.qubit_info)
+    assert sim._current_hamiltonian.n_qudits == len(seq.qubit_info)
     assert sim._tot_duration == 9000  # seq has 9 pulses of 1µs
     assert sim._current_hamiltonian._qid_index == {
         "control1": 0,
@@ -216,7 +216,7 @@ def test_extraction_of_sequences(seq):
         if addr == "Global":
             for slot in seq._schedule[channel]:
                 if isinstance(slot.type, Pulse):
-                    samples = sim._hamiltonian.data.noisy_samples.__next()[
+                    samples = sim._hamiltonian.data.noisy_samples.__next__()[
                         0
                     ].to_nested_dict()[addr][basis]
                     assert np.all(
@@ -600,10 +600,10 @@ def test_single_atom_simulation():
     )
     one_sim = QutipEmulator.from_sequence(one_seq)
     one_res = one_sim.run()
-    assert one_res._size == one_sim._current_hamiltonian.nbqudits
+    assert one_res._size == one_sim._current_hamiltonian.n_qudits
     one_sim = QutipEmulator.from_sequence(one_seq, evaluation_times="Minimal")
     one_resb = one_sim.run()
-    assert one_resb._size == one_sim._current_hamiltonian.nbqudits
+    assert one_resb._size == one_sim._current_hamiltonian.n_qudits
 
 
 def test_add_max_step_and_delays():
@@ -636,16 +636,16 @@ def test_run(seq, patch_plt_show):
         sim.draw(draw_phase_area=True, fig_name="my_fig.pdf")
     bad_initial = np.array([1.0])
     good_initial_array = np.r_[
-        1, np.zeros(sim.dim**sim._current_hamiltonian.nbqudits - 1)
+        1, np.zeros(sim.dim**sim._current_hamiltonian.n_qudits - 1)
     ]
     good_initial_qobj = qutip.tensor(
         [
             qutip.basis(sim.dim, 0)
-            for _ in range(sim._current_hamiltonian.nbqudits)
+            for _ in range(sim._current_hamiltonian.n_qudits)
         ]
     )
     good_initial_qobj_no_dims = qutip.basis(
-        sim.dim**sim._current_hamiltonian.nbqudits, 2
+        sim.dim**sim._current_hamiltonian.n_qudits, 2
     )
 
     with pytest.raises(
@@ -883,7 +883,7 @@ def test_noise(seq, matrices):
         ),
     ):
         assert sim2.run().sample_final_state() == Counter(
-            {"000": 824, "100": 13, "101": 69, "001": 94}
+            {"000": 824, "100": 41, "101": 57, "001": 63, "010": 15}
         )
     with pytest.raises(NotImplementedError, match="Cannot include"):
         QutipEmulator.from_sequence(
@@ -891,11 +891,17 @@ def test_noise(seq, matrices):
         )
     assert sim2._current_hamiltonian.samples.to_nested_dict()["Global"] == {}
     assert any(
-        sim2._hamiltonian_data.noise_trajectories[0][0].bad_atoms.values()
+        sim2._hamiltonian_data.noise_trajectories[
+            0
+        ].trajectory.bad_atoms.values()
     )
     for basis in ("ground-rydberg", "digital"):
-        for t in sim2._hamiltonian_data.bad_atoms[0]:
-            if not sim2._hamiltonian_data.bad_atoms[0][t]:
+        for t in sim2._hamiltonian_data.noise_trajectories[
+            0
+        ].trajectory.bad_atoms:
+            if not sim2._hamiltonian_data.noise_trajectories[
+                0
+            ].trajectory.bad_atoms[t]:
                 continue
             for qty in ("amp", "det", "phase"):
                 assert np.all(
@@ -929,13 +935,13 @@ def test_noise_with_zero_epsilons(seq, matrices):
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
-        (("dephasing",), {"0": 571, "1": 429}, 1),
-        (("relaxation",), {"0": 571, "1": 429}, 1),
-        (("eff_noise",), {"0": 571, "1": 429}, 1),
+        (("dephasing",), {"0": 572, "1": 428}, 1),
+        (("relaxation",), {"0": 572, "1": 428}, 1),
+        (("eff_noise",), {"0": 572, "1": 428}, 1),
         (("depolarizing",), {"0": 561, "1": 439}, 3),
         (("dephasing", "depolarizing", "relaxation"), {"0": 562, "1": 438}, 5),
-        (("eff_noise", "dephasing"), {"0": 572, "1": 428}, 2),
-        (("eff_noise", "leakage"), {"0": 571, "1": 429}, 1),
+        (("eff_noise", "dephasing"), {"0": 573, "1": 427}, 2),
+        (("eff_noise", "leakage"), {"0": 572, "1": 428}, 1),
     ],
 )
 def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
@@ -1017,20 +1023,20 @@ def test_relaxation_noise():
 
 deph_res = {"111": 978, "110": 12, "011": 7, "101": 3}
 depo_res = {
-    "111": 825,
-    "101": 64,
+    "111": 827,
+    "101": 63,
     "011": 59,
-    "110": 41,
+    "110": 40,
     "010": 5,
     "001": 4,
     "000": 1,
     "100": 1,
 }
 deph_depo_res = {
-    "111": 805,
-    "101": 65,
+    "111": 807,
+    "101": 64,
     "011": 60,
-    "110": 57,
+    "110": 56,
     "001": 5,
     "010": 4,
     "100": 3,
@@ -1404,12 +1410,12 @@ def test_run_xy():
     sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.01)
 
     good_initial_array = np.r_[
-        1, np.zeros(sim.dim**sim._current_hamiltonian.nbqudits - 1)
+        1, np.zeros(sim.dim**sim._current_hamiltonian.n_qudits - 1)
     ]
     good_initial_qobj = qutip.tensor(
         [
             qutip.basis(sim.dim, 0)
-            for _ in range(sim._current_hamiltonian.nbqudits)
+            for _ in range(sim._current_hamiltonian.n_qudits)
         ]
     )
     sim.set_initial_state(good_initial_array)
@@ -1426,14 +1432,14 @@ def test_run_xy():
 
 
 res2 = {
-    "0000": 919,
-    "0100": 8,
-    "0001": 39,
-    "0010": 8,
-    "1000": 26,
+    "0000": 920,
+    "0100": 33,
+    "0001": 16,
+    "0010": 6,
+    "1000": 25,
 }
-res1 = {"0000": 929, "0100": 8, "0001": 29, "0010": 8, "1000": 26}
-res3 = {"0000": 929, "0100": 10, "0001": 45, "0010": 5, "1000": 11}
+res1 = {"0000": 930, "0100": 33, "0001": 6, "0010": 6, "1000": 25}
+res3 = {"0000": 930, "0100": 30, "0001": 24, "0010": 5, "1000": 11}
 
 
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
