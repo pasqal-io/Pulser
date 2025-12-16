@@ -263,13 +263,13 @@ def test_leakage(amp_sigma):
     rate = 0.5
     eff_rate = [rate, rate]
     eff_ops = [basisx @ basisr.T, basisx @ basisg.T]  # |x><r| and |x><g|
-
+    nruns = 500
     noise_model = pulser.NoiseModel(
         eff_noise_rates=eff_rate,
         eff_noise_opers=eff_ops,
         with_leakage=True,
         amp_sigma=amp_sigma,
-        runs=int(amp_sigma) or None,
+        runs=(nruns if amp_sigma != 0.0 else None),
     )
 
     eval_times = [1.0]
@@ -309,13 +309,15 @@ def test_leakage(amp_sigma):
     assert one_leaked.expect(result_qut.final_state) == pytest.approx(
         2
         * (1 - math.exp(-rate * duration / 1000))
-        * math.exp(-rate * duration / 1000)
+        * math.exp(-rate * duration / 1000),
+        abs=math.sqrt(1.0 / nruns),
     )
     assert no_leaked.expect(result_qut.final_state) == pytest.approx(
-        math.exp(-2 * rate * duration / 1000)
+        math.exp(-2 * rate * duration / 1000), abs=math.sqrt(1.0 / nruns)
     )
     assert both_leaked.expect(result_qut.final_state) == pytest.approx(
-        (1 - math.exp(-rate * duration / 1000)) ** 2
+        (1 - math.exp(-rate * duration / 1000)) ** 2,
+        abs=math.sqrt(1.0 / nruns),
     )
 
 

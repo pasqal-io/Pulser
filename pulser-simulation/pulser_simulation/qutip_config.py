@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import warnings
+from enum import Enum
 from typing import Any, Literal
 
 import numpy as np
@@ -22,6 +23,12 @@ import numpy as np
 from pulser.backend.config import EmulationConfig
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
+
+
+class Solver(str, Enum):
+    DEFAULT = "default"
+    MESOLVER = "MasterEquation"
+    MCSOLVER = "MonteCarlo"
 
 
 class QutipConfig(EmulationConfig[QutipState]):
@@ -66,6 +73,7 @@ class QutipConfig(EmulationConfig[QutipState]):
         self,
         *,
         sampling_rate: float = 1.0,
+        solver: Solver = Solver.DEFAULT,
         **backend_options: Any,
     ):
         """Initializes a QutipConfig."""
@@ -96,11 +104,12 @@ class QutipConfig(EmulationConfig[QutipState]):
 
         super().__init__(
             sampling_rate=sampling_rate,
+            solver=solver,
             **backend_options,
         )
 
     def _expected_kwargs(self) -> set[str]:
-        return super()._expected_kwargs() | {"sampling_rate"}
+        return super()._expected_kwargs() | {"sampling_rate", "solver"}
 
     def _get_sampling_indices(self, total_duration_ns: int) -> np.ndarray:
         """Calculates the indices at which samples are taken."""

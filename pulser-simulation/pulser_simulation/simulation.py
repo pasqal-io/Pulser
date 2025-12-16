@@ -37,6 +37,7 @@ from pulser.result import SampledResult
 from pulser.sampler.samples import ChannelSamples, SequenceSamples
 from pulser.sequence._seq_drawer import draw_samples
 from pulser_simulation.hamiltonian import Hamiltonian
+from pulser_simulation.qutip_config import Solver
 from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import (
@@ -112,6 +113,7 @@ class QutipEmulator:
         config: Optional[SimConfig] = None,
         evaluation_times: Union[float, str, ArrayLike] = "Full",
         noise_model: NoiseModel | None = None,
+        solver: Solver = Solver.DEFAULT,
     ) -> None:
         """Instantiates a QutipEmulator object."""
         # Initializing the samples obj
@@ -125,6 +127,7 @@ class QutipEmulator:
         # Check compatibility of register and device
         device.validate_register(register)
         self._register = register
+        self.solver = solver
         # Check compatibility of samples and device:
         if sampled_seq._slm_mask.end > 0 and not device.supports_slm_mask:
             raise ValueError(
@@ -626,7 +629,96 @@ class QutipEmulator:
 
         return min(min_variations)
 
-    def _clean_up_results(self, result: QutipResult) -> CoherentResults:
+    # def _clean_up_results(self, result: QutipResult) -> CoherentResults:
+    #    results = [
+    #        QutipResult(
+    #            tuple(self._hamiltonian.data.register.qubits),
+    #            self._meas_basis,
+    #            state,
+    #            self._meas_basis in self.basis_name,
+    #            evaluation_time=t / self._tot_duration * 1e3,
+    #        )
+    #        for state, t in zip(result.states, self._eval_times_array)
+    #    ]
+    #
+    #    meas_errors = (
+    #        {
+    #            "epsilon": self.noise_model.p_false_pos,
+    #            "epsilon_prime": self.noise_model.p_false_neg,
+    #        }
+    #        if "SPAM" in self.noise_model.noise_types
+    #        else None
+    #    )
+    #
+    #    return CoherentResults(
+    #        results,
+    #        self._hamiltonian.nbqudits,
+    #        self.basis_name,
+    #        self._eval_times_array,
+    #        self._meas_basis,
+    #        meas_errors,
+    #    )
+
+    def _run_solver(
+        self, progress_bar: bool = False, **options: Any
+    ) -> CoherentResults:
+        """Returns CoherentResults: Object containing evolution results."""
+        # Decide if progress bar will be fed to QuTiP solver
+        p_bar: Optional[bool]
+        if progress_bar is True:
+            p_bar = True
+        elif (progress_bar is False) or (progress_bar is None):
+            p_bar = None
+        else:
+            raise ValueError("`progress_bar` must be a bool.")
+
+        cfg = {
+            Solver.MCSOLVER: (
+                qutip.mcsolve,
+                {"progress_bar": progress_bar},
+                {"c_ops": self._hamiltonian._collapse_ops, "ntraj": 1},
+            ),
+            Solver.MESOLVER: (
+                qutip.mesolve,
+                {"progress_bar": p_bar, "normalize_output": False},
+                {"c_ops": self._hamiltonian._collapse_ops},
+            ),
+        }
+        if self.solver in cfg:
+            solver_fn, extra_opts, extra_kwargs = cfg[self.solver]
+        elif self.solver == Solver.DEFAULT:
+            if _has_effective_noise(self.noise_model):
+                solver = (
+                    Solver.MCSOLVER
+                    if _has_stochastic_noise_or_state_prep_error(
+                        self.noise_model
+                    )
+                    else Solver.MESOLVER
+                )
+                solver_fn, extra_opts, extra_kwargs = cfg[solver]
+            else:
+                solver_fn, extra_opts, extra_kwargs = (
+                    qutip.sesolve,
+                    {"progress_bar": p_bar, "normalize_output": False},
+                    {},
+                )
+        else:
+            allowed = ", ".join(s.value for s in Solver)
+            raise ValueError(
+                f"Invalid solver '{self.solver}'. "
+                f"Allowed solvers are: {allowed}."
+            )
+
+        options |= extra_opts
+        result = solver_fn(
+            self._hamiltonian._hamiltonian,
+            self.initial_state,
+            self._eval_times_array,
+            **extra_kwargs,
+            options=options,
+        )
+
+        # return self._clean_up_results(result)
         results = [
             QutipResult(
                 tuple(self._hamiltonian.data.register.qubits),
@@ -655,55 +747,6 @@ class QutipEmulator:
             self._meas_basis,
             meas_errors,
         )
-
-    def _run_solver(
-        self, progress_bar: bool = False, **options: Any
-    ) -> CoherentResults:
-        """Returns CoherentResults: Object containing evolution results."""
-        # Decide if progress bar will be fed to QuTiP solver
-        p_bar: Optional[bool]
-        if progress_bar is True:
-            p_bar = True
-        elif (progress_bar is False) or (progress_bar is None):
-            p_bar = None
-        else:
-            raise ValueError("`progress_bar` must be a bool.")
-
-        # TODO: Check that the relevant dephasing parameter is > 0.
-        if _has_effective_noise(
-            self.noise_model
-        ) and not _has_stochastic_noise_or_state_prep_error(self.noise_model):
-            result = qutip.mesolve(
-                self._hamiltonian._hamiltonian,
-                self.initial_state,
-                self._eval_times_array,
-                self._hamiltonian._collapse_ops,
-                options=dict(
-                    progress_bar=p_bar, normalize_output=False, **options
-                ),
-            )
-        elif _has_stochastic_noise_or_state_prep_error(
-            self.noise_model
-        ) and not _has_effective_noise(self.noise_model):
-            result = qutip.sesolve(
-                self._hamiltonian._hamiltonian,
-                self.initial_state,
-                self._eval_times_array,
-                options=dict(
-                    progress_bar=p_bar, normalize_output=False, **options
-                ),
-            )
-        else:
-            result = qutip.mcsolve(
-                self._hamiltonian._hamiltonian,
-                self.initial_state,
-                self._eval_times_array,
-                self._hamiltonian._collapse_ops,
-                ntraj=1,
-                options=dict(progress_bar=p_bar, **options),
-            )
-
-        return self._clean_up_results(result)
 
     def _validate_options(self, options: Any) -> None:
         options.setdefault(
@@ -911,6 +954,7 @@ class QutipEmulator:
         evaluation_times: Union[float, str, ArrayLike] = "Full",
         with_modulation: bool = False,
         noise_model: NoiseModel | None = None,
+        solver: Solver = Solver.DEFAULT,
     ) -> QutipEmulator:
         r"""Simulation of a pulse sequence using QuTiP.
 
@@ -977,4 +1021,5 @@ class QutipEmulator:
             config,
             evaluation_times,
             noise_model=noise_model,
+            solver=solver,
         )

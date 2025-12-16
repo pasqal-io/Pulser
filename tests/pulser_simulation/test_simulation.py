@@ -30,6 +30,7 @@ from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 from pulser_simulation import QutipEmulator, SimConfig
+from pulser_simulation.qutip_config import Solver
 from pulser_simulation.simresults import NoisyResults
 from pulser_simulation.simulation import (
     _has_effective_noise,
@@ -1422,12 +1423,8 @@ def test_run_xy():
     assert sim.samples_obj._measurement == "XY"
 
 
-res2 = {
-    "0000": 956,
-    "0100": 24,
-    "0101": 20,
-}
 res1 = {"0000": 956, "0100": 34, "0001": 10}
+res2 = {"0000": 956, "0100": 24, "0101": 20}
 
 
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
@@ -1478,6 +1475,7 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
             p_false_neg=0.05,
             **params,
         ),
+        solver=Solver.MESOLVER,
     )
     assert set(sim.noise_model.noise_types) == (
         {"SPAM", noise}
@@ -2291,8 +2289,8 @@ def test_noisy_runs(noise):
     ],
     ids=[
         "doppler",
-        "amplitude",
-        "amplitude with no amp_sigma",
+        "amplitude!=0",
+        "amplitude=0",
         "detuning",
         "register",
         "SPAM",
@@ -2320,11 +2318,11 @@ def test_has_shot_to_shot_except_spam(noise_data, expected):
     ],
     ids=[
         "doppler",
-        "amplitude",
+        "amplitude!=0",
         "amplitude=0",
         "detuning",
         "register",
-        "SPAM, state_prep_error=1",
+        "SPAM, state_prep_error!=0",
         "SPAM, state_prep_error=0",
         "not shot_to_shot and not SPAM noise",
         "detuning + other noise",
@@ -2361,7 +2359,7 @@ def test_has_effective_noise(noise_data, expected):
     assert _has_effective_noise(fake_noise_model) is expected
 
 
-def test_qutip_solver_call(seq, matrices):
+def test_qutip_default_solver_call(seq, matrices):
     eff_noise_params = dict(
         eff_noise_rates=(0.1,),
         eff_noise_opers=(matrices["Z3"],),
@@ -2396,3 +2394,50 @@ def test_qutip_solver_call(seq, matrices):
                     mock.assert_called_once()
                 else:
                     mock.assert_not_called()
+
+
+def test_qutip_parametric_solver_call(seq, matrices):
+    from pulser.backend.default_observables import StateResult
+    from pulser_simulation.qutip_backend import QutipBackendV2
+    from pulser_simulation.qutip_config import QutipConfig, Solver
+
+    eff_noise_params = dict(
+        eff_noise_rates=(0.1,),
+        eff_noise_opers=(matrices["Z3"],),
+    )
+    stochastic_noise_params = dict(detuning_sigma=0.1, runs=1)
+    all_noises = eff_noise_params | stochastic_noise_params
+
+    with (
+        patch.object(sim_module.qutip, "mesolve") as me,
+        patch.object(sim_module.qutip, "mcsolve") as mc,
+    ):
+
+        solver_mocks = {
+            Solver.MESOLVER: me,
+            Solver.MCSOLVER: mc,
+        }
+        for solver, solver_tocall in solver_mocks.items():
+            for solver_mock in solver_mocks.values():
+                solver_mock.reset_mock()
+                solver_mock.side_effect = RuntimeError("stop after solver")
+
+            with pytest.raises(RuntimeError, match="stop after solver"):
+                qutip_config = QutipConfig(
+                    default_evaluation_times=[1.0],
+                    observables=[StateResult(evaluation_times=[1.0])],
+                    noise_model=NoiseModel(**all_noises),
+                    solver=solver,
+                )
+
+                qutip_sim = QutipBackendV2(seq, config=qutip_config)
+                qutip_sim.run()
+                # nm = NoiseModel(**noise_param)
+                # sim = QutipEmulator.from_sequence(seq, noise_model=nm)
+                # sim.run()
+
+            for s, s_tocall in solver_mocks.items():
+                if s == solver:
+                    s_tocall.assert_called_once()
+                else:
+                    s_tocall.assert_not_called()
