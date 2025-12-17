@@ -26,6 +26,13 @@ from pulser_simulation.qutip_state import QutipState
 
 
 class Solver(str, Enum):
+    """Supported QuTiP solvers.
+
+    DEFAULT auto-selects based on the noise model;
+    MESOLVER forces ``qutip.mesolve``,
+    MCSOLVER forces ``qutip.mcsolve``.
+    """
+
     DEFAULT = "default"
     MESOLVER = "MasterEquation"
     MCSOLVER = "MonteCarlo"
@@ -60,6 +67,10 @@ class QutipConfig(EmulationConfig[QutipState]):
         noise_model: An optional noise model to emulate the sequence with.
             Ignored if the sequence's device has default noise model and
             `prefer_device_noise_model=True`.
+        solver: QuTiP solver selection.
+            `Solver.DEFAULT` auto - chosen based on inputs such as noise model,
+            `Solver.MESOLVER` master-equation solver, or
+            `Solver.MCSOLVER` Monte-Carlo solver.
 
     See Also:
         EmulationConfig: The base configuration class for an EmulatorBackend.

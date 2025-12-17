@@ -20,7 +20,7 @@ from collections import Counter
 from collections.abc import Iterator
 from dataclasses import asdict, replace
 from functools import lru_cache
-from typing import Any, Optional, Union, cast
+from typing import Any, Callable, Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -102,6 +102,10 @@ class QutipEmulator:
             - A float to act as a sampling rate for the resulting state.
         noise_model: The noise model for the simulation. Replaces and should
             be preferred over 'config'.
+        solver: QuTiP solver selection.
+            `Solver.DEFAULT` auto - chosen based on inputs such as noise model,
+            `Solver.MESOLVER` master-equation solver, or
+            `Solver.MCSOLVER` Monte-Carlo solver.
     """
 
     def __init__(
@@ -672,7 +676,9 @@ class QutipEmulator:
         else:
             raise ValueError("`progress_bar` must be a bool.")
 
-        cfg = {
+        cfg: dict[
+            Solver, tuple[Callable[..., Any], dict[str, Any], dict[str, Any]]
+        ] = {
             Solver.MCSOLVER: (
                 qutip.mcsolve,
                 {"progress_bar": progress_bar},
@@ -709,13 +715,13 @@ class QutipEmulator:
                 f"Allowed solvers are: {allowed}."
             )
 
-        options |= extra_opts
+        options = {**options, **extra_opts}
         result = solver_fn(
             self._hamiltonian._hamiltonian,
             self.initial_state,
             self._eval_times_array,
             **extra_kwargs,
-            options=options,
+            **options,
         )
 
         # return self._clean_up_results(result)
@@ -982,6 +988,10 @@ class QutipEmulator:
                 programmed input or the expected output.
             noise_model: The noise model for the simulation. Replaces and
                 should be preferred over 'config'.
+            solver: QuTiP solver selection.
+            `Solver.DEFAULT` auto - chosen based on inputs such as noise model,
+            `Solver.MESOLVER` master-equation solver, or
+            `Solver.MCSOLVER` Monte-Carlo solver.
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
