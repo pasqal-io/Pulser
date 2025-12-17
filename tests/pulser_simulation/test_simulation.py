@@ -2389,7 +2389,7 @@ def test_qutip_default_solver_call(seq, matrices):
             with pytest.raises(RuntimeError, match="stop after solver"):
                 qutip_config = QutipConfig(
                     observables=[StateResult(evaluation_times=[1.0])],
-                    noise_model=NoiseModel(**all_noises),
+                    noise_model=NoiseModel(**noise_param),
                     solver=solver,
                 )
                 qutip_sim = QutipBackendV2(seq, config=qutip_config)
