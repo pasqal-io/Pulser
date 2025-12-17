@@ -21,6 +21,7 @@ import numpy as np
 import qutip
 
 import pulser
+from pulser._hamiltonian_data import has_shot_to_shot_except_spam
 from pulser.backend.abc import Backend, EmulatorBackend
 from pulser.backend.config import EmulationConfig, EmulatorConfig
 from pulser.backend.default_observables import BitStrings, StateResult
@@ -30,10 +31,7 @@ from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simresults import CoherentResults, SimulationResults
-from pulser_simulation.simulation import (
-    QutipEmulator,
-    _has_shot_to_shot_except_spam,
-)
+from pulser_simulation.simulation import QutipEmulator
 
 
 class QutipBackend(Backend):
@@ -164,19 +162,17 @@ class QutipBackendV2(EmulatorBackend):
             atom_order=tuple(self._sequence.qubit_info),
             total_duration=self._sim_obj.total_duration_ns,
         )
-        eigenstates = self._sim_obj._hamiltonian.data.eigenbasis
+        eigenstates = self._sim_obj._current_hamiltonian.basis_data.eigenbasis
         options: dict = {}
         self._sim_obj._validate_options(
             options
         )  # setup the default qutip options
         if (
-            "SPAM" not in self._sim_obj.noise_model.noise_types
-            or self._sim_obj.noise_model.state_prep_error == 0
-        ) and not _has_shot_to_shot_except_spam(self._sim_obj.noise_model):
+            "SPAM" not in self._config.noise_model.noise_types
+            or self._config.noise_model.state_prep_error == 0
+        ) and not has_shot_to_shot_except_spam(self._sim_obj.noise_model):
             # A single run is needed, regardless of self.config.runs
-            single_res = self._sim_obj._run_solver(
-                progress_bar=False, **options
-            )
+            single_res = self._sim_obj.run(**options)
             assert isinstance(single_res, CoherentResults)
 
             for qutip_res in single_res:
@@ -221,7 +217,7 @@ class QutipBackendV2(EmulatorBackend):
                             [
                                 qutip.Qobj(np.zeros((dim, dim)))
                                 for _ in range(
-                                    self._sim_obj._hamiltonian.nbqudits
+                                    self._sim_obj._current_hamiltonian.n_qudits
                                 )
                             ]
                         )

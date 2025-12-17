@@ -11,22 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains the HamiltonianData class and related classes.
+"""Definition of a set of Lindblad collapse operators."""
+from dataclasses import dataclass
 
-HamiltonianData contains information about a sequence,
-and a list of noise trajectories.
-"""
+import numpy as np
 
-from pulser._hamiltonian_data.hamiltonian_data import (
-    HamiltonianData as HamiltonianData,
-    has_shot_to_shot_except_spam,
-)
-from pulser._hamiltonian_data.noise_trajectory import (
-    NoiseTrajectory as NoiseTrajectory,
-)
-from pulser._hamiltonian_data.basis_data import (
-    BasisData as BasisData,
-)
-from pulser._hamiltonian_data.lindblad_data import (
-    LindbladData as LindbladData,
-)
+
+@dataclass(frozen=True)
+class LindbladData:
+    """Some data about the Lindblad operators used by the simulation."""
+
+    op_matrix_names: list[str]
+    local_collapse_ops: list[tuple[int | float | complex, str | np.ndarray]]
+    depolarizing_pauli_2ds: dict[str, list[tuple[int | complex, str]]]
