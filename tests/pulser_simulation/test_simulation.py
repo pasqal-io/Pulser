@@ -37,7 +37,7 @@ from pulser_simulation.simresults import NoisyResults
 from pulser_simulation.simulation import (
     _has_effective_noise,
     _has_shot_to_shot_except_spam,
-    _has_stochastic_noise_or_state_prep_error,
+    _has_stochastic_noise,
 )
 
 
@@ -2330,10 +2330,10 @@ def test_has_shot_to_shot_except_spam(noise_data, expected):
         "detuning + other noise",
     ],
 )
-def test_has_stochastic_noise_or_state_prep_error(noise_data, expected):
+def test_has_stochastic_noise(noise_data, expected):
     fake_noise_model = SimpleNamespace(**noise_data)
     assert (
-        _has_stochastic_noise_or_state_prep_error(fake_noise_model) is expected
+        _has_stochastic_noise(fake_noise_model) is expected
     )
 
 

@@ -59,7 +59,7 @@ def _has_shot_to_shot_except_spam(noise_model: NoiseModel) -> bool:
     )
 
 
-def _has_stochastic_noise_or_state_prep_error(noise_model: NoiseModel) -> bool:
+def _has_stochastic_noise(noise_model: NoiseModel) -> bool:
     return _has_shot_to_shot_except_spam(noise_model) or (
         "SPAM" in noise_model.noise_types and noise_model.state_prep_error != 0
     )
@@ -638,44 +638,29 @@ class QutipEmulator:
     ) -> CoherentResults:
         """Returns CoherentResults: Object containing evolution results."""
         # Decide if progress bar will be fed to QuTiP solver
-        p_bar: Optional[bool]
         if progress_bar is True:
-            p_bar = True
+            options["progress_bar"] = True
         elif (progress_bar is False) or (progress_bar is None):
-            p_bar = None
+            options["progress_bar"] = None
         else:
             raise ValueError("`progress_bar` must be a bool.")
-        cfg: dict[
-            Solver, tuple[Callable[..., Any], dict[str, Any], dict[str, Any]]
-        ] = {
-            Solver.MCSOLVER: (
-                qutip.mcsolve,
-                {},
-                {"c_ops": self._hamiltonian._collapse_ops, "ntraj": 1},
-            ),
-            Solver.MESOLVER: (
-                qutip.mesolve,
-                {"normalize_output": False},
-                {"c_ops": self._hamiltonian._collapse_ops},
-            ),
+
+        solver_fn: Callable[..., Any] = qutip.sesolve
+
+        cfg: dict[Solver, Callable[..., Any]] = {
+            Solver.MCSOLVER: qutip.mcsolve,
+            Solver.MESOLVER: qutip.mesolve,
         }
         if self.solver in cfg:
-            solver_fn, extra_opts, extra_kwargs = cfg[self.solver]
+            solver_fn = cfg[self.solver]
         elif self.solver == Solver.DEFAULT:
             if _has_effective_noise(self.noise_model):
-                solver = (
-                    Solver.MCSOLVER
-                    if _has_stochastic_noise_or_state_prep_error(
+                solver_fn = (
+                    qutip.mcsolve
+                    if _has_stochastic_noise(
                         self.noise_model
                     )
-                    else Solver.MESOLVER
-                )
-                solver_fn, extra_opts, extra_kwargs = cfg[solver]
-            else:
-                solver_fn, extra_opts, extra_kwargs = (
-                    qutip.sesolve,
-                    {"normalize_output": False},
-                    {},
+                    else qutip.mesolve
                 )
         else:
             allowed = ", ".join(s.value for s in Solver)
@@ -684,7 +669,15 @@ class QutipEmulator:
                 f"Allowed solvers are: {allowed}."
             )
 
-        options = {**options, **extra_opts, "progress_bar": p_bar}
+        if solver_fn in (qutip.mesolve, qutip.sesolve):
+            options["normalize_output"] = False
+
+        extra_kwargs: dict[str, Any] = {}
+        if solver_fn in (qutip.mesolve, qutip.mcsolve):
+            extra_kwargs["c_ops"] = self._hamiltonian._collapse_ops
+            if solver_fn is qutip.mcsolve:
+                extra_kwargs["ntraj"] = 1
+
         result = solver_fn(
             self._hamiltonian._hamiltonian,
             self.initial_state,
