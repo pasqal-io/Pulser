@@ -904,11 +904,11 @@ def test_noise(seq, matrices):
             ].trajectory.bad_atoms[t]:
                 continue
             for qty in ("amp", "det", "phase"):
+                samples = (
+                    sim2._hamiltonian_data.noisy_samples.__next__().samples
+                )
                 assert np.all(
-                    sim2._hamiltonian_data.noisy_samples.__next__()[
-                        1
-                    ].to_nested_dict()["Local"][basis][t][qty]
-                    == 0.0
+                    samples.to_nested_dict()["Local"][basis][t][qty] == 0.0
                 )
 
 

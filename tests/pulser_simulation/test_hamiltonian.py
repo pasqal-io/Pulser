@@ -43,7 +43,7 @@ def test_register_2d(reg2d):
     seq.add(pulse1, "ch1", protocol="no-delay")
     seq.add(pulse1, "ch2", protocol="no-delay")
     data = HamiltonianData.from_sequence(seq)
-    for traj, noisy_samples, n in data.noisy_samples:
+    for traj, noisy_samples, _ in data.noisy_samples:
         Hamiltonian(
             noisy_samples,
             traj,
@@ -70,7 +70,7 @@ def test_register_3d(reg3d):
     seq.add(pulse1, "ch1", protocol="no-delay")
     seq.add(pulse1, "ch2", protocol="no-delay")
     data = HamiltonianData.from_sequence(seq)
-    for traj, noisy_samples, n in data.noisy_samples:
+    for traj, noisy_samples, _ in data.noisy_samples:
         Hamiltonian(
             noisy_samples,
             traj,

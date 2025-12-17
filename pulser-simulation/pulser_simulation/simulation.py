@@ -164,7 +164,7 @@ class QutipEmulator:
         # I don't like this, since the iterator is lost, but I don't
         # want to write logic to store and invalidate the iterator either
         # (e.g. if doing run multiple times).
-        self._current_hamiltonian = next(self._hamiltonians)[0]
+        self._current_hamiltonian = next(self._hamiltonians).hamiltonian
         # Initializing evaluation times
         self._eval_times_array: np.ndarray
         self.set_evaluation_times(evaluation_times)
@@ -210,7 +210,7 @@ class QutipEmulator:
         )
         return Hamiltonian(
             noiseless_data.samples,
-            noiseless_data.noise_trajectories[0][0],
+            noiseless_data.noise_trajectories[0].trajectory,
             noiseless_data.basis_data,
             noiseless_data.lindblad_data,
             self._sampling_rate,
@@ -307,7 +307,7 @@ class QutipEmulator:
             noise_model,
             noise_model.runs,
         )
-        self._current_hamiltonian = next(self._hamiltonians)[0]
+        self._current_hamiltonian = next(self._hamiltonians).hamiltonian
         if self.dim == former_dim:
             self.set_initial_state(self._initial_state)
             return
