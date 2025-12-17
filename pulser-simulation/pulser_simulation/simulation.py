@@ -103,9 +103,13 @@ class QutipEmulator:
         noise_model: The noise model for the simulation. Replaces and should
             be preferred over 'config'.
         solver: QuTiP solver selection.
-            `Solver.DEFAULT` auto — selected based on the noise model,
-            `Solver.MESOLVER` master-equation solver, or
-            `Solver.MCSOLVER` Monte-Carlo solver.
+            If the noise model has no effective noise,
+            `sesolve` is used (the `solver` setting is ignored).
+            If the noise model has effective noise, then:
+            - `Solver.DEFAULT`: auto-select (
+                `mcsolve` for stochastic noise, otherwise `mesolve`)
+            - `Solver.MESOLVER`: use the master-equation solver (`mesolve`)
+            - `Solver.MCSOLVER`: use the Monte-Carlo solver (`mcsolve`)
     """
 
     def __init__(
@@ -645,27 +649,27 @@ class QutipEmulator:
         else:
             raise ValueError("`progress_bar` must be a bool.")
 
+        if self.solver not in Solver:
+            allowed_str = ", ".join(s.value for s in Solver)
+            raise ValueError(
+                f"Invalid solver '{self.solver}'. "
+                f"Allowed solvers are: {allowed_str}."
+            )
+
         solver_fn: Callable[..., Any] = qutip.sesolve
 
-        cfg: dict[Solver, Callable[..., Any]] = {
-            Solver.MCSOLVER: qutip.mcsolve,
-            Solver.MESOLVER: qutip.mesolve,
-        }
-        if self.solver in cfg:
-            solver_fn = cfg[self.solver]
-        elif self.solver == Solver.DEFAULT:
-            if _has_effective_noise(self.noise_model):
+        if _has_effective_noise(self.noise_model):
+            if self.solver == Solver.DEFAULT:
                 solver_fn = (
                     qutip.mcsolve
                     if _has_stochastic_noise(self.noise_model)
                     else qutip.mesolve
                 )
-        else:
-            allowed = ", ".join(s.value for s in Solver)
-            raise ValueError(
-                f"Invalid solver '{self.solver}'. "
-                f"Allowed solvers are: {allowed}."
-            )
+            else:
+                solver_fn = {
+                    Solver.MCSOLVER: qutip.mcsolve,
+                    Solver.MESOLVER: qutip.mesolve,
+                }[self.solver]
 
         if solver_fn in (qutip.mesolve, qutip.sesolve):
             options["normalize_output"] = False
@@ -948,9 +952,13 @@ class QutipEmulator:
             noise_model: The noise model for the simulation. Replaces and
                 should be preferred over 'config'.
             solver: QuTiP solver selection.
-                `Solver.DEFAULT` auto — selected based on the noise model,
-                `Solver.MESOLVER` master-equation solver, or
-                `Solver.MCSOLVER` Monte-Carlo solver.
+                If the noise model has no effective noise,
+                `sesolve` is used (the `solver` setting is ignored).
+                If the noise model has effective noise, then:
+                - `Solver.DEFAULT`: auto-select (
+                    `mcsolve` for stochastic noise, otherwise `mesolve`)
+                - `Solver.MESOLVER`: use the master-equation solver (`mesolve`)
+                - `Solver.MCSOLVER`: use the Monte-Carlo solver (`mcsolve`)
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(

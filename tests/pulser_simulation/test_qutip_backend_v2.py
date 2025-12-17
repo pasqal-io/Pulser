@@ -24,7 +24,7 @@ import pulser
 from pulser.backend.default_observables import Energy, Occupation, StateResult
 from pulser.backend.observable import Callback
 from pulser_simulation.qutip_backend import QutipBackendV2
-from pulser_simulation.qutip_config import QutipConfig
+from pulser_simulation.qutip_config import QutipConfig, Solver
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simulation import QutipEmulator
@@ -263,13 +263,13 @@ def test_leakage(amp_sigma):
     rate = 0.5
     eff_rate = [rate, rate]
     eff_ops = [basisx @ basisr.T, basisx @ basisg.T]  # |x><r| and |x><g|
-    nruns = 500
+
     noise_model = pulser.NoiseModel(
         eff_noise_rates=eff_rate,
         eff_noise_opers=eff_ops,
         with_leakage=True,
         amp_sigma=amp_sigma,
-        runs=(nruns if amp_sigma != 0.0 else None),
+        runs=(1 if amp_sigma != 0.0 else None),
     )
 
     eval_times = [1.0]
@@ -277,6 +277,7 @@ def test_leakage(amp_sigma):
         default_evaluation_times=eval_times,
         observables=[StateResult(evaluation_times=eval_times)],
         noise_model=noise_model,
+        solver=Solver.MESOLVER,
     )
 
     qutip_sim = QutipBackendV2(seq, config=qutip_config)
@@ -309,15 +310,13 @@ def test_leakage(amp_sigma):
     assert one_leaked.expect(result_qut.final_state) == pytest.approx(
         2
         * (1 - math.exp(-rate * duration / 1000))
-        * math.exp(-rate * duration / 1000),
-        abs=math.sqrt(1.0 / nruns),
+        * math.exp(-rate * duration / 1000)
     )
     assert no_leaked.expect(result_qut.final_state) == pytest.approx(
-        math.exp(-2 * rate * duration / 1000), abs=math.sqrt(1.0 / nruns)
+        math.exp(-2 * rate * duration / 1000)
     )
     assert both_leaked.expect(result_qut.final_state) == pytest.approx(
-        (1 - math.exp(-rate * duration / 1000)) ** 2,
-        abs=math.sqrt(1.0 / nruns),
+        (1 - math.exp(-rate * duration / 1000)) ** 2
     )
 
 

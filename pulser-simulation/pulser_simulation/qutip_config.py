@@ -26,11 +26,15 @@ from pulser_simulation.qutip_state import QutipState
 
 
 class Solver(str, Enum):
-    """Supported QuTiP solvers.
+    """QuTiP solver selection.
 
-    DEFAULT auto-selects based on the noise model;
-    MESOLVER forces ``qutip.mesolve``,
-    MCSOLVER forces ``qutip.mcsolve``.
+    If the noise model has no effective noise,
+        ``sesolve`` is used (this setting is ignored).
+    If the noise model has effective noise:
+    - ``DEFAULT``: auto-select (
+        ``mcsolve`` for stochastic noise, else ``mesolve``)
+    - ``MESOLVER``: master-equation solver (``mesolve``)
+    - ``MCSOLVER``: Monte-Carlo solver (``mcsolve``)
     """
 
     DEFAULT = "default"
