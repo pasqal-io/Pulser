@@ -645,18 +645,17 @@ class QutipEmulator:
             p_bar = None
         else:
             raise ValueError("`progress_bar` must be a bool.")
-
         cfg: dict[
             Solver, tuple[Callable[..., Any], dict[str, Any], dict[str, Any]]
         ] = {
             Solver.MCSOLVER: (
                 qutip.mcsolve,
-                {"progress_bar": progress_bar},
+                {},
                 {"c_ops": self._hamiltonian._collapse_ops, "ntraj": 1},
             ),
             Solver.MESOLVER: (
                 qutip.mesolve,
-                {"progress_bar": p_bar, "normalize_output": False},
+                {"normalize_output": False},
                 {"c_ops": self._hamiltonian._collapse_ops},
             ),
         }
@@ -675,7 +674,7 @@ class QutipEmulator:
             else:
                 solver_fn, extra_opts, extra_kwargs = (
                     qutip.sesolve,
-                    {"progress_bar": p_bar, "normalize_output": False},
+                    {"normalize_output": False},
                     {},
                 )
         else:
@@ -685,12 +684,13 @@ class QutipEmulator:
                 f"Allowed solvers are: {allowed}."
             )
 
+        options = {**options, **extra_opts, "progress_bar": p_bar}
         result = solver_fn(
             self._hamiltonian._hamiltonian,
             self.initial_state,
             self._eval_times_array,
             **extra_kwargs,
-            options={**options, **extra_opts},
+            options=options,
         )
 
         results = [
