@@ -213,12 +213,15 @@ def test_extraction_of_sequences(seq):
         addr = seq.declared_channels[channel].addressing
         basis = seq.declared_channels[channel].basis
 
-        if addr == "Global":
-            for slot in seq._schedule[channel]:
-                if isinstance(slot.type, Pulse):
-                    samples = sim._hamiltonian.data.noisy_samples.__next__()[
-                        0
-                    ].to_nested_dict()[addr][basis]
+        assert addr == "Local"
+        for slot in seq._schedule[channel]:
+            if isinstance(slot.type, Pulse):
+                for qubit in slot.targets:  # TO DO: multiaddressing??
+                    samples = (
+                        sim._current_hamiltonian.samples.to_nested_dict()[
+                            addr
+                        ][basis][qubit]
+                    )
                     assert np.all(
                         samples["amp"][slot.ti : slot.tf]
                         == slot.type.amplitude.samples
@@ -230,28 +233,6 @@ def test_extraction_of_sequences(seq):
                     assert np.all(
                         samples["phase"][slot.ti : slot.tf] == slot.type.phase
                     )
-
-        elif addr == "Local":
-            for slot in seq._schedule[channel]:
-                if isinstance(slot.type, Pulse):
-                    for qubit in slot.targets:  # TO DO: multiaddressing??
-                        samples = (
-                            sim._current_hamiltonian.samples.to_nested_dict()[
-                                addr
-                            ][basis][qubit]
-                        )
-                        assert np.all(
-                            samples["amp"][slot.ti : slot.tf]
-                            == slot.type.amplitude.samples
-                        )
-                        assert np.all(
-                            samples["det"][slot.ti : slot.tf]
-                            == slot.type.detuning.samples
-                        )
-                        assert np.all(
-                            samples["phase"][slot.ti : slot.tf]
-                            == slot.type.phase
-                        )
 
 
 @pytest.mark.parametrize("leakage", [False, True])
