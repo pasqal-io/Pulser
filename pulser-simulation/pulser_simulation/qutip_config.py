@@ -31,10 +31,10 @@ class Solver(str, Enum):
     If the noise model has no effective noise,
         ``sesolve`` is used (this setting is ignored).
     If the noise model has effective noise:
-    - ``DEFAULT``: auto-select (
-        ``mcsolve`` for stochastic noise, else ``mesolve``)
-    - ``MESOLVER``: master-equation solver (``mesolve``)
-    - ``MCSOLVER``: Monte-Carlo solver (``mcsolve``)
+    - ``DEFAULT``: auto-selects
+        ``mcsolve`` for stochastic noise, else ``mesolve``
+    - ``MESOLVER``: master-equation solver ``mesolve``
+    - ``MCSOLVER``: Monte-Carlo solver ``mcsolve``
     """
 
     DEFAULT = "default"
@@ -72,9 +72,16 @@ class QutipConfig(EmulationConfig[QutipState]):
             Ignored if the sequence's device has default noise model and
             `prefer_device_noise_model=True`.
         solver: QuTiP solver selection.
-            `Solver.DEFAULT` auto — selected based on the noise model,
-            `Solver.MESOLVER` master-equation solver, or
-            `Solver.MCSOLVER` Monte-Carlo solver.
+            If the noise model has no effective noise,
+                `sesolve` is used (the `solver` setting is ignored).
+            If the noise model has effective noise, then:
+
+            - `Solver.DEFAULT`: auto-select
+                `mcsolve` for stochastic noise, otherwise `mesolve
+
+            - `Solver.MESOLVER`: use the master-equation solver `mesolve`
+
+            - `Solver.MCSOLVER`: use the Monte-Carlo solver `mcsolve`
 
     See Also:
         EmulationConfig: The base configuration class for an EmulatorBackend.

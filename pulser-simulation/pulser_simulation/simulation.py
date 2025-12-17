@@ -104,12 +104,15 @@ class QutipEmulator:
             be preferred over 'config'.
         solver: QuTiP solver selection.
             If the noise model has no effective noise,
-            `sesolve` is used (the `solver` setting is ignored).
+                `sesolve` is used (the `solver` setting is ignored).
             If the noise model has effective noise, then:
-            - `Solver.DEFAULT`: auto-select (
-                `mcsolve` for stochastic noise, otherwise `mesolve`)
-            - `Solver.MESOLVER`: use the master-equation solver (`mesolve`)
-            - `Solver.MCSOLVER`: use the Monte-Carlo solver (`mcsolve`)
+
+            - `Solver.DEFAULT`: auto-select
+                `mcsolve` for stochastic noise, otherwise `mesolve
+
+            - `Solver.MESOLVER`: use the master-equation solver `mesolve`
+
+            - `Solver.MCSOLVER`: use the Monte-Carlo solver `mcsolve`
     """
 
     def __init__(
@@ -953,12 +956,15 @@ class QutipEmulator:
                 should be preferred over 'config'.
             solver: QuTiP solver selection.
                 If the noise model has no effective noise,
-                `sesolve` is used (the `solver` setting is ignored).
+                    `sesolve` is used (the `solver` setting is ignored).
                 If the noise model has effective noise, then:
-                - `Solver.DEFAULT`: auto-select (
-                    `mcsolve` for stochastic noise, otherwise `mesolve`)
-                - `Solver.MESOLVER`: use the master-equation solver (`mesolve`)
-                - `Solver.MCSOLVER`: use the Monte-Carlo solver (`mcsolve`)
+
+                - `Solver.DEFAULT`: auto-select
+                    `mcsolve` for stochastic noise, otherwise `mesolve
+
+                - `Solver.MESOLVER`: use the master-equation solver `mesolve`
+
+                - `Solver.MCSOLVER`: use the Monte-Carlo solver `mcsolve`
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
