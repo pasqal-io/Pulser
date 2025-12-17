@@ -657,9 +657,7 @@ class QutipEmulator:
             if _has_effective_noise(self.noise_model):
                 solver_fn = (
                     qutip.mcsolve
-                    if _has_stochastic_noise(
-                        self.noise_model
-                    )
+                    if _has_stochastic_noise(self.noise_model)
                     else qutip.mesolve
                 )
         else:

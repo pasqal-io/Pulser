@@ -2332,9 +2332,7 @@ def test_has_shot_to_shot_except_spam(noise_data, expected):
 )
 def test_has_stochastic_noise(noise_data, expected):
     fake_noise_model = SimpleNamespace(**noise_data)
-    assert (
-        _has_stochastic_noise(fake_noise_model) is expected
-    )
+    assert _has_stochastic_noise(fake_noise_model) is expected
 
 
 @pytest.mark.parametrize(
