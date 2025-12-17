@@ -24,13 +24,15 @@ import qutip
 
 import pulser_simulation.simulation as sim_module
 from pulser import Pulse, Register, Sequence
+from pulser.backend.default_observables import StateResult
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 from pulser_simulation import QutipEmulator, SimConfig
-from pulser_simulation.qutip_config import Solver
+from pulser_simulation.qutip_backend import QutipBackendV2
+from pulser_simulation.qutip_config import QutipConfig, Solver
 from pulser_simulation.simresults import NoisyResults
 from pulser_simulation.simulation import (
     _has_effective_noise,
@@ -2385,9 +2387,13 @@ def test_qutip_default_solver_call(seq, matrices):
                 solver.side_effect = RuntimeError("stop after solver")
 
             with pytest.raises(RuntimeError, match="stop after solver"):
-                nm = NoiseModel(**noise_param)
-                sim = QutipEmulator.from_sequence(seq, noise_model=nm)
-                sim.run()
+                qutip_config = QutipConfig(
+                    observables=[StateResult(evaluation_times=[1.0])],
+                    noise_model=NoiseModel(**all_noises),
+                    solver=solver,
+                )
+                qutip_sim = QutipBackendV2(seq, config=qutip_config)
+                qutip_sim.run()
 
             for name, mock in solver_mocks.items():
                 if name == solver_name:
@@ -2397,10 +2403,6 @@ def test_qutip_default_solver_call(seq, matrices):
 
 
 def test_qutip_parametric_solver_call(seq, matrices):
-    from pulser.backend.default_observables import StateResult
-    from pulser_simulation.qutip_backend import QutipBackendV2
-    from pulser_simulation.qutip_config import QutipConfig, Solver
-
     eff_noise_params = dict(
         eff_noise_rates=(0.1,),
         eff_noise_opers=(matrices["Z3"],),
@@ -2424,20 +2426,26 @@ def test_qutip_parametric_solver_call(seq, matrices):
 
             with pytest.raises(RuntimeError, match="stop after solver"):
                 qutip_config = QutipConfig(
-                    default_evaluation_times=[1.0],
                     observables=[StateResult(evaluation_times=[1.0])],
                     noise_model=NoiseModel(**all_noises),
                     solver=solver,
                 )
-
                 qutip_sim = QutipBackendV2(seq, config=qutip_config)
                 qutip_sim.run()
-                # nm = NoiseModel(**noise_param)
-                # sim = QutipEmulator.from_sequence(seq, noise_model=nm)
-                # sim.run()
 
             for s, s_tocall in solver_mocks.items():
                 if s == solver:
                     s_tocall.assert_called_once()
                 else:
                     s_tocall.assert_not_called()
+
+
+def test_qutip_invalid_solver_error(seq):
+    nm = NoiseModel(detuning_sigma=0.1, runs=1)
+    with pytest.raises(ValueError, match=r"Invalid solver 'fakesolver'"):
+        sim = QutipEmulator.from_sequence(
+            seq,
+            noise_model=nm,
+            solver="fakesolver",
+        )
+        sim.run()

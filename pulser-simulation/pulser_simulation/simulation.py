@@ -103,7 +103,7 @@ class QutipEmulator:
         noise_model: The noise model for the simulation. Replaces and should
             be preferred over 'config'.
         solver: QuTiP solver selection.
-            `Solver.DEFAULT` auto - chosen based on inputs such as noise model,
+            `Solver.DEFAULT` auto — selected based on the noise model,
             `Solver.MESOLVER` master-equation solver, or
             `Solver.MCSOLVER` Monte-Carlo solver.
     """
@@ -989,9 +989,9 @@ class QutipEmulator:
             noise_model: The noise model for the simulation. Replaces and
                 should be preferred over 'config'.
             solver: QuTiP solver selection.
-            `Solver.DEFAULT` auto - chosen based on inputs such as noise model,
-            `Solver.MESOLVER` master-equation solver, or
-            `Solver.MCSOLVER` Monte-Carlo solver.
+                `Solver.DEFAULT` auto — selected based on the noise model,
+                `Solver.MESOLVER` master-equation solver, or
+                `Solver.MCSOLVER` Monte-Carlo solver.
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
