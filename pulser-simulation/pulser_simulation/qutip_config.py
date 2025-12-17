@@ -68,7 +68,7 @@ class QutipConfig(EmulationConfig[QutipState]):
             Ignored if the sequence's device has default noise model and
             `prefer_device_noise_model=True`.
         solver: QuTiP solver selection.
-            `Solver.DEFAULT` auto - chosen based on inputs such as noise model,
+            `Solver.DEFAULT` auto — selected based on the noise model,
             `Solver.MESOLVER` master-equation solver, or
             `Solver.MCSOLVER` Monte-Carlo solver.
 

@@ -633,36 +633,6 @@ class QutipEmulator:
 
         return min(min_variations)
 
-    # def _clean_up_results(self, result: QutipResult) -> CoherentResults:
-    #    results = [
-    #        QutipResult(
-    #            tuple(self._hamiltonian.data.register.qubits),
-    #            self._meas_basis,
-    #            state,
-    #            self._meas_basis in self.basis_name,
-    #            evaluation_time=t / self._tot_duration * 1e3,
-    #        )
-    #        for state, t in zip(result.states, self._eval_times_array)
-    #    ]
-    #
-    #    meas_errors = (
-    #        {
-    #            "epsilon": self.noise_model.p_false_pos,
-    #            "epsilon_prime": self.noise_model.p_false_neg,
-    #        }
-    #        if "SPAM" in self.noise_model.noise_types
-    #        else None
-    #    )
-    #
-    #    return CoherentResults(
-    #        results,
-    #        self._hamiltonian.nbqudits,
-    #        self.basis_name,
-    #        self._eval_times_array,
-    #        self._meas_basis,
-    #        meas_errors,
-    #    )
-
     def _run_solver(
         self, progress_bar: bool = False, **options: Any
     ) -> CoherentResults:
@@ -715,16 +685,14 @@ class QutipEmulator:
                 f"Allowed solvers are: {allowed}."
             )
 
-        options = {**options, **extra_opts}
         result = solver_fn(
             self._hamiltonian._hamiltonian,
             self.initial_state,
             self._eval_times_array,
             **extra_kwargs,
-            **options,
+            options={**options, **extra_opts},
         )
 
-        # return self._clean_up_results(result)
         results = [
             QutipResult(
                 tuple(self._hamiltonian.data.register.qubits),
