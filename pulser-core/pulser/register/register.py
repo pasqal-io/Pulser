@@ -513,7 +513,11 @@ class Register(BaseRegister, RegDrawer):
             custom_ax = cast(
                 plt.Axes,
                 self._initialize_fig_axes(
-                    self.layout.sorted_coords if draw_empty_sites else pos,
+                    (
+                        self.layout.sorted_coords
+                        if (draw_empty_sites and self.layout is not None)
+                        else pos
+                    ),
                     blockade_radius=blockade_radius,
                     draw_half_radius=draw_half_radius,
                 )[1],

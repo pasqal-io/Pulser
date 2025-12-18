@@ -36,6 +36,7 @@ from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
+from pulser.register.register_layout import RegisterLayout
 from pulser.register.weight_maps import DetuningMap
 from pulser.sampler.sampler import sample
 from pulser.sampler.samples import ChannelSamples, DMMSamples, SequenceSamples
@@ -431,17 +432,16 @@ def _draw_register_det_maps(
                 )
 
         elif isinstance(register, Register):
-            empty_traps_reg: None | Register
+            empty_traps_reg: None | BaseRegister
             try:
                 empty_traps_reg = register._get_empty_traps_reg()
-                assert register.layout is not None
             except ValueError:  # None if no layout in register
                 empty_traps_reg = None
             fig_reg, axes_reg = register._initialize_fig_axes(
                 (
                     pos
                     if empty_traps_reg is None
-                    else register.layout.sorted_coords
+                    else cast(RegisterLayout, register.layout).sorted_coords
                 ),
                 blockade_radius=35,
                 draw_half_radius=True,
