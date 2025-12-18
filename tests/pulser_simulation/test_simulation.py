@@ -24,6 +24,7 @@ import qutip
 
 import pulser_simulation.simulation as sim_module
 from pulser import Pulse, Register, Sequence
+from pulser._hamiltonian_data import has_shot_to_shot_except_spam
 from pulser.backend.default_observables import StateResult
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel
@@ -35,7 +36,6 @@ from pulser_simulation.qutip_backend import QutipBackendV2
 from pulser_simulation.qutip_config import QutipConfig, Solver
 from pulser_simulation.simresults import NoisyResults
 from pulser_simulation.simulation import (
-    _has_shot_to_shot_except_spam,
     _has_stochastic_noise,
     _requires_collapse_operators,
 )
@@ -2296,7 +2296,7 @@ def test_noisy_runs(noise):
 )
 def test_has_shot_to_shot_except_spam(noise_data, expected):
     fake_noise_model = SimpleNamespace(**noise_data)
-    assert _has_shot_to_shot_except_spam(fake_noise_model) is expected
+    assert has_shot_to_shot_except_spam(fake_noise_model) is expected
 
 
 @pytest.mark.parametrize(

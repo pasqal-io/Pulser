@@ -33,6 +33,10 @@ from pulser._hamiltonian_data import (
     HamiltonianData,
     has_shot_to_shot_except_spam,
 )
+
+# from pulser._hamiltonian_data.lindblad_data import (
+#    LindbladData as LindbladData
+# )
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
@@ -59,7 +63,7 @@ class HamiltonianWithReps(NamedTuple):
 
 
 def _has_stochastic_noise(noise_model: NoiseModel) -> bool:
-    return _has_shot_to_shot_except_spam(noise_model) or (
+    return has_shot_to_shot_except_spam(noise_model) or (
         "SPAM" in noise_model.noise_types and noise_model.state_prep_error != 0
     )
 
@@ -679,12 +683,12 @@ class QutipEmulator:
 
         extra_kwargs: dict[str, Any] = {}
         if solver_fn in (qutip.mesolve, qutip.mcsolve):
-            extra_kwargs["c_ops"] = self._hamiltonian._collapse_ops
+            extra_kwargs["c_ops"] = hamiltonian._collapse_ops
             if solver_fn is qutip.mcsolve:
                 extra_kwargs["ntraj"] = 1
 
         result = solver_fn(
-            self._hamiltonian._hamiltonian,
+            hamiltonian._hamiltonian,
             self.initial_state,
             self._eval_times_array,
             **extra_kwargs,
