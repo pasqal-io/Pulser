@@ -28,8 +28,13 @@ from pulser_simulation.qutip_state import QutipState
 class Solver(str, Enum):
     """QuTiP solver selection.
 
-    If the noise model has no effective noise, ``sesolve`` is used
-    (this setting is ignored). If the noise model has effective noise.
+    If the noise model has no effective noise,
+      ``qutip.sesolve`` is used (this setting is ignored).
+    If the noise model has effective noise:
+        - ``DEFAULT``: auto-select ``qutip.mcsolve``
+          for stochastic noise, else ``qutip.mesolve``
+        - ``MESOLVER``: master-equation solver ``qutip.mesolve``
+        - ``MCSOLVER``: Monte-Carlo solver ``qutip.mcsolve``
     """
 
     DEFAULT = "default"
@@ -66,7 +71,19 @@ class QutipConfig(EmulationConfig[QutipState]):
         noise_model: An optional noise model to emulate the sequence with.
             Ignored if the sequence's device has default noise model and
             `prefer_device_noise_model=True`.
-        solver: QuTiP solver selection.
+        solver: QuTiP solver selection. If the noise model has no collapse
+            operators (i.e. no dephasing/relaxation/depolarizing/eff_noise
+            terms), the simulation uses qutip.sesolve and the solver
+            setting is ignored. If collapse operators are present, then:
+
+            - ``Solver.DEFAULT``: auto-select ``qutip.mcsolve``
+              for stochastic noise, otherwise ``qutip.mesolve``.
+
+            - ``Solver.MCSOLVER``: use the Monte-Carlo
+              solver ``qutip.mcsolve``.
+
+            - ``Solver.MESOLVER``: use the master-equation
+              solver ``qutip.mesolve``.
 
     See Also:
         EmulationConfig: The base configuration class for an EmulatorBackend.

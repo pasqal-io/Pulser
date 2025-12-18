@@ -65,7 +65,7 @@ def _has_stochastic_noise(noise_model: NoiseModel) -> bool:
     )
 
 
-def _has_effective_noise(noise_model: NoiseModel) -> bool:
+def _requires_collapse_operators(noise_model: NoiseModel) -> bool:
     # TODO: Check that the relevant dephasing parameter is > 0.
     return (
         "dephasing" in noise_model.noise_types
@@ -102,18 +102,19 @@ class QutipEmulator:
             - A float to act as a sampling rate for the resulting state.
         noise_model: The noise model for the simulation. Replaces and should
             be preferred over 'config'.
-        solver: QuTiP solver selection. If the noise model has no effective
-            noise, ``qutip.sesolve`` is used, the ``solver`` setting
-            is ignored. If the noise model has effective noise, then:
+        solver: QuTiP solver selection. If the noise model has no collapse
+            operators (i.e. no dephasing/relaxation/depolarizing/eff_noise
+            terms), the simulation uses qutip.sesolve and the solver setting
+            is ignored. If collapse operators are present, then:
+
+            - ``Solver.DEFAULT``: auto-select ``qutip.mcsolve``
+              for stochastic noise, otherwise ``qutip.mesolve``.
 
             - ``Solver.MCSOLVER``: use the Monte-Carlo
               solver ``qutip.mcsolve``.
 
             - ``Solver.MESOLVER``: use the master-equation
               solver ``qutip.mesolve``.
-
-            - ``Solver.DEFAULT``: auto-select ``qutip.mcsolve``
-              for stochastic noise, otherwise ``qutip.mesolve``.
     """
 
     def __init__(
@@ -662,7 +663,7 @@ class QutipEmulator:
 
         solver_fn: Callable[..., Any] = qutip.sesolve
 
-        if _has_effective_noise(self.noise_model):
+        if _requires_collapse_operators(self.noise_model):
             if self.solver == Solver.DEFAULT:
                 solver_fn = (
                     qutip.mcsolve
@@ -955,18 +956,19 @@ class QutipEmulator:
                 programmed input or the expected output.
             noise_model: The noise model for the simulation. Replaces and
                 should be preferred over 'config'.
-            solver: QuTiP solver selection. If the noise model has no effective
-                noise, ``qutip.sesolve`` is used, the ``solver`` setting
-                is ignored. If the noise model has effective noise, then:
+            solver: QuTiP solver selection. If the noise model has no collapse
+                operators (i.e. no dephasing/relaxation/depolarizing/eff_noise
+                terms), the simulation uses qutip.sesolve and the solver
+                setting is ignored. If collapse operators are present, then:
+
+                - ``Solver.DEFAULT``: auto-select ``qutip.mcsolve``
+                  for stochastic noise, otherwise ``qutip.mesolve``.
 
                 - ``Solver.MCSOLVER``: use the Monte-Carlo
                   solver ``qutip.mcsolve``.
 
                 - ``Solver.MESOLVER``: use the master-equation
                   solver ``qutip.mesolve``.
-
-                - ``Solver.DEFAULT``: auto-select ``qutip.mcsolve``
-                  for stochastic noise, otherwise ``qutip.mesolve``.
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(

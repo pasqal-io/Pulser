@@ -35,9 +35,9 @@ from pulser_simulation.qutip_backend import QutipBackendV2
 from pulser_simulation.qutip_config import QutipConfig, Solver
 from pulser_simulation.simresults import NoisyResults
 from pulser_simulation.simulation import (
-    _has_effective_noise,
     _has_shot_to_shot_except_spam,
     _has_stochastic_noise,
+    _requires_collapse_operators,
 )
 
 
@@ -2354,9 +2354,9 @@ def test_has_stochastic_noise(noise_data, expected):
         "eff_noise + other",
     ],
 )
-def test_has_effective_noise(noise_data, expected):
+def test_requires_collapse_operators(noise_data, expected):
     fake_noise_model = SimpleNamespace(**noise_data)
-    assert _has_effective_noise(fake_noise_model) is expected
+    assert _requires_collapse_operators(fake_noise_model) is expected
 
 
 def test_qutip_default_solver_call(seq, matrices):
