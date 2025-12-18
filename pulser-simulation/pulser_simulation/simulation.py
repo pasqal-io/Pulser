@@ -98,15 +98,7 @@ class QutipEmulator:
             - A float to act as a sampling rate for the resulting state.
         noise_model: The noise model for the simulation. Replaces and should
             be preferred over 'config'.
-        solver: QuTiP solver selection. If the noise model has no effective
-            noise, ``qutip.sesolve`` is used, the ``solver`` setting
-            is ignored. If the noise model has effective noise, then:
-            - ``Solver.MCSOLVER``:
-              use the Monte-Carlo solver ``qutip.mcsolve``
-            - ``Solver.MESOLVER``:
-              use the master-equation solver ``qutip.mesolve``
-            - ``Solver.DEFAULT``: auto-select ``qutip.mcsolve``
-              for stochastic noise, otherwise ``qutip.mesolve``
+        solver: QuTiP solver selection.
     """
 
     def __init__(
@@ -944,15 +936,7 @@ class QutipEmulator:
                 programmed input or the expected output.
             noise_model: The noise model for the simulation. Replaces and
                 should be preferred over 'config'.
-            solver: QuTiP solver selection. If the noise model has no effective
-                noise, ``qutip.sesolve`` is used, the ``solver`` setting
-                is ignored. If the noise model has effective noise, then:
-                - ``Solver.MCSOLVER``: use the Monte-Carlo
-                  solver ``qutip.mcsolve``
-                - ``Solver.MESOLVER``: use the master-equation
-                  solver ``qutip.mesolve``
-                - ``Solver.DEFAULT``: auto-select ``qutip.mcsolve`` for
-                  stochastic noise, otherwise ``qutip.mesolve``
+            solver: QuTiP solver selection.
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
