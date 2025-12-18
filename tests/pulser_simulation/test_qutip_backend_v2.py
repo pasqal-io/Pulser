@@ -159,9 +159,15 @@ def test_qutip_backend_v2_default_noise_model():
 
     backend = QutipBackendV2(sequence(noisy_device), config=config)
 
-    assert backend._sim_obj._hamiltonian.config.p_false_neg == 0.0
-    assert backend._sim_obj._hamiltonian.config.temperature == 50
-    assert backend._sim_obj._hamiltonian.config.dephasing_rate == 0.01
+    # The QutipEmulator should use the device noise model as per the config
+    assert backend._sim_obj._hamiltonian_data.noise_model.p_false_neg == 0.0
+    assert backend._sim_obj._hamiltonian_data.noise_model.temperature == 50
+    assert (
+        backend._sim_obj._hamiltonian_data.noise_model.dephasing_rate == 0.01
+    )
+
+    # However, the config will contain the given noise model
+    assert backend._config.noise_model.p_false_neg == 0.1
 
     backend.run()
 

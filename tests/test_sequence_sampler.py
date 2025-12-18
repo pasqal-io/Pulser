@@ -41,7 +41,7 @@ def assert_same_samples_as_sim(seq: pulser.Sequence) -> None:
     got = sample(seq).to_nested_dict()
     want = (
         pulser_simulation.QutipEmulator.from_sequence(seq)
-        ._hamiltonian.data.noisy_samples.to_nested_dict()
+        ._current_hamiltonian.samples.to_nested_dict()
         .copy()
     )
 
