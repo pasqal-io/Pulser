@@ -431,8 +431,17 @@ def _draw_register_det_maps(
                 )
 
         elif isinstance(register, Register):
+            empty_traps_reg: None | Register
+            try:
+                empty_traps_reg = register._get_empty_traps_reg()
+            except ValueError:  # None if no layout in register
+                empty_traps_reg = None
             fig_reg, axes_reg = register._initialize_fig_axes(
-                pos,
+                (
+                    pos
+                    if empty_traps_reg is None
+                    else register.layout.sorted_coords
+                ),
                 blockade_radius=35,
                 draw_half_radius=True,
                 nregisters=nregisters,
@@ -440,6 +449,15 @@ def _draw_register_det_maps(
             ax_reg = (
                 axes_reg if isinstance(axes_reg, plt.Axes) else axes_reg[0]
             )
+            if empty_traps_reg:
+                register._draw_2D(
+                    ax=ax_reg,
+                    ids=empty_traps_reg.qubit_ids,
+                    pos=empty_traps_reg._coords_arr.as_array(detach=True),
+                    with_labels=False,
+                    label_name="empty",
+                    are_traps=True,
+                )
             register._draw_2D(
                 ax=ax_reg,
                 pos=pos,
