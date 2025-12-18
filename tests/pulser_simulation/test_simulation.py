@@ -24,7 +24,6 @@ import qutip
 
 import pulser_simulation.simulation as sim_module
 from pulser import Pulse, Register, Sequence
-from pulser._hamiltonian_data import has_shot_to_shot_except_spam
 from pulser.backend.default_observables import StateResult
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel
@@ -33,12 +32,9 @@ from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 from pulser_simulation import QutipEmulator, SimConfig
 from pulser_simulation.qutip_backend import QutipBackendV2
-from pulser_simulation.qutip_config import QutipConfig, Solver
+from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.simresults import NoisyResults
-from pulser_simulation.simulation import (
-    _has_stochastic_noise,
-    _requires_collapse_operators,
-)
+from pulser_simulation.simulation import Solver, _has_stochastic_noise
 
 
 @pytest.fixture
@@ -2275,34 +2271,6 @@ def test_noisy_runs(noise):
     "noise_data, expected",
     [
         (dict(noise_types="doppler"), True),
-        (dict(noise_types="amplitude", amp_sigma=1), True),
-        (dict(noise_types="amplitude", amp_sigma=0), False),
-        (dict(noise_types="detuning"), True),
-        (dict(noise_types="register"), True),
-        (dict(noise_types="SPAM"), False),
-        (dict(noise_types="other"), False),
-        (dict(noise_types={"other", "doppler"}), True),
-    ],
-    ids=[
-        "doppler",
-        "amplitude!=0",
-        "amplitude=0",
-        "detuning",
-        "register",
-        "SPAM",
-        "not shot to shot noise",
-        "doppler + other noise",
-    ],
-)
-def test_has_shot_to_shot_except_spam(noise_data, expected):
-    fake_noise_model = SimpleNamespace(**noise_data)
-    assert has_shot_to_shot_except_spam(fake_noise_model) is expected
-
-
-@pytest.mark.parametrize(
-    "noise_data, expected",
-    [
-        (dict(noise_types="doppler"), True),
         (dict(noise_types="amplitude", amp_sigma=1.0), True),
         (dict(noise_types="amplitude", amp_sigma=0.0), False),
         (dict(noise_types="detuning"), True),
@@ -2329,35 +2297,8 @@ def test_has_stochastic_noise(noise_data, expected):
     assert _has_stochastic_noise(fake_noise_model) is expected
 
 
-@pytest.mark.parametrize(
-    "noise_data, expected",
-    [
-        (dict(noise_types="dephasing"), True),
-        (dict(noise_types="relaxation"), True),
-        (dict(noise_types="depolarizing"), True),
-        (dict(noise_types="eff_noise"), True),
-        (dict(noise_types="other"), False),
-        (dict(noise_types={"other", "eff_noise"}), True),
-    ],
-    ids=[
-        "dephasing",
-        "relaxation",
-        "depolarizing",
-        "eff_noise",
-        "not effective noise",
-        "eff_noise + other",
-    ],
-)
-def test_requires_collapse_operators(noise_data, expected):
-    fake_noise_model = SimpleNamespace(**noise_data)
-    assert _requires_collapse_operators(fake_noise_model) is expected
-
-
 def test_qutip_default_solver_call(seq, matrices):
-    eff_noise_params = dict(
-        eff_noise_rates=(0.1,),
-        eff_noise_opers=(matrices["Z3"],),
-    )
+    eff_noise_params = dict(dephasing_rate=0.1)
     stochastic_noise_params = dict(detuning_sigma=0.1, runs=1)
 
     with (
@@ -2394,10 +2335,7 @@ def test_qutip_default_solver_call(seq, matrices):
 
 
 def test_qutip_parametric_solver_call(seq, matrices):
-    eff_noise_params = dict(
-        eff_noise_rates=(0.1,),
-        eff_noise_opers=(matrices["Z3"],),
-    )
+    eff_noise_params = dict(dephasing_rate=0.1)
     stochastic_noise_params = dict(detuning_sigma=0.1, runs=1)
     all_noises = eff_noise_params | stochastic_noise_params
 

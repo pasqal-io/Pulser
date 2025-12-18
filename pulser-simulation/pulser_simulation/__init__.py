@@ -21,7 +21,7 @@ from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_backend import QutipBackend, QutipBackendV2
 from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.simconfig import SimConfig
-from pulser_simulation.simulation import QutipEmulator
+from pulser_simulation.simulation import QutipEmulator, Solver
 
 # NOTE: If any of these change, remember to MANUALLY replicate them in the
 # API reference doc (ie they are not updated automatically).
@@ -35,4 +35,5 @@ __all__ = [
     "QutipBackendV2",
     "QutipEmulator",
     "SimConfig",
+    "Solver",
 ]

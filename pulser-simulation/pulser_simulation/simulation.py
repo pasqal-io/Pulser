@@ -19,6 +19,7 @@ import warnings
 from collections import Counter
 from collections.abc import Iterator
 from dataclasses import asdict
+from enum import Enum
 from functools import lru_cache
 from typing import Any, Callable, NamedTuple, Optional, Union, cast
 
@@ -45,7 +46,6 @@ from pulser.result import SampledResult
 from pulser.sampler.samples import ChannelSamples, SequenceSamples
 from pulser.sequence._seq_drawer import draw_samples
 from pulser_simulation.hamiltonian import Hamiltonian
-from pulser_simulation.qutip_config import Solver
 from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import (
@@ -68,14 +68,21 @@ def _has_stochastic_noise(noise_model: NoiseModel) -> bool:
     )
 
 
-def _requires_collapse_operators(noise_model: NoiseModel) -> bool:
-    # TODO: Check that the relevant dephasing parameter is > 0.
-    return (
-        "dephasing" in noise_model.noise_types
-        or "relaxation" in noise_model.noise_types
-        or "depolarizing" in noise_model.noise_types
-        or "eff_noise" in noise_model.noise_types
-    )
+class Solver(str, Enum):
+    """QuTiP solver selection.
+
+    If the noise model has no effective noise,
+      ``qutip.sesolve`` is used (this setting is ignored).
+    If the noise model has effective noise:
+        - ``DEFAULT``: auto-select ``qutip.mcsolve``
+          for stochastic noise, else ``qutip.mesolve``
+        - ``MESOLVER``: master-equation solver ``qutip.mesolve``
+        - ``MCSOLVER``: Monte-Carlo solver ``qutip.mcsolve``
+    """
+
+    DEFAULT = "default"
+    MESOLVER = "MasterEquation"
+    MCSOLVER = "MonteCarlo"
 
 
 class QutipEmulator:
@@ -656,7 +663,7 @@ class QutipEmulator:
         else:
             raise ValueError("`progress_bar` must be a bool.")
 
-        if self.solver not in Solver:
+        if not isinstance(self.solver, Solver):
             allowed_str = ", ".join(s.value for s in Solver)
             raise ValueError(
                 f"Invalid solver '{self.solver}'. "
@@ -665,7 +672,7 @@ class QutipEmulator:
 
         solver_fn: Callable[..., Any] = qutip.sesolve
 
-        if _requires_collapse_operators(self.noise_model):
+        if len(hamiltonian.lindblad_data.local_collapse_ops) > 0:
             if self.solver == Solver.DEFAULT:
                 solver_fn = (
                     qutip.mcsolve

@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import warnings
-from enum import Enum
 from typing import Any, Literal
 
 import numpy as np
@@ -23,23 +22,7 @@ import numpy as np
 from pulser.backend.config import EmulationConfig
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
-
-
-class Solver(str, Enum):
-    """QuTiP solver selection.
-
-    If the noise model has no effective noise,
-      ``qutip.sesolve`` is used (this setting is ignored).
-    If the noise model has effective noise:
-        - ``DEFAULT``: auto-select ``qutip.mcsolve``
-          for stochastic noise, else ``qutip.mesolve``
-        - ``MESOLVER``: master-equation solver ``qutip.mesolve``
-        - ``MCSOLVER``: Monte-Carlo solver ``qutip.mcsolve``
-    """
-
-    DEFAULT = "default"
-    MESOLVER = "MasterEquation"
-    MCSOLVER = "MonteCarlo"
+from pulser_simulation.simulation import Solver
 
 
 class QutipConfig(EmulationConfig[QutipState]):
