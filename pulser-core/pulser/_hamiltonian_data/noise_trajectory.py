@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+import pulser.math as pm
 from pulser.register.base_register import BaseRegister, QubitId
 
 ChannelName = str
@@ -32,3 +33,4 @@ class NoiseTrajectory:
     det_fluctuations: dict[ChannelName, float]
     det_phases: dict[ChannelName, np.ndarray]
     register: BaseRegister
+    interaction_matrix: pm.AbstractArray
