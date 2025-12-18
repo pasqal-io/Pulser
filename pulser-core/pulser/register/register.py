@@ -424,7 +424,7 @@ class Register(BaseRegister, RegDrawer):
             dict(zip(self.qubit_ids, [rot @ v for v in self._coords_arr]))
         )
 
-    def _get_empty_traps_reg(self) -> Register:
+    def _get_empty_traps_reg(self) -> BaseRegister:
         """A Register containing the layout's empty trap."""
         if self.layout is None:
             raise ValueError(
@@ -506,6 +506,7 @@ class Register(BaseRegister, RegDrawer):
 
         if draw_empty_sites:
             empty_traps_reg = self._get_empty_traps_reg()
+            assert self.layout is not None
 
         pos = self._coords_arr.as_array(detach=True)
         if custom_ax is None:

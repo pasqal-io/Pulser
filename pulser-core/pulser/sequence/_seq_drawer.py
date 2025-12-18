@@ -434,6 +434,7 @@ def _draw_register_det_maps(
             empty_traps_reg: None | Register
             try:
                 empty_traps_reg = register._get_empty_traps_reg()
+                assert register.layout is not None
             except ValueError:  # None if no layout in register
                 empty_traps_reg = None
             fig_reg, axes_reg = register._initialize_fig_axes(
