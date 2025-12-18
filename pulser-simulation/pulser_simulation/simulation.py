@@ -21,6 +21,7 @@ from collections.abc import Iterator
 from dataclasses import asdict
 from functools import lru_cache
 from typing import Any, Callable, NamedTuple, Optional, Union, cast
+
 import matplotlib.pyplot as plt
 import numpy as np
 import qutip
