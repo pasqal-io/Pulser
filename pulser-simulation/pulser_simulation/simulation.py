@@ -89,16 +89,31 @@ class QutipEmulator:
         config: Configuration to be used for this simulation. *Deprecated
             since v1.6, please use ``noise_model`` instead.*
         evaluation_times: Choose between:
+
             - "Full": The times are set to be the ones used to define the
               Hamiltonian to the solver.
+
             - "Minimal": The times are set to only include initial and final
               times.
+
             - An ArrayLike object of times in µs if you wish to only include
               those specific times.
+
             - A float to act as a sampling rate for the resulting state.
         noise_model: The noise model for the simulation. Replaces and should
             be preferred over 'config'.
-        solver: QuTiP solver selection.
+        solver: QuTiP solver selection. If the noise model has no effective
+            noise, ``qutip.sesolve`` is used, the ``solver`` setting
+            is ignored. If the noise model has effective noise, then:
+
+            - ``Solver.MCSOLVER``: use the Monte-Carlo
+              solver ``qutip.mcsolve``.
+
+            - ``Solver.MESOLVER``: use the master-equation
+              solver ``qutip.mesolve``.
+
+            - ``Solver.DEFAULT``: auto-select ``qutip.mcsolve``
+              for stochastic noise, otherwise ``qutip.mesolve``.
     """
 
     def __init__(
@@ -925,18 +940,33 @@ class QutipEmulator:
             config: Configuration to be used for this simulation. *Deprecated
                 since v1.6, use 'noise_model' instead.*
             evaluation_times: Choose between:
+
                 - "Full": The times are set to be the ones used to define the
                   Hamiltonian to the solver.
+
                 - "Minimal": The times are set to only include initial and
                   final times.
+
                 - An ArrayLike object of times in µs if you wish to only
                   include those specific times.
+
                 - A float to act as a sampling rate for the resulting state.
             with_modulation: Whether to simulate the sequence with the
                 programmed input or the expected output.
             noise_model: The noise model for the simulation. Replaces and
                 should be preferred over 'config'.
-            solver: QuTiP solver selection.
+            solver: QuTiP solver selection. If the noise model has no effective
+                noise, ``qutip.sesolve`` is used, the ``solver`` setting
+                is ignored. If the noise model has effective noise, then:
+
+                - ``Solver.MCSOLVER``: use the Monte-Carlo
+                  solver ``qutip.mcsolve``.
+
+                - ``Solver.MESOLVER``: use the master-equation
+                  solver ``qutip.mesolve``.
+
+                - ``Solver.DEFAULT``: auto-select ``qutip.mcsolve``
+                  for stochastic noise, otherwise ``qutip.mesolve``.
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
