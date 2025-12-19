@@ -1419,9 +1419,51 @@ def test_run_xy():
     assert sim.samples_obj._measurement == "XY"
 
 
-res1 = {"0000": 930, "0100": 33, "0001": 6, "0010": 6, "1000": 25}
-res2 = {"0000": 920, "0100": 33, "0001": 16, "0010": 6, "1000": 25}
-res3 = {"0000": 930, "0100": 30, "0001": 24, "0010": 5, "1000": 11}
+res_deph_mcarlo = {"0000": 942, "0001": 12, "0010": 5, "0100": 30, "1000": 11}
+res_eff_mcarlo = {"0000": 930, "0001": 6, "0010": 6, "0100": 33, "1000": 25}
+res_leak_mcarlo = res_eff_mcarlo
+res_depol_mcarlo = {
+    "0001": 22,
+    "0010": 48,
+    "0011": 50,
+    "0100": 50,
+    "0101": 6,
+    "0110": 34,
+    "0111": 622,
+    "1000": 26,
+    "1001": 5,
+    "1010": 11,
+    "1011": 28,
+    "1101": 28,
+    "1110": 37,
+    "1111": 33,
+}
+res_deph_atom1_mcarlo = res_deph_mcarlo
+res_deph_atom2_mcarlo = res_deph_mcarlo
+
+res_deph_me = res_deph_mcarlo
+res_eff_me = res_eff_mcarlo
+res_leak_me = res_eff_mcarlo
+res_depol_meq = {
+    "0000": 84,
+    "0001": 89,
+    "0010": 60,
+    "0011": 58,
+    "0100": 99,
+    "0101": 59,
+    "0110": 67,
+    "0111": 28,
+    "1000": 66,
+    "1001": 62,
+    "1010": 84,
+    "1011": 61,
+    "1100": 46,
+    "1101": 27,
+    "1110": 40,
+    "1111": 70,
+}
+res_deph_atom1_meq = res_deph_mcarlo
+res_deph_atom2_meq = res_deph_mcarlo
 
 
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
@@ -1429,23 +1471,32 @@ res3 = {"0000": 930, "0100": 30, "0001": 24, "0010": 5, "1000": 11}
 @pytest.mark.parametrize(
     "masked_qubit, noise, result, n_collapse_ops, solver",
     [
-        (None, "dephasing", res1, 1, Solver.MCSOLVER),
-        (None, "eff_noise", res1, 1, Solver.MCSOLVER),
-        (None, "leakage", res1, 1, Solver.MCSOLVER),
-        (None, "depolarizing", res1, 3, Solver.MCSOLVER),
-        ("atom0", "dephasing", res3, 1, Solver.MCSOLVER),
-        ("atom1", "dephasing", res1, 1, Solver.MCSOLVER),
-        (None, "eff_noise", res1, 1, Solver.MESOLVER),
-        (None, "leakage", res1, 1, Solver.MESOLVER),
-        (None, "depolarizing", res2, 3, Solver.MESOLVER),
-        ("atom0", "dephasing", res3, 1, Solver.MESOLVER),
-        ("atom1", "dephasing", res1, 1, Solver.MESOLVER),
+        (None, "dephasing", res_deph_mcarlo, 1, Solver.MCSOLVER),
+        (None, "eff_noise", res_eff_mcarlo, 1, Solver.MCSOLVER),
+        (None, "leakage", res_leak_mcarlo, 1, Solver.MCSOLVER),
+        (None, "depolarizing", res_depol_mcarlo, 3, Solver.MCSOLVER),
+        ("atom0", "dephasing", res_deph_atom1_mcarlo, 1, Solver.MCSOLVER),
+        ("atom1", "dephasing", res_deph_atom2_mcarlo, 1, Solver.MCSOLVER),
+        (None, "dephasing", res_deph_me, 1, Solver.MESOLVER),
+        (None, "eff_noise", res_eff_me, 1, Solver.MESOLVER),
+        (None, "leakage", res_leak_me, 1, Solver.MESOLVER),
+        (None, "depolarizing", res_depol_meq, 3, Solver.MESOLVER),
+        ("atom0", "dephasing", res_deph_atom1_meq, 1, Solver.MESOLVER),
+        ("atom1", "dephasing", res_deph_atom2_meq, 1, Solver.MESOLVER),
     ],
 )
 def test_noisy_xy(
     monkeypatch, matrices, masked_qubit, noise, result, n_collapse_ops, solver
 ):
-    np.random.seed(15092021)
+    seed = 15092021
+    np.random.seed(seed)
+    if solver is Solver.MCSOLVER:
+        real = sim_module.qutip.mcsolve
+        monkeypatch.setattr(
+            sim_module.qutip,
+            "mcsolve",
+            lambda *args, **kwargs: real(*args, **({"seeds": seed} | kwargs)),
+        )
 
     simple_reg = Register.square(2, prefix="atom")
     detun = 1.0
@@ -1468,7 +1519,9 @@ def test_noisy_xy(
             eff_noise_rates=[0.025],
         )
     else:
-        params[f"{noise}_rate"] = _LEGACY_DEFAULTS[f"{noise}_rate"]
+        # to see effects of noise
+        # noise_rate > _LEGACY_DEFAULTS[f"{noise}_rate"]
+        params[f"{noise}_rate"] = 100
 
     sim = QutipEmulator.from_sequence(
         seq,
