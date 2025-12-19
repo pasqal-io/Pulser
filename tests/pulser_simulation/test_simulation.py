@@ -1443,9 +1443,18 @@ res3 = {"0000": 930, "0100": 30, "0001": 24, "0010": 5, "1000": 11}
     ],
 )
 def test_noisy_xy(
-    matrices, masked_qubit, noise, result, n_collapse_ops, solver
+    monkeypatch, matrices, masked_qubit, noise, result, n_collapse_ops, solver
 ):
-    np.random.seed(15092021)
+    seed = 15092021
+    np.random.seed(seed)
+    if solver is Solver.MCSOLVER:
+        real = qutip.mcsolve
+        monkeypatch.setattr(
+            sim_module.qutip,
+            "mcsolve",
+            lambda *args, **kwargs: real(*args, **({"seeds": seed} | kwargs)),
+        )
+
     simple_reg = Register.square(2, prefix="atom")
     detun = 1.0
     amp = 3.0
@@ -1468,6 +1477,7 @@ def test_noisy_xy(
         )
     else:
         params[f"{noise}_rate"] = _LEGACY_DEFAULTS[f"{noise}_rate"]
+
     sim = QutipEmulator.from_sequence(
         seq,
         sampling_rate=0.1,
