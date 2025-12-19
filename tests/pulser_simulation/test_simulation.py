@@ -1427,17 +1427,24 @@ res3 = {"0000": 930, "0100": 30, "0001": 24, "0010": 5, "1000": 11}
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 @pytest.mark.filterwarnings("ignore:Supplying a 'SimConfig' to QutipEmulator")
 @pytest.mark.parametrize(
-    "masked_qubit, noise, result, n_collapse_ops",
+    "masked_qubit, noise, result, n_collapse_ops, solver",
     [
-        (None, "dephasing", res1, 1),
-        (None, "eff_noise", res1, 1),
-        (None, "leakage", res1, 1),
-        (None, "depolarizing", res2, 3),
-        ("atom0", "dephasing", res3, 1),
-        ("atom1", "dephasing", res1, 1),
+        (None, "dephasing", res1, 1, Solver.MCSOLVER),
+        (None, "eff_noise", res1, 1, Solver.MCSOLVER),
+        (None, "leakage", res1, 1, Solver.MCSOLVER),
+        (None, "depolarizing", res1, 3, Solver.MCSOLVER),
+        ("atom0", "dephasing", res3, 1, Solver.MCSOLVER),
+        ("atom1", "dephasing", res1, 1, Solver.MCSOLVER),
+        (None, "eff_noise", res1, 1, Solver.MESOLVER),
+        (None, "leakage", res1, 1, Solver.MESOLVER),
+        (None, "depolarizing", res2, 3, Solver.MESOLVER),
+        ("atom0", "dephasing", res3, 1, Solver.MESOLVER),
+        ("atom1", "dephasing", res1, 1, Solver.MESOLVER),
     ],
 )
-def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
+def test_noisy_xy(
+    matrices, masked_qubit, noise, result, n_collapse_ops, solver
+):
     np.random.seed(15092021)
     simple_reg = Register.square(2, prefix="atom")
     detun = 1.0
@@ -1473,7 +1480,7 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
             p_false_neg=0.05,
             **params,
         ),
-        solver=Solver.MESOLVER,
+        solver=solver,
     )
     assert set(sim.noise_model.noise_types) == (
         {"SPAM", noise}
@@ -2297,7 +2304,7 @@ def test_has_stochastic_noise(noise_data, expected):
     assert _has_stochastic_noise(fake_noise_model) is expected
 
 
-def test_qutip_default_solver_call(seq, matrices):
+def test_qutip_default_solver_call(seq):
     eff_noise_params = dict(dephasing_rate=0.1)
     stochastic_noise_params = dict(detuning_sigma=0.1, runs=1)
 
@@ -2334,7 +2341,7 @@ def test_qutip_default_solver_call(seq, matrices):
                     mock.assert_not_called()
 
 
-def test_qutip_parametric_solver_call(seq, matrices):
+def test_qutip_parametric_solver_call(seq):
     eff_noise_params = dict(dephasing_rate=0.1)
     stochastic_noise_params = dict(detuning_sigma=0.1, runs=1)
     all_noises = eff_noise_params | stochastic_noise_params

@@ -34,10 +34,6 @@ from pulser._hamiltonian_data import (
     HamiltonianData,
     has_shot_to_shot_except_spam,
 )
-
-# from pulser._hamiltonian_data.lindblad_data import (
-#    LindbladData as LindbladData
-# )
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
@@ -659,7 +655,7 @@ class QutipEmulator:
         if progress_bar is True:
             options["progress_bar"] = True
         elif (progress_bar is False) or (progress_bar is None):
-            options["progress_bar"] = None
+            options["progress_bar"] = ""
         else:
             raise ValueError("`progress_bar` must be a bool.")
 
