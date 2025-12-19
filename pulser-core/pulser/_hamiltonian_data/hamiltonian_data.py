@@ -680,6 +680,7 @@ class HamiltonianData:
             tuple[int | float | complex, str | np.ndarray]
         ] = []
         depolarizing_pauli_2ds: dict[str, list[tuple[int | complex, str]]] = {}
+        # TODO: Check that the relevant dephasing parameter is > 0.
         if "dephasing" in noise_model.noise_types:
             dephasing_rates = {
                 "d": noise_model.dephasing_rate,
