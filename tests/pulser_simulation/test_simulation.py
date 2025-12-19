@@ -1420,8 +1420,8 @@ def test_run_xy():
 
 
 res_deph_mcarlo = {"0000": 830, "0001": 21, "0010": 3, "0100": 80, "1000": 66}
-res_eff_mcarlo = res_deph_mcarlo
-res_leak_mcarlo = res_deph_mcarlo
+res_eff_mcarlo = {"0000": 860, "0001": 35, "0010": 4, "0100": 28, "1000": 73}
+res_leak_mcarlo = res_eff_mcarlo
 res_depol_mcarlo = res_deph_mcarlo
 res_deph_atom1_mcarlo = {
     "0000": 798,
@@ -1441,8 +1441,8 @@ res_deph_atom2_mcarlo = {
 }
 
 res_deph_meq = res_deph_mcarlo
-res_eff_meq = res_deph_mcarlo
-res_leak_meq = res_deph_mcarlo
+res_eff_meq = {"0000": 845, "0001": 29, "0010": 8, "0100": 57, "1000": 61}
+res_leak_meq = res_eff_meq
 res_depol_meq = {
     "0000": 791,
     "0001": 28,
@@ -1522,7 +1522,7 @@ def test_noisy_xy(
             eff_noise_opers=[
                 (matrices["Z3"] if with_leakage else matrices["Z"]).full()
             ],
-            eff_noise_rates=[0.025],
+            eff_noise_rates=[1.0],
         )
     else:
         params[f"{noise}_rate"] = _LEGACY_DEFAULTS[f"{noise}_rate"]
