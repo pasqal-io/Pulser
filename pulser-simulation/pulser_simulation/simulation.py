@@ -697,8 +697,7 @@ class QutipEmulator:
             **extra_kwargs,
             options=options,
         )
-        # 0.9899279788021733 ME
-        # 0.9998641880535688 MC
+
         results = [
             QutipResult(
                 tuple(self._hamiltonian_data.register.qubits),
@@ -709,8 +708,7 @@ class QutipEmulator:
             )
             for state, t in zip(result.states, self._eval_times_array)
         ]
-        # 9.99864188e-01 MC
-        # 0.9899279788021733-1 ME
+
         meas_errors = (
             {
                 "epsilon": self.noise_model.p_false_pos,
