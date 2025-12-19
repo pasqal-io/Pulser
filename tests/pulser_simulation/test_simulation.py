@@ -1445,15 +1445,7 @@ res3 = {"0000": 930, "0100": 30, "0001": 24, "0010": 5, "1000": 11}
 def test_noisy_xy(
     monkeypatch, matrices, masked_qubit, noise, result, n_collapse_ops, solver
 ):
-    seed = 15092021
-    np.random.seed(seed)
-    if solver is Solver.MCSOLVER:
-        real = qutip.mcsolve
-        monkeypatch.setattr(
-            sim_module.qutip,
-            "mcsolve",
-            lambda *args, **kwargs: real(*args, **({"seeds": seed} | kwargs)),
-        )
+    np.random.seed(15092021)
 
     simple_reg = Register.square(2, prefix="atom")
     detun = 1.0
