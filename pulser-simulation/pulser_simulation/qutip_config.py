@@ -22,6 +22,7 @@ import numpy as np
 from pulser.backend.config import EmulationConfig
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
+from pulser_simulation.simulation import Solver
 
 
 class QutipConfig(EmulationConfig[QutipState]):
@@ -53,6 +54,19 @@ class QutipConfig(EmulationConfig[QutipState]):
         noise_model: An optional noise model to emulate the sequence with.
             Ignored if the sequence's device has default noise model and
             `prefer_device_noise_model=True`.
+        solver: QuTiP solver selection. If the noise model has no collapse
+            operators (i.e. no dephasing/relaxation/depolarizing/eff_noise
+            terms), the simulation uses qutip.sesolve and the solver
+            setting is ignored. If collapse operators are present, then:
+
+            - ``Solver.DEFAULT``: auto-select ``qutip.mcsolve``
+              for stochastic noise, otherwise ``qutip.mesolve``.
+
+            - ``Solver.MCSOLVER``: use the Monte-Carlo
+              solver ``qutip.mcsolve``.
+
+            - ``Solver.MESOLVER``: use the master-equation
+              solver ``qutip.mesolve``.
 
     See Also:
         EmulationConfig: The base configuration class for an EmulatorBackend.
@@ -66,6 +80,7 @@ class QutipConfig(EmulationConfig[QutipState]):
         self,
         *,
         sampling_rate: float = 1.0,
+        solver: Solver = Solver.DEFAULT,
         **backend_options: Any,
     ):
         """Initializes a QutipConfig."""
@@ -96,11 +111,12 @@ class QutipConfig(EmulationConfig[QutipState]):
 
         super().__init__(
             sampling_rate=sampling_rate,
+            solver=solver,
             **backend_options,
         )
 
     def _expected_kwargs(self) -> set[str]:
-        return super()._expected_kwargs() | {"sampling_rate"}
+        return super()._expected_kwargs() | {"sampling_rate", "solver"}
 
     def _get_sampling_indices(self, total_duration_ns: int) -> np.ndarray:
         """Calculates the indices at which samples are taken."""

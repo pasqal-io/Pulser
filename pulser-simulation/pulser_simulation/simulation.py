@@ -19,8 +19,9 @@ import warnings
 from collections import Counter
 from collections.abc import Iterator
 from dataclasses import asdict
+from enum import Enum
 from functools import lru_cache
-from typing import Any, NamedTuple, Optional, Union, cast
+from typing import Any, Callable, NamedTuple, Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -57,6 +58,29 @@ class HamiltonianWithReps(NamedTuple):
     reps: int
 
 
+def _has_stochastic_noise(noise_model: NoiseModel) -> bool:
+    return has_shot_to_shot_except_spam(noise_model) or (
+        "SPAM" in noise_model.noise_types and noise_model.state_prep_error != 0
+    )
+
+
+class Solver(str, Enum):
+    """QuTiP solver selection.
+
+    If the noise model has no effective noise,
+      ``qutip.sesolve`` is used (this setting is ignored).
+    If the noise model has effective noise:
+        - ``DEFAULT``: auto-select ``qutip.mcsolve``
+          for stochastic noise, else ``qutip.mesolve``
+        - ``MESOLVER``: master-equation solver ``qutip.mesolve``
+        - ``MCSOLVER``: Monte-Carlo solver ``qutip.mcsolve``
+    """
+
+    DEFAULT = "default"
+    MESOLVER = "MasterEquation"
+    MCSOLVER = "MonteCarlo"
+
+
 class QutipEmulator:
     r"""Emulator of a pulse sequence using QuTiP.
 
@@ -84,6 +108,19 @@ class QutipEmulator:
             - A float to act as a sampling rate for the resulting state.
         noise_model: The noise model for the simulation. Replaces and should
             be preferred over 'config'.
+        solver: QuTiP solver selection. If the noise model has no collapse
+            operators (i.e. no dephasing/relaxation/depolarizing/eff_noise
+            terms), the simulation uses qutip.sesolve and the solver setting
+            is ignored. If collapse operators are present, then:
+
+            - ``Solver.DEFAULT``: auto-select ``qutip.mcsolve``
+              for stochastic noise, otherwise ``qutip.mesolve``.
+
+            - ``Solver.MCSOLVER``: use the Monte-Carlo
+              solver ``qutip.mcsolve``.
+
+            - ``Solver.MESOLVER``: use the master-equation
+              solver ``qutip.mesolve``.
     """
 
     def __init__(
@@ -95,6 +132,7 @@ class QutipEmulator:
         config: Optional[SimConfig] = None,
         evaluation_times: Union[float, str, ArrayLike] = "Full",
         noise_model: NoiseModel | None = None,
+        solver: Solver = Solver.DEFAULT,
     ) -> None:
         """Instantiates a QutipEmulator object."""
         # Initializing the samples obj
@@ -109,6 +147,7 @@ class QutipEmulator:
         self._sampling_rate = sampling_rate
         device.validate_register(register)
         self._register = register
+        self.solver = solver
         # Check compatibility of samples and device:
         if sampled_seq._slm_mask.end > 0 and not device.supports_slm_mask:
             raise ValueError(
@@ -613,39 +652,52 @@ class QutipEmulator:
     ) -> CoherentResults:
         """Returns CoherentResults: Object containing evolution results."""
         # Decide if progress bar will be fed to QuTiP solver
-        p_bar: Optional[bool]
         if progress_bar is True:
-            p_bar = True
+            options["progress_bar"] = True
         elif (progress_bar is False) or (progress_bar is None):
-            p_bar = None
+            options["progress_bar"] = ""
         else:
             raise ValueError("`progress_bar` must be a bool.")
 
-        if (
-            # TODO: Check that the relevant dephasing parameter is > 0.
-            "dephasing" in self.noise_model.noise_types
-            or "relaxation" in self.noise_model.noise_types
-            or "depolarizing" in self.noise_model.noise_types
-            or "eff_noise" in self.noise_model.noise_types
-        ):
-            result = qutip.mesolve(
-                hamiltonian._hamiltonian,
-                self.initial_state,
-                self._eval_times_array,
-                hamiltonian._collapse_ops,
-                options=dict(
-                    progress_bar=p_bar, normalize_output=False, **options
-                ),
+        if not isinstance(self.solver, Solver):
+            allowed_str = ", ".join(s.value for s in Solver)
+            raise ValueError(
+                f"Invalid solver '{self.solver}'. "
+                f"Allowed solvers are: {allowed_str}."
             )
-        else:
-            result = qutip.sesolve(
-                hamiltonian._hamiltonian,
-                self.initial_state,
-                self._eval_times_array,
-                options=dict(
-                    progress_bar=p_bar, normalize_output=False, **options
-                ),
-            )
+
+        solver_fn: Callable[..., Any] = qutip.sesolve
+
+        if len(hamiltonian.lindblad_data.local_collapse_ops) > 0:
+            if self.solver == Solver.DEFAULT:
+                solver_fn = (
+                    qutip.mcsolve
+                    if _has_stochastic_noise(self.noise_model)
+                    else qutip.mesolve
+                )
+            else:
+                solver_fn = {
+                    Solver.MCSOLVER: qutip.mcsolve,
+                    Solver.MESOLVER: qutip.mesolve,
+                }[self.solver]
+
+        if solver_fn in (qutip.mesolve, qutip.sesolve):
+            options["normalize_output"] = False
+
+        extra_kwargs: dict[str, Any] = {}
+        if solver_fn in (qutip.mesolve, qutip.mcsolve):
+            extra_kwargs["c_ops"] = hamiltonian._collapse_ops
+            if solver_fn is qutip.mcsolve:
+                extra_kwargs["ntraj"] = 1
+
+        result = solver_fn(
+            hamiltonian._hamiltonian,
+            self.initial_state,
+            self._eval_times_array,
+            **extra_kwargs,
+            options=options,
+        )
+
         results = [
             QutipResult(
                 tuple(self._hamiltonian_data.register.qubits),
@@ -831,6 +883,7 @@ class QutipEmulator:
         evaluation_times: Union[float, str, ArrayLike] = "Full",
         with_modulation: bool = False,
         noise_model: NoiseModel | None = None,
+        solver: Solver = Solver.DEFAULT,
     ) -> QutipEmulator:
         r"""Simulation of a pulse sequence using QuTiP.
 
@@ -858,6 +911,19 @@ class QutipEmulator:
                 programmed input or the expected output.
             noise_model: The noise model for the simulation. Replaces and
                 should be preferred over 'config'.
+            solver: QuTiP solver selection. If the noise model has no collapse
+                operators (i.e. no dephasing/relaxation/depolarizing/eff_noise
+                terms), the simulation uses qutip.sesolve and the solver
+                setting is ignored. If collapse operators are present, then:
+
+                - ``Solver.DEFAULT``: auto-select ``qutip.mcsolve``
+                  for stochastic noise, otherwise ``qutip.mesolve``.
+
+                - ``Solver.MCSOLVER``: use the Monte-Carlo
+                  solver ``qutip.mcsolve``.
+
+                - ``Solver.MESOLVER``: use the master-equation
+                  solver ``qutip.mesolve``.
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
@@ -897,4 +963,5 @@ class QutipEmulator:
             config,
             evaluation_times,
             noise_model=noise_model,
+            solver=solver,
         )

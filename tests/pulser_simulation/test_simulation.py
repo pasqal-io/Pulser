@@ -15,20 +15,26 @@
 import dataclasses
 import re
 from collections import Counter
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 import qutip
 
+import pulser_simulation.simulation as sim_module
 from pulser import Pulse, Register, Sequence
+from pulser.backend.default_observables import StateResult
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 from pulser_simulation import QutipEmulator, SimConfig
+from pulser_simulation.qutip_backend import QutipBackendV2
+from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.simresults import NoisyResults
+from pulser_simulation.simulation import Solver, _has_stochastic_noise
 
 
 @pytest.fixture
@@ -1098,9 +1104,6 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
         assert np.all(np.isclose(state[:, 2], np.zeros_like(state[:, 2])))
 
 
-res_deph_relax = {"000": 451, "010": 205, "001": 170, "100": 168, "101": 6}
-
-
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
@@ -1119,7 +1122,11 @@ res_deph_relax = {"000": 451, "010": 205, "001": 170, "100": 168, "101": 6}
             {"000": 459, "010": 202, "001": 168, "100": 167, "101": 4},
             1,
         ),
-        (("dephasing", "relaxation"), res_deph_relax, 3),
+        (
+            ("dephasing", "relaxation"),
+            {"000": 451, "010": 205, "001": 170, "100": 168, "101": 6},
+            3,
+        ),
         (
             ("eff_noise", "dephasing"),
             {"111": 932, "101": 28, "011": 24, "110": 15, "001": 1},
@@ -1412,36 +1419,95 @@ def test_run_xy():
     assert sim.samples_obj._measurement == "XY"
 
 
-res2 = {
-    "0000": 920,
-    "0100": 33,
-    "0001": 16,
-    "0010": 6,
-    "1000": 25,
+res_deph_mcarlo = {"0000": 830, "0001": 21, "0010": 3, "0100": 80, "1000": 66}
+res_eff_mcarlo = {"0000": 860, "0001": 35, "0010": 4, "0100": 28, "1000": 73}
+res_leak_mcarlo = res_eff_mcarlo
+res_depol_mcarlo = res_deph_mcarlo
+res_deph_atom1_mcarlo = {
+    "0000": 798,
+    "0001": 101,
+    "0010": 22,
+    "0100": 54,
+    "0101": 8,
+    "1000": 17,
 }
-res1 = {"0000": 930, "0100": 33, "0001": 6, "0010": 6, "1000": 25}
-res3 = {"0000": 930, "0100": 30, "0001": 24, "0010": 5, "1000": 11}
+res_deph_atom2_mcarlo = {
+    "0000": 570,
+    "0001": 339,
+    "0011": 12,
+    "0100": 13,
+    "1000": 56,
+    "1001": 10,
+}
+
+res_deph_meq = res_deph_mcarlo
+res_eff_meq = {"0000": 845, "0001": 29, "0010": 8, "0100": 57, "1000": 61}
+res_leak_meq = res_eff_meq
+res_depol_meq = {
+    "0000": 791,
+    "0001": 28,
+    "0010": 18,
+    "0100": 72,
+    "0101": 12,
+    "0110": 2,
+    "1000": 60,
+    "1010": 17,
+}
+res_deph_atom1_meq = {
+    "0000": 798,
+    "0001": 101,
+    "0010": 10,
+    "0011": 12,
+    "0100": 54,
+    "0101": 8,
+    "1000": 17,
+}
+res_deph_atom2_meq = {
+    "0000": 575,
+    "0001": 334,
+    "0011": 12,
+    "0100": 13,
+    "1000": 56,
+    "1001": 10,
+}
 
 
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 @pytest.mark.filterwarnings("ignore:Supplying a 'SimConfig' to QutipEmulator")
 @pytest.mark.parametrize(
-    "masked_qubit, noise, result, n_collapse_ops",
+    "masked_qubit, noise, result, n_collapse_ops, solver",
     [
-        (None, "dephasing", res1, 1),
-        (None, "eff_noise", res1, 1),
-        (None, "leakage", res1, 1),
-        (None, "depolarizing", res2, 3),
-        ("atom0", "dephasing", res3, 1),
-        ("atom1", "dephasing", res1, 1),
+        (None, "dephasing", res_deph_mcarlo, 1, Solver.MCSOLVER),
+        (None, "eff_noise", res_eff_mcarlo, 1, Solver.MCSOLVER),
+        (None, "leakage", res_leak_mcarlo, 1, Solver.MCSOLVER),
+        (None, "depolarizing", res_depol_mcarlo, 3, Solver.MCSOLVER),
+        ("atom0", "dephasing", res_deph_atom1_mcarlo, 1, Solver.MCSOLVER),
+        ("atom1", "dephasing", res_deph_atom2_mcarlo, 1, Solver.MCSOLVER),
+        (None, "dephasing", res_deph_meq, 1, Solver.MESOLVER),
+        (None, "eff_noise", res_eff_meq, 1, Solver.MESOLVER),
+        (None, "leakage", res_leak_meq, 1, Solver.MESOLVER),
+        (None, "depolarizing", res_depol_meq, 3, Solver.MESOLVER),
+        ("atom0", "dephasing", res_deph_atom1_meq, 1, Solver.MESOLVER),
+        ("atom1", "dephasing", res_deph_atom2_meq, 1, Solver.MESOLVER),
     ],
 )
-def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
-    np.random.seed(15092021)
+def test_noisy_xy(
+    monkeypatch, matrices, masked_qubit, noise, result, n_collapse_ops, solver
+):
+    seed = 15092021
+    np.random.seed(seed)
+    if solver is Solver.MCSOLVER:
+        real = sim_module.qutip.mcsolve
+        monkeypatch.setattr(
+            sim_module.qutip,
+            "mcsolve",
+            lambda *args, **kwargs: real(*args, **({"seeds": seed} | kwargs)),
+        )
+
     simple_reg = Register.square(2, prefix="atom")
     detun = 1.0
     amp = 3.0
-    rise = Pulse.ConstantPulse(100, amp, detun, 0.0)
+    rise = Pulse.ConstantPulse(1000, amp, detun, 0.0)
     seq = Sequence(simple_reg, MockDevice)
     seq.declare_channel("ch0", "mw_global")
     if masked_qubit is not None:
@@ -1456,10 +1522,11 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
             eff_noise_opers=[
                 (matrices["Z3"] if with_leakage else matrices["Z"]).full()
             ],
-            eff_noise_rates=[0.025],
+            eff_noise_rates=[1.0],
         )
     else:
         params[f"{noise}_rate"] = _LEGACY_DEFAULTS[f"{noise}_rate"]
+
     sim = QutipEmulator.from_sequence(
         seq,
         sampling_rate=0.1,
@@ -1472,6 +1539,7 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
             p_false_neg=0.05,
             **params,
         ),
+        solver=solver,
     )
     assert set(sim.noise_model.noise_types) == (
         {"SPAM", noise}
@@ -1513,16 +1581,24 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
             seq,
             noise_model=NoiseModel(runs=1, samples_per_run=1, amp_sigma=0.1),
         )
-    with pytest.deprecated_call(), pytest.raises(
-        NotImplementedError, match="mode 'XY' does not support simulation of"
+    with (
+        pytest.deprecated_call(),
+        pytest.raises(
+            NotImplementedError,
+            match="mode 'XY' does not support simulation of",
+        ),
     ):
         sim.set_config(
             SimConfig.from_noise_model(
                 NoiseModel(runs=1, samples_per_run=1, temperature=50)
             )
         )
-    with pytest.deprecated_call(), pytest.raises(
-        NotImplementedError, match="mode 'XY' does not support simulation of"
+    with (
+        pytest.deprecated_call(),
+        pytest.raises(
+            NotImplementedError,
+            match="mode 'XY' does not support simulation of",
+        ),
     ):
         sim.add_config(
             SimConfig.from_noise_model(
@@ -2255,3 +2331,116 @@ def test_noisy_runs(noise):
         result = sim.run()
         assert mock_run_solver.call_count == nruns
         assert isinstance(result, NoisyResults)
+
+
+@pytest.mark.parametrize(
+    "noise_data, expected",
+    [
+        (dict(noise_types="doppler"), True),
+        (dict(noise_types="amplitude", amp_sigma=1.0), True),
+        (dict(noise_types="amplitude", amp_sigma=0.0), False),
+        (dict(noise_types="detuning"), True),
+        (dict(noise_types="register"), True),
+        (dict(noise_types="SPAM", state_prep_error=0.0), False),
+        (dict(noise_types="SPAM", state_prep_error=1.0), True),
+        (dict(noise_types="other"), False),
+        (dict(noise_types={"other", "detuning"}), True),
+    ],
+    ids=[
+        "doppler",
+        "amplitude!=0",
+        "amplitude=0",
+        "detuning",
+        "register",
+        "SPAM, state_prep_error!=0",
+        "SPAM, state_prep_error=0",
+        "not shot_to_shot and not SPAM noise",
+        "detuning + other noise",
+    ],
+)
+def test_has_stochastic_noise(noise_data, expected):
+    fake_noise_model = SimpleNamespace(**noise_data)
+    assert _has_stochastic_noise(fake_noise_model) is expected
+
+
+def test_qutip_default_solver_call(seq):
+    eff_noise_params = dict(dephasing_rate=0.1)
+    stochastic_noise_params = dict(detuning_sigma=0.1, runs=1)
+
+    with (
+        patch.object(sim_module.qutip, "mesolve") as me,
+        patch.object(sim_module.qutip, "sesolve") as se,
+        patch.object(sim_module.qutip, "mcsolve") as mc,
+    ):
+
+        solvers_and_params = {
+            "mesolve": eff_noise_params,
+            "sesolve": stochastic_noise_params,
+            "mcsolve": eff_noise_params | stochastic_noise_params,
+        }
+        solver_mocks = {"mesolve": me, "sesolve": se, "mcsolve": mc}
+
+        for solver_name, noise_param in solvers_and_params.items():
+            for solver in solver_mocks.values():
+                solver.reset_mock()
+                solver.side_effect = RuntimeError("stop after solver")
+
+            with pytest.raises(RuntimeError, match="stop after solver"):
+                qutip_config = QutipConfig(
+                    observables=[StateResult(evaluation_times=[1.0])],
+                    noise_model=NoiseModel(**noise_param),
+                )
+                qutip_sim = QutipBackendV2(seq, config=qutip_config)
+                qutip_sim.run()
+
+            for name, mock in solver_mocks.items():
+                if name == solver_name:
+                    mock.assert_called_once()
+                else:
+                    mock.assert_not_called()
+
+
+def test_qutip_parametric_solver_call(seq):
+    eff_noise_params = dict(dephasing_rate=0.1)
+    stochastic_noise_params = dict(detuning_sigma=0.1, runs=1)
+    all_noises = eff_noise_params | stochastic_noise_params
+
+    with (
+        patch.object(sim_module.qutip, "mesolve") as me,
+        patch.object(sim_module.qutip, "mcsolve") as mc,
+    ):
+
+        solver_mocks = {
+            Solver.MESOLVER: me,
+            Solver.MCSOLVER: mc,
+        }
+        for solver, solver_tocall in solver_mocks.items():
+            for solver_mock in solver_mocks.values():
+                solver_mock.reset_mock()
+                solver_mock.side_effect = RuntimeError("stop after solver")
+
+            with pytest.raises(RuntimeError, match="stop after solver"):
+                qutip_config = QutipConfig(
+                    observables=[StateResult(evaluation_times=[1.0])],
+                    noise_model=NoiseModel(**all_noises),
+                    solver=solver,
+                )
+                qutip_sim = QutipBackendV2(seq, config=qutip_config)
+                qutip_sim.run()
+
+            for s, s_tocall in solver_mocks.items():
+                if s == solver:
+                    s_tocall.assert_called_once()
+                else:
+                    s_tocall.assert_not_called()
+
+
+def test_qutip_invalid_solver_error(seq):
+    nm = NoiseModel(detuning_sigma=0.1, runs=1)
+    with pytest.raises(ValueError, match=r"Invalid solver 'fakesolver'"):
+        sim = QutipEmulator.from_sequence(
+            seq,
+            noise_model=nm,
+            solver="fakesolver",
+        )
+        sim.run()
