@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -11,6 +12,7 @@ from pulser._hamiltonian_data.hamiltonian_data import (
     _generate_detuning_fluctuations,
     _noisy_register,
     _register_sigma_xy_z,
+    has_shot_to_shot_except_spam,
 )
 from pulser.sampler import sample
 
@@ -635,3 +637,31 @@ def test_noise_hf_detuning_generation():
 
     assert np.allclose(hf_det, hd_det_expected)
     assert hf_det.size == times.size
+
+
+@pytest.mark.parametrize(
+    "noise_data, expected",
+    [
+        (dict(noise_types="doppler"), True),
+        (dict(noise_types="amplitude", amp_sigma=1), True),
+        (dict(noise_types="amplitude", amp_sigma=0), False),
+        (dict(noise_types="detuning"), True),
+        (dict(noise_types="register"), True),
+        (dict(noise_types="SPAM"), False),
+        (dict(noise_types="other"), False),
+        (dict(noise_types={"other", "doppler"}), True),
+    ],
+    ids=[
+        "doppler",
+        "amplitude!=0",
+        "amplitude=0",
+        "detuning",
+        "register",
+        "SPAM",
+        "not shot to shot noise",
+        "doppler + other noise",
+    ],
+)
+def test_has_shot_to_shot_except_spam(noise_data, expected):
+    fake_noise_model = SimpleNamespace(**noise_data)
+    assert has_shot_to_shot_except_spam(fake_noise_model) is expected

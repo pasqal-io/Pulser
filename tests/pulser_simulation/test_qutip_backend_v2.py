@@ -24,7 +24,7 @@ import pulser
 from pulser.backend.default_observables import Energy, Occupation, StateResult
 from pulser.backend.observable import Callback
 from pulser_simulation.qutip_backend import QutipBackendV2
-from pulser_simulation.qutip_config import QutipConfig
+from pulser_simulation.qutip_config import QutipConfig, Solver
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simulation import QutipEmulator
@@ -275,7 +275,7 @@ def test_leakage(amp_sigma):
         eff_noise_opers=eff_ops,
         with_leakage=True,
         amp_sigma=amp_sigma,
-        runs=int(amp_sigma) or None,
+        runs=(1 if amp_sigma != 0.0 else None),
     )
 
     eval_times = [1.0]
@@ -283,6 +283,7 @@ def test_leakage(amp_sigma):
         default_evaluation_times=eval_times,
         observables=[StateResult(evaluation_times=eval_times)],
         noise_model=noise_model,
+        solver=Solver.MESOLVER,
     )
 
     qutip_sim = QutipBackendV2(seq, config=qutip_config)

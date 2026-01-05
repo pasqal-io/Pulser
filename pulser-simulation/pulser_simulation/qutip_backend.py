@@ -145,6 +145,7 @@ class QutipBackendV2(EmulatorBackend):
             sampling_rate=self._config.sampling_rate,
             noise_model=noise_model,
             with_modulation=self._config.with_modulation,
+            solver=self._config.solver,
         )
         self._sim_obj.set_evaluation_times(
             self._config._get_legacy_evaluation_times(
