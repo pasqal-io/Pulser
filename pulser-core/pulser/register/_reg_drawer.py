@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, Optional, Tuple, cast
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import collections as mc
+from mpl_toolkits.mplot3d import Axes3D
 from scipy.spatial import KDTree
 
 if TYPE_CHECKING:
@@ -292,81 +293,80 @@ class RegDrawer:
                     + labels[iy]
                     + "-plane"
                 )
+            return
+        fig = plt.figure(
+            figsize=cast(
+                Tuple[float, float],
+                tuple(2 * np.array(plt.figaspect(0.5))),
+            )
+        )
 
+        if draw_graph and blockade_radius is not None:
+            bonds = {}
+            for i, j in edges:
+                xi, yi, zi = pos[i]
+                xj, yj, zj = pos[j]
+                bonds[(i, j)] = [[xi, xj], [yi, yj], [zi, zj]]
+
+        params: dict[str, Any]
+        if are_traps:
+            params = dict(s=50, c="white", edgecolors="black")
         else:
-            fig = plt.figure(
-                figsize=cast(
-                    Tuple[float, float],
-                    tuple(2 * np.array(plt.figaspect(0.5))),
-                )
+            params = dict(s=30, c=ordered_qubit_colors)
+
+        for i in range(1, 3):
+            ax = fig.add_subplot(
+                1, 2, i, projection="3d", azim=-60 * (-1) ** i, elev=15
+            )
+            assert isinstance(ax, Axes3D)
+            ax.scatter(
+                pos[:, 0], pos[:, 1], pos[:, 2], alpha=0.7, **params
             )
 
+            if with_labels:
+                for q, coords in zip(ids, pos):
+                    ax.text(
+                        coords[0],
+                        coords[1],
+                        coords[2],
+                        q,
+                        fontsize=12,
+                        ha="left",
+                        va="bottom",
+                    )
+
+            if draw_half_radius and blockade_radius is not None:
+                mesh_num = 20 if len(ids) > 10 else 40
+                for r, color in zip(pos, ordered_qubit_colors):
+                    x0, y0, z0 = r
+                    radius = blockade_radius / 2
+
+                    # Strange behavior pf mypy using "imaginary slice step"
+                    # u, v = np.pi * np.mgrid[0:2:50j, 0:1:50j]
+
+                    v, u = np.meshgrid(
+                        np.arccos(np.linspace(-1, 1, num=mesh_num)),
+                        np.linspace(0, 2 * np.pi, num=mesh_num),
+                    )
+                    x = radius * np.cos(u) * np.sin(v) + x0
+                    y = radius * np.sin(u) * np.sin(v) + y0
+                    z = radius * np.cos(v) + z0
+                    # alpha controls opacity
+                    ax.plot_surface(
+                        x,
+                        y,
+                        z,
+                        color=color,
+                        alpha=0.1,
+                    )
+
             if draw_graph and blockade_radius is not None:
-                bonds = {}
-                for i, j in edges:
-                    xi, yi, zi = pos[i]
-                    xj, yj, zj = pos[j]
-                    bonds[(i, j)] = [[xi, xj], [yi, yj], [zi, zj]]
+                for x, y, z in bonds.values():
+                    ax.plot(x, y, z, linewidth=1.5, color="grey")
 
-            params: dict[str, Any]
-            if are_traps:
-                params = dict(s=50, c="white", edgecolors="black")
-            else:
-                params = dict(s=30, c=ordered_qubit_colors)
-
-            for i in range(1, 3):
-                ax = fig.add_subplot(
-                    1, 2, i, projection="3d", azim=-60 * (-1) ** i, elev=15
-                )
-
-                ax.scatter(
-                    pos[:, 0], pos[:, 1], pos[:, 2], alpha=0.7, **params
-                )
-
-                if with_labels:
-                    for q, coords in zip(ids, pos):
-                        ax.text(
-                            coords[0],
-                            coords[1],
-                            coords[2],
-                            q,
-                            fontsize=12,
-                            ha="left",
-                            va="bottom",
-                        )
-
-                if draw_half_radius and blockade_radius is not None:
-                    mesh_num = 20 if len(ids) > 10 else 40
-                    for r, color in zip(pos, ordered_qubit_colors):
-                        x0, y0, z0 = r
-                        radius = blockade_radius / 2
-
-                        # Strange behavior pf mypy using "imaginary slice step"
-                        # u, v = np.pi * np.mgrid[0:2:50j, 0:1:50j]
-
-                        v, u = np.meshgrid(
-                            np.arccos(np.linspace(-1, 1, num=mesh_num)),
-                            np.linspace(0, 2 * np.pi, num=mesh_num),
-                        )
-                        x = radius * np.cos(u) * np.sin(v) + x0
-                        y = radius * np.sin(u) * np.sin(v) + y0
-                        z = radius * np.cos(v) + z0
-                        # alpha controls opacity
-                        ax.plot_surface(
-                            x,
-                            y,
-                            z,
-                            color=color,
-                            alpha=0.1,
-                        )
-
-                if draw_graph and blockade_radius is not None:
-                    for x, y, z in bonds.values():
-                        ax.plot(x, y, z, linewidth=1.5, color="grey")
-
-                ax.set_xlabel("x (µm)")
-                ax.set_ylabel("y (µm)")
-                ax.set_zlabel("z (µm)")
+            ax.set_xlabel("x (µm)")
+            ax.set_ylabel("y (µm)")
+            ax.set_zlabel("z (µm)")
 
     @staticmethod
     def _register_dims(

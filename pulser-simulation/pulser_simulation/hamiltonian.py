@@ -92,7 +92,7 @@ class Hamiltonian:
             int(self._sampling_rate * self._duration),
             dtype=int,
         )
-        return full_array[indices]
+        return cast(np.ndarray, full_array[indices])
 
     def _build_collapse_operators(
         self,

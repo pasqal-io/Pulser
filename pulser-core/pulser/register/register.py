@@ -441,9 +441,12 @@ class Register(BaseRegister, RegDrawer):
             for trap_id in layout_ids
             if trap_id not in filled_traps_ids
         ]
-        return self.layout.define_register(
-            *empty_traps_ids,
-            qubit_ids=[str(trap_id) for trap_id in empty_traps_ids],
+        return cast(
+            Register, 
+            self.layout.define_register(
+                *empty_traps_ids,
+                qubit_ids=[str(trap_id) for trap_id in empty_traps_ids],
+            )
         )
 
     def draw(
@@ -506,13 +509,14 @@ class Register(BaseRegister, RegDrawer):
 
         if draw_empty_sites:
             empty_traps_reg = self._get_empty_traps_reg()
+            # layout is not None if draw_empty_sites
 
         pos = self._coords_arr.as_array(detach=True)
         if custom_ax is None:
             custom_ax = cast(
                 plt.Axes,
                 self._initialize_fig_axes(
-                    self.layout.sorted_coords if draw_empty_sites else pos,
+                    cast(pulser.register.RegisterLayout, self.layout).sorted_coords if draw_empty_sites else pos,
                     blockade_radius=blockade_radius,
                     draw_half_radius=draw_half_radius,
                 )[1],

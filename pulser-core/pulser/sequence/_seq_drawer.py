@@ -434,13 +434,14 @@ def _draw_register_det_maps(
             empty_traps_reg: None | Register
             try:
                 empty_traps_reg = register._get_empty_traps_reg()
+                # register has a layout
             except ValueError:  # None if no layout in register
                 empty_traps_reg = None
             fig_reg, axes_reg = register._initialize_fig_axes(
                 (
                     pos
                     if empty_traps_reg is None
-                    else register.layout.sorted_coords
+                    else cast(pulser.register.RegisterLayout, register.layout).sorted_coords
                 ),
                 blockade_radius=35,
                 draw_half_radius=True,
