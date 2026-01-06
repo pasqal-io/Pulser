@@ -81,7 +81,7 @@ class AbstractArray:
         if self.is_tensor:
             torch_tensor = cast(torch.Tensor, self._array)
             return AbstractArray(
-                torch_tensor.to(dtype=dtype)  # type: ignore[arg-type]
+                torch_tensor.to(dtype=dtype)  # type: ignore[call-overload]
             )
         return AbstractArray(cast(np.ndarray, self._array).astype(dtype))
 
