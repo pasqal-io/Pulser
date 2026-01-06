@@ -441,7 +441,9 @@ def _draw_register_det_maps(
                 (
                     pos
                     if empty_traps_reg is None
-                    else cast(pulser.register.RegisterLayout, register.layout).sorted_coords
+                    else cast(
+                        pulser.register.RegisterLayout, register.layout
+                    ).sorted_coords
                 ),
                 blockade_radius=35,
                 draw_half_radius=True,

@@ -17,7 +17,7 @@ from __future__ import annotations
 import functools
 import importlib.util
 import operator
-from typing import Optional, Any, Generator, Union, cast
+from typing import Any, Generator, Optional, Union, cast
 
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike

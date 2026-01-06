@@ -20,7 +20,7 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, field, fields
-from typing import Optional, Any, Callable, Literal, cast, get_args
+from typing import Any, Callable, Literal, Optional, cast, get_args
 
 import numpy as np
 from scipy.spatial.distance import squareform

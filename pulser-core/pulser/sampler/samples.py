@@ -209,7 +209,8 @@ class ChannelSamples:
             (
                 np.count_nonzero(self.amp.as_array(detach=True))
                 + np.count_nonzero(self.det.as_array(detach=True))
-            ) == 0
+            )
+            == 0
         )
 
     def _generate_std_samples(self) -> ChannelSamples:

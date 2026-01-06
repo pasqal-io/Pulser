@@ -319,9 +319,7 @@ class RegDrawer:
                 1, 2, i, projection="3d", azim=-60 * (-1) ** i, elev=15
             )
             assert isinstance(ax, Axes3D)
-            ax.scatter(
-                pos[:, 0], pos[:, 1], pos[:, 2], alpha=0.7, **params
-            )
+            ax.scatter(pos[:, 0], pos[:, 1], pos[:, 2], alpha=0.7, **params)
 
             if with_labels:
                 for q, coords in zip(ids, pos):

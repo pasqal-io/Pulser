@@ -442,11 +442,11 @@ class Register(BaseRegister, RegDrawer):
             if trap_id not in filled_traps_ids
         ]
         return cast(
-            Register, 
+            Register,
             self.layout.define_register(
                 *empty_traps_ids,
                 qubit_ids=[str(trap_id) for trap_id in empty_traps_ids],
-            )
+            ),
         )
 
     def draw(
@@ -516,7 +516,13 @@ class Register(BaseRegister, RegDrawer):
             custom_ax = cast(
                 plt.Axes,
                 self._initialize_fig_axes(
-                    cast(pulser.register.RegisterLayout, self.layout).sorted_coords if draw_empty_sites else pos,
+                    (
+                        cast(
+                            pulser.register.RegisterLayout, self.layout
+                        ).sorted_coords
+                        if draw_empty_sites
+                        else pos
+                    ),
                     blockade_radius=blockade_radius,
                     draw_half_radius=draw_half_radius,
                 )[1],
