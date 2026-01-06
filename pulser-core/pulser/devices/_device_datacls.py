@@ -20,7 +20,7 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, field, fields
-from typing import Any, Callable, Literal, cast, get_args
+from typing import Optional, Any, Callable, Literal, cast, get_args
 
 import numpy as np
 from scipy.spatial.distance import squareform
@@ -153,7 +153,7 @@ class BaseDevice(ABC):
 
     def __post_init__(self) -> None:
         def type_check(
-            param: str, type_: type, value_override: Any = None
+            param: str, type_: type, value_override: Optional[Any] = None
         ) -> None:
             """Check that one instance attribute has the right type.
 

@@ -17,7 +17,7 @@ from __future__ import annotations
 import functools
 import importlib.util
 import operator
-from typing import Any, Generator, Union, cast
+from typing import Optional, Any, Generator, Union, cast
 
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
@@ -42,7 +42,7 @@ class AbstractArray:
     def __init__(
         self,
         array: AbstractArrayLike,
-        dtype: DTypeLike = None,
+        dtype: Optional[DTypeLike] = None,
         force_array: bool = False,
     ):
         """Initializes a new AbstractArray."""
