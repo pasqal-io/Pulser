@@ -253,12 +253,6 @@ def test_init_errors():
             seq_samples, seq.register, pulser.DigitalAnalogDevice, None, None
         )
 
-    with pytest.raises(
-        ValueError,
-        match="n_trajectories",
-    ):
-        HamiltonianData(seq_samples, seq.register, seq.device, noise_model, 5)
-
 
 def test_from_sequence():
     seq = seq_with_SLM("rydberg_global")

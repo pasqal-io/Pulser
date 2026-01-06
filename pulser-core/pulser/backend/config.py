@@ -131,6 +131,12 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         noise_model: An optional noise model to emulate the sequence with.
             Ignored if the sequence's device has default noise model and
             `prefer_device_noise_model=True`.
+        n_trajectories: The number of trajectories to average over when the
+            emulation includes stochastic noise or is using a Monte Carlo
+            solver. If left undefined, tries to use the (now deprecated) value
+            of `NoiseModel.runs`. If that is also not defined,
+            **defaults to 40** trajectories. Whenever averaging over multiple
+            trajectories is not needed, this value is ignored.
 
     Note:
         Additional parameters may be provided. It is up to the emulation
@@ -149,6 +155,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     interaction_matrix: pm.AbstractArray | None
     prefer_device_noise_model: bool
     noise_model: NoiseModel
+    n_trajectories: int
     # Whether to warn if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = False
 
@@ -169,6 +176,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         interaction_matrix: ArrayLike | None = None,
         prefer_device_noise_model: bool = False,
         noise_model: NoiseModel = NoiseModel(),
+        n_trajectories: int | None = None,
         **backend_options: Any,
     ) -> None:
         """Initializes the EmulationConfig."""
@@ -255,6 +263,30 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
                 f" not {type(noise_model)}."
             )
 
+        if (
+            n_trajectories is not None
+            and noise_model.runs is not None
+            and n_trajectories != noise_model.runs
+        ):
+            raise ValueError(
+                "`EmulationConfig.n_trajectories` and `NoiseModel.runs` "
+                "can't be simultaneously defined. Please favour using only"
+                " `EmulationConfig.n_trajectories`."
+            )
+        n_trajectories = (
+            n_trajectories
+            if n_trajectories is not None
+            # NoiseModel.runs is type and value checked so we don't have to
+            # explicitly check for None
+            else (noise_model.runs or 40)
+        )
+
+        if n_trajectories < 1 or n_trajectories != int(n_trajectories):
+            raise ValueError(
+                "`n_trajectories` must be a strictly positive integer, "
+                f"not {n_trajectories}."
+            )
+
         super().__init__(
             callbacks=tuple(callbacks),
             observables=tuple(observables),
@@ -264,6 +296,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             interaction_matrix=interaction_matrix,
             prefer_device_noise_model=bool(prefer_device_noise_model),
             noise_model=noise_model,
+            n_trajectories=int(n_trajectories),
             **backend_options,
         )
 

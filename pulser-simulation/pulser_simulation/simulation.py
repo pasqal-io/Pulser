@@ -121,6 +121,10 @@ class QutipEmulator:
 
             - ``Solver.MESOLVER``: use the master-equation
               solver ``qutip.mesolve``.
+        n_trajectories: The number of trajectories to average over when the
+            emulation includes stochastic noise or is using a Monte Carlo
+            solver. If defined, takes precedence over the (now deprecated)
+            `noise_model.runs` or `config.runs`.
     """
 
     def __init__(
@@ -133,6 +137,7 @@ class QutipEmulator:
         evaluation_times: Union[float, str, ArrayLike] = "Full",
         noise_model: NoiseModel | None = None,
         solver: Solver = Solver.DEFAULT,
+        n_trajectories: int | None = None,
     ) -> None:
         """Instantiates a QutipEmulator object."""
         # Initializing the samples obj
@@ -166,6 +171,7 @@ class QutipEmulator:
 
         self._tot_duration = sampled_seq.max_duration
         self.samples_obj = sampled_seq.extend_duration(self._tot_duration + 1)
+        self._n_trajectories = n_trajectories
 
         # Testing sampling
         if not (0 < sampling_rate <= 1.0):
@@ -197,8 +203,13 @@ class QutipEmulator:
             noise_model = config.to_noise_model()
         if not noise_model:
             noise_model = NoiseModel()
+
         self._hamiltonian_data = HamiltonianData(
-            self.samples_obj, register, device, noise_model, noise_model.runs
+            self.samples_obj,
+            register,
+            device,
+            noise_model,
+            self._get_n_trajectories(noise_model, check_value=True),
         )
         # I don't like this, since the iterator is lost, but I don't
         # want to write logic to store and invalidate the iterator either
@@ -216,6 +227,31 @@ class QutipEmulator:
             else:
                 self._meas_basis = self.basis_name.replace("_with_error", "")
         self.set_initial_state("all-ground")
+
+    def _get_n_trajectories(
+        self, noise_model: NoiseModel, check_value: bool
+    ) -> int | None:
+        n_trajectories = (
+            self._n_trajectories
+            if self._n_trajectories is not None
+            else noise_model.runs
+        )
+        if (
+            check_value
+            and _has_stochastic_noise(noise_model)
+            and n_trajectories is None
+        ):
+            raise ValueError(
+                "'n_trajectories' must be defined when the NoiseModel contains"
+                " stochastic noise, which is the case for the given noise "
+                f"model: {noise_model!r}"
+            )
+        return n_trajectories
+
+    @property
+    def n_trajectories(self) -> int | None:
+        """The number of trajectories to average over (when applicable)."""
+        return self._get_n_trajectories(self.noise_model, check_value=False)
 
     @property
     def device(self) -> BaseDevice:
@@ -245,7 +281,11 @@ class QutipEmulator:
             noise = NoiseModel()
 
         noiseless_data = HamiltonianData(
-            self.samples_obj, self._register, self.device, noise, noise.runs
+            self.samples_obj,
+            self._register,
+            self.device,
+            noise,
+            n_trajectories=1,
         )
         return Hamiltonian(
             noiseless_data.samples,
@@ -344,7 +384,7 @@ class QutipEmulator:
             self._register,
             self.device,
             noise_model,
-            noise_model.runs,
+            self._get_n_trajectories(noise_model, check_value=True),
         )
         self._current_hamiltonian = next(self._hamiltonians).hamiltonian
         if self.dim == former_dim:
@@ -783,10 +823,7 @@ class QutipEmulator:
         """
         self._validate_options(options)
 
-        if (
-            "SPAM" not in self.noise_model.noise_types
-            or self.noise_model.state_prep_error == 0
-        ) and not has_shot_to_shot_except_spam(self.noise_model):
+        if not _has_stochastic_noise(self.noise_model):
             # A single run is needed, regardless of self.config.runs
             return self._run_solver(
                 self._current_hamiltonian, progress_bar, **options
@@ -809,7 +846,7 @@ class QutipEmulator:
             )
 
         n_measures = (
-            cast(int, self.noise_model.runs) * self.noise_model.samples_per_run
+            cast(int, self.n_trajectories) * self.noise_model.samples_per_run
         )
         results = [
             SampledResult(
@@ -884,6 +921,7 @@ class QutipEmulator:
         with_modulation: bool = False,
         noise_model: NoiseModel | None = None,
         solver: Solver = Solver.DEFAULT,
+        n_trajectories: int | None = None,
     ) -> QutipEmulator:
         r"""Simulation of a pulse sequence using QuTiP.
 
@@ -924,6 +962,10 @@ class QutipEmulator:
 
                 - ``Solver.MESOLVER``: use the master-equation
                   solver ``qutip.mesolve``.
+            n_trajectories: The number of trajectories to average over when the
+                emulation includes stochastic noise or is using a Monte Carlo
+                solver. If defined, takes precedence over the (now deprecated)
+                `noise_model.runs` or `config.runs`.
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
@@ -964,4 +1006,5 @@ class QutipEmulator:
             evaluation_times,
             noise_model=noise_model,
             solver=solver,
+            n_trajectories=n_trajectories,
         )
