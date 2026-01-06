@@ -69,7 +69,6 @@ def results_noisy(seq_no_meas):
         sim = QutipEmulator.from_sequence(
             seq_no_meas,
             noise_model=NoiseModel(
-                runs=15,
                 samples_per_run=5,
                 temperature=50.0,
                 state_prep_error=0.005,
@@ -78,6 +77,7 @@ def results_noisy(seq_no_meas):
                 amp_sigma=1e-3,
                 laser_waist=175.0,
             ),
+            n_trajectories=15,
         )
     return sim.run()
 
@@ -233,7 +233,6 @@ def test_get_final_state_noisy(reg, pi_pulse):
     sim_noisy = QutipEmulator.from_sequence(
         seq_,
         noise_model=NoiseModel(
-            runs=15,
             samples_per_run=5,
             temperature=50.0,
             trap_depth=0.01,
@@ -242,6 +241,7 @@ def test_get_final_state_noisy(reg, pi_pulse):
             p_false_pos=0.01,
             p_false_neg=0.05,
         ),
+        n_trajectories=15,
     )
     res3 = sim_noisy.run()
     res3._meas_basis = "digital"
@@ -409,13 +409,13 @@ def test_sample_final_state_noisy(seq_no_meas, results_noisy):
     res_3level = QutipEmulator.from_sequence(
         seq_no_meas,
         noise_model=NoiseModel(
-            runs=10,
             samples_per_run=5,
             temperature=50.0,
             state_prep_error=0.005,
             p_false_pos=0.01,
             p_false_neg=0.05,
         ),
+        n_trajectories=10,
     )
     final_state = res_3level.run().states[-1]
     assert np.isclose(

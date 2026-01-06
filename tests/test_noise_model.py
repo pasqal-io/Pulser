@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import contextlib
 import re
 import warnings
 
@@ -105,9 +106,18 @@ class TestNoiseModel:
         ],
     )
     def test_init(self, params, noise_types):
-        noise_model = NoiseModel(
-            **{p: (1.0 if p != "disable_doppler" else True) for p in params}
-        )
+
+        with (
+            pytest.deprecated_call(match="NoiseModel.runs")
+            if "runs" in params
+            else contextlib.nullcontext()
+        ):
+            noise_model = NoiseModel(
+                **{
+                    p: (1.0 if p != "disable_doppler" else True)
+                    for p in params
+                }
+            )
         assert set(noise_model.noise_types) == noise_types
         relevant_params = NoiseModel._find_relevant_params(
             noise_types,
@@ -127,6 +137,9 @@ class TestNoiseModel:
         "noise_param", ["relaxation_rate", "p_false_neg", "laser_waist"]
     )
     @pytest.mark.parametrize("unused_param", ["runs", "samples_per_run"])
+    @pytest.mark.filterwarnings(
+        "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
+    )
     def test_unused_params(self, unused_param, noise_param):
         with pytest.warns(
             UserWarning,
@@ -148,12 +161,18 @@ class TestNoiseModel:
         "param",
         ["runs", "samples_per_run", "laser_waist"],
     )
+    @pytest.mark.filterwarnings(
+        "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
+    )
     def test_init_strict_pos(self, param):
         with pytest.raises(
             ValueError, match=f"'{param}' must be greater than zero, not 0"
         ):
             NoiseModel(**{param: 0})
 
+    @pytest.mark.filterwarnings(
+        "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
+    )
     @pytest.mark.parametrize("value", [None, -1e-9, 0.0, 0.2, 1.0001])
     @pytest.mark.parametrize(
         "param, noise",
@@ -193,6 +212,9 @@ class TestNoiseModel:
             else:
                 assert noise_model.noise_types == ()
 
+    @pytest.mark.filterwarnings(
+        "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
+    )
     @pytest.mark.parametrize("value", [-1e-9, 0.0, 0.5, 1.0, 1.0001])
     @pytest.mark.parametrize(
         "param, noise",
@@ -319,19 +341,17 @@ class TestNoiseModel:
     def test_hf_detuning_noise_validation(self):
         # list - expected format
         noise_mod = NoiseModel(
-            detuning_hf_psd=[1, 4, 2], detuning_hf_omegas=[3, 6, 7], runs=1
+            detuning_hf_psd=[1, 4, 2], detuning_hf_omegas=[3, 6, 7]
         )
         # np.array - other expected format
         noise_mod = NoiseModel(
             detuning_hf_psd=np.array([1, 4, 2]),
             detuning_hf_omegas=np.array([3, 6, 7]),
-            runs=1,
         )
         # tuple - other expected format
         noise_mod = NoiseModel(
             detuning_hf_psd=(1, 4, 2),
             detuning_hf_omegas=(3, 6, 7),
-            runs=1,
         )
 
         # not provided psd and freqs
@@ -506,6 +526,9 @@ class TestNoiseModel:
             "samples_per_run",
         }
 
+    @pytest.mark.filterwarnings(
+        "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
+    )
     def test_repr(self):
         assert repr(NoiseModel()) == "NoiseModel(noise_types=())"
         assert (
@@ -588,8 +611,6 @@ def test_register_noise_no_warning_when_all_params_defined():
         temperature=15.0,
         trap_waist=1.0,
         trap_depth=150.0,  # the same units as temperature
-        runs=1,
-        samples_per_run=1,
     )
     assert noise_model.noise_types == ("doppler", "register")
     with warnings.catch_warnings(record=True) as rec:
@@ -615,8 +636,6 @@ def test_trap_param_default_and_temperature_set():
         trap_waist=0.0,  # default
         trap_depth=None,  # default
         temperature=10.0,
-        runs=1,
-        samples_per_run=1,
     )
     assert noise_model.noise_types == ("doppler",)
 
@@ -633,8 +652,6 @@ def test_check_register_noise_params_invalid_params():
             trap_depth=150.0,
             trap_waist=0.0,
             temperature=10.0,
-            runs=1,
-            samples_per_run=1,
         )
     with pytest.raises(
         ValueError, match="defined in order to simulate register noise"
@@ -643,6 +660,4 @@ def test_check_register_noise_params_invalid_params():
             trap_waist=2.0,
             trap_depth=150,
             temperature=0.0,
-            runs=1,
-            samples_per_run=1,
         )

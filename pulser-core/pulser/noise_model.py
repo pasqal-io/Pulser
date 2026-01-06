@@ -172,10 +172,12 @@ class NoiseModel:
             necessary, this determines how many times that happens. Not
             to be confused with the number of times the resulting
             bitstring distribution is sampled when calculating bitstring
-            counts.
+            counts. *Deprecated since v1.7; this parameter is only used by
+            deprecated backends. Please use 'EmulationConfig.n_trajectories'
+            instead.*
         samples_per_run: Number of samples per noisy Hamiltonian. Useful
             for cutting down on computing time, but unrealistic. *Deprecated
-            since v1.6, use only `runs`.*
+            since v1.6; this parameter is only used by deprecated backends.*
         state_prep_error: The state preparation error probability. Defaults
             to 0.
         p_false_pos: Probability of measuring a false positive. Defaults to 0.
@@ -316,6 +318,20 @@ class NoiseModel:
             for p in param_vals
             if param_vals[p] is not None or p in relevant_params
         }
+
+        if param_vals.get("runs") is not None:
+            warnings.warn(
+                "Defining the number of emulation trajectories via "
+                "'NoiseModel.runs' is deprecated since pulser v1.7. "
+                "Please favour using 'EmulationConfig.n_trajectories' "
+                "instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+        else:
+            # Exclude 'runs' from validation when it's None
+            relevant_param_vals.pop("runs", None)
+
         self._validate_parameters(relevant_param_vals)
 
         self._check_register_noise_params(
@@ -542,9 +558,7 @@ class NoiseModel:
             if param == "samples_per_run" and value != 1:
                 warnings.warn(
                     "Setting samples_per_run different to 1 is "
-                    "deprecated since pulser v1.6. Please use only "
-                    "`runs` to define the number of noisy simulations "
-                    "to perform.",
+                    "deprecated since pulser v1.6.",
                     DeprecationWarning,
                     stacklevel=2,
                 )
