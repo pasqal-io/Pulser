@@ -182,7 +182,6 @@ def test_init_errors():
     seq = seq_with_SLM("rydberg_global")
     seq_samples = sample(seq)
     register = pulser.Register.square(3, spacing=6, prefix="")
-    noise_model = pulser.NoiseModel()
     with pytest.raises(
         TypeError,
         match=(
