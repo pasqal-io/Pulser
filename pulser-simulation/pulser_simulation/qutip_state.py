@@ -133,7 +133,7 @@ class QutipState(State[complex, float]):
         return dict(
             zip(
                 map(
-                    self.get_basis_state_from_index,
+                    self.get_basis_state_from_index,  # type: ignore[arg-type]
                     non_zero,
                 ),
                 probs,
