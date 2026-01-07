@@ -424,7 +424,7 @@ class Register(BaseRegister, RegDrawer):
             dict(zip(self.qubit_ids, [rot @ v for v in self._coords_arr]))
         )
 
-    def _get_empty_traps_reg(self) -> Register:
+    def _get_empty_traps_reg(self) -> BaseRegister:
         """A Register containing the layout's empty trap."""
         if self.layout is None:
             raise ValueError(
@@ -441,12 +441,9 @@ class Register(BaseRegister, RegDrawer):
             for trap_id in layout_ids
             if trap_id not in filled_traps_ids
         ]
-        return cast(
-            Register,
-            self.layout.define_register(
-                *empty_traps_ids,
-                qubit_ids=[str(trap_id) for trap_id in empty_traps_ids],
-            ),
+        return self.layout.define_register(
+            *empty_traps_ids,
+            qubit_ids=[str(trap_id) for trap_id in empty_traps_ids],
         )
 
     def draw(
@@ -509,7 +506,7 @@ class Register(BaseRegister, RegDrawer):
 
         if draw_empty_sites:
             empty_traps_reg = self._get_empty_traps_reg()
-            # layout is not None if draw_empty_sites
+            assert self.layout is not None
 
         pos = self._coords_arr.as_array(detach=True)
         if custom_ax is None:
@@ -517,10 +514,8 @@ class Register(BaseRegister, RegDrawer):
                 plt.Axes,
                 self._initialize_fig_axes(
                     (
-                        cast(
-                            pulser.register.RegisterLayout, self.layout
-                        ).sorted_coords
-                        if draw_empty_sites
+                        self.layout.sorted_coords
+                        if (draw_empty_sites and self.layout is not None)
                         else pos
                     ),
                     blockade_radius=blockade_radius,
