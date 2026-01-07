@@ -688,6 +688,7 @@ class QutipEmulator:
         self,
         hamiltonian: Hamiltonian,
         progress_bar: bool = False,
+        mcsolve_ntraj: int = 1,
         **options: Any,
     ) -> CoherentResults:
         """Returns CoherentResults: Object containing evolution results."""
@@ -728,7 +729,7 @@ class QutipEmulator:
         if solver_fn in (qutip.mesolve, qutip.mcsolve):
             extra_kwargs["c_ops"] = hamiltonian._collapse_ops
             if solver_fn is qutip.mcsolve:
-                extra_kwargs["ntraj"] = 1
+                extra_kwargs["ntraj"] = mcsolve_ntraj
 
         result = solver_fn(
             hamiltonian._hamiltonian,
@@ -826,7 +827,10 @@ class QutipEmulator:
         if not _has_stochastic_noise(self.noise_model):
             # A single run is needed, regardless of self.config.runs
             return self._run_solver(
-                self._current_hamiltonian, progress_bar, **options
+                self._current_hamiltonian,
+                progress_bar,
+                mcsolve_ntraj=self.n_trajectories,
+                **options,
             )
 
         # Will return NoisyResults

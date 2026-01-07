@@ -1880,7 +1880,7 @@ def test_effective_size_disjoint(channel_type):
             p_false_pos=0.01,
             p_false_neg=0.05,
         ),
-        n_trajectories=1,
+        n_trajectories=15,
     )
     assert sim._current_hamiltonian.noise_trajectory.bad_atoms == {
         "atom0": True,
