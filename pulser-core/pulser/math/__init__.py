@@ -40,7 +40,7 @@ class TensorLike(Protocol[T]):
 
     def detach(self: T) -> T: ...  # noqa: D102
 
-    def __array__(self, dtype: Any = None) -> np.ndarray: ...
+    def __array__(self, dtype: Any | None = None) -> np.ndarray: ...
 
 
 # Custom function definitions
