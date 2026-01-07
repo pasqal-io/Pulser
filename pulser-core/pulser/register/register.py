@@ -424,6 +424,28 @@ class Register(BaseRegister, RegDrawer):
             dict(zip(self.qubit_ids, [rot @ v for v in self._coords_arr]))
         )
 
+    def _get_empty_traps_reg(self) -> BaseRegister:
+        """A Register containing the layout's empty trap."""
+        if self.layout is None:
+            raise ValueError(
+                "The register must have an associated RegisterLayout "
+                "to draw the empty sites."
+            )
+        layout = self.layout
+        layout_ids = list(layout.traps_dict.keys())
+        filled_traps_ids = layout.get_traps_from_coordinates(
+            *tuple(self.qubits.values())
+        )
+        empty_traps_ids = [
+            trap_id
+            for trap_id in layout_ids
+            if trap_id not in filled_traps_ids
+        ]
+        return self.layout.define_register(
+            *empty_traps_ids,
+            qubit_ids=[str(trap_id) for trap_id in empty_traps_ids],
+        )
+
     def draw(
         self,
         with_labels: bool = True,
@@ -483,32 +505,19 @@ class Register(BaseRegister, RegDrawer):
         )
 
         if draw_empty_sites:
-            if self.layout is None:
-                raise ValueError(
-                    "The register must have an associated RegisterLayout "
-                    "to draw the empty sites."
-                )
-            layout = self.layout
-            layout_ids = list(layout.traps_dict.keys())
-            filled_traps_ids = layout.get_traps_from_coordinates(
-                *tuple(self.qubits.values())
-            )
-            empty_traps_ids = [
-                trap_id
-                for trap_id in layout_ids
-                if trap_id not in filled_traps_ids
-            ]
-            empty_traps_reg = self.layout.define_register(
-                *empty_traps_ids,
-                qubit_ids=[str(trap_id) for trap_id in empty_traps_ids],
-            )
+            empty_traps_reg = self._get_empty_traps_reg()
+            assert self.layout is not None
 
         pos = self._coords_arr.as_array(detach=True)
         if custom_ax is None:
             custom_ax = cast(
                 plt.Axes,
                 self._initialize_fig_axes(
-                    layout.sorted_coords if draw_empty_sites else pos,
+                    (
+                        self.layout.sorted_coords
+                        if (draw_empty_sites and self.layout is not None)
+                        else pos
+                    ),
                     blockade_radius=blockade_radius,
                     draw_half_radius=draw_half_radius,
                 )[1],
@@ -528,7 +537,7 @@ class Register(BaseRegister, RegDrawer):
                 with_labels=False,
                 label_name="empty",
                 are_traps=True,
-                **draw_kwargs,  # type: ignore
+                ax=custom_ax,
             )
 
         super()._draw_2D(
