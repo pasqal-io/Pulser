@@ -138,6 +138,14 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
         QutipEmulator.from_sequence(
             seq, config=_config, noise_model=NoiseModel()
         )
+
+    with pytest.raises(
+        ValueError,
+        match="'n_trajectories' must be defined when the NoiseModel contains"
+        " stochastic noise",
+    ):
+        QutipEmulator.from_sequence(seq, noise_model=NoiseModel(amp_sigma=0.1))
+
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.011)
     sampled_seq = sampler.sample(seq)
     ext_sampled_seq = sampled_seq.extend_duration(sampled_seq.max_duration + 1)

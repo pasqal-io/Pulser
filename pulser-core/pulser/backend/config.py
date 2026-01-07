@@ -44,6 +44,7 @@ from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.noise_model import NoiseModel
 
+DEFAULT_N_TRAJECTORIES = 40
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 
 StateType = TypeVar("StateType", bound=State)
@@ -278,7 +279,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             if n_trajectories is not None
             # NoiseModel.runs is type and value checked so we don't have to
             # explicitly check for None
-            else (noise_model.runs or 40)
+            else (noise_model.runs or DEFAULT_N_TRAJECTORIES)
         )
 
         if n_trajectories < 1 or n_trajectories != int(n_trajectories):

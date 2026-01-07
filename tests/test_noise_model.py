@@ -170,9 +170,6 @@ class TestNoiseModel:
         ):
             NoiseModel(**{param: 0})
 
-    @pytest.mark.filterwarnings(
-        "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
-    )
     @pytest.mark.parametrize("value", [None, -1e-9, 0.0, 0.2, 1.0001])
     @pytest.mark.parametrize(
         "param, noise",
@@ -187,10 +184,6 @@ class TestNoiseModel:
     )
     def test_init_rate_like(self, param, noise, value):
         kwargs = {param: value}
-        if (
-            param == "temperature" or param == "detuning_sigma"
-        ) and value != 0:
-            kwargs.update(dict(runs=1, samples_per_run=1))
         if value is None:
             with pytest.raises(
                 TypeError,
@@ -591,12 +584,12 @@ class TestNoiseModel:
                     temperature=15.0,
                     trap_depth=150.0,  # same units as temperature
                     trap_waist=1.0,
-                    runs=1,
+                    runs=None,
                     samples_per_run=1,
                     disable_doppler=True,
                 )
             )
-            == "NoiseModel(noise_types=('register',), runs=1, "
+            == "NoiseModel(noise_types=('register',), runs=None, "
             "samples_per_run=1, temperature=15.0, trap_waist=1.0, "
             "trap_depth=150.0)"
         )

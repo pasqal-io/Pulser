@@ -194,6 +194,10 @@ def test_qutip_backend_v2_stochastic_noise():
     )
     seq = sequence()
     backend = QutipBackendV2(seq, config=config)
+
+    # Check trajectories are passed to _sim_obj
+    assert backend._sim_obj.n_trajectories == config.n_trajectories
+
     results = backend.run()
 
     # Same run with old API

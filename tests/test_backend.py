@@ -579,6 +579,54 @@ def test_emulation_config():
         # Just to ensure subsequent tests are not affected
         EmulationConfig._enforce_expected_kwargs = False
 
+    with pytest.raises(ValueError, match="strictly positive integer"):
+        EmulationConfig(
+            observables=(BitStrings(),),
+            n_trajectories=0,
+        )
+
+    with pytest.raises(ValueError, match="strictly positive integer"):
+        EmulationConfig(
+            observables=(BitStrings(),),
+            n_trajectories=1.001,
+        )
+
+    with pytest.deprecated_call():
+        runs_noise_model = pulser.NoiseModel(amp_sigma=0.1, runs=10)
+
+    with pytest.raises(
+        ValueError,
+        match="`EmulationConfig.n_trajectories` and `NoiseModel.runs` can't be"
+        " simultaneously defined",
+    ):
+        assert runs_noise_model != 2
+        EmulationConfig(
+            observables=(BitStrings(),),
+            noise_model=runs_noise_model,
+            n_trajectories=2,
+        )
+
+    # If n_trajectories == noise_model.runs, it's ok
+    assert (
+        EmulationConfig(
+            observables=(BitStrings(),),
+            noise_model=runs_noise_model,
+            n_trajectories=10.0,  # float still works if it matches an
+        ).n_trajectories
+        == 10
+    )
+
+    # If n_trajectories is not given, noise_model.runs is used
+    assert (
+        EmulationConfig(
+            observables=(BitStrings(),), noise_model=runs_noise_model
+        ).n_trajectories
+        == runs_noise_model.runs
+    )
+
+    # If None are given, defaults to 40
+    assert EmulationConfig(observables=(BitStrings(),)).n_trajectories == 40
+
 
 def test_results_aggregation():
     results1 = Results(atom_order=[0, 1], total_duration=100)
