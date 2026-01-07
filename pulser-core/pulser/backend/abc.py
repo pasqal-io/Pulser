@@ -14,6 +14,7 @@
 """Base class for the backend interface."""
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import ClassVar
@@ -97,6 +98,19 @@ class EmulatorBackend(Backend):
         """Initializes the backend."""
         super().__init__(sequence, mimic_qpu=mimic_qpu)
         self._config = self.validate_config(config or self.default_config)
+        if (
+            self._config.prefer_device_noise_model
+            and self._sequence.device.default_noise_model is not None
+            and self._sequence.device.default_noise_model.runs is not None
+            and self._sequence.device.default_noise_model.runs
+            != self._config.n_trajectories
+        ):
+            config = self._config
+            warnings.warn(
+                f"'{sequence.device.default_noise_model.runs=}' is being "
+                f"ignored; '{config.n_trajectories=}' will be used instead.",
+                stacklevel=2,
+            )
 
     @classmethod
     def validate_config(cls, config: EmulationConfig) -> EmulationConfig:

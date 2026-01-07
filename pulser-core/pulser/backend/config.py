@@ -134,10 +134,14 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             `prefer_device_noise_model=True`.
         n_trajectories: The number of trajectories to average over when the
             emulation includes stochastic noise or is using a Monte Carlo
-            solver. If left undefined, tries to use the (now deprecated) value
-            of `NoiseModel.runs`. If that is also not defined,
-            **defaults to 40** trajectories. Whenever averaging over multiple
-            trajectories is not needed, this value is ignored.
+            solver. When left undefined:
+
+            (1) If 'prefer_device_noise_model=False', tries to use the (now
+            deprecated) value of `NoiseModel.runs`. If that is also not
+            defined, defaults to 1 trajectory.
+
+            (2) If 'prefer_device_noise_model=True', **defaults to 40**
+            trajectories.
 
     Note:
         Additional parameters may be provided. It is up to the emulation
@@ -274,13 +278,14 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
                 "can't be simultaneously defined. Please favour using only"
                 " `EmulationConfig.n_trajectories`."
             )
-        n_trajectories = (
-            n_trajectories
-            if n_trajectories is not None
-            # NoiseModel.runs is type and value checked so we don't have to
-            # explicitly check for None
-            else (noise_model.runs or DEFAULT_N_TRAJECTORIES)
-        )
+
+        if n_trajectories is None:
+            if prefer_device_noise_model:
+                n_trajectories = DEFAULT_N_TRAJECTORIES
+            else:
+                n_trajectories = (
+                    noise_model.runs if noise_model.runs is not None else 1
+                )
 
         if n_trajectories < 1 or n_trajectories != int(n_trajectories):
             raise ValueError(

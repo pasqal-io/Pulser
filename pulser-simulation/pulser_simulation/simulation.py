@@ -829,7 +829,7 @@ class QutipEmulator:
             return self._run_solver(
                 self._current_hamiltonian,
                 progress_bar,
-                mcsolve_ntraj=self.n_trajectories,
+                mcsolve_ntraj=self.n_trajectories or 1,
                 **options,
             )
 
