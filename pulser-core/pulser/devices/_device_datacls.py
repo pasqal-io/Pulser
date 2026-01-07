@@ -153,7 +153,7 @@ class BaseDevice(ABC):
 
     def __post_init__(self) -> None:
         def type_check(
-            param: str, type_: type, value_override: Any = None
+            param: str, type_: type, value_override: Any | None = None
         ) -> None:
             """Check that one instance attribute has the right type.
 
