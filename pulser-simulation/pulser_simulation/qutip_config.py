@@ -72,7 +72,7 @@ class QutipConfig(EmulationConfig[QutipState]):
         EmulationConfig: The base configuration class for an EmulatorBackend.
     """
 
-    # Whether to warn if unexpected kwargs are received
+    # Whether to error if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = True
     sampling_rate: float
     _state_type = QutipState

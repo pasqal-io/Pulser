@@ -54,7 +54,7 @@ class BackendConfig:
     """The base backend configuration."""
 
     _backend_options: dict[str, Any]
-    # Whether to warn if unexpected kwargs are received
+    # Whether to error if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = True
 
     def __init__(self, **backend_options: Any) -> None:
@@ -161,7 +161,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     prefer_device_noise_model: bool
     noise_model: NoiseModel
     n_trajectories: int
-    # Whether to warn if unexpected kwargs are received
+    # Whether to error if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = False
 
     _state_type: ClassVar[Type[State]]
