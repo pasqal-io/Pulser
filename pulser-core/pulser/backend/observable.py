@@ -152,8 +152,6 @@ class Observable(Callback):
             state: The current state.
             hamiltonian: The Hamiltonian at this time.
             result: The Results object to store the result in.
-            time_tol: Tolerance below which two time values are considered
-                equal.
         """
         time_tol = (
             (0.5 / result.total_duration) if result.total_duration else 1e-6
