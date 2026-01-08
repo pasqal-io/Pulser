@@ -316,6 +316,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             "interaction_matrix",
             "prefer_device_noise_model",
             "noise_model",
+            "n_trajectories",
         }
 
     def is_evaluation_time(self, t: float, tol: float = 1e-6) -> bool:
