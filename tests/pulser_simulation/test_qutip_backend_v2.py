@@ -89,9 +89,8 @@ def test_callback():
 
     config = QutipConfig(
         callbacks=[CountCalls()],
-        noise_model=pulser.NoiseModel(
-            amp_sigma=0.1, runs=1, samples_per_run=1
-        ),
+        noise_model=pulser.NoiseModel(amp_sigma=0.1),
+        n_trajectories=1,
     )
     backend = QutipBackendV2(seq, config=config)
     backend.run()
@@ -141,7 +140,7 @@ def test_qutip_backend_v2_default_noise_model():
     noisy_device = dataclasses.replace(
         pulser.devices.MockDevice,
         default_noise_model=pulser.NoiseModel(
-            dephasing_rate=0.01, temperature=50, runs=2, samples_per_run=1
+            dephasing_rate=0.01, temperature=50
         ),
     )
 
@@ -155,6 +154,7 @@ def test_qutip_backend_v2_default_noise_model():
             qutip.tensor([qutip.basis(2, 0) for _ in range(2)]),
             eigenstates=("r", "g"),
         ),
+        n_trajectories=2,
     )
 
     backend = QutipBackendV2(sequence(noisy_device), config=config)
@@ -180,7 +180,6 @@ def test_qutip_backend_v2_stochastic_noise():
             temperature=50.0,
             p_false_neg=0.01,
             amp_sigma=1e-3,
-            runs=30,
             samples_per_run=samples_per_run,
         )
 
@@ -191,9 +190,14 @@ def test_qutip_backend_v2_stochastic_noise():
             Occupation(evaluation_times=[0.001 * n for n in range(1001)]),
         ],
         noise_model=get_noise_model(samples_per_run=1),
+        n_trajectories=30,
     )
     seq = sequence()
     backend = QutipBackendV2(seq, config=config)
+
+    # Check trajectories are passed to _sim_obj
+    assert backend._sim_obj.n_trajectories == config.n_trajectories
+
     results = backend.run()
 
     # Same run with old API
@@ -201,7 +205,9 @@ def test_qutip_backend_v2_stochastic_noise():
         DeprecationWarning, match="Setting samples_per_run different to 1 is"
     ):
         qutip_emulator = QutipEmulator.from_sequence(
-            seq, noise_model=get_noise_model(samples_per_run=100)
+            seq,
+            noise_model=get_noise_model(samples_per_run=100),
+            n_trajectories=30,
         )
     results_old_api = qutip_emulator.run()
 
@@ -275,7 +281,6 @@ def test_leakage(amp_sigma):
         eff_noise_opers=eff_ops,
         with_leakage=True,
         amp_sigma=amp_sigma,
-        runs=(1 if amp_sigma != 0.0 else None),
     )
 
     eval_times = [1.0]
@@ -284,6 +289,7 @@ def test_leakage(amp_sigma):
         observables=[StateResult(evaluation_times=eval_times)],
         noise_model=noise_model,
         solver=Solver.MESOLVER,
+        n_trajectories=1,
     )
 
     qutip_sim = QutipBackendV2(seq, config=qutip_config)
@@ -342,7 +348,6 @@ def test_register_detuning_detection():
         temperature=50.0,
         disable_doppler=True,
         detuning_sigma=5.0,
-        runs=10,
     )
 
     assert set(noise_model.noise_types) == {"register", "detuning"}
@@ -352,6 +357,7 @@ def test_register_detuning_detection():
         default_evaluation_times=eval_times,
         observables=[StateResult(evaluation_times=eval_times)],
         noise_model=noise_model,
+        n_trajectories=10,
     )
 
     qutip_sim = QutipBackendV2(seq, config=qutip_config)

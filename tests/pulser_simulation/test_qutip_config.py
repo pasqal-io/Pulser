@@ -56,9 +56,7 @@ def test_samples_per_run():
                 observables=[
                     StateResult(evaluation_times=[1.0]),
                 ],
-                noise_model=NoiseModel(
-                    temperature=45, runs=100, samples_per_run=5
-                ),
+                noise_model=NoiseModel(temperature=45, samples_per_run=5),
             )
 
 
