@@ -26,11 +26,19 @@ from pulser.backend.config import EmulationConfig, EmulatorConfig
 from pulser.backend.default_observables import BitStrings, StateResult
 from pulser.backend.results import Results
 from pulser.noise_model import NoiseModel
+from pulser_simulation.aggregators import density_matrix_aggregator
 from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simresults import CoherentResults, SimulationResults
 from pulser_simulation.simulation import QutipEmulator, _has_stochastic_noise
+
+
+def _get_state_tag(results: Results) -> str | None:
+    for tag in results.get_result_tags():
+        if tag.startswith("state"):
+            return tag
+    return None
 
 
 class QutipBackend(Backend):
@@ -159,10 +167,6 @@ class QutipBackendV2(EmulatorBackend):
 
     def run(self) -> Results:
         """Executes the sequence on the backend."""
-        res = Results(
-            atom_order=tuple(self._sequence.qubit_info),
-            total_duration=self._sim_obj.total_duration_ns,
-        )
         eigenstates = self._sim_obj._current_hamiltonian.basis_data.eigenbasis
         options: dict = {}
         self._sim_obj._validate_options(
@@ -172,6 +176,10 @@ class QutipBackendV2(EmulatorBackend):
             # A single run is needed, regardless of self.config.runs
             single_res = self._sim_obj.run(**options)
             assert isinstance(single_res, CoherentResults)
+            res = Results(
+                atom_order=tuple(self._sequence.qubit_info),
+                total_duration=self._sim_obj.total_duration_ns,
+            )
 
             for qutip_res in single_res:
                 t = qutip_res.evaluation_time
@@ -198,14 +206,19 @@ class QutipBackendV2(EmulatorBackend):
                         hamiltonian=ham,
                         result=res,
                     )
-
+            return res
         else:
             density_matrices: dict[float, qutip.Qobj] = {}
             total_reps = 0
             dim = len(self._sim_obj.basis)
+            results: list[Results] = []
             for cleanres_noisyseq, reps in self._sim_obj._noisy_runs(
                 progress_bar=False, **options
             ):
+                res = Results(
+                    atom_order=tuple(self._sequence.qubit_info),
+                    total_duration=self._sim_obj.total_duration_ns,
+                )
                 total_reps += reps
                 for qutip_res in cleanres_noisyseq:
                     t = qutip_res.evaluation_time
@@ -220,40 +233,34 @@ class QutipBackendV2(EmulatorBackend):
                             ]
                         )
 
-                    if qutip_res.state.isoper:
-                        density_matrices[t] += reps * qutip_res.state
-                    else:
-                        density_matrices[t] += (
-                            reps * qutip_res.state * qutip_res.state.dag()
+                    state = QutipState(
+                        qutip_res.state, eigenstates=eigenstates
+                    )
+                    ham = QutipOperator(
+                        self._sim_obj._get_noiseless_hamiltonian(
+                            self._config.noise_model.with_leakage
+                        )._hamiltonian(t * res.total_duration / 1000),
+                        eigenstates=eigenstates,
+                    )
+
+                    for callback in self._config.callbacks:
+                        callback(
+                            config=self._config,
+                            t=float(t),
+                            state=state,
+                            hamiltonian=ham,
+                            result=res,
                         )
-
-            density_matrices = {
-                t: m / total_reps for t, m in density_matrices.items()
-            }
-
-            for t, dm in density_matrices.items():
-                state = QutipState(dm, eigenstates=eigenstates)
-                ham = QutipOperator(
-                    self._sim_obj._get_noiseless_hamiltonian(
-                        self._config.noise_model.with_leakage
-                    )._hamiltonian(t * res.total_duration / 1000),
-                    eigenstates=eigenstates,
-                )
-                for callback in self._config.callbacks:
-                    callback(
-                        config=self._config,
-                        t=float(t),
-                        state=state,
-                        hamiltonian=ham,
-                        result=res,
-                    )
-                for obs in self._config.observables:
-                    obs(
-                        config=self._config,
-                        t=float(t),
-                        state=state,
-                        hamiltonian=ham,
-                        result=res,
-                    )
-
-        return res
+                    for obs in self._config.observables:
+                        obs(
+                            config=self._config,
+                            t=float(t),
+                            state=state,
+                            hamiltonian=ham,
+                            result=res,
+                        )
+                results.append(res)
+            custom_aggregators = {}
+            if (state_tag := _get_state_tag(results[0])) is not None:
+                custom_aggregators[state_tag] = density_matrix_aggregator
+            return Results.aggregate(results, **custom_aggregators)

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import dataclasses
 import math
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -363,3 +364,40 @@ def test_register_detuning_detection():
     qutip_sim = QutipBackendV2(seq, config=qutip_config)
     result_qut = qutip_sim.run()
     assert result_qut.final_state._state.shape == (4, 4)  # density matrix
+
+
+def test_aggregation():
+    reg = pulser.Register({"q0": [-1e5, 0], "q1": [1e5, 0], "q2": [0, 1e5]})
+    seq = pulser.Sequence(reg, pulser.MockDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(
+        pulser.Pulse.ConstantDetuning(
+            pulser.BlackmanWaveform(100, np.pi), 0.0, 0.0
+        ),
+        "ryd",
+    )
+
+    occup = Occupation(evaluation_times=[1.0])
+
+    qutip_config = QutipConfig(
+        observables=(occup,),
+        n_trajectories=3,
+        noise_model=pulser.NoiseModel(state_prep_error=1 / 3),
+    )
+    with patch(
+        "pulser._hamiltonian_data.hamiltonian_data.np.random.uniform"
+    ) as bad_atoms_mock:
+        # The bad qubits for each trajectory (0,1,2 respectively)
+        # and a 4th item for the noiseless hamiltonian
+        bad_atoms_mock.side_effect = [
+            np.array([0.1, 0.5, 0.6]),
+            np.array([0.5, 0.1, 0.6]),
+            np.array([0.5, 0.6, 0.1]),
+            np.array([0.1, 0.2, 0.3]),
+        ]
+        qutip_backend = QutipBackendV2(seq, config=qutip_config)
+        qutip_results = qutip_backend.run()
+
+    assert np.allclose(
+        qutip_results.occupation[-1], np.ones(3) * 0.6667, atol=1e-4
+    )
