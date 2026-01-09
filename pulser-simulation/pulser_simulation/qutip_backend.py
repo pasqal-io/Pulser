@@ -260,6 +260,9 @@ class QutipBackendV2(EmulatorBackend):
                             result=res,
                         )
                 results.append(res)
+            if len(results) == 1:
+                # aggregation does not work on EnergyVariance for example.
+                return results[0]
             custom_aggregators = {}
             if (state_tag := _get_state_tag(results[0])) is not None:
                 custom_aggregators[state_tag] = density_matrix_aggregator
