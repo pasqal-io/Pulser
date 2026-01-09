@@ -150,6 +150,7 @@ def serialize_abstract_sequence(
         "variables": {},
         "operations": [],
         "measurement": None,
+        "pulser_version": pulser.__version__,
     }
 
     if metadata:
