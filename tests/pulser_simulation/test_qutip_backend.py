@@ -76,13 +76,14 @@ def test_qutip_backend(sequence):
 
 
 def test_with_default_noise(sequence):
-    spam_noise = pulser.NoiseModel(
-        p_false_pos=0.1,
-        p_false_neg=0.05,
-        state_prep_error=0.1,
-        runs=10,
-        samples_per_run=1,
-    )
+    with pytest.deprecated_call():
+        spam_noise = pulser.NoiseModel(
+            p_false_pos=0.1,
+            p_false_neg=0.05,
+            state_prep_error=0.1,
+            runs=10,
+            samples_per_run=1,
+        )
     new_device = dataclasses.replace(
         MockDevice, default_noise_model=spam_noise
     )

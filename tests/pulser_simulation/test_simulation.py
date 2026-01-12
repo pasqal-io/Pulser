@@ -138,6 +138,14 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
         QutipEmulator.from_sequence(
             seq, config=_config, noise_model=NoiseModel()
         )
+
+    with pytest.raises(
+        ValueError,
+        match="'n_trajectories' must be defined when the NoiseModel contains"
+        " stochastic noise",
+    ):
+        QutipEmulator.from_sequence(seq, noise_model=NoiseModel(amp_sigma=0.1))
+
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.011)
     sampled_seq = sampler.sample(seq)
     ext_sampled_seq = sampled_seq.extend_duration(sampled_seq.max_duration + 1)
@@ -442,12 +450,12 @@ def test_empty_sequences(reg):
     emu = QutipEmulator.from_sequence(
         seq,
         noise_model=NoiseModel(
-            runs=15,
             samples_per_run=1,
             state_prep_error=0.005,
             p_false_pos=0.01,
             p_false_neg=0.05,
         ),
+        n_trajectories=15,
     )
     assert not emu._current_hamiltonian.samples.to_nested_dict()["Global"]
     for basis in emu._current_hamiltonian.samples.to_nested_dict()["Local"]:
@@ -487,7 +495,8 @@ def test_get_hamiltonian():
     np.random.seed(123)
     simple_sim_noise = QutipEmulator.from_sequence(
         simple_seq,
-        noise_model=NoiseModel(runs=15, samples_per_run=1, temperature=20000),
+        noise_model=NoiseModel(samples_per_run=1, temperature=20000),
+        n_trajectories=15,
     )
     simple_ham_noise = simple_sim_noise.get_hamiltonian(144)
     np.testing.assert_allclose(
@@ -531,12 +540,12 @@ def test_get_hamiltonian():
     simple_sim_noise = QutipEmulator.from_sequence(
         simple_seq,
         noise_model=NoiseModel(
-            runs=1,
             samples_per_run=1,
             temperature=50.0,
             trap_depth=150.0,
             trap_waist=1.0,
         ),
+        n_trajectories=1,
     )
     simple_ham_noise = simple_sim_noise.get_hamiltonian(144)
 
@@ -670,9 +679,8 @@ def test_run(seq, patch_plt_show):
     sim = QutipEmulator.from_sequence(
         seq,
         sampling_rate=0.01,
-        noise_model=NoiseModel(
-            runs=1, samples_per_run=1, state_prep_error=0.1
-        ),
+        noise_model=NoiseModel(samples_per_run=1, state_prep_error=0.1),
+        n_trajectories=1,
     )
     sim.set_initial_state(good_initial_qobj_no_dims)
     with pytest.raises(
@@ -781,6 +789,9 @@ def test_eval_times(seq):
 
 
 @pytest.mark.filterwarnings(
+    "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
+)
+@pytest.mark.filterwarnings(
     "ignore:Supplying a 'SimConfig' to QutipEmulator:DeprecationWarning"
 )
 @pytest.mark.filterwarnings(
@@ -856,12 +867,12 @@ def test_noise(seq, matrices):
         seq,
         sampling_rate=0.01,
         noise_model=NoiseModel(
-            runs=15,
             samples_per_run=5,
             p_false_pos=0.01,
             p_false_neg=0.05,
             state_prep_error=0.9,
         ),
+        n_trajectories=15,
     )
     with pytest.warns(
         UserWarning,
@@ -959,6 +970,7 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
             )
         ]
         params["eff_noise_rates"] = [0.1 if with_leakage else 0.025]
+    n_trajectories = params.pop("runs", None)
     sim = QutipEmulator.from_sequence(
         seq,
         sampling_rate=0.01,
@@ -966,6 +978,7 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
             with_leakage=with_leakage,
             **params,
         ),
+        n_trajectories=n_trajectories,
     )
     assert set(sim.noise_model.noise_types) == set(noise)
     assert [
@@ -1227,6 +1240,9 @@ def test_noises_all(matrices, noise, result, n_collapse_ops, seq):
 
 
 @pytest.mark.filterwarnings(
+    "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
+)
+@pytest.mark.filterwarnings(
     "ignore:Supplying a 'SimConfig' to QutipEmulator:DeprecationWarning"
 )
 @pytest.mark.filterwarnings(
@@ -1338,7 +1354,8 @@ def test_concurrent_pulses():
     # Noisy simulation
     sim_with_noise = QutipEmulator.from_sequence(
         seq,
-        noise_model=NoiseModel(runs=15, samples_per_run=5, temperature=50.0),
+        noise_model=NoiseModel(samples_per_run=5, temperature=50.0),
+        n_trajectories=15,
     )
 
     for t in sim_no_noise.evaluation_times:
@@ -1531,7 +1548,6 @@ def test_noisy_xy(
         seq,
         sampling_rate=0.1,
         noise_model=NoiseModel(
-            runs=15,
             samples_per_run=10,
             with_leakage=with_leakage,
             state_prep_error=0.4,
@@ -1539,6 +1555,7 @@ def test_noisy_xy(
             p_false_neg=0.05,
             **params,
         ),
+        n_trajectories=15,
         solver=solver,
     )
     assert set(sim.noise_model.noise_types) == (
@@ -1570,7 +1587,8 @@ def test_noisy_xy(
     ):
         QutipEmulator.from_sequence(
             seq,
-            noise_model=NoiseModel(runs=1, samples_per_run=1, temperature=50),
+            noise_model=NoiseModel(temperature=50),
+            n_trajectories=1,
         )
     with pytest.raises(ValueError, match="is not a valid"):
         sim.set_config("SimConfig")
@@ -1579,7 +1597,8 @@ def test_noisy_xy(
     ):
         QutipEmulator.from_sequence(
             seq,
-            noise_model=NoiseModel(runs=1, samples_per_run=1, amp_sigma=0.1),
+            noise_model=NoiseModel(amp_sigma=0.1),
+            n_trajectories=1,
         )
     with (
         pytest.deprecated_call(),
@@ -1589,9 +1608,7 @@ def test_noisy_xy(
         ),
     ):
         sim.set_config(
-            SimConfig.from_noise_model(
-                NoiseModel(runs=1, samples_per_run=1, temperature=50)
-            )
+            SimConfig.from_noise_model(NoiseModel(runs=1, temperature=50))
         )
     with (
         pytest.deprecated_call(),
@@ -1601,9 +1618,7 @@ def test_noisy_xy(
         ),
     ):
         sim.add_config(
-            SimConfig.from_noise_model(
-                NoiseModel(runs=1, samples_per_run=1, temperature=50)
-            )
+            SimConfig.from_noise_model(NoiseModel(runs=1, temperature=50))
         )
 
 
@@ -1819,12 +1834,12 @@ def test_effective_size_intersection():
             seq,
             sampling_rate=0.01,
             noise_model=NoiseModel(
-                runs=15,
                 samples_per_run=1,
                 state_prep_error=0.4,
                 p_false_pos=0.01,
                 p_false_neg=0.05,
             ),
+            n_trajectories=15,
         )
         assert sim._current_hamiltonian.noise_trajectory.bad_atoms == {
             "atom0": True,
@@ -1860,12 +1875,12 @@ def test_effective_size_disjoint(channel_type):
         seq,
         sampling_rate=0.01,
         noise_model=NoiseModel(
-            runs=15,
             samples_per_run=5,
             state_prep_error=0.4,
             p_false_pos=0.01,
             p_false_neg=0.05,
         ),
+        n_trajectories=15,
     )
     assert sim._current_hamiltonian.noise_trajectory.bad_atoms == {
         "atom0": True,
@@ -1961,10 +1976,13 @@ def test_simulation_with_modulation(
     assert pulse1_mod_samples.size == mod_dt
 
     noise_model = NoiseModel(
-        runs=15, samples_per_run=1, temperature=50, laser_waist=175.0
+        samples_per_run=1, temperature=50, laser_waist=175.0
     )
     sim = QutipEmulator.from_sequence(
-        seq, with_modulation=True, noise_model=noise_model
+        seq,
+        with_modulation=True,
+        noise_model=noise_model,
+        n_trajectories=15,
     )
 
     assert (
@@ -2083,7 +2101,8 @@ def test_amp_sigma_noise():
 
     sim = QutipEmulator.from_sequence(
         seq,
-        noise_model=NoiseModel(amp_sigma=0.1, runs=1, samples_per_run=1),
+        noise_model=NoiseModel(amp_sigma=0.1),
+        n_trajectories=1,
     )
 
     noiseless_samples = QutipEmulator.from_sequence(
@@ -2157,7 +2176,8 @@ def test_detuning_noise():
 
     sim = QutipEmulator.from_sequence(
         seq,
-        noise_model=NoiseModel(detuning_sigma=0.1, runs=1, samples_per_run=1),
+        noise_model=NoiseModel(detuning_sigma=0.1),
+        n_trajectories=1,
     )
     sim_samples = sim._current_hamiltonian.samples.to_nested_dict()
 
@@ -2202,9 +2222,10 @@ def test_detuning_hf_noise(monkeypatch):
     noise_mod = NoiseModel(
         detuning_hf_psd=2.0 * np.pi * np.array([1, 2, 3]),
         detuning_hf_omegas=2.0 * np.pi * np.array([4, 5, 6]),
-        runs=1,
     )
-    sim = QutipEmulator.from_sequence(seq, noise_model=noise_mod)
+    sim = QutipEmulator.from_sequence(
+        seq, noise_model=noise_mod, n_trajectories=1
+    )
     sim_samples = sim._current_hamiltonian.samples.to_nested_dict()
 
     rydberg_0 = sim_samples["Local"]["ground-rydberg"]["q0"]["det"]
@@ -2323,8 +2344,10 @@ def test_noisy_runs(noise):
     seq.add(pulse1, "ch1", protocol="no-delay")
     seq.add(pulse1, "ch2", protocol="no-delay")
     nruns = 2
-    noise_mod = NoiseModel(runs=nruns, **noise)
-    sim = QutipEmulator.from_sequence(seq, noise_model=noise_mod)
+    noise_mod = NoiseModel(**noise)
+    sim = QutipEmulator.from_sequence(
+        seq, noise_model=noise_mod, n_trajectories=nruns
+    )
     with patch.object(
         QutipEmulator, "_run_solver", wraps=sim._run_solver
     ) as mock_run_solver:
@@ -2365,7 +2388,7 @@ def test_has_stochastic_noise(noise_data, expected):
 
 def test_qutip_default_solver_call(seq):
     eff_noise_params = dict(dephasing_rate=0.1)
-    stochastic_noise_params = dict(detuning_sigma=0.1, runs=1)
+    stochastic_noise_params = dict(detuning_sigma=0.1)
 
     with (
         patch.object(sim_module.qutip, "mesolve") as me,
@@ -2389,6 +2412,7 @@ def test_qutip_default_solver_call(seq):
                 qutip_config = QutipConfig(
                     observables=[StateResult(evaluation_times=[1.0])],
                     noise_model=NoiseModel(**noise_param),
+                    n_trajectories=1,
                 )
                 qutip_sim = QutipBackendV2(seq, config=qutip_config)
                 qutip_sim.run()
@@ -2402,7 +2426,7 @@ def test_qutip_default_solver_call(seq):
 
 def test_qutip_parametric_solver_call(seq):
     eff_noise_params = dict(dephasing_rate=0.1)
-    stochastic_noise_params = dict(detuning_sigma=0.1, runs=1)
+    stochastic_noise_params = dict(detuning_sigma=0.1)
     all_noises = eff_noise_params | stochastic_noise_params
 
     with (
@@ -2424,6 +2448,7 @@ def test_qutip_parametric_solver_call(seq):
                     observables=[StateResult(evaluation_times=[1.0])],
                     noise_model=NoiseModel(**all_noises),
                     solver=solver,
+                    n_trajectories=1,
                 )
                 qutip_sim = QutipBackendV2(seq, config=qutip_config)
                 qutip_sim.run()
@@ -2436,11 +2461,12 @@ def test_qutip_parametric_solver_call(seq):
 
 
 def test_qutip_invalid_solver_error(seq):
-    nm = NoiseModel(detuning_sigma=0.1, runs=1)
+    nm = NoiseModel(detuning_sigma=0.1)
     with pytest.raises(ValueError, match=r"Invalid solver 'fakesolver'"):
         sim = QutipEmulator.from_sequence(
             seq,
             noise_model=nm,
             solver="fakesolver",
+            n_trajectories=1,
         )
         sim.run()

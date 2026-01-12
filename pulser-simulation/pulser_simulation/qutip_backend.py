@@ -21,7 +21,6 @@ import numpy as np
 import qutip
 
 import pulser
-from pulser._hamiltonian_data import has_shot_to_shot_except_spam
 from pulser.backend.abc import Backend, EmulatorBackend
 from pulser.backend.config import EmulationConfig, EmulatorConfig
 from pulser.backend.default_observables import BitStrings, StateResult
@@ -31,7 +30,7 @@ from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simresults import CoherentResults, SimulationResults
-from pulser_simulation.simulation import QutipEmulator
+from pulser_simulation.simulation import QutipEmulator, _has_stochastic_noise
 
 
 class QutipBackend(Backend):
@@ -146,6 +145,7 @@ class QutipBackendV2(EmulatorBackend):
             noise_model=noise_model,
             with_modulation=self._config.with_modulation,
             solver=self._config.solver,
+            n_trajectories=self._config.n_trajectories,
         )
         self._sim_obj.set_evaluation_times(
             self._config._get_legacy_evaluation_times(
@@ -168,10 +168,7 @@ class QutipBackendV2(EmulatorBackend):
         self._sim_obj._validate_options(
             options
         )  # setup the default qutip options
-        if (
-            "SPAM" not in self._config.noise_model.noise_types
-            or self._config.noise_model.state_prep_error == 0
-        ) and not has_shot_to_shot_except_spam(self._sim_obj.noise_model):
+        if not _has_stochastic_noise(self._sim_obj.noise_model):
             # A single run is needed, regardless of self.config.runs
             single_res = self._sim_obj.run(**options)
             assert isinstance(single_res, CoherentResults)

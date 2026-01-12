@@ -182,7 +182,6 @@ def test_init_errors():
     seq = seq_with_SLM("rydberg_global")
     seq_samples = sample(seq)
     register = pulser.Register.square(3, spacing=6, prefix="")
-    noise_model = pulser.NoiseModel()
     with pytest.raises(
         TypeError,
         match=(
@@ -253,16 +252,10 @@ def test_init_errors():
             seq_samples, seq.register, pulser.DigitalAnalogDevice, None, None
         )
 
-    with pytest.raises(
-        ValueError,
-        match="n_trajectories",
-    ):
-        HamiltonianData(seq_samples, seq.register, seq.device, noise_model, 5)
-
 
 def test_from_sequence():
     seq = seq_with_SLM("rydberg_global")
-    noise_model = pulser.NoiseModel(detuning_sigma=0.5, runs=1)
+    noise_model = pulser.NoiseModel(detuning_sigma=0.5)
     samples = 5  # something that implements __eq__
     with unittest.mock.patch(
         "pulser._hamiltonian_data.hamiltonian_data.sampler.sample"
@@ -273,9 +266,11 @@ def test_from_sequence():
         ) as mock_init:
             mock_init.return_value = None
             mock_sample.return_value = samples
-            HamiltonianData.from_sequence(seq, noise_model=noise_model)
+            HamiltonianData.from_sequence(
+                seq, noise_model=noise_model, n_trajectories=1
+            )
             mock_init.assert_called_once_with(
-                samples, seq.register, seq.device, noise_model, None
+                samples, seq.register, seq.device, noise_model, 1
             )
 
     with pytest.raises(
@@ -360,7 +355,7 @@ def test_int_qubit_ids():
         ),
         "ch0",
     )
-    noise_model = pulser.NoiseModel(detuning_sigma=0.5, runs=1)
+    noise_model = pulser.NoiseModel(detuning_sigma=0.5)
 
     ham = HamiltonianData.from_sequence(
         seq, noise_model=noise_model, n_trajectories=1
@@ -378,7 +373,7 @@ def test_register():
 
 def test_bad_atoms():
     seq = seq_with_SLM("rydberg_global")
-    noise = pulser.NoiseModel(state_prep_error=1.0, runs=1)
+    noise = pulser.NoiseModel(state_prep_error=1.0)
     ham = HamiltonianData.from_sequence(
         seq, noise_model=noise, n_trajectories=1
     )
@@ -519,7 +514,7 @@ def test_noisy_interaction_matrix():
         ),
         "ch0",
     )
-    noise = pulser.NoiseModel(state_prep_error=0.5, runs=1)
+    noise = pulser.NoiseModel(state_prep_error=0.5)
     ham = HamiltonianData.from_sequence(
         seq, noise_model=noise, n_trajectories=1
     )
@@ -572,7 +567,7 @@ def test_noisy_interaction_matrix_torch():
         ),
         "ch0",
     )
-    noise = pulser.NoiseModel(state_prep_error=0.5, runs=1)
+    noise = pulser.NoiseModel(state_prep_error=0.5)
     ham = HamiltonianData.from_sequence(
         seq, noise_model=noise, n_trajectories=1
     )
@@ -629,9 +624,7 @@ def test_noise_hf_detuning_generation():
     times = np.arange(0, 10, 0.1)
     phases = np.random.uniform(0, 2 * np.pi, size=(2,))
 
-    noise_m = pulser.NoiseModel(
-        detuning_hf_psd=psd, detuning_hf_omegas=freqs, runs=1
-    )
+    noise_m = pulser.NoiseModel(detuning_hf_psd=psd, detuning_hf_omegas=freqs)
     hf_det = _generate_detuning_fluctuations(noise_m, 0.0, phases, times)
     hd_det_expected = original_formula_gen_noise(psd, freqs, times, phases)
 

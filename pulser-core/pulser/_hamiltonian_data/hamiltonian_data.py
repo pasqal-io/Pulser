@@ -242,6 +242,7 @@ class HamiltonianData:
         register: The noiseless register.
         noise_model: NoiseModel to be used to generate noise.
         n_trajectories: The number of noise trajectories to sample.
+            Defaults to 1.
     """
 
     def __init__(
@@ -292,10 +293,7 @@ class HamiltonianData:
 
         self._noise_model = noise_model
         self._check_noise_model(noise_model)
-        # TODO: get rid of NoiseModel.runs
-        if n_trajectories is not noise_model.runs:
-            raise ValueError("n_trajectories should equal noise_model.runs")
-        if not n_trajectories:
+        if n_trajectories is None:
             n_trajectories = 1
 
         self.local_noises = True
@@ -397,6 +395,7 @@ class HamiltonianData:
             noise_model: The noise model for the simulation. Replaces and
                 should be preferred over 'noise_model'.
             n_trajectories: The number of noise trajectories to sample.
+                Defaults to 1.
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
