@@ -165,6 +165,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
 
             (2) If 'prefer_device_noise_model=True', **defaults to 40**
             trajectories.
+        default_num_shots: The default number of shots for ``BitStrings``, used
+            whenever the observable doesn't define its own. Defaults to 1000.
 
     Note:
         Additional parameters may be provided. It is up to the emulation
@@ -184,6 +186,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     prefer_device_noise_model: bool
     noise_model: NoiseModel
     n_trajectories: int
+    default_num_shots: int
     # Whether to error if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = False
 
@@ -205,6 +208,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         prefer_device_noise_model: bool = False,
         noise_model: NoiseModel = NoiseModel(),
         n_trajectories: int | None = None,
+        default_num_shots: int = 1000,
         **backend_options: Any,
     ) -> None:
         """Initializes the EmulationConfig."""
@@ -326,6 +330,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             prefer_device_noise_model=bool(prefer_device_noise_model),
             noise_model=noise_model,
             n_trajectories=int(n_trajectories),
+            default_num_shots=int(default_num_shots),
             **backend_options,
         )
 
@@ -376,7 +381,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         """Deserialize an EmulationConfig from an abstract JSON object.
 
         Args:
-            obj_str (str): the JSON string representing the sequence encoded
+            obj_str (str): The JSON string representing the config encoded
                 in the abstract JSON format.
 
         Returns:
