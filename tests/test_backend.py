@@ -469,15 +469,25 @@ def test_backend_config():
     config1 = BackendConfig()
     with pytest.raises(AttributeError, match="'dt' has not been passed"):
         config1.dt
+    assert config1.default_num_shots is None
 
     with pytest.warns(
         DeprecationWarning,
         match="The 'backend_options' argument of 'BackendConfig' has been "
         "deprecated",
     ):
-        config2 = BackendConfig(backend_options={"dt": 10})
+        config2 = BackendConfig(
+            default_num_shots=1, backend_options={"dt": 10}
+        )
         assert config2.backend_options["dt"] == 10
         assert config2.dt == 10
+        assert config2.default_num_shots == 1
+
+    with pytest.raises(
+        ValueError,
+        match="'default_num_shots' must be greater than or equal to 1",
+    ):
+        BackendConfig(default_num_shots=0.1)
 
 
 def test_emulation_config():
