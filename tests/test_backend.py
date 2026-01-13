@@ -58,6 +58,8 @@ from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
 from pulser_simulation import QutipOperator, QutipState
 
+pytestmark = pytest.mark.filterwarnings("ignore::FutureWarning")
+
 
 @pytest.fixture
 def sequence() -> pulser.Sequence:
@@ -1092,10 +1094,11 @@ class TestObservables:
         obs = StateResult()
         assert obs.apply(state=ghz_state) == ghz_state
 
+    @pytest.mark.parametrize("default_num_shots_from_config", [True, False])
     @pytest.mark.parametrize("p_false_pos", [0, 0.4])
     @pytest.mark.parametrize("p_false_neg", [0, 0.3])
     @pytest.mark.parametrize("one_state", [0, "g"])
-    @pytest.mark.parametrize("num_shots", [0, 100])
+    @pytest.mark.parametrize("num_shots", [None, 100])
     def test_bitstrings(
         self,
         config: EmulationConfig,
@@ -1104,23 +1107,30 @@ class TestObservables:
         one_state,
         p_false_pos,
         p_false_neg,
+        default_num_shots_from_config,
     ):
         with pytest.raises(ValueError, match="greater than or equal to 1"):
             BitStrings(num_shots=0)
         kwargs = {}
         if num_shots:
             kwargs["num_shots"] = num_shots
-        obs = BitStrings(one_state=one_state, **kwargs)
+        obs = BitStrings(
+            one_state=one_state,
+            use_default_num_shots_from_config=default_num_shots_from_config,
+            **kwargs,
+        )
         assert obs.tag == "bitstrings"
         noise_model = pulser.NoiseModel(
             p_false_pos=p_false_pos, p_false_neg=p_false_neg
         )
         config.noise_model = noise_model
+        # Different than the BitStrings default on purpose
+        config.default_num_shots = 2000
         assert config.noise_model.noise_types == (
             ("SPAM",) if p_false_pos or p_false_neg else ()
         )
         np.random.seed(123)
-        expected_shots = num_shots or obs.num_shots
+        expected_shots = num_shots or obs.num_shots or config.default_num_shots
         expected_counts = ghz_state.sample(
             num_shots=expected_shots,
             one_state=one_state or ghz_state.infer_one_state(),

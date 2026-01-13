@@ -122,7 +122,12 @@ class QutipBackendV2(EmulatorBackend):
     """
 
     default_config = QutipConfig(
-        observables=[BitStrings(evaluation_times=[1.0]), StateResult()]
+        observables=[
+            BitStrings(
+                evaluation_times=[1.0], use_default_num_shots_from_config=True
+            ),
+            StateResult(),
+        ]
     )
     _config: QutipConfig
 

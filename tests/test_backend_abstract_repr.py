@@ -57,7 +57,7 @@ class TestObservableRepr:
             (
                 BitStrings,
                 (),
-                {},
+                {"use_default_num_shots_from_config": True},
             ),
             (
                 CorrelationMatrix,
@@ -130,8 +130,8 @@ class TestObservableRepr:
             assert repr.get("one_state", None) == expected_kwargs.get(
                 "one_state", None
             )
-            assert repr.get("num_shots", 1000) == expected_kwargs.get(
-                "num_shots", 1000
+            assert repr.get("num_shots", 0) == expected_kwargs.get(
+                "num_shots", 0
             )
 
     @mark.parametrize(
@@ -233,7 +233,7 @@ class TestObservableRepr:
             json.dumps(StateResult(), cls=AbstractReprEncoder)
 
     def test_not_supported_observable(self):
-        obs = BitStrings()
+        obs = BitStrings(use_default_num_shots_from_config=True)
 
         corrupted_obs_repr = json.loads(
             json.dumps(obs, cls=AbstractReprEncoder)
@@ -243,6 +243,28 @@ class TestObservableRepr:
             _deserialize_observable(
                 corrupted_obs_repr, StateRepr, OperatorRepr
             )
+
+    def test_legacy_bitstring(self):
+        obs = BitStrings(
+            num_shots=None, use_default_num_shots_from_config=True
+        )
+        assert obs.num_shots is None
+
+        config = EmulationConfig(observables=[obs])
+        # The config is valid
+        config_repr_str = config.to_abstract_repr(skip_validation=False)
+        config_repr = json.loads(config_repr_str)
+        # but "num_shots" had to be set to 0
+        assert config_repr["observables"][0]["num_shots"] == 0
+
+        # However, it is back to None after deserialization
+
+        deserialized_config = EmulationConfig.from_abstract_repr(
+            config_repr_str
+        )
+        deserialzed_obs = deserialized_config.observables[0]
+        assert isinstance(deserialzed_obs, BitStrings)
+        assert deserialzed_obs.num_shots is None
 
 
 class TestConfigRepr:
@@ -261,7 +283,10 @@ class TestConfigRepr:
         "observables",
         [
             (
-                BitStrings(evaluation_times=[i * 0.01 for i in range(10)]),
+                BitStrings(
+                    evaluation_times=[i * 0.01 for i in range(10)],
+                    use_default_num_shots_from_config=True,
+                ),
                 CorrelationMatrix(),
             ),
             (Energy(), Occupation(one_state="0")),
@@ -511,7 +536,7 @@ class TestOperatorRepr:
     [True, False],
 )
 def test_result_serialization(test_torch: bool):
-    bitstrings = BitStrings()
+    bitstrings = BitStrings(use_default_num_shots_from_config=True)
     corr = CorrelationMatrix()
     energy = Energy()
     occ = Occupation()

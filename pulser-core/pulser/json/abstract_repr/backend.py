@@ -79,7 +79,16 @@ def _deserialize_observable(
     obs = ser_obs.copy()
     obs_name = obs.pop("observable")
     if obs_name == "bitstrings":
-        return BitStrings(**obs)
+        # FIXME: "num_shots" is stored as 0 when it is None to keep
+        # compatibility with older versions of the JSON schema
+        # This special case should be lifted once the current schema
+        # (which accepts null too) is widespread
+        num_shots = obs.pop("num_shots")
+        return BitStrings(
+            num_shots=num_shots or None,
+            use_default_num_shots_from_config=True,
+            **obs,
+        )
     if obs_name == "expectation":
         return Expectation(
             _deserialize_operator(obs.pop("operator"), op_type), **obs
