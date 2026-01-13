@@ -261,9 +261,7 @@ class TestConfigRepr:
         "observables",
         [
             (
-                BitStrings(
-                    evaluation_times=[i * 0.01 for i in range(10)],
-                ),
+                BitStrings(evaluation_times=[i * 0.01 for i in range(10)]),
                 CorrelationMatrix(),
             ),
             (Energy(), Occupation(one_state="0")),
