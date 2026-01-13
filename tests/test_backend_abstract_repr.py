@@ -57,7 +57,7 @@ class TestObservableRepr:
             (
                 BitStrings,
                 (),
-                {"use_default_num_shots_from_config": True},
+                {},
             ),
             (
                 CorrelationMatrix,
@@ -233,7 +233,7 @@ class TestObservableRepr:
             json.dumps(StateResult(), cls=AbstractReprEncoder)
 
     def test_not_supported_observable(self):
-        obs = BitStrings(use_default_num_shots_from_config=True)
+        obs = BitStrings()
 
         corrupted_obs_repr = json.loads(
             json.dumps(obs, cls=AbstractReprEncoder)
@@ -263,7 +263,6 @@ class TestConfigRepr:
             (
                 BitStrings(
                     evaluation_times=[i * 0.01 for i in range(10)],
-                    use_default_num_shots_from_config=True,
                 ),
                 CorrelationMatrix(),
             ),
@@ -514,7 +513,7 @@ class TestOperatorRepr:
     [True, False],
 )
 def test_result_serialization(test_torch: bool):
-    bitstrings = BitStrings(use_default_num_shots_from_config=True)
+    bitstrings = BitStrings()
     corr = CorrelationMatrix()
     energy = Energy()
     occ = Occupation()

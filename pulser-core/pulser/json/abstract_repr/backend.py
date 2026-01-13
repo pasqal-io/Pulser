@@ -79,7 +79,7 @@ def _deserialize_observable(
     obs = ser_obs.copy()
     obs_name = obs.pop("observable")
     if obs_name == "bitstrings":
-        return BitStrings(use_default_num_shots_from_config=True, **obs)
+        return BitStrings(**obs)
     if obs_name == "expectation":
         return Expectation(
             _deserialize_operator(obs.pop("operator"), op_type), **obs

@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import json
 import re
@@ -57,8 +58,6 @@ from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
 from pulser_simulation import QutipOperator, QutipState
-
-pytestmark = pytest.mark.filterwarnings("ignore::FutureWarning")
 
 
 @pytest.fixture
@@ -909,7 +908,7 @@ def test_results():
     ):
         assert res.get_result_times("bitstrings")
 
-    obs = BitStrings(tag_suffix="test")
+    obs = BitStrings(num_shots=100, tag_suffix="test")
     with pytest.raises(
         ValueError,
         match=f"'bitstrings_test:{obs.uuid}' has not been stored",
@@ -917,7 +916,7 @@ def test_results():
         assert res.get_result(obs, 1.0)
 
     obs(
-        config=EmulationConfig(observables=(BitStrings(),)),
+        config=EmulationConfig(observables=(obs,)),
         t=1.0,
         state=QutipState.from_state_amplitudes(
             eigenstates=("r", "g"), amplitudes={"rrr": 1.0}
@@ -1094,7 +1093,6 @@ class TestObservables:
         obs = StateResult()
         assert obs.apply(state=ghz_state) == ghz_state
 
-    @pytest.mark.parametrize("default_num_shots_from_config", [True, False])
     @pytest.mark.parametrize("p_false_pos", [0, 0.4])
     @pytest.mark.parametrize("p_false_neg", [0, 0.3])
     @pytest.mark.parametrize("one_state", [0, "g"])
@@ -1107,7 +1105,6 @@ class TestObservables:
         one_state,
         p_false_pos,
         p_false_neg,
-        default_num_shots_from_config,
     ):
         with pytest.raises(ValueError, match="greater than or equal to 1"):
             BitStrings(num_shots=0)
@@ -1116,9 +1113,19 @@ class TestObservables:
             kwargs["num_shots"] = num_shots
         obs = BitStrings(
             one_state=one_state,
-            use_default_num_shots_from_config=default_num_shots_from_config,
             **kwargs,
         )
+        context_manager = (
+            pytest.raises(
+                RuntimeWarning,
+                match="The default value of `BitStrings.num_shots` was "
+                "changed from 1000 to None in Pulser v1.7",
+            )
+            if num_shots is None
+            else contextlib.nullcontext()
+        )
+        with context_manager:
+            assert obs.num_shots == num_shots
         assert obs.tag == "bitstrings"
         noise_model = pulser.NoiseModel(
             p_false_pos=p_false_pos, p_false_neg=p_false_neg
@@ -1130,7 +1137,7 @@ class TestObservables:
             ("SPAM",) if p_false_pos or p_false_neg else ()
         )
         np.random.seed(123)
-        expected_shots = num_shots or obs.num_shots or config.default_num_shots
+        expected_shots = num_shots or config.default_num_shots
         expected_counts = ghz_state.sample(
             num_shots=expected_shots,
             one_state=one_state or ghz_state.infer_one_state(),
