@@ -131,11 +131,7 @@ class BitStrings(Observable):
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         repr = super()._to_abstract_repr()
-        # FIXME: When `num_shots` is None, replace by 0 to be compatible
-        # with older version of the JSON schema. The deserializer is
-        # expecting this and will handle it, but this special case
-        # should be removed when possible
-        repr["num_shots"] = self.num_shots or 0
+        repr["num_shots"] = self.num_shots
         repr["one_state"] = self.one_state
         return repr
 
