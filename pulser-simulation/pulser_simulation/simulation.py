@@ -874,7 +874,7 @@ class QutipEmulator:
         self, progress_bar: bool, **options: Any
     ) -> Iterator[tuple[SimulationResults, int]]:
         n_trajectories = self.n_trajectories
-        for (i, (ham, reps)) in enumerate(self._hamiltonians):
+        for i, (ham, reps) in enumerate(self._hamiltonians):
             print(f"Run {i+1}/{n_trajectories}")
             self._current_hamiltonian = ham
             # Yield CoherentResults instance from sequence with added noise:
