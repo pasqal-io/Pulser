@@ -41,7 +41,7 @@ runs:
       if: ${{ inputs.numpy == 'numpy-v1'}}
       shell: bash
       run: |
-        pip install numpy==1.26
+        pip install "numpy>=1.26.4, <2.0.0"
     - name: Install numpy v2
       if: ${{ inputs.numpy == 'numpy-v2'}}
       shell: bash
