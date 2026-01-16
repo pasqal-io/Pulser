@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import math
 import warnings
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field, fields
@@ -24,6 +25,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.json.abstract_repr as pulser_abstract_repr
+from pulser.constants import KB, KEFF, MASS, TRAP_WAVELENGTH
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults
@@ -104,6 +106,53 @@ OPTIONAL_IN_ABSTR_REPR = (
     "detuning_hf_psd",
     "detuning_hf_omegas",
 )
+
+
+def doppler_sigma(temperature: float) -> float:
+    """Standard deviation for Doppler shifting due to thermal motion.
+
+    Arg:
+        temperature: The temperature in K.
+    """
+    return KEFF * math.sqrt(KB * temperature / MASS)
+
+
+def _register_sigma_xy_z(
+    temperature: float, trap_waist: float, trap_depth: float
+) -> tuple[float, float]:
+    """Standard deviation for fluctuations in atom position in the trap.
+
+    - Plane fluctuation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,
+      w is the trap waist and Uₜᵣₐₚ is the trap depth.
+    - Off plane fluctuation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the trap
+    wavelength with a constant value of 0.85 µm
+
+    Note: a k_B factor is absorbed in the trap depth (Uₜᵣₐₚ), so the units
+    of temperature and trap depth are the same.
+
+    Args:
+        temperature (float): Temperature (T) of the atoms in the trap
+            (in Kelvin).
+        trap_depth (float): Depth of the trap (Uₜᵣₐₚ)
+            (same units as temperature).
+        trap_waist (float): Waist of the trap (w) (in µmeters).
+
+    Returns:
+        tuple: The standard deviations of the spatial position fluctuations
+        in the xy-plane (register_sigma_xy) and along the z-axis
+        (register_sigma_z).
+    """
+    register_sigma_xy = math.sqrt(
+        temperature * trap_waist**2 / (4 * trap_depth)
+    )
+    register_sigma_z = (
+        math.pi
+        / TRAP_WAVELENGTH
+        * math.sqrt(2)
+        * trap_waist
+        * register_sigma_xy
+    )
+    return register_sigma_xy, register_sigma_z
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -628,3 +677,129 @@ class NoiseModel:
                 obj_str
             )
         )
+
+    def summary(self) -> str:
+        """A readable summary of the impact of the noise on the simulation."""
+        _summary = "Noise summary:\n"
+        runs = self.runs or 1
+        add_to_traj_summary = []
+        # Follow the impact as in step-by-step tutorial
+        if "register" in self.noise_types:
+            # 1. Register
+            _summary += "- Register Position Fluctuations**:\n"
+            register_sigma_xy, register_sigma_z = _register_sigma_xy_z(
+                self.temperature,
+                self.trap_waist,
+                cast(float, self.trap_depth),
+            )
+            _summary += (
+                f"  - XY-Plane Position Fluctuations: {register_sigma_xy} µm\n"
+            )
+            _summary += (
+                f"  - Z-Axis Position Fluctuations: {register_sigma_z} µm\n"
+            )
+            add_to_traj_summary.append("register, ")
+        if self.state_prep_error > 0:
+            # 2. State Preparation
+            _summary += (
+                "- State Preparation Error Probability**: "
+                f"{self.state_prep_error}\n"
+            )
+            add_to_traj_summary.append("initial state, ")
+
+        # 3. Pulse Shaping
+        if "amplitude" in self.noise_types:
+            _summary += "- Amplitude fluctuations:\n"
+            if self.laser_waist > 0:
+                _summary += (
+                    f"  - In-space Gaussian damping σ={self.laser_waist} µm\n"
+                )
+            if self.amp_sigma > 0:
+                _summary += (
+                    "  - Shot-to-shot Amplitude Fluctuations**:"
+                    f" {self.amp_sigma*100}% Amplitude\n"
+                )
+                add_to_traj_summary.append("amplitude, ")
+        if "detuning" in self.noise_types or "doppler" in self.noise_types:
+            _summary += "- Detuning fluctuations:\n"
+            if self.detuning_sigma > 0 or "doppler" in self.noise_types:
+                _summary += "  - Shot-to-Shot Detuning fluctuations:\n"
+                if self.detuning_sigma > 0:
+                    _summary += (
+                        "       - Laser's Detuning fluctuations**: "
+                        f"{self.detuning_sigma} rad/µs\n"
+                    )
+                if "doppler" in self.noise_types:
+                    _summary += (
+                        "       - Doppler fluctuations**: "
+                        f"{doppler_sigma(self.temperature)} rad/µs\n"
+                    )
+            if len(self.detuning_hf_psd) > 0:
+                psd = list(zip(self.detuning_hf_omegas, self.detuning_hf_psd))
+                _summary += (
+                    "  - High-Frequency Detuning fluctuations**, PSD: "
+                    f"{psd} (rad/µs, rad/µs)\n"
+                )
+            add_to_traj_summary.append("detuning, ")
+
+        # 4. Noise channels
+        if "relaxation" in self.noise_types or "dephasing" in self.noise_types:
+            _summary += "- Dissipation parameters: \n"
+            if "relaxation" in self.noise_types:
+                _summary += f"   - T1: {1/self.relaxation_rate} µs\n"
+            if "dephasing" in self.noise_types:
+                if self.dephasing_rate > 0:
+                    _summary += f"   - T2* (r-g): {1/self.dephasing_rate} µs\n"
+                if self.hyperfine_dephasing_rate > 0:
+                    _summary += (
+                        "   - T2* (g-h): "
+                        f"{1/self.hyperfine_dephasing_rate} µs\n"
+                    )
+
+        if (
+            "eff_noise" in self.noise_types
+            or "depolarizing" in self.noise_types
+        ):
+            _summary += "- Other Decoherence Processes:\n"
+            if "depolarizing" in self.noise_types:
+                _summary += (
+                    "   - Depolarization at rate "
+                    f"{self.depolarizing_rate} µs^-1\n"
+                )
+            if "eff_noise" in self.noise_types:
+                _summary += (
+                    "   - Custom Lindblad operators (in 1/µs)"
+                    + (
+                        " including a leakage state"
+                        if self.with_leakage
+                        else ""
+                    )
+                    + ":\n"
+                )
+                for rate, oper in zip(
+                    self.eff_noise_rates, self.eff_noise_opers
+                ):
+                    _summary += f"       - {rate} * {oper}\n"
+
+        # 5. Measurement noises
+        if self.p_false_pos > 0 or self.p_false_neg > 0:
+            _summary += "- Measurement noises:\n"
+            if self.p_false_pos > 0:
+                _summary += (
+                    "   - False Positive Meas. Probability: "
+                    f"{self.p_false_pos}\n"
+                )
+            if self.p_false_neg > 0:
+                _summary += (
+                    "   - False Negative Meas. Probability: "
+                    f"{self.p_false_neg}\n"
+                )
+        if add_to_traj_summary == []:
+            return _summary
+        traj_summary = (
+            f"**: Generates {runs} trajector"
+            f'{"y" if runs == 1 else "ies"} with different '
+        )
+        for suffix in add_to_traj_summary:
+            traj_summary += suffix
+        return _summary + traj_summary.rstrip(", ")

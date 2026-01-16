@@ -17,6 +17,7 @@ import contextlib
 import re
 import warnings
 
+import dataclasses
 import numpy as np
 import pytest
 
@@ -654,3 +655,134 @@ def test_check_register_noise_params_invalid_params():
             trap_depth=150,
             temperature=0.0,
         )
+
+
+@pytest.mark.filterwarnings(
+    "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
+)
+def test_summary():
+    noise_model = NoiseModel(
+        temperature=10,
+        trap_depth=1.0,
+        trap_waist=1.0,
+        disable_doppler=True,
+        runs=2,
+    )
+    summary = (
+        "Noise summary:\n"
+        + "- Register Position Fluctuations**:\n"
+        + "  - XY-Plane Position Fluctuations: 1.5811388300841898 µm\n"
+        + "  - Z-Axis Position Fluctuations: 8.264487918871444 µm\n"
+    )
+    end_summary = "**: Generates 2 trajectories with different register"
+    assert summary + end_summary == noise_model.summary()
+    noise_model = NoiseModel(
+        temperature=10, trap_depth=1.0, trap_waist=1.0, runs=1
+    )
+    end_summary = "**: Generates 1 trajectory with different register"
+    detuning_summary = (
+        "- Detuning fluctuations:\n"
+        + "  - Shot-to-Shot Detuning fluctuations:\n"
+    )
+    doppler_summary = (
+        "       - Doppler fluctuations**: 268.3952309561405 rad/µs\n"
+    )
+    assert (
+        noise_model.summary()
+        == summary
+        + detuning_summary
+        + doppler_summary
+        + end_summary
+        + ", detuning"
+    )
+    noise_model = NoiseModel(
+        temperature=10, trap_depth=1.0, trap_waist=1.0, detuning_sigma=1.0
+    )
+    detuning_summary += (
+        "       - Laser's Detuning fluctuations**: 1.0 rad/µs\n"
+        + doppler_summary
+    )
+    assert (
+        noise_model.summary()
+        == summary + detuning_summary + end_summary + ", detuning"
+    )
+    noise_model = dataclasses.replace(
+        noise_model, amp_sigma=0.1, laser_waist=100
+    )
+    summary += (
+        "- Amplitude fluctuations:\n"
+        + "  - In-space Gaussian damping σ=100 µm\n"
+        + "  - Shot-to-shot Amplitude Fluctuations**: 10.0% Amplitude\n"
+        + detuning_summary
+    )
+    end_summary += ", amplitude, detuning"
+    assert noise_model.summary() == summary + end_summary
+    noise_model = dataclasses.replace(
+        noise_model, detuning_hf_omegas=[1.0, 2.0], detuning_hf_psd=[1.0, 0.5]
+    )
+    summary += (
+        "  - High-Frequency Detuning fluctuations**, "
+        "PSD: [(1.0, 1.0), (2.0, 0.5)] (rad/µs, rad/µs)\n"
+    )
+    assert noise_model.summary() == summary + end_summary
+    noise_model = dataclasses.replace(
+        noise_model, relaxation_rate=0.1, dephasing_rate=0.5
+    )
+    summary += (
+        "- Dissipation parameters: \n"
+        + "   - T1: 10.0 µs\n"
+        + "   - T2* (r-g): 2.0 µs\n"
+    )
+    assert noise_model.summary() == summary + end_summary
+    noise_model = dataclasses.replace(
+        noise_model, hyperfine_dephasing_rate=0.25
+    )
+    summary += "   - T2* (g-h): 4.0 µs\n"
+    assert noise_model.summary() == summary + end_summary
+    noise_model = dataclasses.replace(noise_model, depolarizing_rate=0.2)
+    summary += (
+        "- Other Decoherence Processes:\n"
+        + "   - Depolarization at rate 0.2 µs^-1\n"
+    )
+    assert noise_model.summary() == summary + end_summary
+    noise_model = dataclasses.replace(
+        noise_model,
+        eff_noise_rates=(1.0,),
+        eff_noise_opers=(((1.0, 0.0), (0.0, -1.0)),),
+    )
+    assert (
+        noise_model.summary()
+        == summary
+        + "   - Custom Lindblad operators (in 1/µs):\n"
+        + "       - 1.0 * ((1.0, 0.0), (0.0, -1.0))\n"
+        + end_summary
+    )
+    noise_model = dataclasses.replace(
+        noise_model,
+        with_leakage=True,
+        eff_noise_opers=(
+            ((1.0, 0.0, 0.0), (0.0, -1.0, 2.0), (0.0, 2.0, 1.0)),
+        ),
+    )
+    summary += (
+        "   - Custom Lindblad operators (in 1/µs) including a leakage state:\n"
+        "       - 1.0 * ((1.0, 0.0, 0.0), (0.0, -1.0, 2.0), (0.0, 2.0, 1.0))\n"
+    )
+    assert noise_model.summary() == summary + end_summary
+    noise_model = dataclasses.replace(
+        noise_model, p_false_pos=0.5, p_false_neg=0.2
+    )
+    summary += (
+        "- Measurement noises:\n"
+        + "   - False Positive Meas. Probability: 0.5\n"
+        + "   - False Negative Meas. Probability: 0.2\n"
+    )
+    assert noise_model.summary() == summary + end_summary
+    # Without repetition
+    noise_model = NoiseModel(relaxation_rate=0.2)
+    assert (
+        noise_model.summary()
+        == "Noise summary:\n"
+        + "- Dissipation parameters: \n"
+        + "   - T1: 5.0 µs\n"
+    )
