@@ -886,6 +886,11 @@ def test_results():
     res = Results(atom_order=(), total_duration=0)
     assert res.get_result_tags() == []
     assert res.get_tagged_results() == {}
+    res_str = (
+        "Results(stored_results={stored_results}, "
+        "evaluation_times={evaluation_times}, atom_order=(), total_duration=0)"
+    )
+    assert str(res) == res_str.format(stored_results=[], evaluation_times={})
     with pytest.raises(
         AttributeError, match="'bitstrings' is not in the results"
     ):
@@ -931,6 +936,14 @@ def test_results():
     )
     with pytest.raises(ValueError, match="not available at time 0.912"):
         res.get_result(obs, 0.912)
+
+    assert str(res) == res_str.format(
+        stored_results=["bitstrings_test"],
+        evaluation_times={"bitstrings_test": [1.0]},
+    )
+
+
+# def test_results_str(atom_order, total_duration)
 
 
 def test_results_final_bistrings():

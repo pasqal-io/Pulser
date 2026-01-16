@@ -51,7 +51,7 @@ class Result(ABC, backend_results.Results):
     """Base class for storing the result of an observable at specific time."""
 
     meas_basis: str
-    total_duration: int = field(default=0, init=False)
+    total_duration: int = field(default=0, init=False, repr=False)
 
     @property
     def sampling_dist(self) -> dict[str, float]:
@@ -138,6 +138,9 @@ class Result(ABC, backend_results.Results):
         plt.ylabel("Probabilites")
         if show:
             plt.show()
+
+    def __str__(self) -> str:
+        return self.__repr__()
 
 
 @dataclass

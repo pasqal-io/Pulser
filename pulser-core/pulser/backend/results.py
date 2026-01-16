@@ -31,7 +31,7 @@ from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import stringify_qubit_ids
 
 
-@dataclass
+@dataclass(repr=False)
 class Results:
     """A collection of results.
 
@@ -42,12 +42,12 @@ class Results:
 
     atom_order: tuple[str, ...]
     total_duration: int
-    _results: dict[uuid.UUID, list[Any]] = field(init=False)
-    _times: dict[uuid.UUID, list[float]] = field(init=False)
+    _results: dict[uuid.UUID, list[Any]] = field(init=False, repr=False)
+    _times: dict[uuid.UUID, list[float]] = field(init=False, repr=False)
     _aggregation_methods: dict[uuid.UUID, AggregationMethod] = field(
-        init=False
+        init=False, repr=False
     )
-    _tagmap: dict[str, uuid.UUID] = field(init=False)
+    _tagmap: dict[str, uuid.UUID] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self._results = {}
@@ -400,6 +400,18 @@ class Results:
                 )
 
         return aggregated
+
+    def __str__(self) -> str:
+        params = dict(
+            stored_results=self.get_result_tags(),
+            evaluation_times={
+                tag: self._times[_uuid] for tag, _uuid in self._tagmap.items()
+            },
+            atom_order=self.atom_order,
+            total_duration=self.total_duration,
+        )
+        params_list = [f"{key}={value}" for key, value in params.items()]
+        return f"{self.__class__.__name__}({', '.join(params_list)})"
 
 
 ResultsType = TypeVar("ResultsType", bound=Results)

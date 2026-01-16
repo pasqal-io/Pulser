@@ -67,6 +67,14 @@ def test_sampled_result(patch_plt_show):
         meas_basis="ground-rydberg",
         bitstring_counts=samples,
     )
+
+    assert (
+        repr(result)
+        == str(result)
+        == "SampledResult(atom_order=('a', 'b', 'c'), "
+        f"meas_basis='ground-rydberg', bitstring_counts={samples}, "
+        "evaluation_time=1.0)"
+    )
     assert result.final_bitstrings == result_from_dict.final_bitstrings
     assert isinstance(result.final_bitstrings, Counter)
     assert isinstance(result_from_dict.final_bitstrings, Counter)
