@@ -797,8 +797,8 @@ class NoiseModel:
         if add_to_traj_summary == []:
             return _summary
         traj_summary = (
-            f"**: Generates {runs} trajector"
-            f'{"y" if runs == 1 else "ies"} with different '
+            "**: Emulation will generate EmulationConfig.n_trajectories"
+            " trajectories with different "
         )
         for suffix in add_to_traj_summary:
             traj_summary += suffix

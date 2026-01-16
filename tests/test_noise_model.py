@@ -674,12 +674,14 @@ def test_summary():
         + "  - XY-Plane Position Fluctuations: 1.5811388300841898 µm\n"
         + "  - Z-Axis Position Fluctuations: 8.264487918871444 µm\n"
     )
-    end_summary = "**: Generates 2 trajectories with different register"
+    end_summary = (
+        "**: Emulation will generate EmulationConfig.n_trajectories"
+        " trajectories with different register"
+    )
     assert summary + end_summary == noise_model.summary()
     noise_model = NoiseModel(
         temperature=10, trap_depth=1.0, trap_waist=1.0, runs=1
     )
-    end_summary = "**: Generates 1 trajectory with different register"
     detuning_summary = (
         "- Detuning fluctuations:\n"
         + "  - Shot-to-Shot Detuning fluctuations:\n"
