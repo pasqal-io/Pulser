@@ -14,10 +14,10 @@
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import re
 import warnings
 
-import dataclasses
 import numpy as np
 import pytest
 
@@ -657,37 +657,40 @@ def test_check_register_noise_params_invalid_params():
         )
 
 
-@pytest.mark.filterwarnings(
-    "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
-)
-def test_summary():
+def test_noise_table_summary():
+    # Start with a NoiseModel with only register noise
     noise_model = NoiseModel(
         temperature=10,
         trap_depth=1.0,
         trap_waist=1.0,
         disable_doppler=True,
-        runs=2,
     )
+    noise_table = {
+        "register_sigma_xy": (0.0015811388300841897, "µm"),
+        "register_sigma_z": (0.008264487918871443, "µm"),
+    }
+    assert noise_model.get_noise_table() == noise_table
     summary = (
         "Noise summary:\n"
         + "- Register Position Fluctuations**:\n"
-        + "  - XY-Plane Position Fluctuations: 1.5811388300841898 µm\n"
-        + "  - Z-Axis Position Fluctuations: 8.264487918871444 µm\n"
+        + "  - XY-Plane Position Fluctuations: 0.0015811388300841897 µm\n"
+        + "  - Z-Axis Position Fluctuations: 0.008264487918871443 µm\n"
     )
     end_summary = (
         "**: Emulation will generate EmulationConfig.n_trajectories"
         " trajectories with different register"
     )
     assert summary + end_summary == noise_model.summary()
-    noise_model = NoiseModel(
-        temperature=10, trap_depth=1.0, trap_waist=1.0, runs=1
-    )
+    # Include doppler noise
+    noise_model = NoiseModel(temperature=10, trap_depth=1.0, trap_waist=1.0)
+    noise_table["doppler_sigma"] = (0.2683952309561405, "rad/µs")
+    assert noise_model.get_noise_table() == noise_table
     detuning_summary = (
-        "- Detuning fluctuations:\n"
+        "- Detuning fluctuations**:\n"
         + "  - Shot-to-Shot Detuning fluctuations:\n"
     )
     doppler_summary = (
-        "       - Doppler fluctuations**: 268.3952309561405 rad/µs\n"
+        "       - Doppler fluctuations: 0.2683952309561405 rad/µs\n"
     )
     assert (
         noise_model.summary()
@@ -697,61 +700,101 @@ def test_summary():
         + end_summary
         + ", detuning"
     )
+    # Include detuning shot to shot
     noise_model = NoiseModel(
         temperature=10, trap_depth=1.0, trap_waist=1.0, detuning_sigma=1.0
     )
+    noise_table["detuning_sigma"] = (1.0, "rad/µs")
+    assert noise_model.get_noise_table() == noise_table
     detuning_summary += (
-        "       - Laser's Detuning fluctuations**: 1.0 rad/µs\n"
+        "       - Laser's Detuning fluctuations: 1.0 rad/µs\n"
         + doppler_summary
     )
     assert (
         noise_model.summary()
         == summary + detuning_summary + end_summary + ", detuning"
     )
+    # Include state preparation error
+    noise_model = dataclasses.replace(noise_model, state_prep_error=0.1)
+    noise_table["state_prep_error"] = (0.1, "")
+    assert noise_model.get_noise_table() == noise_table
+    summary += "- State Preparation Error Probability**: 0.1\n"
+    end_summary += ", initial state"
+    assert (
+        noise_model.summary()
+        == summary + detuning_summary + end_summary + ", detuning"
+    )
+    # Include amplitude fluctuations noise
     noise_model = dataclasses.replace(
         noise_model, amp_sigma=0.1, laser_waist=100
     )
+    noise_table["amp_sigma"] = (10.0, "%")
+    noise_table["laser_waist"] = (100, "µm")
+    assert noise_model.get_noise_table() == noise_table
     summary += (
         "- Amplitude fluctuations:\n"
-        + "  - In-space Gaussian damping σ=100 µm\n"
-        + "  - Shot-to-shot Amplitude Fluctuations**: 10.0% Amplitude\n"
+        + "  - Finite-waist Gaussian damping σ=100 µm\n"
+        + "  - Shot-to-shot Amplitude Fluctuations**: 10.0 % Amplitude\n"
         + detuning_summary
     )
     end_summary += ", amplitude, detuning"
     assert noise_model.summary() == summary + end_summary
+    # Include PSD noise
     noise_model = dataclasses.replace(
         noise_model, detuning_hf_omegas=[1.0, 2.0], detuning_hf_psd=[1.0, 0.5]
     )
+    noise_table["detuning_psd"] = (
+        [(1.0, 1.0), (2.0, 0.5)],
+        "(rad/µs, rad/µs)",
+    )
+    assert noise_table == noise_model.get_noise_table()
     summary += (
-        "  - High-Frequency Detuning fluctuations**, "
+        "  - High-Frequency Detuning fluctuations, "
         "PSD: [(1.0, 1.0), (2.0, 0.5)] (rad/µs, rad/µs)\n"
     )
     assert noise_model.summary() == summary + end_summary
+    # Include relaxation and dephasing rates
     noise_model = dataclasses.replace(
         noise_model, relaxation_rate=0.1, dephasing_rate=0.5
     )
+    noise_table["T1"] = (10.0, "µs")
+    noise_table["T2* (r-g)"] = (2.0, "µs")
+    assert noise_model.get_noise_table() == noise_table
     summary += (
         "- Dissipation parameters: \n"
         + "   - T1: 10.0 µs\n"
         + "   - T2* (r-g): 2.0 µs\n"
     )
     assert noise_model.summary() == summary + end_summary
+    # Include hyperfine dephasing rate
     noise_model = dataclasses.replace(
         noise_model, hyperfine_dephasing_rate=0.25
     )
+    noise_table["T2* (g-h)"] = (4.0, "µs")
+    assert noise_model.get_noise_table() == noise_table
     summary += "   - T2* (g-h): 4.0 µs\n"
     assert noise_model.summary() == summary + end_summary
+    # Include depolarizing rate
     noise_model = dataclasses.replace(noise_model, depolarizing_rate=0.2)
+    noise_table["depolarizing_rate"] = (0.2, "1/µs")
+    assert noise_model.get_noise_table() == noise_table
     summary += (
         "- Other Decoherence Processes:\n"
-        + "   - Depolarization at rate 0.2 µs^-1\n"
+        + "   - Depolarization at rate 0.2 1/µs\n"
     )
     assert noise_model.summary() == summary + end_summary
+    # Include eff noise
     noise_model = dataclasses.replace(
         noise_model,
         eff_noise_rates=(1.0,),
         eff_noise_opers=(((1.0, 0.0), (0.0, -1.0)),),
     )
+    noise_table["eff_noise"] = (
+        [(1.0, ((1.0, 0.0), (0.0, -1.0)))],
+        "(1/µs, '')",
+    )
+    noise_table["with_leakage"] = (False, "")
+    assert noise_model.get_noise_table() == noise_table
     assert (
         noise_model.summary()
         == summary
@@ -759,21 +802,28 @@ def test_summary():
         + "       - 1.0 * ((1.0, 0.0), (0.0, -1.0))\n"
         + end_summary
     )
+    # With leakage
+    new_oper = ((1.0, 0.0, 0.0), (0.0, -1.0, 2.0), (0.0, 2.0, 1.0))
     noise_model = dataclasses.replace(
         noise_model,
         with_leakage=True,
-        eff_noise_opers=(
-            ((1.0, 0.0, 0.0), (0.0, -1.0, 2.0), (0.0, 2.0, 1.0)),
-        ),
+        eff_noise_opers=(new_oper,),
     )
+    noise_table["eff_noise"] = ([(1.0, new_oper)], "(1/µs, '')")
+    noise_table["with_leakage"] = (True, "")
+    assert noise_model.get_noise_table() == noise_table
     summary += (
         "   - Custom Lindblad operators (in 1/µs) including a leakage state:\n"
         "       - 1.0 * ((1.0, 0.0, 0.0), (0.0, -1.0, 2.0), (0.0, 2.0, 1.0))\n"
     )
     assert noise_model.summary() == summary + end_summary
+    # Add measurement errors
     noise_model = dataclasses.replace(
         noise_model, p_false_pos=0.5, p_false_neg=0.2
     )
+    noise_table["p_false_neg"] = (0.2, "")
+    noise_table["p_false_pos"] = (0.5, "")
+    assert noise_model.get_noise_table() == noise_table
     summary += (
         "- Measurement noises:\n"
         + "   - False Positive Meas. Probability: 0.5\n"
@@ -782,6 +832,7 @@ def test_summary():
     assert noise_model.summary() == summary + end_summary
     # Without repetition
     noise_model = NoiseModel(relaxation_rate=0.2)
+    assert noise_model.get_noise_table() == {"T1": (5.0, "µs")}
     assert (
         noise_model.summary()
         == "Noise summary:\n"

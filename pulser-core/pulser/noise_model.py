@@ -678,121 +678,183 @@ class NoiseModel:
             )
         )
 
-    def summary(self) -> str:
-        """A readable summary of the impact of the noise on the simulation."""
-        _summary = "Noise summary:\n"
-        runs = self.runs or 1
-        add_to_traj_summary = []
-        # Follow the impact as in step-by-step tutorial
+    def get_noise_table(self) -> dict[str, tuple[Any, str]]:
+        """Maps noise quantities impacting simu. with their value and units."""
+        table: dict[str, tuple[Any, str]] = {}
         if "register" in self.noise_types:
-            # 1. Register
-            _summary += "- Register Position Fluctuations**:\n"
             register_sigma_xy, register_sigma_z = _register_sigma_xy_z(
-                self.temperature,
+                self.temperature * 1e-6,
                 self.trap_waist,
                 cast(float, self.trap_depth),
             )
+            table["register_sigma_xy"] = (register_sigma_xy, "µm")
+            table["register_sigma_z"] = (register_sigma_z, "µm")
+        if self.state_prep_error > 0:
+            table["state_prep_error"] = (self.state_prep_error, "")
+        if self.laser_waist is not None and self.laser_waist > 0:
+            table["laser_waist"] = (self.laser_waist, "µm")
+        if self.amp_sigma > 0:
+            table["amp_sigma"] = (self.amp_sigma * 100, "%")
+        if self.detuning_sigma > 0:
+            table["detuning_sigma"] = (self.detuning_sigma, "rad/µs")
+        if "doppler" in self.noise_types:
+            table["doppler_sigma"] = (
+                doppler_sigma(self.temperature * 1e-6),
+                "rad/µs",
+            )
+        if len(self.detuning_hf_psd) > 0:
+            psd = list(zip(self.detuning_hf_omegas, self.detuning_hf_psd))
+            table["detuning_psd"] = (psd, "(rad/µs, rad/µs)")
+        if "relaxation" in self.noise_types:
+            table["T1"] = (1 / self.relaxation_rate, "µs")
+        if self.dephasing_rate > 0:
+            table["T2* (r-g)"] = (1 / self.dephasing_rate, "µs")
+        if self.hyperfine_dephasing_rate > 0:
+            table["T2* (g-h)"] = (1 / self.hyperfine_dephasing_rate, "µs")
+        if "depolarizing" in self.noise_types:
+            table["depolarizing_rate"] = (self.depolarizing_rate, "1/µs")
+        if "eff_noise" in self.noise_types:
+            table["eff_noise"] = (
+                list(zip(self.eff_noise_rates, self.eff_noise_opers)),
+                "(1/µs, '')",
+            )
+            table["with_leakage"] = (self.with_leakage, "")
+        if self.p_false_pos > 0:
+            table["p_false_pos"] = (self.p_false_pos, "")
+        if self.p_false_neg > 0:
+            table["p_false_neg"] = (self.p_false_neg, "")
+        return table
+
+    def summary(self) -> str:
+        """A readable summary of the impact of the noise on the simulation."""
+
+        def _repr_value_unit(value: Any, unit: str) -> str:
+            if unit == "":
+                return f"{value}"
+            return f"{value} {unit}"
+
+        _summary = "Noise summary:\n"
+        noise_table = self.get_noise_table()
+        add_to_traj_summary = []
+        # Follow the impact as in step-by-step tutorial
+        if "register_sigma_xy" in noise_table:
+            assert "register_sigma_z" in noise_table
+            # 1. Register
+            _summary += "- Register Position Fluctuations**:\n"
             _summary += (
-                f"  - XY-Plane Position Fluctuations: {register_sigma_xy} µm\n"
+                "  - XY-Plane Position Fluctuations: "
+                f"{_repr_value_unit(*noise_table["register_sigma_xy"])}\n"
             )
             _summary += (
-                f"  - Z-Axis Position Fluctuations: {register_sigma_z} µm\n"
+                "  - Z-Axis Position Fluctuations: "
+                f"{_repr_value_unit(*noise_table["register_sigma_z"])}\n"
             )
             add_to_traj_summary.append("register, ")
-        if self.state_prep_error > 0:
+        if "state_prep_error" in noise_table:
             # 2. State Preparation
             _summary += (
                 "- State Preparation Error Probability**: "
-                f"{self.state_prep_error}\n"
+                f"{_repr_value_unit(*noise_table["state_prep_error"])}\n"
             )
             add_to_traj_summary.append("initial state, ")
 
         # 3. Pulse Shaping
-        if "amplitude" in self.noise_types:
+        if "laser_waist" in noise_table or "amp_sigma" in noise_table:
             _summary += "- Amplitude fluctuations:\n"
-            if self.laser_waist > 0:
+            if "laser_waist" in noise_table:
                 _summary += (
-                    f"  - In-space Gaussian damping σ={self.laser_waist} µm\n"
+                    "  - Finite-waist Gaussian damping σ="
+                    f"{_repr_value_unit(*noise_table["laser_waist"])}\n"
                 )
-            if self.amp_sigma > 0:
+            if "amp_sigma" in noise_table:
                 _summary += (
                     "  - Shot-to-shot Amplitude Fluctuations**:"
-                    f" {self.amp_sigma*100}% Amplitude\n"
+                    f" {_repr_value_unit(*noise_table["amp_sigma"])}"
+                    " Amplitude\n"
                 )
                 add_to_traj_summary.append("amplitude, ")
-        if "detuning" in self.noise_types or "doppler" in self.noise_types:
-            _summary += "- Detuning fluctuations:\n"
-            if self.detuning_sigma > 0 or "doppler" in self.noise_types:
+        if (
+            "detuning_sigma" in noise_table
+            or "doppler_sigma" in noise_table
+            or "detuning_psd" in noise_table
+        ):
+            _summary += "- Detuning fluctuations**:\n"
+            if (
+                "detuning_sigma" in noise_table
+                or "doppler_sigma" in noise_table
+            ):
                 _summary += "  - Shot-to-Shot Detuning fluctuations:\n"
-                if self.detuning_sigma > 0:
+                if "detuning_sigma" in noise_table:
                     _summary += (
-                        "       - Laser's Detuning fluctuations**: "
-                        f"{self.detuning_sigma} rad/µs\n"
+                        "       - Laser's Detuning fluctuations: "
+                        f"{_repr_value_unit(*noise_table["detuning_sigma"])}\n"
                     )
-                if "doppler" in self.noise_types:
+                if "doppler_sigma" in noise_table:
                     _summary += (
-                        "       - Doppler fluctuations**: "
-                        f"{doppler_sigma(self.temperature)} rad/µs\n"
+                        "       - Doppler fluctuations: "
+                        f"{_repr_value_unit(*noise_table["doppler_sigma"])}\n"
                     )
-            if len(self.detuning_hf_psd) > 0:
-                psd = list(zip(self.detuning_hf_omegas, self.detuning_hf_psd))
+            if "detuning_psd" in noise_table:
                 _summary += (
-                    "  - High-Frequency Detuning fluctuations**, PSD: "
-                    f"{psd} (rad/µs, rad/µs)\n"
+                    "  - High-Frequency Detuning fluctuations, PSD: "
+                    f"{_repr_value_unit(*noise_table["detuning_psd"])}\n"
                 )
             add_to_traj_summary.append("detuning, ")
 
         # 4. Noise channels
-        if "relaxation" in self.noise_types or "dephasing" in self.noise_types:
-            _summary += "- Dissipation parameters: \n"
-            if "relaxation" in self.noise_types:
-                _summary += f"   - T1: {1/self.relaxation_rate} µs\n"
-            if "dephasing" in self.noise_types:
-                if self.dephasing_rate > 0:
-                    _summary += f"   - T2* (r-g): {1/self.dephasing_rate} µs\n"
-                if self.hyperfine_dephasing_rate > 0:
-                    _summary += (
-                        "   - T2* (g-h): "
-                        f"{1/self.hyperfine_dephasing_rate} µs\n"
-                    )
-
         if (
-            "eff_noise" in self.noise_types
-            or "depolarizing" in self.noise_types
+            "T1" in noise_table
+            or "T2* (r-g)" in noise_table
+            or "T2* (g-h)" in noise_table
         ):
+            _summary += "- Dissipation parameters: \n"
+            if "T1" in noise_table:
+                _summary += (
+                    f"   - T1: {_repr_value_unit(*noise_table["T1"])}\n"
+                )
+            if "T2* (r-g)" in noise_table:
+                _summary += (
+                    "   - T2* (r-g): "
+                    f"{_repr_value_unit(*noise_table["T2* (r-g)"])}\n"
+                )
+            if "T2* (g-h)" in noise_table:
+                _summary += (
+                    "   - T2* (g-h): "
+                    f"{_repr_value_unit(*noise_table["T2* (g-h)"])}\n"
+                )
+
+        if "eff_noise" in noise_table or "depolarizing_rate" in noise_table:
             _summary += "- Other Decoherence Processes:\n"
-            if "depolarizing" in self.noise_types:
+            if "depolarizing_rate" in noise_table:
                 _summary += (
                     "   - Depolarization at rate "
-                    f"{self.depolarizing_rate} µs^-1\n"
+                    f"{_repr_value_unit(*noise_table["depolarizing_rate"])}\n"
                 )
-            if "eff_noise" in self.noise_types:
+            if "eff_noise" in noise_table:
                 _summary += (
                     "   - Custom Lindblad operators (in 1/µs)"
                     + (
                         " including a leakage state"
-                        if self.with_leakage
+                        if noise_table["with_leakage"][0]
                         else ""
                     )
                     + ":\n"
                 )
-                for rate, oper in zip(
-                    self.eff_noise_rates, self.eff_noise_opers
-                ):
+                for rate, oper in noise_table["eff_noise"][0]:
                     _summary += f"       - {rate} * {oper}\n"
 
         # 5. Measurement noises
-        if self.p_false_pos > 0 or self.p_false_neg > 0:
+        if "p_false_pos" in noise_table or "p_false_neg" in noise_table:
             _summary += "- Measurement noises:\n"
-            if self.p_false_pos > 0:
+            if "p_false_pos" in noise_table:
                 _summary += (
                     "   - False Positive Meas. Probability: "
-                    f"{self.p_false_pos}\n"
+                    f"{_repr_value_unit(*noise_table["p_false_pos"])}\n"
                 )
-            if self.p_false_neg > 0:
+            if "p_false_neg" in noise_table:
                 _summary += (
                     "   - False Negative Meas. Probability: "
-                    f"{self.p_false_neg}\n"
+                    f"{_repr_value_unit(*noise_table["p_false_neg"])}\n"
                 )
         if add_to_traj_summary == []:
             return _summary
