@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import dataclasses
 import math
+import warnings
 from unittest.mock import patch
 
 import numpy as np
@@ -25,6 +26,7 @@ import pulser
 from pulser.backend.default_observables import (
     BitStrings,
     Energy,
+    EnergyVariance,
     Occupation,
     StateResult,
 )
@@ -385,27 +387,29 @@ def test_aggregation():
     occup = Occupation(evaluation_times=[1.0])
     state = StateResult(evaluation_times=[1.0])
     bitstrings = BitStrings(evaluation_times=[1.0])
+    variance = EnergyVariance(evaluation_times=[1.0])
 
     qutip_config = QutipConfig(
-        observables=(occup, state, bitstrings),
+        observables=(occup, state, bitstrings, variance),
         n_trajectories=5,
         noise_model=pulser.NoiseModel(state_prep_error=1 / 3),
     )
-    with patch(
-        "pulser._hamiltonian_data.hamiltonian_data.np.random.uniform"
-    ) as bad_atoms_mock:
-        # The bad qubits for each trajectory (0,0,1,1,2 respectively)
-        # and a 6th item for the noiseless hamiltonian
-        bad_atoms_mock.side_effect = [
-            np.array([0.1, 0.5, 0.6]),
-            np.array([0.1, 0.5, 0.6]),
-            np.array([0.5, 0.1, 0.6]),
-            np.array([0.5, 0.1, 0.6]),
-            np.array([0.5, 0.6, 0.1]),
-            np.array([0.1, 0.2, 0.3]),
-        ]
-        qutip_backend = QutipBackendV2(seq, config=qutip_config)
-        qutip_results = qutip_backend.run()
+    with warnings.catch_warnings(record=True) as w:
+        with patch(
+            "pulser._hamiltonian_data.hamiltonian_data.np.random.uniform"
+        ) as bad_atoms_mock:
+            # The bad qubits for each trajectory (0,0,1,1,2 respectively)
+            # and a 6th item for the noiseless hamiltonian
+            bad_atoms_mock.side_effect = [
+                np.array([0.1, 0.5, 0.6]),
+                np.array([0.1, 0.5, 0.6]),
+                np.array([0.5, 0.1, 0.6]),
+                np.array([0.5, 0.1, 0.6]),
+                np.array([0.5, 0.6, 0.1]),
+                np.array([0.1, 0.2, 0.3]),
+            ]
+            qutip_backend = QutipBackendV2(seq, config=qutip_config)
+            qutip_results = qutip_backend.run()
 
     expected_state = [
         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -428,3 +432,6 @@ def test_aggregation():
         "101": 2000,
         "110": 1000,
     }
+    assert "energy_variance" not in qutip_results.get_result_tags()
+    assert issubclass(w[0].category, UserWarning)
+    assert "Skipping aggregation of `energy_variance`." in str(w[0].message)
