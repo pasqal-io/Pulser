@@ -108,7 +108,7 @@ OPTIONAL_IN_ABSTR_REPR = (
 )
 
 
-def doppler_sigma(temperature: float) -> float:
+def _doppler_sigma(temperature: float) -> float:
     """Standard deviation for Doppler shifting due to thermal motion.
 
     Arg:
@@ -699,7 +699,7 @@ class NoiseModel:
             table["detuning_sigma"] = (self.detuning_sigma, "rad/µs")
         if "doppler" in self.noise_types:
             table["doppler_sigma"] = (
-                doppler_sigma(self.temperature * 1e-6),
+                _doppler_sigma(self.temperature * 1e-6),
                 "rad/µs",
             )
         if len(self.detuning_hf_psd) > 0:
@@ -743,18 +743,18 @@ class NoiseModel:
             _summary += "- Register Position Fluctuations**:\n"
             _summary += (
                 "  - XY-Plane Position Fluctuations: "
-                f"{_repr_value_unit(*noise_table["register_sigma_xy"])}\n"
+                f"{_repr_value_unit(*noise_table['register_sigma_xy'])}\n"
             )
             _summary += (
                 "  - Z-Axis Position Fluctuations: "
-                f"{_repr_value_unit(*noise_table["register_sigma_z"])}\n"
+                f"{_repr_value_unit(*noise_table['register_sigma_z'])}\n"
             )
             add_to_traj_summary.append("register, ")
         if "state_prep_error" in noise_table:
             # 2. State Preparation
             _summary += (
                 "- State Preparation Error Probability**: "
-                f"{_repr_value_unit(*noise_table["state_prep_error"])}\n"
+                f"{_repr_value_unit(*noise_table['state_prep_error'])}\n"
             )
             add_to_traj_summary.append("initial state, ")
 
@@ -764,12 +764,12 @@ class NoiseModel:
             if "laser_waist" in noise_table:
                 _summary += (
                     "  - Finite-waist Gaussian damping σ="
-                    f"{_repr_value_unit(*noise_table["laser_waist"])}\n"
+                    f"{_repr_value_unit(*noise_table['laser_waist'])}\n"
                 )
             if "amp_sigma" in noise_table:
                 _summary += (
                     "  - Shot-to-shot Amplitude Fluctuations**:"
-                    f" {_repr_value_unit(*noise_table["amp_sigma"])}"
+                    f" {_repr_value_unit(*noise_table['amp_sigma'])}"
                     " Amplitude\n"
                 )
                 add_to_traj_summary.append("amplitude, ")
@@ -787,17 +787,17 @@ class NoiseModel:
                 if "detuning_sigma" in noise_table:
                     _summary += (
                         "       - Laser's Detuning fluctuations: "
-                        f"{_repr_value_unit(*noise_table["detuning_sigma"])}\n"
+                        f"{_repr_value_unit(*noise_table['detuning_sigma'])}\n"
                     )
                 if "doppler_sigma" in noise_table:
                     _summary += (
                         "       - Doppler fluctuations: "
-                        f"{_repr_value_unit(*noise_table["doppler_sigma"])}\n"
+                        f"{_repr_value_unit(*noise_table['doppler_sigma'])}\n"
                     )
             if "detuning_psd" in noise_table:
                 _summary += (
                     "  - High-Frequency Detuning fluctuations, PSD: "
-                    f"{_repr_value_unit(*noise_table["detuning_psd"])}\n"
+                    f"{_repr_value_unit(*noise_table['detuning_psd'])}\n"
                 )
             add_to_traj_summary.append("detuning, ")
 
@@ -810,17 +810,17 @@ class NoiseModel:
             _summary += "- Dissipation parameters: \n"
             if "T1" in noise_table:
                 _summary += (
-                    f"   - T1: {_repr_value_unit(*noise_table["T1"])}\n"
+                    f"   - T1: {_repr_value_unit(*noise_table['T1'])}\n"
                 )
             if "T2* (r-g)" in noise_table:
                 _summary += (
                     "   - T2* (r-g): "
-                    f"{_repr_value_unit(*noise_table["T2* (r-g)"])}\n"
+                    f"{_repr_value_unit(*noise_table['T2* (r-g)'])}\n"
                 )
             if "T2* (g-h)" in noise_table:
                 _summary += (
                     "   - T2* (g-h): "
-                    f"{_repr_value_unit(*noise_table["T2* (g-h)"])}\n"
+                    f"{_repr_value_unit(*noise_table['T2* (g-h)'])}\n"
                 )
 
         if "eff_noise" in noise_table or "depolarizing_rate" in noise_table:
@@ -828,7 +828,7 @@ class NoiseModel:
             if "depolarizing_rate" in noise_table:
                 _summary += (
                     "   - Depolarization at rate "
-                    f"{_repr_value_unit(*noise_table["depolarizing_rate"])}\n"
+                    f"{_repr_value_unit(*noise_table['depolarizing_rate'])}\n"
                 )
             if "eff_noise" in noise_table:
                 _summary += (
@@ -849,12 +849,12 @@ class NoiseModel:
             if "p_false_pos" in noise_table:
                 _summary += (
                     "   - False Positive Meas. Probability: "
-                    f"{_repr_value_unit(*noise_table["p_false_pos"])}\n"
+                    f"{_repr_value_unit(*noise_table['p_false_pos'])}\n"
                 )
             if "p_false_neg" in noise_table:
                 _summary += (
                     "   - False Negative Meas. Probability: "
-                    f"{_repr_value_unit(*noise_table["p_false_neg"])}\n"
+                    f"{_repr_value_unit(*noise_table['p_false_neg'])}\n"
                 )
         if add_to_traj_summary == []:
             return _summary

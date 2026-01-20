@@ -32,7 +32,9 @@ from pulser._hamiltonian_data.noise_trajectory import NoiseTrajectory
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import STATES_RANK, Channel, States
 from pulser.devices._device_datacls import COORD_PRECISION, BaseDevice
-from pulser.noise_model import NoiseModel, _register_sigma_xy_z, doppler_sigma
+from pulser.noise_model import NoiseModel
+from pulser.noise_model import _doppler_sigma as doppler_sigma
+from pulser.noise_model import _register_sigma_xy_z
 from pulser.register import Register3D
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler import sampler
