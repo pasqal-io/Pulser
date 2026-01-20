@@ -34,4 +34,4 @@ def density_matrix_aggregator(values: list[QutipState]) -> QutipState:
         else:
             q_state = state._state
         acc += q_state
-    return QutipState(acc, eigenstates=values[0].eigenstates)
+    return QutipState(acc / len(values), eigenstates=values[0].eigenstates)
