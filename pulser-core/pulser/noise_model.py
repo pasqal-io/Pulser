@@ -796,8 +796,8 @@ class NoiseModel:
                     )
             if "detuning_psd" in noise_table:
                 _summary += (
-                    "  - High-Frequency Detuning fluctuations, PSD: "
-                    f"{_repr_value_unit(*noise_table['detuning_psd'])}\n"
+                    "  - High-Frequency Detuning fluctuations. See PSD in "
+                    f"get_noise_table()['detuning_psd'].\n"
                 )
             add_to_traj_summary.append("detuning, ")
 

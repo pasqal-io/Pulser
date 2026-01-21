@@ -749,8 +749,8 @@ def test_noise_table_summary():
     )
     assert noise_table == noise_model.get_noise_table()
     summary += (
-        "  - High-Frequency Detuning fluctuations, "
-        "PSD: [(1.0, 1.0), (2.0, 0.5)] (rad/µs, rad/µs)\n"
+        "  - High-Frequency Detuning fluctuations. See PSD "
+        "in get_noise_table()['detuning_psd'].\n"
     )
     assert noise_model.summary() == summary + end_summary
     # Include relaxation and dephasing rates
