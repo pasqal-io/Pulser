@@ -880,7 +880,8 @@ class QutipEmulator:
                 print(f"Emulating Trajectory {traj_nb+1}/{n_trajectories}")
             else:
                 print(
-                    f"Emulating Trajectories [{traj_nb+1} - {traj_nb+reps}]/{n_trajectories}"
+                    f"Emulating Trajectories [{traj_nb+1} - {traj_nb+reps}]"
+                    f"/{n_trajectories}"
                 )
             self._current_hamiltonian = ham
             traj_nb += reps
