@@ -36,6 +36,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.math as pm
+from pulser.backend._classproperty import classproperty
 from pulser.backend.observable import Callback, Observable
 from pulser.backend.operator import Operator, OperatorRepr
 from pulser.backend.state import State, StateRepr
@@ -320,6 +321,26 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             "noise_model",
             "n_trajectories",
         }
+
+    @classproperty
+    def state_type(cls) -> Type[State]:
+        """The state type to use with this config class."""
+        try:
+            return cls._state_type
+        except AttributeError:
+            raise AttributeError(
+                f"{cls.__name__!r} has no associated 'state_type'."
+            )
+
+    @classproperty
+    def operator_type(cls) -> Type[Operator]:
+        """The operator type to use with this config class."""
+        try:
+            return cls._operator_type
+        except AttributeError:
+            raise AttributeError(
+                f"{cls.__name__!r} has no associated 'operator_type'."
+            )
 
     def is_evaluation_time(self, t: float, tol: float = 1e-6) -> bool:
         """Assesses whether a relative time is an evaluation time."""
