@@ -1615,17 +1615,46 @@ def test_delay_at_rest(in_eom, at_rest, delay_duration):
     seq = Sequence(Register.square(2, 5, prefix="q"), AnalogDevice)
     seq.declare_channel("ryd", "rydberg_global")
     assert (ch_obj := seq.declared_channels["ryd"]).mod_bandwidth is not None
-    pulse = Pulse.ConstantPulse(100, 1, 0, 0)
+    amp = 1
+    det = -seq.declared_channels["ryd"].max_abs_detuning
+    pulse = Pulse.ConstantPulse(100, amp, det, 0)
     assert pulse.duration == 100
     if in_eom:
-        seq.enable_eom_mode("ryd", 1, 0, 0)
+        seq.enable_eom_mode("ryd", amp, det, 0)
         seq.add_eom_pulse("ryd", pulse.duration, 0)
+        assert len(seq._schedule["ryd"].eom_blocks) == 1
+        assert seq._schedule["ryd"].eom_blocks[0].detuning_on == det
+        assert (
+            det_off := seq._schedule["ryd"].eom_blocks[0].detuning_off
+        ) < det
     else:
         seq.add(pulse, "ryd")
     assert (extra_delay := pulse.fall_time(ch_obj, in_eom_mode=in_eom)) > 0
+    adjusted_extra_delay = seq._schedule["ryd"].adjust_duration(extra_delay)
     seq.delay(delay_duration, "ryd", at_rest=at_rest)
-    assert seq.get_duration() == pulse.duration + delay_duration + (
-        seq._schedule["ryd"].adjust_duration(extra_delay) * at_rest
+    assert (
+        seq.get_duration()
+        == pulse.duration + delay_duration + adjusted_extra_delay * at_rest
+    )
+    if delay_duration == 0 and not at_rest:
+        assert seq._schedule["ryd"][-1].type == pulse
+        return
+    if in_eom:
+        off_pulse = Pulse.ConstantPulse(
+            max(delay_duration, adjusted_extra_delay), 0, det_off, 0
+        )
+        assert seq._schedule["ryd"][-1].type == off_pulse
+        if delay_duration > 0 and at_rest:
+            assert seq._schedule["ryd"][-2].type == Pulse.ConstantPulse(
+                adjusted_extra_delay, 0, det_off, 0
+            )
+    else:
+        assert seq._schedule["ryd"][-1].type == "delay"
+        if delay_duration > 0 and at_rest:
+            assert seq._schedule["ryd"][-2].type == "delay"
+    assert (
+        seq._schedule["ryd"][-3 if delay_duration > 0 and at_rest else -2].type
+        == pulse
     )
 
 
