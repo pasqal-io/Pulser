@@ -73,7 +73,7 @@ class BackendConfig:
             )
         # Store the abstract repr of the config in _backend_options
         # Prevents potential issues with mutable arguments
-        self._backend_options = copy.deepcopy(backend_options)
+        super().__setattr__("_backend_options", copy.deepcopy(backend_options))
         if "backend_options" in backend_options:
             with warnings.catch_warnings():
                 warnings.filterwarnings("always")
@@ -97,6 +97,9 @@ class BackendConfig:
         ):
             return self._backend_options[name]
         raise AttributeError(f"{name!r} has not been passed to {self!r}.")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        raise AttributeError(f"{type(self).__name__!r} is read-only.")
 
 
 class EmulationConfig(BackendConfig, Generic[StateType]):
@@ -378,7 +381,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
 # Legacy class
 
 
-@dataclass
+@dataclass(frozen=True)
 class EmulatorConfig(BackendConfig):
     """The configuration for emulator backends.
 
