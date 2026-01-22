@@ -49,6 +49,9 @@ EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 
 StateType = TypeVar("StateType", bound=State)
 
+# TODO: Replace with built-in Self when python >= 3.11
+Self = TypeVar("Self", bound="BackendConfig")
+
 
 class BackendConfig:
     """The base backend configuration."""
@@ -86,6 +89,10 @@ class BackendConfig:
                 )
             self._backend_options.update(backend_options["backend_options"])
 
+    def with_changes(self: Self, **changes: Any) -> Self:
+        """Returns a copy of the config with the given changes."""
+        return type(self)(**(self._backend_options | changes))
+
     def _expected_kwargs(self) -> set[str]:
         return set()
 
@@ -99,7 +106,12 @@ class BackendConfig:
         raise AttributeError(f"{name!r} has not been passed to {self!r}.")
 
     def __setattr__(self, name: str, value: Any) -> None:
-        raise AttributeError(f"{type(self).__name__!r} is read-only.")
+        cls_name = type(self).__name__
+        raise AttributeError(
+            f"{cls_name!r} is read-only. Please use "
+            f"'{cls_name}.with_changes()' to make a copy with the desired "
+            "changes."
+        )
 
 
 class EmulationConfig(BackendConfig, Generic[StateType]):

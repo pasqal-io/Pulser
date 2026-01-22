@@ -1105,7 +1105,7 @@ class TestObservables:
         noise_model = pulser.NoiseModel(
             p_false_pos=p_false_pos, p_false_neg=p_false_neg
         )
-        config.noise_model = noise_model
+        config = config.with_changes(noise_model=noise_model)
         assert config.noise_model.noise_types == (
             ("SPAM",) if p_false_pos or p_false_neg else ()
         )
