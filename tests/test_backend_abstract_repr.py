@@ -130,8 +130,8 @@ class TestObservableRepr:
             assert repr.get("one_state", None) == expected_kwargs.get(
                 "one_state", None
             )
-            assert repr.get("num_shots", 1000) == expected_kwargs.get(
-                "num_shots", 1000
+            assert repr.get("num_shots", None) == expected_kwargs.get(
+                "num_shots", None
             )
 
     @mark.parametrize(
