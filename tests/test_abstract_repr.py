@@ -810,6 +810,7 @@ class TestSerialization:
                 "channels",
                 "operations",
                 "measurement",
+                "pulser_version",
             ]
         )
         device_name = abstract["device"]["name"]
@@ -1602,6 +1603,7 @@ def _get_serialized_seq(
         "operations": operations,
         "variables": variables,
         "measurement": None,
+        "pulser_version": pulser.__version__,
     }
     seq_dict.update(override_kwargs)
     return seq_dict

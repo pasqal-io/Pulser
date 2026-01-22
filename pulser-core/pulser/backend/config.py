@@ -206,7 +206,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         with_modulation: bool = False,
         interaction_matrix: ArrayLike | None = None,
         prefer_device_noise_model: bool = False,
-        noise_model: NoiseModel = NoiseModel(),
+        noise_model: NoiseModel | None = None,
         n_trajectories: int | None = None,
         default_num_shots: int = 1000,
         **backend_options: Any,
@@ -289,9 +289,11 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
                     stacklevel=2,
                 )
 
-        if not isinstance(noise_model, NoiseModel):
+        if noise_model is None:
+            noise_model = NoiseModel()
+        elif not isinstance(noise_model, NoiseModel):
             raise TypeError(
-                "'noise_model' must be a NoiseModel instance,"
+                "When defined, 'noise_model' must be a NoiseModel instance,"
                 f" not {type(noise_model)}."
             )
 
