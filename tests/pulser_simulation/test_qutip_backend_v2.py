@@ -363,3 +363,7 @@ def test_register_detuning_detection():
     qutip_sim = QutipBackendV2(seq, config=qutip_config)
     result_qut = qutip_sim.run()
     assert result_qut.final_state._state.shape == (4, 4)  # density matrix
+
+
+def test_config_type():
+    assert QutipBackendV2.config_type is QutipConfig

@@ -657,6 +657,9 @@ def test_emulation_config():
     # I prefer_device_noise_model=False, defaults to 1
     assert EmulationConfig(observables=(BitStrings(),)).n_trajectories == 1
 
+    assert EmulationConfig.state_type is pulser.backend.StateRepr
+    assert EmulationConfig.operator_type is pulser.backend.OperatorRepr
+
 
 def test_results_aggregation():
     results1 = Results(atom_order=[0, 1], total_duration=100)
@@ -883,12 +886,18 @@ def test_results_aggregation_errors(caplog):
 
 
 def test_results():
-    res = Results(atom_order=(), total_duration=0)
+    res = Results(atom_order=(), total_duration=100)
     assert res.get_result_tags() == []
     assert res.get_tagged_results() == {}
-    res_str = (
-        "Results(stored_results={stored_results}, "
-        "evaluation_times={evaluation_times}, atom_order=(), total_duration=0)"
+    res_str = "\n".join(
+        [
+            "Results",
+            "-------",
+            "Stored results: {stored_results}",
+            "Evaluation times per result: {evaluation_times}",
+            "Atom order in states and bitstrings: ()",
+            "Total sequence duration: 100 ns",
+        ]
     )
     assert str(res) == res_str.format(stored_results=[], evaluation_times={})
     with pytest.raises(
@@ -941,9 +950,6 @@ def test_results():
         stored_results=["bitstrings_test"],
         evaluation_times={"bitstrings_test": [1.0]},
     )
-
-
-# def test_results_str(atom_order, total_duration)
 
 
 def test_results_final_bistrings():

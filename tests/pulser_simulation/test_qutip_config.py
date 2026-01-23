@@ -5,7 +5,11 @@ import pytest
 
 from pulser import NoiseModel
 from pulser.backend.default_observables import StateResult
-from pulser_simulation.qutip_config import QutipConfig
+from pulser_simulation.qutip_config import (
+    QutipConfig,
+    QutipOperator,
+    QutipState,
+)
 
 
 def test_no_interaction_matrix():
@@ -73,3 +77,8 @@ def test_initial_state():
             ],
             initial_state="all-ground",
         )
+
+
+def test_preferred_types():
+    assert QutipConfig.state_type is QutipState
+    assert QutipConfig.operator_type is QutipOperator
