@@ -669,11 +669,12 @@ def test_emulation_config():
     assert EmulationConfig(observables=(BitStrings(),)).n_trajectories == 1
 
     # EmulationConfig would error on receiving a numpy array of len > 1
+    times = np.array([0.5, 1.0])
     conf = EmulationConfig(
-        default_evaluation_times=np.array([0.5, 1.0]),
+        default_evaluation_times=times,
         observables=(BitStrings(),),
     )
-    assert conf.default_evaluation_times == [0.5, 1.0]
+    assert np.allclose(conf.default_evaluation_times, times)
 
 
 def test_results_aggregation():
