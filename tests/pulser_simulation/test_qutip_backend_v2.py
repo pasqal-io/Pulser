@@ -113,6 +113,9 @@ def test_qutip_backend_v2_energy():
     )
     backend = QutipBackendV2(seq, config=config)
     results = backend.run()
+    assert results.get_result_times("state") != results.get_result_times(
+        "energy"
+    )
     assert (
         results.get_result("energy", 0.0)
         == results.energy[0]
