@@ -2501,13 +2501,15 @@ class Sequence(Generic[DeviceType]):
                     float(optimal_detuning_off),
                     return_switching_beams=True,
                 )
-                # Detuning sent by laser is constant detuning on
+                # Detuning sent by laser is constant equal to detuning_on
                 assert np.isclose(
                     detuning_on,
-                    detuning_off
-                    - eom_config._lightshift(
-                        amp_on, *(set(RydbergBeam) - set(switching_beams))
-                    ),
+                    (
+                        detuning_off
+                        + eom_config._lightshift(
+                            pm.AbstractArray(amp_on), *switching_beams
+                        )
+                    ).as_array(detach=True),
                 )
                 # Update optimal_detuning_off to match the chosen detuning_off
                 # This minimizes the changes to the sequence when the device

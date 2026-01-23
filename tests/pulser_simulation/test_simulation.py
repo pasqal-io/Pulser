@@ -25,6 +25,7 @@ import qutip
 import pulser_simulation.simulation as sim_module
 from pulser import Pulse, Register, Sequence
 from pulser.backend.default_observables import StateResult
+from pulser.channels.eom import RydbergBeam
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel
 from pulser.register.register_layout import RegisterLayout
@@ -2470,3 +2471,65 @@ def test_qutip_invalid_solver_error(seq):
             n_trajectories=1,
         )
         sim.run()
+
+
+@pytest.mark.parametrize("min_detuning_on", [False, True])
+def test_eom(mod_device, reg, min_detuning_on):
+    # If min_detuning_on, detuning_on in eom is minimal and controlled
+    # beams are taken such that detuning_off < -max_abs_detuning
+    # Otherwise detuning_on=max_abs_detuning, and controlled beams
+    # are taken such that detuning_off > max_abs_detuning
+    channels = mod_device.channels
+    eom_config = channels["rydberg_global"].eom_config
+    if min_detuning_on:
+        assert eom_config.controlled_beams == (RydbergBeam.BLUE,)
+    else:
+        eom_config = dataclasses.replace(
+            eom_config, controlled_beams=(RydbergBeam.RED,)
+        )
+        channels["rydberg_global"] = dataclasses.replace(
+            channels["rydberg_global"], eom_config=eom_config
+        )
+        mod_device = dataclasses.replace(
+            mod_device,
+            channel_ids=list(channels),
+            channel_objects=list(channels.values()),
+        )
+    seq = Sequence(reg, mod_device)
+    seq.declare_channel("ryd_glob", "rydberg_global")
+    seq.add(Pulse.ConstantPulse(1000, np.pi / 2, 0, 0), "ryd_glob")  # pi/2
+    # Z rotations
+    max_abs_det = seq.declared_channels["ryd_glob"].max_abs_detuning
+    detuning_on = -max_abs_det if min_detuning_on else max_abs_det
+    seq.enable_eom_mode(
+        "ryd_glob", np.pi, detuning_on, correct_phase_drift=True
+    )
+    det_off = seq._schedule["ryd_glob"].eom_blocks[-1].detuning_off
+    assert det_off < detuning_on if min_detuning_on else det_off > detuning_on
+    seq.add_eom_pulse("ryd_glob", 1000, 0)
+    seq.delay(500, "ryd_glob")
+    seq.modify_eom_setpoint(
+        "ryd_glob", np.pi / 2, 0, 0, correct_phase_drift=True
+    )
+    seq.add_eom_pulse("ryd_glob", 1000, 0)  # pi/2
+    # Check that simulation runs
+    np.random.seed(123)
+    sim = QutipEmulator.from_sequence(seq)
+    res = sim.run()
+    final_state = res.sample_final_state()
+    if min_detuning_on:
+        assert final_state == {
+            "000": 850,
+            "100": 53,
+            "001": 46,
+            "010": 42,
+            "101": 9,
+        }
+    else:
+        assert final_state == {"000": 879, "010": 49, "100": 40, "001": 32}
+    # Also with noisy detuning
+    sim = QutipEmulator.from_sequence(
+        seq, noise_model=NoiseModel(detuning_sigma=0.1), n_trajectories=3
+    )
+    res = sim.run()
+    assert res[-1].bitstring_counts == {"000": 3}
