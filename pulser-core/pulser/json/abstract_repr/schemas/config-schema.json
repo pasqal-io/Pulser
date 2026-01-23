@@ -95,6 +95,14 @@
             "noise_model": {
                 "description": "the noise model to use",
                 "$ref": "noise-schema.json#/definitions/NoiseModel"
+            },
+            "n_trajectories": {
+                "description": "The number of trajectories to average over when the emulation requires it.",
+                "type": "integer"
+            },
+            "default_num_shots": {
+                "description": "The default number of shots when sampling a quantum state.",
+                "type": "integer"
             }
         },
         "required": [
@@ -250,7 +258,10 @@
             },
             "num_shots": {
                 "description": "how many bitstrings to generate",
-                "type": "integer"
+                "type": [
+                    "integer",
+                    "null"
+                ]
             },
             "one_state": {
                 "description": "which basis state to measure as 1, the rest is 0.",
