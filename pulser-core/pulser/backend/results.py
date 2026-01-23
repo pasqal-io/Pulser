@@ -41,7 +41,9 @@ class Results:
     """
 
     atom_order: tuple[str, ...]
+    """The order of the atoms/qudits in the results."""
     total_duration: int
+    """The total duration of the sequence, in ns."""
     _results: dict[uuid.UUID, list[Any]] = field(init=False, repr=False)
     _times: dict[uuid.UUID, list[float]] = field(init=False, repr=False)
     _aggregation_methods: dict[uuid.UUID, AggregationMethod] = field(
@@ -104,7 +106,7 @@ class Results:
 
     @property
     def final_bitstrings(self) -> dict[str, int]:
-        """Returns the bitstrings at the end of the sequence, if available."""
+        """The bitstrings at the end of the sequence, if available."""
         try:
             return cast(
                 typing.Dict[str, int], self.get_result("bitstrings", time=1.0)
@@ -119,7 +121,7 @@ class Results:
 
     @property
     def final_state(self) -> State:
-        """Returns the state at the end of the sequence, if available."""
+        """The state at the end of the sequence, if available."""
         try:
             return cast(State, self.get_result("state", time=1.0))
         except ValueError:
@@ -402,16 +404,20 @@ class Results:
         return aggregated
 
     def __str__(self) -> str:
-        params = dict(
-            stored_results=self.get_result_tags(),
-            evaluation_times={
-                tag: self._times[_uuid] for tag, _uuid in self._tagmap.items()
-            },
-            atom_order=self.atom_order,
-            total_duration=self.total_duration,
-        )
-        params_list = [f"{key}={value}" for key, value in params.items()]
-        return f"{self.__class__.__name__}({', '.join(params_list)})"
+        evaluation_times = {
+            tag: self._times[_uuid] for tag, _uuid in self._tagmap.items()
+        }
+
+        cls_name = self.__class__.__name__
+        lines = [
+            cls_name,
+            "-" * len(cls_name),  # Separator
+            f"Stored results: {self.get_result_tags()}",
+            f"Evaluation times per result: {evaluation_times}",
+            f"Atom order in states and bitstrings: {self.atom_order}",
+            f"Total sequence duration: {self.total_duration} ns",
+        ]
+        return "\n".join(lines)
 
 
 ResultsType = TypeVar("ResultsType", bound=Results)
