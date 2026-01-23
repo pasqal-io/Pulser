@@ -165,8 +165,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     # Whether to error if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = False
 
-    _state_type: ClassVar[Type[State]]
-    _operator_type: ClassVar[Type[Operator]]
+    _state_type: ClassVar[Type[State]] = StateRepr
+    _operator_type: ClassVar[Type[Operator]] = OperatorRepr
 
     def __init__(
         self,
@@ -324,23 +324,13 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
 
     @classproperty
     def state_type(cls) -> Type[State]:
-        """The state type to use with this config class."""
-        try:
-            return cls._state_type
-        except AttributeError:
-            raise AttributeError(
-                f"{cls.__name__!r} has no associated 'state_type'."
-            )
+        """The preferred state type to use with this config class."""
+        return cls._state_type
 
     @classproperty
     def operator_type(cls) -> Type[Operator]:
-        """The operator type to use with this config class."""
-        try:
-            return cls._operator_type
-        except AttributeError:
-            raise AttributeError(
-                f"{cls.__name__!r} has no associated 'operator_type'."
-            )
+        """The preferred operator type to use with this config class."""
+        return cls._operator_type
 
     def is_evaluation_time(self, t: float, tol: float = 1e-6) -> bool:
         """Assesses whether a relative time is an evaluation time."""
@@ -391,8 +381,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         return _deserialize_emulation_config(
             json.loads(obj_str),
             cls,
-            getattr(cls, "_state_type", StateRepr),
-            getattr(cls, "_operator_type", OperatorRepr),
+            cls.state_type,
+            cls.operator_type,
         )
 
 
