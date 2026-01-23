@@ -2503,7 +2503,7 @@ class Sequence(Generic[DeviceType]):
                 )
                 # Detuning sent by laser is constant equal to detuning_on
                 assert np.isclose(
-                    detuning_on,
+                    pm.AbstractArray(detuning_on).as_array(detach=True),
                     (
                         detuning_off
                         + eom_config._lightshift(
