@@ -668,6 +668,13 @@ def test_emulation_config():
     # I prefer_device_noise_model=False, defaults to 1
     assert EmulationConfig(observables=(BitStrings(),)).n_trajectories == 1
 
+    # EmulationConfig would error on receiving a numpy array of len > 1
+    conf = EmulationConfig(
+        default_evaluation_times=np.array([0.5, 1.0]),
+        observables=(BitStrings(),),
+    )
+    assert conf.default_evaluation_times == [0.5, 1.0]
+
 
 def test_results_aggregation():
     results1 = Results(atom_order=[0, 1], total_duration=100)
