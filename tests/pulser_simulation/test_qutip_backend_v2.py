@@ -103,10 +103,11 @@ def test_qutip_backend_v2_energy():
         TypeError, match="'config' must be an instance of 'EmulationConfig'"
     ):
         QutipBackendV2(seq, config="tralala")
+
     config = QutipConfig(
         default_evaluation_times="Full",
         observables=[
-            StateResult(evaluation_times=[1.0]),
+            StateResult(),
             Energy(evaluation_times=[0.001 * n for n in range(1001)]),
         ],
     )
