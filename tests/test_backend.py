@@ -137,6 +137,7 @@ class _MockConnection(RemoteConnection):
         self._support_open_batch = True
         self._got_closed = ""
         self._progress_calls = 0
+        self._last_submit_kwargs = {}
         self.result = SampledResult(
             ("q0", "q1"),
             meas_basis="ground-rydberg",
@@ -151,6 +152,7 @@ class _MockConnection(RemoteConnection):
         batch_id: str | None = None,
         **kwargs,
     ) -> RemoteResults:
+        self._last_submit_kwargs = kwargs
         if batch_id:
             return RemoteResults("dcba", self)
         return RemoteResults("abcd", self)
@@ -305,11 +307,19 @@ def test_remote_backend(sequence):
     with pytest.raises(TypeError, match="must be a valid RemoteConnection"):
         QPUBackend(seq, "fake_connection")
 
+    with pytest.raises(
+        TypeError,
+        match="'config' must be an instance of 'BackendConfig'; "
+        "got 'str' instead",
+    ):
+        QPUBackend(seq, connection, config="bad config")
+
     qpu_backend = QPUBackend(seq, connection)
     remote_backend = RemoteBackend(seq, connection)
     # Generic remote backend can run without job_params
     assert remote_backend.run().batch_id == "abcd"
-    # But QPUBackend requires job_params
+    # But QPUBackend requires job_params IF config.default_num_shots is None
+    assert qpu_backend._config.default_num_shots is None
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         qpu_backend.run()
     for backend in [qpu_backend, remote_backend]:
@@ -387,6 +397,30 @@ def test_remote_backend(sequence):
 
     available_results = remote_results.get_available_results()
     assert available_results == {"abcd": connection.result}
+
+
+def test_qpu_backend_default_num_shots(sequence):
+    seq = pulser.Sequence(
+        sequence.register.with_automatic_layout(AnalogDevice), AnalogDevice
+    )
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.delay(1000, "ryd")
+    connection = _MockConnection()
+    default_num_shots = 123
+    qpu_backend = QPUBackend(
+        seq,
+        connection,
+        config=BackendConfig(default_num_shots=default_num_shots),
+    )
+
+    # Run without job params uses default_num_shots
+    qpu_backend.run()
+    assert connection._last_submit_kwargs["job_params"][0]["runs"] == 123
+
+    # For jobs that don't specify "runs", uses the default
+    qpu_backend.run(job_params=[{"runs": 2}, {}])
+    assert connection._last_submit_kwargs["job_params"][0]["runs"] == 2
+    assert connection._last_submit_kwargs["job_params"][1]["runs"] == 123
 
 
 def test_emulator_backend(sequence):

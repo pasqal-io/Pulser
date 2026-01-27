@@ -73,13 +73,13 @@ class QPUBackend(RemoteBackend):
         if self._config.default_num_shots is not None:
             # Use default_num_shots when runs is not defined
             if job_params is None:
-                job_params = {"runs": self._config.default_num_shots}
+                job_params = [{"runs": self._config.default_num_shots}]
             else:
                 # Make sure job_params format is correct first
                 self._type_check_job_params(job_params)
                 job_params = [
                     # If runs is not defined in d, uses default_num_shots
-                    {"runs": self._config_default_num_shots} | d
+                    {"runs": self._config.default_num_shots} | d
                     for d in job_params
                 ]
         # super().run() includes call to `validate_job_params` since

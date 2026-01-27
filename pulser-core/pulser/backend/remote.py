@@ -314,6 +314,8 @@ class RemoteBackend(Backend):
         config: An optional backend configuration.
     """
 
+    _config: BackendConfig
+
     def __init__(
         self,
         sequence: Sequence,
@@ -333,7 +335,7 @@ class RemoteBackend(Backend):
         if not isinstance(config, BackendConfig):
             raise TypeError(
                 "When given, a 'config' must be an instance of "
-                f"'BackendConfig'; got {type(config)!r} instead."
+                f"'BackendConfig'; got {type(config).__name__!r} instead."
             )
         self._config = config
         self._batch_id: str | None = None
