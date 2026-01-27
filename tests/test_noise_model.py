@@ -19,6 +19,7 @@ import warnings
 
 import numpy as np
 import pytest
+import qutip
 
 from pulser.noise_model import (
     _NOISE_TYPE_PARAMS,
@@ -290,6 +291,13 @@ class TestNoiseModel:
                 eff_noise_opers=[matrices["I"], matrices["X"]],
                 eff_noise_rates=[-1.0, 0.5],
             )
+        with pytest.raises(
+            TypeError, match="eff_noise_rates is a list of floats,"
+        ):
+            NoiseModel(
+                eff_noise_opers=[matrices["I4"]],
+                eff_noise_rates=[1],
+            )
 
     def test_eff_noise_opers(self, matrices):
         with pytest.raises(ValueError, match="The operators list length"):
@@ -330,6 +338,19 @@ class TestNoiseModel:
                 eff_noise_opers=[matrices["I4"]],
                 eff_noise_rates=[1.0],
             )
+        id_nested_tuple = ((1.0, 0.0), (0.0, 1.0))
+        assert NoiseModel(
+            eff_noise_opers=[matrices["I"]],
+            eff_noise_rates=[1.0],
+        ).eff_noise_opers == (id_nested_tuple,)
+        assert NoiseModel(
+            eff_noise_opers=[matrices["I"].tolist()],
+            eff_noise_rates=[1.0],
+        ).eff_noise_opers == (id_nested_tuple, )
+        assert NoiseModel(
+            eff_noise_opers=[qutip.Qobj(matrices["I"])],
+            eff_noise_rates=[1.0],
+        ).eff_noise_opers == (id_nested_tuple,)
 
     def test_hf_detuning_noise_validation(self):
         # list - expected format
