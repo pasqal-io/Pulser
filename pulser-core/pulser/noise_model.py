@@ -730,8 +730,8 @@ class NoiseModel:
 
         def _repr_value_unit(value: Any, unit: str) -> str:
             if unit == "":
-                return f"{value}"
-            return f"{value} {unit}"
+                return f"{value:6g}"
+            return f"{value:6g} {unit}"
 
         _summary = "Noise summary:\n"
         noise_table = self.get_noise_table()
@@ -841,7 +841,7 @@ class NoiseModel:
                     + ":\n"
                 )
                 for rate, oper in noise_table["eff_noise"][0]:
-                    _summary += f"       - {rate} * {oper}\n"
+                    _summary += f"       - {rate:6g} * {oper}\n"
 
         # 5. Measurement noises
         if "p_false_pos" in noise_table or "p_false_neg" in noise_table:
