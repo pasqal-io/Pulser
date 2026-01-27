@@ -814,18 +814,20 @@ def test_noise_table_summary():
         + end_summary
     )
     # With leakage
-    new_oper = ((1.0, 0.0, 0.0), (0.0, -1.0, 2.0), (0.0, 2.0, 1.0))
+    new_oper_tuple = ((1.0, 0.0, 1 / 3), (0.0, -1.0, 2.0), (0.0, 2.0, 1.0))
+    new_oper = np.array(new_oper_tuple)  # with an array
     noise_model = dataclasses.replace(
         noise_model,
         with_leakage=True,
         eff_noise_opers=(new_oper,),
     )
-    noise_table["eff_noise"] = ([(1.0, new_oper)], "(1/µs, '')")
+    noise_table["eff_noise"] = ([(1.0, new_oper_tuple)], "(1/µs, '')")
     noise_table["with_leakage"] = (True, "")
     assert noise_model.get_noise_table() == noise_table
     summary += (
         "   - Custom Lindblad operators (in 1/µs) including a leakage state:\n"
-        "       - 1 * ((1.0, 0.0, 0.0), (0.0, -1.0, 2.0), (0.0, 2.0, 1.0))\n"
+        "       - 1 * ((1.0, 0.0, 0.333333), (0.0, -1.0, 2.0), (0.0, 2.0, 1.0)"
+        ")\n"
     )
     assert noise_model.summary() == summary + end_summary
     # Add measurement errors

@@ -852,7 +852,11 @@ class NoiseModel:
                     )
                 ]
                 for rate, oper in noise_table["eff_noise"][0]:
-                    summary_list += [f"       - {rate:g} * {oper}"]
+                    oper_str = tuple(
+                        tuple(float(f"{val:g}") for val in lines)
+                        for lines in oper
+                    )
+                    summary_list += [f"       - {rate:g} * {oper_str}"]
 
         # 5. Measurement noises
         if "p_false_pos" in noise_table or "p_false_neg" in noise_table:
