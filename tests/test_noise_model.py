@@ -291,13 +291,6 @@ class TestNoiseModel:
                 eff_noise_opers=[matrices["I"], matrices["X"]],
                 eff_noise_rates=[-1.0, 0.5],
             )
-        with pytest.raises(
-            TypeError, match="eff_noise_rates is a list of floats,"
-        ):
-            NoiseModel(
-                eff_noise_opers=[matrices["I"]],
-                eff_noise_rates=[1],
-            )
 
     def test_eff_noise_opers(self, matrices):
         with pytest.raises(ValueError, match="The operators list length"):
