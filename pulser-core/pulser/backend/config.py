@@ -132,8 +132,8 @@ class BackendConfig:
         cls_name = type(self).__name__
         raise AttributeError(
             f"{cls_name!r} is read-only. Please use "
-            f"'{cls_name}.with_changes()' to make a copy with the desired "
-            "changes."
+            f"'{cls_name}.with_changes({name}=...)' to make a copy with the "
+            "desired changes."
         )
 
 

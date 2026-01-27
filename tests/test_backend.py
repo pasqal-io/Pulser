@@ -490,6 +490,18 @@ def test_backend_config():
     ):
         BackendConfig(default_num_shots=0.1)
 
+    with pytest.raises(
+        AttributeError,
+        match=re.escape(
+            "'BackendConfig' is read-only. Please use "
+            "'BackendConfig.with_changes(default_num_shots=...)'"
+        ),
+    ):
+        config1.default_num_shots = 1
+
+    assert config1.default_num_shots is None
+    assert config1.with_changes(default_num_shots=1).default_num_shots == 1
+
 
 def test_emulation_config():
     with pytest.warns(
@@ -665,8 +677,20 @@ def test_emulation_config():
         == 40
     )
 
-    # I prefer_device_noise_model=False, defaults to 1
-    assert EmulationConfig(observables=(BitStrings(),)).n_trajectories == 1
+    # If prefer_device_noise_model=False, defaults to 1
+    config = EmulationConfig(observables=(BitStrings(),))
+    assert config.n_trajectories == 1
+
+    with pytest.raises(
+        AttributeError,
+        match=re.escape(
+            "'EmulationConfig' is read-only. Please use "
+            "'EmulationConfig.with_changes(n_trajectories=...)'"
+        ),
+    ):
+        config.n_trajectories = 10
+
+    assert config.with_changes(n_trajectories=10).n_trajectories == 10
 
 
 def test_results_aggregation():
