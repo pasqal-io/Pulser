@@ -494,7 +494,7 @@ class NoiseModel:
                 f"({len(eff_noise_rates)}) must be equal."
             )
         for rate in eff_noise_rates:
-            if not isinstance(rate, float):
+            if not (isinstance(rate, float) or isinstance(rate, int)):
                 raise TypeError(
                     "eff_noise_rates is a list of floats,"
                     f" it must not contain a {type(rate)}."

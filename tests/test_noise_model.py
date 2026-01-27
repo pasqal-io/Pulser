@@ -295,7 +295,7 @@ class TestNoiseModel:
             TypeError, match="eff_noise_rates is a list of floats,"
         ):
             NoiseModel(
-                eff_noise_opers=[matrices["I4"]],
+                eff_noise_opers=[matrices["I"]],
                 eff_noise_rates=[1],
             )
 
