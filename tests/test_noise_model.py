@@ -20,6 +20,7 @@ import warnings
 
 import numpy as np
 import pytest
+import qutip
 
 from pulser.noise_model import (
     _NOISE_TYPE_PARAMS,
@@ -331,6 +332,19 @@ class TestNoiseModel:
                 eff_noise_opers=[matrices["I4"]],
                 eff_noise_rates=[1.0],
             )
+        id_nested_tuple = ((1.0, 0.0), (0.0, 1.0))
+        assert NoiseModel(
+            eff_noise_opers=[matrices["I"]],
+            eff_noise_rates=[1.0],
+        ).eff_noise_opers == (id_nested_tuple,)
+        assert NoiseModel(
+            eff_noise_opers=[matrices["I"].tolist()],
+            eff_noise_rates=[1.0],
+        ).eff_noise_opers == (id_nested_tuple,)
+        assert NoiseModel(
+            eff_noise_opers=[qutip.Qobj(matrices["I"])],
+            eff_noise_rates=[1.0],
+        ).eff_noise_opers == (id_nested_tuple,)
 
     def test_hf_detuning_noise_validation(self):
         # list - expected format
