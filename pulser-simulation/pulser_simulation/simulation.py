@@ -825,6 +825,7 @@ class QutipEmulator:
         self._validate_options(options)
 
         if not _has_stochastic_noise(self.noise_model):
+            print("Emulating Trajectory 1/1")
             # A single run is needed, regardless of self.config.runs
             return self._run_solver(
                 self._current_hamiltonian,
@@ -872,8 +873,18 @@ class QutipEmulator:
     def _noisy_runs(
         self, progress_bar: bool, **options: Any
     ) -> Iterator[tuple[SimulationResults, int]]:
-        for ham, reps in self._hamiltonians:
+        n_trajectories = self.n_trajectories
+        traj_nb = 0
+        for i, (ham, reps) in enumerate(self._hamiltonians):
+            if reps == 1:
+                print(f"Emulating Trajectory {traj_nb+1}/{n_trajectories}")
+            else:
+                print(
+                    f"Emulating Trajectories [{traj_nb+1} - {traj_nb+reps}]"
+                    f"/{n_trajectories}"
+                )
             self._current_hamiltonian = ham
+            traj_nb += reps
             # Yield CoherentResults instance from sequence with added noise:
             yield self._run_solver(ham, progress_bar, **options), reps
 

@@ -67,6 +67,8 @@ class QutipConfig(EmulationConfig[QutipState]):
 
             - ``Solver.MESOLVER``: use the master-equation
               solver ``qutip.mesolve``.
+        progress_bar: Whether or not to display the progress of the run
+            of a trajectory inside qutip.
 
     See Also:
         EmulationConfig: The base configuration class for an EmulatorBackend.
@@ -83,6 +85,7 @@ class QutipConfig(EmulationConfig[QutipState]):
         *,
         sampling_rate: float = 1.0,
         solver: Solver = Solver.DEFAULT,
+        progress_bar: bool = False,
         **backend_options: Any,
     ):
         """Initializes a QutipConfig."""
@@ -114,11 +117,16 @@ class QutipConfig(EmulationConfig[QutipState]):
         super().__init__(
             sampling_rate=sampling_rate,
             solver=solver,
+            progress_bar=progress_bar,
             **backend_options,
         )
 
     def _expected_kwargs(self) -> set[str]:
-        return super()._expected_kwargs() | {"sampling_rate", "solver"}
+        return super()._expected_kwargs() | {
+            "sampling_rate",
+            "solver",
+            "progress_bar",
+        }
 
     def _get_sampling_indices(self, total_duration_ns: int) -> np.ndarray:
         """Calculates the indices at which samples are taken."""
