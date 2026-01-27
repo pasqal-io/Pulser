@@ -82,3 +82,14 @@ def test_initial_state():
 def test_preferred_types():
     assert QutipConfig.state_type is QutipState
     assert QutipConfig.operator_type is QutipOperator
+
+
+def test_progress_bar():
+    config = QutipConfig(
+        observables=[
+            StateResult(evaluation_times=[1.0]),
+        ],
+        progress_bar=True,
+    )
+    assert config.progress_bar
+    assert "progress_bar" in config._expected_kwargs()
