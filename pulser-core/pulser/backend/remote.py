@@ -23,6 +23,7 @@ from types import TracebackType
 from typing import Any, Mapping, Type, TypedDict
 
 from pulser.backend.abc import Backend
+from pulser.backend.config import BackendConfig
 from pulser.backend.results import Results, ResultsSequence
 from pulser.devices import Device
 from pulser.sequence import Sequence
@@ -310,6 +311,7 @@ class RemoteBackend(Backend):
             are executed.
         mimic_qpu: Whether to mimic the validations necessary for
             execution on a QPU.
+        config: An optional backend configuration.
     """
 
     def __init__(
@@ -317,6 +319,8 @@ class RemoteBackend(Backend):
         sequence: Sequence,
         connection: RemoteConnection,
         mimic_qpu: bool = False,
+        *,
+        config: BackendConfig | None = None,
     ) -> None:
         """Starts a new remote backend instance."""
         super().__init__(sequence, mimic_qpu=mimic_qpu)
@@ -325,6 +329,13 @@ class RemoteBackend(Backend):
                 "'connection' must be a valid RemoteConnection instance."
             )
         self._connection = connection
+        config = config if config is not None else BackendConfig()
+        if not isinstance(config, BackendConfig):
+            raise TypeError(
+                "When given, a 'config' must be an instance of "
+                f"'BackendConfig'; got {type(config)!r} instead."
+            )
+        self._config = config
         self._batch_id: str | None = None
 
     def run(

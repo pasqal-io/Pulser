@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from pulser import Sequence
+from pulser.backend.config import BackendConfig
 from pulser.backend.remote import (
     JobParams,
     RemoteBackend,
@@ -31,13 +32,19 @@ class QPUBackend(RemoteBackend):
             backend accessible via a remote connection.
         connection: The remote connection through which the jobs
             are executed.
+        config: An optional backend configuration. For a QPU, it can be used
+            to define a `default_num_shots`.
     """
 
     def __init__(
-        self, sequence: Sequence, connection: RemoteConnection
+        self,
+        sequence: Sequence,
+        connection: RemoteConnection,
+        *,
+        config: BackendConfig | None = None,
     ) -> None:
         """Starts a new QPU backend instance."""
-        super().__init__(sequence, connection, mimic_qpu=True)
+        super().__init__(sequence, connection, mimic_qpu=True, config=config)
 
     def run(
         self, job_params: list[JobParams] | None = None, wait: bool = False
@@ -45,12 +52,15 @@ class QPUBackend(RemoteBackend):
         """Runs the sequence on the remote QPU and returns the result.
 
         Args:
-            job_params: A list of parameters for each job to execute. Each
-                mapping must contain a defined 'runs' field specifying
-                the number of times to run the same sequence. If the sequence
-                is parametrized, the values for all the variables necessary
-                to build the sequence must be given in it's own mapping, for
-                each job, under the 'variables' field.
+            job_params: A list of dictionaries with the parameters to execute
+                each job. If not given, the backend will attempt to run one
+                job with 'BackendConfig.default_num_shots'.
+                If the sequence is parametrized, the values for all the
+                variables necessary to build the sequence must be given in
+                it's own dictionary, for each job, under the 'variables' field.
+                Each dictionary may contain a custom 'runs' field specifying
+                the number of shots to take of the same sequence; if not given,
+                'BackendConfig.default_num_shots' is used when available.
             wait: Whether to wait until the results of the jobs become
                 available.  If set to False, the call is non-blocking and the
                 obtained results' status can be checked using their `status`
@@ -60,5 +70,18 @@ class QPUBackend(RemoteBackend):
             The results, which can be accessed once all sequences have been
             successfully executed.
         """
-        self.validate_job_params(job_params, self._sequence.device.max_runs)
+        if self._config.default_num_shots is not None:
+            # Use default_num_shots when runs is not defined
+            if job_params is None:
+                job_params = {"runs": self._config.default_num_shots}
+            else:
+                # Make sure job_params format is correct first
+                self._type_check_job_params(job_params)
+                job_params = [
+                    # If runs is not defined in d, uses default_num_shots
+                    {"runs": self._config_default_num_shots} | d
+                    for d in job_params
+                ]
+        # super().run() includes call to `validate_job_params` since
+        # _mimic_qpu = True
         return super().run(job_params, wait)
