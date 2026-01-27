@@ -73,3 +73,14 @@ def test_initial_state():
             ],
             initial_state="all-ground",
         )
+
+
+def test_progress_bar():
+    config = QutipConfig(
+        observables=[
+            StateResult(evaluation_times=[1.0]),
+        ],
+        progress_bar=True,
+    )
+    assert config.progress_bar
+    assert "progress_bar" in config._expected_kwargs()

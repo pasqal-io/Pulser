@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import json
 import re
@@ -469,15 +470,25 @@ def test_backend_config():
     config1 = BackendConfig()
     with pytest.raises(AttributeError, match="'dt' has not been passed"):
         config1.dt
+    assert config1.default_num_shots is None
 
     with pytest.warns(
         DeprecationWarning,
         match="The 'backend_options' argument of 'BackendConfig' has been "
         "deprecated",
     ):
-        config2 = BackendConfig(backend_options={"dt": 10})
+        config2 = BackendConfig(
+            default_num_shots=1, backend_options={"dt": 10}
+        )
         assert config2.backend_options["dt"] == 10
         assert config2.dt == 10
+        assert config2.default_num_shots == 1
+
+    with pytest.raises(
+        ValueError,
+        match="'default_num_shots' must be greater than or equal to 1",
+    ):
+        BackendConfig(default_num_shots=0.1)
 
 
 def test_emulation_config():
@@ -897,7 +908,7 @@ def test_results():
     ):
         assert res.get_result_times("bitstrings")
 
-    obs = BitStrings(tag_suffix="test")
+    obs = BitStrings(num_shots=100, tag_suffix="test")
     with pytest.raises(
         ValueError,
         match=f"'bitstrings_test:{obs.uuid}' has not been stored",
@@ -905,7 +916,7 @@ def test_results():
         assert res.get_result(obs, 1.0)
 
     obs(
-        config=EmulationConfig(observables=(BitStrings(),)),
+        config=EmulationConfig(observables=(obs,)),
         t=1.0,
         state=QutipState.from_state_amplitudes(
             eigenstates=("r", "g"), amplitudes={"rrr": 1.0}
@@ -1085,7 +1096,7 @@ class TestObservables:
     @pytest.mark.parametrize("p_false_pos", [0, 0.4])
     @pytest.mark.parametrize("p_false_neg", [0, 0.3])
     @pytest.mark.parametrize("one_state", [0, "g"])
-    @pytest.mark.parametrize("num_shots", [0, 100])
+    @pytest.mark.parametrize("num_shots", [None, 100])
     def test_bitstrings(
         self,
         config: EmulationConfig,
@@ -1100,17 +1111,35 @@ class TestObservables:
         kwargs = {}
         if num_shots:
             kwargs["num_shots"] = num_shots
-        obs = BitStrings(one_state=one_state, **kwargs)
+        obs = BitStrings(
+            one_state=one_state,
+            **kwargs,
+        )
+        context_manager = (
+            pytest.raises(
+                RuntimeWarning,
+                match="The default value of `BitStrings.num_shots` was "
+                "changed from 1000 to None in Pulser v1.7",
+            )
+            if num_shots is None
+            else contextlib.nullcontext()
+        )
+        with context_manager:
+            assert obs.num_shots == num_shots
         assert obs.tag == "bitstrings"
         noise_model = pulser.NoiseModel(
             p_false_pos=p_false_pos, p_false_neg=p_false_neg
         )
-        config = config.with_changes(noise_model=noise_model)
+        config = config.with_changes(
+            noise_model=noise_model,
+            # Different than the BitStrings default on purpose
+            default_num_shots=2000,
+        )
         assert config.noise_model.noise_types == (
             ("SPAM",) if p_false_pos or p_false_neg else ()
         )
         np.random.seed(123)
-        expected_shots = num_shots or obs.num_shots
+        expected_shots = num_shots or config.default_num_shots
         expected_counts = ghz_state.sample(
             num_shots=expected_shots,
             one_state=one_state or ghz_state.infer_one_state(),

@@ -54,13 +54,26 @@ Self = TypeVar("Self", bound="BackendConfig")
 
 
 class BackendConfig:
-    """The base backend configuration."""
+    """The base backend configuration.
 
+    Args:
+        default_num_shots: The default number of shots for the backend. Must
+            be a strictly positive integer.
+
+    Note:
+        Additional parameters may be provided. It is up to the backend that
+        receives a configuration with extra parameters to assess whether it
+        recognizes them and how it will use them.
+    """
+
+    default_num_shots: int | None
     _backend_options: dict[str, Any]
     # Whether to error if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = True
 
-    def __init__(self, **backend_options: Any) -> None:
+    def __init__(
+        self, *, default_num_shots: int | None = None, **backend_options: Any
+    ) -> None:
         """Initializes the backend config."""
         cls_name = self.__class__.__name__
         if self._enforce_expected_kwargs and (
@@ -88,6 +101,16 @@ class BackendConfig:
                     stacklevel=2,
                 )
             self._backend_options.update(backend_options["backend_options"])
+
+        if default_num_shots is not None:
+            if default_num_shots < 1:
+                raise ValueError(
+                    "'default_num_shots' must be greater than or equal to 1, "
+                    f"not {default_num_shots}."
+                )
+            default_num_shots = int(default_num_shots)
+        # Store in _backend_options together with all the other paramters
+        self._backend_options["default_num_shots"] = default_num_shots
 
     def with_changes(self: Self, **changes: Any) -> Self:
         """Returns a copy of the config with the given changes."""
@@ -157,6 +180,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
 
             (2) If 'prefer_device_noise_model=True', **defaults to 40**
             trajectories.
+        default_num_shots: The default number of shots for ``BitStrings``, used
+            whenever the observable doesn't define its own. Defaults to 1000.
 
     Note:
         Additional parameters may be provided. It is up to the emulation
@@ -176,6 +201,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     prefer_device_noise_model: bool
     noise_model: NoiseModel
     n_trajectories: int
+    default_num_shots: int
     # Whether to error if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = False
 
@@ -197,6 +223,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         prefer_device_noise_model: bool = False,
         noise_model: NoiseModel | None = None,
         n_trajectories: int | None = None,
+        default_num_shots: int = 1000,
         **backend_options: Any,
     ) -> None:
         """Initializes the EmulationConfig."""
@@ -320,6 +347,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             prefer_device_noise_model=bool(prefer_device_noise_model),
             noise_model=noise_model,
             n_trajectories=int(n_trajectories),
+            default_num_shots=int(default_num_shots),
             **backend_options,
         )
 
@@ -370,7 +398,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         """Deserialize an EmulationConfig from an abstract JSON object.
 
         Args:
-            obj_str (str): the JSON string representing the sequence encoded
+            obj_str (str): The JSON string representing the config encoded
                 in the abstract JSON format.
 
         Returns:
