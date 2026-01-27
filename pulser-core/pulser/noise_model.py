@@ -655,7 +655,11 @@ class NoiseModel:
         relevant_params.add("noise_types")
         params_list = []
         for f in fields(self):
-            if f.name in relevant_params:
+            if (
+                f.name in relevant_params
+                and f.name != "runs"
+                and f.name != "samples_per_run"
+            ):
                 params_list.append(f"{f.name}={getattr(self, f.name)!r}")
         return f"{self.__class__.__name__}({', '.join(params_list)})"
 

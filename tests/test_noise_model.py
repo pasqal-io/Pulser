@@ -556,8 +556,7 @@ class TestNoiseModel:
         )
         assert (
             repr(NoiseModel(amp_sigma=0.3, runs=100, samples_per_run=1))
-            == "NoiseModel(noise_types=('amplitude',), "
-            "runs=100, samples_per_run=1, amp_sigma=0.3)"
+            == "NoiseModel(noise_types=('amplitude',), amp_sigma=0.3)"
         )
         assert (
             repr(NoiseModel(laser_waist=100.0))
@@ -589,9 +588,8 @@ class TestNoiseModel:
                     samples_per_run=1,
                 )
             )
-            == "NoiseModel(noise_types=('doppler', 'register'), runs=1, "
-            "samples_per_run=1, temperature=15.0, trap_waist=1.0, "
-            "trap_depth=150.0)"
+            == "NoiseModel(noise_types=('doppler', 'register'), "
+            "temperature=15.0, trap_waist=1.0, trap_depth=150.0)"
         )
         assert (
             repr(
@@ -604,9 +602,8 @@ class TestNoiseModel:
                     disable_doppler=True,
                 )
             )
-            == "NoiseModel(noise_types=('register',), runs=None, "
-            "samples_per_run=1, temperature=15.0, trap_waist=1.0, "
-            "trap_depth=150.0)"
+            == "NoiseModel(noise_types=('register',), "
+            "temperature=15.0, trap_waist=1.0, trap_depth=150.0)"
         )
 
 
