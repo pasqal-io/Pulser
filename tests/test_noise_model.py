@@ -346,7 +346,7 @@ class TestNoiseModel:
         assert NoiseModel(
             eff_noise_opers=[matrices["I"].tolist()],
             eff_noise_rates=[1.0],
-        ).eff_noise_opers == (id_nested_tuple, )
+        ).eff_noise_opers == (id_nested_tuple,)
         assert NoiseModel(
             eff_noise_opers=[qutip.Qobj(matrices["I"])],
             eff_noise_rates=[1.0],
