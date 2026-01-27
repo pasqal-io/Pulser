@@ -261,6 +261,14 @@ class NoiseModel:
         """Initializes a noise model."""
 
         def to_tuple(obj: tuple) -> tuple:
+            try:
+                # Transform qutip.Qobj objects into np.ndarray
+                obj = np.array(
+                    obj.to("Dense").data_as("ndarray"),  # type: ignore
+                    dtype=complex,
+                )
+            except AttributeError:
+                pass
             if isinstance(obj, (tuple, list, np.ndarray)):
                 obj = tuple(to_tuple(el) for el in obj)
             return obj
