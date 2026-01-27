@@ -673,8 +673,8 @@ def test_noise_table_summary():
     summary = (
         "Noise summary:\n"
         + "- Register Position Fluctuations**:\n"
-        + "  - XY-Plane Position Fluctuations: 0.0015811388300841897 µm\n"
-        + "  - Z-Axis Position Fluctuations: 0.008264487918871443 µm\n"
+        + "  - XY-Plane Position Fluctuations: 0.00158114 µm\n"
+        + "  - Z-Axis Position Fluctuations: 0.00826449 µm\n"
     )
     end_summary = (
         "**: Emulation will generate EmulationConfig.n_trajectories"
@@ -689,9 +689,7 @@ def test_noise_table_summary():
         "- Detuning fluctuations**:\n"
         + "  - Shot-to-Shot Detuning fluctuations:\n"
     )
-    doppler_summary = (
-        "       - Doppler fluctuations: 0.2683952309561405 rad/µs\n"
-    )
+    doppler_summary = "       - Doppler fluctuations: 0.268395 rad/µs\n"
     assert (
         noise_model.summary()
         == summary
@@ -707,8 +705,7 @@ def test_noise_table_summary():
     noise_table["detuning_sigma"] = (1.0, "rad/µs")
     assert noise_model.get_noise_table() == noise_table
     detuning_summary += (
-        "       - Laser's Detuning fluctuations: 1.0 rad/µs\n"
-        + doppler_summary
+        "       - Laser's Detuning fluctuations: 1 rad/µs\n" + doppler_summary
     )
     assert (
         noise_model.summary()
@@ -734,7 +731,7 @@ def test_noise_table_summary():
     summary += (
         "- Amplitude fluctuations:\n"
         + "  - Finite-waist Gaussian damping σ=100 µm\n"
-        + "  - Shot-to-shot Amplitude Fluctuations**: 10.0 % Amplitude\n"
+        + "  - Shot-to-shot Amplitude Fluctuations**: 10 % Amplitude\n"
         + detuning_summary
     )
     end_summary += ", amplitude, detuning"
@@ -761,9 +758,9 @@ def test_noise_table_summary():
     noise_table["T2* (r-g)"] = (2.0, "µs")
     assert noise_model.get_noise_table() == noise_table
     summary += (
-        "- Dissipation parameters: \n"
-        + "   - T1: 10.0 µs\n"
-        + "   - T2* (r-g): 2.0 µs\n"
+        "- Dissipation parameters:\n"
+        + "   - T1: 10 µs\n"
+        + "   - T2* (r-g): 2 µs\n"
     )
     assert noise_model.summary() == summary + end_summary
     # Include hyperfine dephasing rate
@@ -772,7 +769,7 @@ def test_noise_table_summary():
     )
     noise_table["T2* (g-h)"] = (4.0, "µs")
     assert noise_model.get_noise_table() == noise_table
-    summary += "   - T2* (g-h): 4.0 µs\n"
+    summary += "   - T2* (g-h): 4 µs\n"
     assert noise_model.summary() == summary + end_summary
     # Include depolarizing rate
     noise_model = dataclasses.replace(noise_model, depolarizing_rate=0.2)
@@ -799,7 +796,7 @@ def test_noise_table_summary():
         noise_model.summary()
         == summary
         + "   - Custom Lindblad operators (in 1/µs):\n"
-        + "       - 1.0 * ((1.0, 0.0), (0.0, -1.0))\n"
+        + "       - 1 * ((1.0, 0.0), (0.0, -1.0))\n"
         + end_summary
     )
     # With leakage
@@ -814,7 +811,7 @@ def test_noise_table_summary():
     assert noise_model.get_noise_table() == noise_table
     summary += (
         "   - Custom Lindblad operators (in 1/µs) including a leakage state:\n"
-        "       - 1.0 * ((1.0, 0.0, 0.0), (0.0, -1.0, 2.0), (0.0, 2.0, 1.0))\n"
+        "       - 1 * ((1.0, 0.0, 0.0), (0.0, -1.0, 2.0), (0.0, 2.0, 1.0))\n"
     )
     assert noise_model.summary() == summary + end_summary
     # Add measurement errors
@@ -835,7 +832,5 @@ def test_noise_table_summary():
     assert noise_model.get_noise_table() == {"T1": (5.0, "µs")}
     assert (
         noise_model.summary()
-        == "Noise summary:\n"
-        + "- Dissipation parameters: \n"
-        + "   - T1: 5.0 µs\n"
+        == "Noise summary:\n- Dissipation parameters:\n   - T1: 5 µs"
     )
