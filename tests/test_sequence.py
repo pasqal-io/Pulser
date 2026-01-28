@@ -1182,7 +1182,8 @@ def test_switch_device_eom(
     )
     seq.enable_eom_mode("rydberg", amp_on=2.0, detuning_on=0.0)
     seq.add_eom_pulse("rydberg", 100, 0.0)
-    seq.delay(200, "rydberg")
+    # Enforce influence of the EOMs mod_bandwidth via the phase jump time
+    seq.add_eom_pulse("rydberg", 100, 1.0)
     assert seq.is_in_eom_mode("rydberg")
 
     err_base = "No match for channel rydberg "
@@ -1246,10 +1247,12 @@ def test_switch_device_eom(
         ):
             seq.with_new_device(wrong_analog, strict=True)
     else:
-        # Can't switch to eom if the modulation bandwidth doesn't match
+        # Can't switch because the modulation bandwidth doesn't match
+        # so the interval between the EOM pulses is different
         with pytest.raises(
             ValueError,
-            match=err_base + "with the same mod_bandwidth for the EOM.",
+            match="Changing the device produced a sequence with different"
+            " samples for channel 'rydberg'",
         ):
             seq.with_new_device(wrong_analog, strict=True)
     # Can if one Channel has a correct EOM configuration
@@ -1317,7 +1320,8 @@ def test_switch_device_eom(
         if extension_arg in ["control", "2control"]:
             with helpers.raises_all(
                 [ValueError, SwitchDeviceError],
-                match="No match for channel rydberg with an EOM configuration",
+                match="Changing the device produced a sequence with different"
+                " samples for channel 'rydberg'",
             ):
                 seq.with_new_device(up_analog, strict=True)
             return
@@ -1361,9 +1365,9 @@ def test_switch_device_eom(
         "No matching found between declared channels and channels in "
         "the new device that does not modify the samples of the "
         "Sequence. Here is a list of matchings tested and their "
-        "associated errors: {(('rydberg', 'rydberg_global'),): 'No "
-        "match for channel rydberg with an EOM configuration that "
-        "does not change the samples."
+        "associated errors: {(('rydberg', 'rydberg_global'),): \""
+        "Changing the device produced a sequence with different"
+        " samples for channel 'rydberg'"
     )
     if parametrized:
         with helpers.raises_all(
