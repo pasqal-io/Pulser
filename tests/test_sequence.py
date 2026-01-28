@@ -71,14 +71,6 @@ def device():
     )
 
 
-def _eom_detuning_on_dict(max_abs_detuning: float) -> dict[str, float]:
-    """A dict of detuning_on possibilities in EOM mode."""
-    return {"NULL": 0, "MAX": -max_abs_detuning}
-
-
-EOM_DETUNING_ON_CHOICES: list[str] = list(_eom_detuning_on_dict(0))
-
-
 def test_init(reg, device):
     with pytest.raises(TypeError, match="must be of type 'BaseDevice'"):
         Sequence(reg, Device)
@@ -1163,7 +1155,12 @@ extended_eom_device = dataclasses.replace(
 )
 
 
-@pytest.mark.parametrize("detuning_on_str", EOM_DETUNING_ON_CHOICES)
+def _eom_detuning_on_dict(max_abs_detuning: float) -> dict[str, float]:
+    """A dict of detuning_on possibilities in EOM mode."""
+    return {"NULL": 0, "MAX": -max_abs_detuning}
+
+
+@pytest.mark.parametrize("detuning_on_str", ["NULL", "MAX"])
 @pytest.mark.parametrize("device", [AnalogDevice, extended_eom_device])
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
@@ -1641,11 +1638,6 @@ def test_delay_at_rest(in_eom, at_rest, delay_duration):
     if in_eom:
         seq.enable_eom_mode("ryd", amp, det, 0)
         seq.add_eom_pulse("ryd", pulse.duration, 0)
-        assert len(seq._schedule["ryd"].eom_blocks) == 1
-        assert seq._schedule["ryd"].eom_blocks[0].detuning_on == det
-        assert (
-            det_off := seq._schedule["ryd"].eom_blocks[0].detuning_off
-        ) < det
     else:
         seq.add(pulse, "ryd")
     assert (extra_delay := pulse.fall_time(ch_obj, in_eom_mode=in_eom)) > 0
@@ -1659,6 +1651,14 @@ def test_delay_at_rest(in_eom, at_rest, delay_duration):
         assert seq._schedule["ryd"][-1].type == pulse
         return
     if in_eom:
+        # Check created EOM block
+        assert len(seq._schedule["ryd"].eom_blocks) == 1
+        assert seq._schedule["ryd"].eom_blocks[0].detuning_on == det
+        # detuning off is below -max_abs_det
+        assert (
+            det_off := seq._schedule["ryd"].eom_blocks[0].detuning_off
+        ) < det
+        # Delays are added as detuned delay with detuning=detuning_off
         off_pulse = Pulse.ConstantPulse(
             max(delay_duration, adjusted_extra_delay), 0, det_off, 0
         )
@@ -1668,6 +1668,7 @@ def test_delay_at_rest(in_eom, at_rest, delay_duration):
                 adjusted_extra_delay, 0, det_off, 0
             )
     else:
+        # Delays are added as slots of type "delay"
         assert seq._schedule["ryd"][-1].type == "delay"
         if delay_duration > 0 and at_rest:
             assert seq._schedule["ryd"][-2].type == "delay"
@@ -1836,7 +1837,7 @@ def test_block_if_measured(reg, call, args):
         getattr(seq, call)(*args)
 
 
-@pytest.mark.parametrize("detuning_on_str", EOM_DETUNING_ON_CHOICES)
+@pytest.mark.parametrize("detuning_on_str", ["NULL", "MAX"])
 def test_str(reg, device, mod_device, det_map, detuning_on_str):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
@@ -2798,7 +2799,7 @@ def test_multiple_index_targets(reg):
     assert built_seq._last("ch0").targets == {"q2", "q3"}
 
 
-@pytest.mark.parametrize("detuning_on_str", EOM_DETUNING_ON_CHOICES)
+@pytest.mark.parametrize("detuning_on_str", ["NULL", "MAX"])
 @pytest.mark.parametrize("custom_phase_jump_time", (None, 0))
 @pytest.mark.parametrize("check_wait_for_fall", (True, False))
 @pytest.mark.parametrize("correct_phase_drift", (True, False))
@@ -3042,7 +3043,7 @@ def test_eom_buffer(
 @pytest.mark.parametrize("correct_phase_drift", [True, False])
 @pytest.mark.parametrize("amp_diff", [0, -0.5, 0.5])
 @pytest.mark.parametrize("det_diff", [0, -5, 10])
-@pytest.mark.parametrize("detuning_on_str", EOM_DETUNING_ON_CHOICES)
+@pytest.mark.parametrize("detuning_on_str", ["NULL", "MAX"])
 def test_modify_eom_setpoint(
     reg, mod_device, amp_diff, det_diff, correct_phase_drift, detuning_on_str
 ):
@@ -3073,14 +3074,18 @@ def test_modify_eom_setpoint(
     detuning_on_match = _eom_detuning_on_dict(ryd_ch_obj.max_abs_detuning)
     detuning_on = detuning_on_match[detuning_on_str]
     param_vals = [1.0, detuning_on]
-    if detuning_on + det_diff < -ryd_ch_obj.max_abs_detuning:
+    if (det_diff, detuning_on_str) == (-5, "MAX"):
+        # Build errors because detuning on is below -max_abs_detuning
+        assert detuning_on + det_diff < -ryd_ch_obj.max_abs_detuning
         with pytest.raises(
             ValueError, match="The pulse's detuning values go out of the range"
         ):
             seq.build(params=param_vals)
         # Nothing else to check
         return
-    built_seq = seq.build(params=param_vals)
+    # Detuning on is greater than -max_abs_detuning
+    assert detuning_on + det_diff >= -ryd_ch_obj.max_abs_detuning
+    built_seq = seq.build(params=param_vals)  # Sequence can be built
     expected_duration = 4 * dt + eom_buffer_dt
     assert built_seq.get_duration() == expected_duration
 

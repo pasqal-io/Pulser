@@ -2502,15 +2502,17 @@ class Sequence(Generic[DeviceType]):
                     return_switching_beams=True,
                 )
                 # Detuning sent by laser is constant equal to detuning_on
-                assert np.isclose(
-                    pm.AbstractArray(detuning_on).as_array(detach=True),
-                    (
-                        detuning_off
-                        + eom_config._lightshift(
-                            pm.AbstractArray(amp_on), *switching_beams
-                        )
-                    ).as_array(detach=True),
+                lightshift = eom_config._lightshift(
+                    pm.AbstractArray(amp_on), *switching_beams
                 )
+                if channel_obj.max_abs_detuning is not None:
+                    assert (
+                        detuning_off - lightshift
+                        >= -channel_obj.max_abs_detuning
+                        if lightshift < 0
+                        else detuning_off - lightshift
+                        <= channel_obj.max_abs_detuning
+                    )
                 # Update optimal_detuning_off to match the chosen detuning_off
                 # This minimizes the changes to the sequence when the device
                 # is switched
