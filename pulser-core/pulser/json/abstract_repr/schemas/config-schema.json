@@ -447,14 +447,14 @@
             },
             "evaluation_times": {
                 "$ref": "#/evaluation_times"
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": [
+                    "string",
+                    "null"
+                ]
             }
-        },
-        "tag_suffix": {
-            "description": "added to base_tag to distinguish different instances",
-            "type": [
-                "string",
-                "null"
-            ]
         },
         "required": [
             "observable",
