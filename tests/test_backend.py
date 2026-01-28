@@ -691,6 +691,8 @@ def test_emulation_config():
         config.n_trajectories = 10
 
     assert config.with_changes(n_trajectories=10).n_trajectories == 10
+    # The config stayed the same
+    assert config.n_trajectories == 1
 
 
 def test_results_aggregation():
