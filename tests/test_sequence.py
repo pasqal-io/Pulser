@@ -1155,6 +1155,12 @@ extended_eom_device = dataclasses.replace(
 )
 
 
+def _eom_detuning_on_dict(max_abs_detuning: float) -> dict[str, float]:
+    """A dict of detuning_on possibilities in EOM mode."""
+    return {"NULL": 0, "MAX": -max_abs_detuning}
+
+
+@pytest.mark.parametrize("detuning_on_str", ["NULL", "MAX"])
 @pytest.mark.parametrize("device", [AnalogDevice, extended_eom_device])
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
@@ -1164,6 +1170,7 @@ extended_eom_device = dataclasses.replace(
 def test_switch_device_eom(
     helpers,
     reg,
+    detuning_on_str,
     device,
     mappable_reg,
     parametrized,
@@ -1180,7 +1187,16 @@ def test_switch_device_eom(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    seq.enable_eom_mode("rydberg", amp_on=2.0, detuning_on=0.0)
+    detuning_on_match = _eom_detuning_on_dict(
+        seq.declared_channels["rydberg"].max_abs_detuning
+    )
+    detuning_on = detuning_on_match[detuning_on_str]
+    seq.enable_eom_mode(
+        "rydberg",
+        amp_on=2.0,
+        detuning_on=detuning_on,
+        optimal_detuning_off=detuning_on,
+    )
     seq.add_eom_pulse("rydberg", 100, 0.0)
     seq.delay(200, "rydberg")
     assert seq.is_in_eom_mode("rydberg")
@@ -1615,17 +1631,50 @@ def test_delay_at_rest(in_eom, at_rest, delay_duration):
     seq = Sequence(Register.square(2, 5, prefix="q"), AnalogDevice)
     seq.declare_channel("ryd", "rydberg_global")
     assert (ch_obj := seq.declared_channels["ryd"]).mod_bandwidth is not None
-    pulse = Pulse.ConstantPulse(100, 1, 0, 0)
+    amp = 1
+    det = -seq.declared_channels["ryd"].max_abs_detuning
+    pulse = Pulse.ConstantPulse(100, amp, det, 0)
     assert pulse.duration == 100
     if in_eom:
-        seq.enable_eom_mode("ryd", 1, 0, 0)
+        seq.enable_eom_mode("ryd", amp, det, 0)
         seq.add_eom_pulse("ryd", pulse.duration, 0)
     else:
         seq.add(pulse, "ryd")
     assert (extra_delay := pulse.fall_time(ch_obj, in_eom_mode=in_eom)) > 0
+    adjusted_extra_delay = seq._schedule["ryd"].adjust_duration(extra_delay)
     seq.delay(delay_duration, "ryd", at_rest=at_rest)
-    assert seq.get_duration() == pulse.duration + delay_duration + (
-        seq._schedule["ryd"].adjust_duration(extra_delay) * at_rest
+    assert (
+        seq.get_duration()
+        == pulse.duration + delay_duration + adjusted_extra_delay * at_rest
+    )
+    if delay_duration == 0 and not at_rest:
+        assert seq._schedule["ryd"][-1].type == pulse
+        return
+    if in_eom:
+        # Check created EOM block
+        assert len(seq._schedule["ryd"].eom_blocks) == 1
+        assert seq._schedule["ryd"].eom_blocks[0].detuning_on == det
+        # detuning off is below -max_abs_det
+        assert (
+            det_off := seq._schedule["ryd"].eom_blocks[0].detuning_off
+        ) < det
+        # Delays are added as detuned delay with detuning=detuning_off
+        off_pulse = Pulse.ConstantPulse(
+            max(delay_duration, adjusted_extra_delay), 0, det_off, 0
+        )
+        assert seq._schedule["ryd"][-1].type == off_pulse
+        if delay_duration > 0 and at_rest:
+            assert seq._schedule["ryd"][-2].type == Pulse.ConstantPulse(
+                adjusted_extra_delay, 0, det_off, 0
+            )
+    else:
+        # Delays are added as slots of type "delay"
+        assert seq._schedule["ryd"][-1].type == "delay"
+        if delay_duration > 0 and at_rest:
+            assert seq._schedule["ryd"][-2].type == "delay"
+    assert (
+        seq._schedule["ryd"][-3 if delay_duration > 0 and at_rest else -2].type
+        == pulse
     )
 
 
@@ -1788,7 +1837,8 @@ def test_block_if_measured(reg, call, args):
         getattr(seq, call)(*args)
 
 
-def test_str(reg, device, mod_device, det_map):
+@pytest.mark.parametrize("detuning_on_str", ["NULL", "MAX"])
+def test_str(reg, device, mod_device, det_map, detuning_on_str):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     pulse = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
@@ -1797,7 +1847,11 @@ def test_str(reg, device, mod_device, det_map):
     seq.target("q7", "ch0")
 
     seq.declare_channel("ch1", "rydberg_global")
-    seq.enable_eom_mode("ch1", 2, 0, optimal_detuning_off=10.0)
+    detuning_on_match = _eom_detuning_on_dict(
+        seq.declared_channels["ch1"].max_abs_detuning
+    )
+    detuning_on = detuning_on_match[detuning_on_str]
+    seq.enable_eom_mode("ch1", 2, detuning_on, optimal_detuning_off=10.0)
     seq.add_eom_pulse("ch1", duration=100, phase=0, protocol="no-delay")
     seq.delay(500, "ch1")
 
@@ -1816,9 +1870,11 @@ def test_str(reg, device, mod_device, det_map):
     msg_ch1 = (
         f"\n\nChannel: ch1\nt: 0 | Initial targets: {targets} "
         "| Phase Reference: 0.0 "
-        "\nt: 0->100 | Pulse(Amp=2 rad/µs, Detuning=0 rad/µs, Phase=0) "
+        "\nt: 0->100 | Pulse(Amp=2 rad/µs, Detuning="
+        f"{detuning_on:.3g} rad/µs, Phase=0) "
         f"| Targets: {targets}"
-        "\nt: 100->600 | Detuned Delay | Detuning: -1 rad/µs"
+        "\nt: 100->600 | Detuned Delay | Detuning: "
+        f"{(detuning_on-1):.3g} rad/µs"
     )
 
     msg_det_map = (
@@ -2743,6 +2799,7 @@ def test_multiple_index_targets(reg):
     assert built_seq._last("ch0").targets == {"q2", "q3"}
 
 
+@pytest.mark.parametrize("detuning_on_str", ["NULL", "MAX"])
 @pytest.mark.parametrize("custom_phase_jump_time", (None, 0))
 @pytest.mark.parametrize("check_wait_for_fall", (True, False))
 @pytest.mark.parametrize("correct_phase_drift", (True, False))
@@ -2750,6 +2807,7 @@ def test_multiple_index_targets(reg):
 def test_eom_mode(
     reg,
     mod_device,
+    detuning_on_str,
     custom_buffer_time,
     correct_phase_drift,
     check_wait_for_fall,
@@ -2776,7 +2834,8 @@ def test_eom_mode(
     assert not seq.is_in_eom_mode("ch0")
 
     amp_on = 1.0
-    detuning_on = 0.0
+    detuning_on_match = _eom_detuning_on_dict(ch0_obj.max_abs_detuning)
+    detuning_on = detuning_on_match[detuning_on_str]
     seq.enable_eom_mode("ch0", amp_on, detuning_on, optimal_detuning_off=-100)
     assert seq.is_in_eom_mode("ch0")
 
@@ -2871,7 +2930,9 @@ def test_eom_mode(
     )
     assert buffer_delay.type == "delay"
 
-    assert seq.current_phase_ref("q0", basis="ground-rydberg") == phase_ref
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == phase_ref % (
+        2 * np.pi
+    )
     # Check buffer when EOM is not enabled at the start of the sequence
     interval_time = 0
     if check_wait_for_fall:
@@ -2982,8 +3043,9 @@ def test_eom_buffer(
 @pytest.mark.parametrize("correct_phase_drift", [True, False])
 @pytest.mark.parametrize("amp_diff", [0, -0.5, 0.5])
 @pytest.mark.parametrize("det_diff", [0, -5, 10])
+@pytest.mark.parametrize("detuning_on_str", ["NULL", "MAX"])
 def test_modify_eom_setpoint(
-    reg, mod_device, amp_diff, det_diff, correct_phase_drift
+    reg, mod_device, amp_diff, det_diff, correct_phase_drift, detuning_on_str
 ):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ryd", "rydberg_global")
@@ -3009,8 +3071,21 @@ def test_modify_eom_setpoint(
 
     ryd_ch_obj = seq.declared_channels["ryd"]
     eom_buffer_dt = ryd_ch_obj._eom_buffer_time
-    param_vals = [1.0, 0.0]
-    built_seq = seq.build(params=param_vals)
+    detuning_on_match = _eom_detuning_on_dict(ryd_ch_obj.max_abs_detuning)
+    detuning_on = detuning_on_match[detuning_on_str]
+    param_vals = [1.0, detuning_on]
+    if (det_diff, detuning_on_str) == (-5, "MAX"):
+        # Build errors because detuning on is below -max_abs_detuning
+        assert detuning_on + det_diff < -ryd_ch_obj.max_abs_detuning
+        with pytest.raises(
+            ValueError, match="The pulse's detuning values go out of the range"
+        ):
+            seq.build(params=param_vals)
+        # Nothing else to check
+        return
+    # Detuning on is greater than -max_abs_detuning
+    assert detuning_on + det_diff >= -ryd_ch_obj.max_abs_detuning
+    built_seq = seq.build(params=param_vals)  # Sequence can be built
     expected_duration = 4 * dt + eom_buffer_dt
     assert built_seq.get_duration() == expected_duration
 
