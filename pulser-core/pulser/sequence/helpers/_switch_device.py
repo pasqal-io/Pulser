@@ -194,7 +194,7 @@ def switch_device(
             # These parameters only need to match when the sequence is
             # parametrized because their effects appear in the time slots check
             # when the sequence is built
-            return ("", f" with the same {", ".join(timing_diff_params)}.", [])
+            return ("", f" with the same {', '.join(timing_diff_params)}.", [])
         diff_params += timing_diff_params
         return ("", "", diff_params)
 
@@ -358,12 +358,11 @@ def switch_device(
                         active_eom_channels,
                         strict,
                     )
-                    diff_str = ", ".join(diff_params)
                     raise SwitchDeviceError(
                         "Changing the device produced a sequence with "
                         f"different samples for channel {old_ch_name!r}. "
                         "This may be due to a mismatch in the following "
-                        f"parameters: {diff_str}"
+                        f"parameters: {', '.join(diff_params)}"
                     )
         return new_seq
 
