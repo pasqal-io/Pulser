@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 import itertools
 import warnings
 from typing import TYPE_CHECKING, Any, cast
@@ -96,12 +97,13 @@ def switch_device(
             int, ch_obj.fixed_retarget_t
         ) < cast(int, ch_obj.min_retarget_interval)
 
+    @functools.cache
     def check_channels_match(
         old_ch_name: str,
         new_ch_obj: Channel,
-        active_eom_channels: list,
+        active_eom_channels: tuple[str, ...],
         strict: bool,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, list[str]]:
         """Check whether two channels match.
 
         Returns a tuple that contains a non-strict error message and a
@@ -111,6 +113,7 @@ def switch_device(
         will eventually be filled. If strict=True, all the conditions are
         checked - the returned error can either be non-strict or strict.
         """
+        diff_params = []
         old_ch_obj = seq.declared_channels[old_ch_name]
         # We verify the channel class then
         # check whether the addressing is Global or Local
@@ -119,15 +122,15 @@ def switch_device(
         addressing_match = old_ch_obj.addressing == new_ch_obj.addressing
         if not (type_match and basis_match and addressing_match):
             # If there already is a message, keeps it
-            return (" with the right type, basis and addressing.", "")
+            return (" with the right type, basis and addressing.", "", [])
         if old_ch_name in active_eom_channels:
             # Uses EOM mode, so the new device needs a matching
             # EOM configuration
             if new_ch_obj.eom_config is None:
-                return (" with an EOM configuration.", "")
+                return (" with an EOM configuration.", "", [])
             # If the Channels are of the same type, so must be the EOM configs
             assert type(new_ch_obj.eom_config) is type(old_ch_obj.eom_config)
-            if strict and seq.is_parametrized():
+            if strict:
                 # Eom configs have to match if Sequence is parametrized
                 new_eom_config = dataclasses.asdict(new_ch_obj.eom_config)
                 old_eom_config = dataclasses.asdict(
@@ -156,33 +159,50 @@ def switch_device(
                 if new_ch_obj._eom_buffer_time == old_ch_obj._eom_buffer_time:
                     new_eom_config.pop("custom_buffer_time")
                     old_eom_config.pop("custom_buffer_time")
-                if new_eom_config != old_eom_config:
-                    return ("", " with the same EOM configuration.")
+                # All keys should always match
+                assert old_eom_config.keys() == new_eom_config.keys()
+                eom_diff_params = [
+                    param
+                    for param in old_eom_config
+                    if old_eom_config[param] != new_eom_config[param]
+                ]
+                if seq.is_parametrized() and eom_diff_params:
+                    return (
+                        "",
+                        " with the same EOM configuration; they following EOM"
+                        f" parameters differed: {eom_diff_params}",
+                        [],
+                    )
+                # Add an 'eom_config' prefix to identify the params
+                diff_params += [f"'eom_config.{p}'" for p in eom_diff_params]
         if not strict:
-            return ("", "")
+            return ("", "", diff_params)
 
-        if seq.is_parametrized():
-            # These parameters only need to be checked when the sequence is
+        timing_params_to_check = [
+            "mod_bandwidth",
+            "fixed_retarget_t",
+            "clock_period",
+            "phase_jump_time",
+        ]
+        if check_retarget(old_ch_obj) or check_retarget(new_ch_obj):
+            timing_params_to_check.append("min_retarget_interval")
+        timing_diff_params = []
+        for param_ in timing_params_to_check:
+            if getattr(new_ch_obj, param_) != getattr(old_ch_obj, param_):
+                timing_diff_params.append(f"{param_!r}")
+        if seq.is_parametrized() and timing_diff_params:
+            # These parameters only need to match when the sequence is
             # parametrized because their effects appear in the time slots check
             # when the sequence is built
-            timing_params_to_check = [
-                "mod_bandwidth",
-                "fixed_retarget_t",
-                "clock_period",
-                "phase_jump_time",
-            ]
-            if check_retarget(old_ch_obj) or check_retarget(new_ch_obj):
-                timing_params_to_check.append("min_retarget_interval")
-            for param_ in timing_params_to_check:
-                if getattr(new_ch_obj, param_) != getattr(old_ch_obj, param_):
-                    return ("", f" with the same {param_}.")
-        return ("", "")
+            return ("", f" with the same {", ".join(timing_diff_params)}.", [])
+        diff_params += timing_diff_params
+        return ("", "", diff_params)
 
     def is_good_match(
         channel_match: dict[str, str],
         reusable_channels: bool,
         all_channels_new_device: dict[str, Channel],
-        active_eom_channels: list,
+        active_eom_channels: tuple[str, ...],
         strict: bool,
     ) -> bool:
         used_channels_new_device = list(channel_match.values())
@@ -196,14 +216,14 @@ def switch_device(
                 all_channels_new_device[new_ch_name],
                 active_eom_channels,
                 strict,
-            ) != ("", ""):
+            )[:2] != ("", ""):
                 return False
         return True
 
     def raise_error_non_matching_channel(
         reusable_channels: bool,
         all_channels_new_device: dict[str, Channel],
-        active_eom_channels: list,
+        active_eom_channels: tuple[str, ...],
         strict: bool,
     ) -> None:
         strict_error_message = ""
@@ -211,7 +231,7 @@ def switch_device(
         channel_match: dict[str, Any] = {}
         for old_ch_name, old_ch_obj in seq.declared_channels.items():
             channel_match[old_ch_name] = None
-            base_msg = f"No match for channel {old_ch_name}"
+            base_msg = f"No match for channel {old_ch_name!r}"
             # Find the corresponding channel on the new device
             for new_ch_id, new_ch_obj in all_channels_new_device.items():
                 if (
@@ -220,13 +240,15 @@ def switch_device(
                 ):
                     # Channel already matched and can't be reused
                     continue
-                (ch_match_err_suffix, strict_error_message_suffix) = (
-                    check_channels_match(
-                        old_ch_name,
-                        new_ch_obj,
-                        active_eom_channels,
-                        strict,
-                    )
+                (
+                    ch_match_err_suffix,
+                    strict_error_message_suffix,
+                    _,
+                ) = check_channels_match(
+                    old_ch_name,
+                    new_ch_obj,
+                    active_eom_channels,
+                    strict,
                 )
                 if (ch_match_err_suffix, strict_error_message_suffix) == (
                     "",
@@ -255,6 +277,7 @@ def switch_device(
     def build_sequence_from_matching(
         new_device: BaseDevice,
         channel_match: dict[str, str],
+        active_eom_channels: tuple[str, ...],
         strict: bool,
     ) -> Sequence:
         # Initialize the new sequence (works for Sequence subclasses too)
@@ -328,18 +351,28 @@ def switch_device(
                     new_seq._schedule[new_ch_name].slots
                     != seq._schedule[old_ch_name].slots
                 ):
+                    # Get the diff_params for the error message
+                    _, _, diff_params = check_channels_match(
+                        old_ch_name,
+                        new_seq.declared_channels[new_ch_name],
+                        active_eom_channels,
+                        strict,
+                    )
+                    diff_str = ", ".join(diff_params)
                     raise SwitchDeviceError(
                         "Changing the device produced a sequence with "
-                        f"different samples for channel {old_ch_name!r}."
+                        f"different samples for channel {old_ch_name!r}. "
+                        "This may be due to a mismatch in the following "
+                        f"parameters: {diff_str}"
                     )
         return new_seq
 
     # Channel match
-    active_eom_channels = [
+    active_eom_channels = tuple(
         {**dict(zip(("channel",), call.args)), **call.kwargs}["channel"]
         for call in seq._calls + seq._to_build_calls
         if call.name == "enable_eom_mode"
-    ]
+    )
     all_channels_new_device = {
         **new_device.channels,
         **new_device.dmm_channels,
@@ -368,7 +401,7 @@ def switch_device(
     for channel_match in possible_channel_match:
         try:
             return build_sequence_from_matching(
-                new_device, channel_match, strict
+                new_device, channel_match, active_eom_channels, strict
             )
         except ValueError as e:
             err_channel_match[tuple(channel_match.items())] = str(e)

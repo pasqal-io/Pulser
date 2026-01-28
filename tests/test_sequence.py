@@ -719,7 +719,7 @@ def test_switch_device_down(
     seq.declare_channel("raman_1", "raman_local", ["q0"])
     with pytest.raises(
         TypeError,
-        match="No match for channel raman_1 with the"
+        match="No match for channel 'raman_1' with the"
         " right type, basis and addressing.",
     ):
         # Can't find a match for the 2nd raman_local
@@ -727,7 +727,7 @@ def test_switch_device_down(
 
     with pytest.raises(
         TypeError,
-        match="No match for channel raman_1 with the"
+        match="No match for channel 'raman_1' with the"
         " right type, basis and addressing.",
     ):
         # Can't find a match for the 2nd raman_local
@@ -736,7 +736,8 @@ def test_switch_device_down(
     with (
         helpers.raises_all(
             [ValueError, SwitchDeviceError],
-            match="No match for channel raman_1 with the same clock_period.",
+            match="No match for channel 'raman_1' with the "
+            "same 'clock_period'.",
         )
         if parametrized
         # can switch when not parametrized since sequence contains only
@@ -784,7 +785,7 @@ def test_switch_device_down(
 
     with pytest.raises(
         TypeError,
-        match="No match for channel dmm_0_1 with the"
+        match="No match for channel 'dmm_0_1' with the"
         " right type, basis and addressing.",
     ):
         # Can't find a match for the 2nd dmm_0
@@ -927,7 +928,7 @@ def test_switch_device_down(
     ):
         with pytest.raises(
             TypeError,
-            match="No match for channel ising with the"
+            match="No match for channel 'ising' with the"
             + " right type, basis and addressing.",
         ):
             seq.with_new_device(dev_)
@@ -945,7 +946,7 @@ def test_switch_device_down(
     with (
         helpers.raises_all(
             [ValueError, SwitchDeviceError],
-            match="No match for channel ising with the same clock_period.",
+            match="No match for channel 'ising' with the same 'clock_period'.",
         )
         if parametrized
         else contextlib.nullcontext()
@@ -965,7 +966,8 @@ def test_switch_device_down(
     with (
         helpers.raises_all(
             [ValueError, SwitchDeviceError],
-            match="No match for channel digital with the same mod_bandwidth.",
+            match="No match for channel 'digital' with the "
+            "same 'mod_bandwidth'",
         )
         if parametrized
         else contextlib.nullcontext()
@@ -975,8 +977,8 @@ def test_switch_device_down(
     with (
         helpers.raises_all(
             [ValueError, SwitchDeviceError],
-            match="No match for channel digital"
-            + " with the same fixed_retarget_t.",
+            match="No match for channel 'digital'"
+            + " with the same 'fixed_retarget_t'.",
         )
         if parametrized
         else contextlib.nullcontext()
@@ -996,8 +998,8 @@ def test_switch_device_down(
     with (
         helpers.raises_all(
             [ValueError, SwitchDeviceError],
-            match="No match for channel digital"
-            + " with the same min_retarget_interval.",
+            match="No match for channel 'digital'"
+            + " with the same 'min_retarget_interval'.",
         )
         if parametrized
         else contextlib.nullcontext()
@@ -1186,7 +1188,7 @@ def test_switch_device_eom(
     seq.add_eom_pulse("rydberg", 100, 1.0)
     assert seq.is_in_eom_mode("rydberg")
 
-    err_base = "No match for channel rydberg "
+    err_base = "No match for channel 'rydberg' "
     warns_msg = (
         "Switching to a device with a different Rydberg level,"
         " check that the expected interactions still hold."
@@ -1252,7 +1254,8 @@ def test_switch_device_eom(
         with pytest.raises(
             ValueError,
             match="Changing the device produced a sequence with different"
-            " samples for channel 'rydberg'",
+            " samples for channel 'rydberg'. This may be due to a mismatch"
+            " in the following parameters: 'eom_config.mod_bandwidth'",
         ):
             seq.with_new_device(wrong_analog, strict=True)
     # Can if one Channel has a correct EOM configuration
@@ -1367,7 +1370,8 @@ def test_switch_device_eom(
         "Sequence. Here is a list of matchings tested and their "
         "associated errors: {(('rydberg', 'rydberg_global'),): \""
         "Changing the device produced a sequence with different"
-        " samples for channel 'rydberg'"
+        " samples for channel 'rydberg'. This may be due to a mismatch"
+        " in the following parameters: 'eom_config.max_limiting_amp'"
     )
     if parametrized:
         with helpers.raises_all(
@@ -1426,7 +1430,8 @@ def test_switch_device_strict_time_slots_check(reg):
         SwitchDeviceError,
         match=re.escape(
             "Changing the device produced a sequence with "
-            "different samples for channel 'ryd'."
+            "different samples for channel 'ryd'. This may be due to a "
+            "mismatch in the following parameters: 'clock_period'"
         ),
     ):
         seq.with_new_device(modified_device, strict=True)
@@ -1443,7 +1448,7 @@ def test_switch_device_strict_time_slots_check(reg):
     # So we should get a different error about timing parameter mismatch
     with pytest.raises(
         SwitchDeviceError,
-        match="No match for channel ryd with the same clock_period.",
+        match="No match for channel 'ryd' with the same 'clock_period'.",
     ):
         seq_param.with_new_device(modified_device, strict=True)
 
@@ -1496,7 +1501,7 @@ def test_switch_device_strict_time_slots_check(reg):
     # For parametrized sequences, phase_jump_time differences should be caught
     with pytest.raises(
         SwitchDeviceError,
-        match="No match for channel ryd with the same phase_jump_time.",
+        match="No match for channel 'ryd' with the same 'phase_jump_time'.",
     ):
         seq_phase.with_new_device(modified_phase_device, strict=True)
 
