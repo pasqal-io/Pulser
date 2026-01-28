@@ -862,7 +862,7 @@ def test_config(matrices):
 
 
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
-def test_noise(seq, matrices):
+def test_noise(capfd, seq, matrices):
     np.random.seed(3)
     sim2 = QutipEmulator.from_sequence(
         seq,
@@ -884,6 +884,12 @@ def test_noise(seq, matrices):
         assert sim2.run().sample_final_state() == Counter(
             {"000": 824, "100": 41, "101": 57, "001": 63, "010": 15}
         )
+    out, _ = capfd.readouterr()
+    assert out.rstrip("\n").split("\n") == [
+        "Emulating Trajectories [1 - 13]/15",
+        "Emulating Trajectory 14/15",
+        "Emulating Trajectory 15/15",
+    ]
     with pytest.raises(NotImplementedError, match="Cannot include"):
         QutipEmulator.from_sequence(
             seq, noise_model=NoiseModel(depolarizing_rate=0.05)
@@ -998,7 +1004,7 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
         assert np.all(np.isclose(state[:, 2], np.zeros_like(state[:, 2])))
 
 
-def test_relaxation_noise():
+def test_relaxation_noise(capfd):
     seq = Sequence(Register({"q0": (0, 0)}), MockDevice)
     seq.declare_channel("ryd", "rydberg_global")
     seq.add(Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi), 0, 0), "ryd")
@@ -1012,6 +1018,8 @@ def test_relaxation_noise():
         for op in sim._current_hamiltonian._collapse_ops
     ]
     res = sim.run()
+    out, _ = capfd.readouterr()
+    assert out.rstrip("\n").split("\n") == ["Emulating Trajectory 1/1"]
     start_samples = res.sample_state(1)
     ryd_pop = start_samples["1"]
     assert ryd_pop > start_samples.get("0", 0)

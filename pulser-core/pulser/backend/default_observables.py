@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import copy
 import functools
+import warnings
 from collections import Counter
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Type
@@ -72,7 +73,8 @@ class BitStrings(Observable):
             If left as `None`, uses the ``default_evaluation_times`` of the
             backend's ``EmulationConfig``.
         num_shots: How many bitstrings to sample each time this observable
-            is computed.
+            is computed. If left as `None`, will use `default_num_shots`
+            of the backend's ``EmulationConfig``.
         one_state: The eigenstate that measures to 1. Can be left undefined
             if the state's eigenstates form a known eigenbasis with a
             defined "one state".
@@ -85,7 +87,7 @@ class BitStrings(Observable):
         self,
         *,
         evaluation_times: Sequence[float] | None = None,
-        num_shots: int = 1000,
+        num_shots: int | None = None,
         one_state: Eigenstate | None = None,
         tag_suffix: str | None = None,
     ):
@@ -93,21 +95,49 @@ class BitStrings(Observable):
         super().__init__(
             evaluation_times=evaluation_times, tag_suffix=tag_suffix
         )
-        if num_shots < 1:
-            raise ValueError(
-                "'num_shots' must be greater than or equal to 1, "
-                f"not {num_shots}."
-            )
-        self.num_shots = int(num_shots)
+        # Relies on the validation in the setter
+        self.num_shots = num_shots
         self.one_state = one_state
 
     @property
     def _base_tag(self) -> str:
         return "bitstrings"
 
+    @property
+    def num_shots(self) -> int | None:
+        """How many bitstrings to sample each time this observable is computed.
+
+        Warning:
+            The default value for this parameter was changed from 1000 to None
+            in Pulser v1.7.  When left as None, it now relies on
+            `EmulationConfig.default_num_shots` to decide how many shots to
+            take.
+        """
+        if self._num_shots is None:
+            warnings.warn(
+                "The default value of `BitStrings.num_shots` was changed "
+                "from 1000 to None in Pulser v1.7. When left as None, it now "
+                "relies on `EmulationConfig.default_num_shots` to decide how "
+                "many shots to take.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        return self._num_shots
+
+    @num_shots.setter
+    def num_shots(self, num_shots: int | None) -> None:
+        if num_shots is not None:
+            if num_shots < 1:
+                raise ValueError(
+                    "'num_shots' must be greater than or equal to 1, "
+                    f"not {num_shots}."
+                )
+            num_shots = int(num_shots)
+        self._num_shots = num_shots
+
     def _to_abstract_repr(self) -> dict[str, Any]:
         repr = super()._to_abstract_repr()
-        repr["num_shots"] = self.num_shots
+        repr["num_shots"] = self._num_shots
         repr["one_state"] = self.one_state
         return repr
 
@@ -120,7 +150,11 @@ class BitStrings(Observable):
     ) -> Counter[str]:
         """Calculates the observable to store in the Results."""
         return state.sample(
-            num_shots=self.num_shots,
+            num_shots=(
+                self._num_shots
+                if self._num_shots is not None
+                else config.default_num_shots
+            ),
             one_state=self.one_state,
             p_false_pos=config.noise_model.p_false_pos,
             p_false_neg=config.noise_model.p_false_neg,

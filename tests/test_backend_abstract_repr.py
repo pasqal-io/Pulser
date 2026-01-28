@@ -130,9 +130,14 @@ class TestObservableRepr:
             assert repr.get("one_state", None) == expected_kwargs.get(
                 "one_state", None
             )
-            assert repr.get("num_shots", 1000) == expected_kwargs.get(
-                "num_shots", 1000
+            assert repr.get("num_shots", None) == expected_kwargs.get(
+                "num_shots", None
             )
+
+        # Check observable against the schema via config serialization
+        EmulationConfig(observables=[obs]).to_abstract_repr(
+            skip_validation=False
+        )
 
     @mark.parametrize(
         "state_kwargs",
