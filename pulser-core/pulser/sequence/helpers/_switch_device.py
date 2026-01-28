@@ -19,8 +19,6 @@ import itertools
 import warnings
 from typing import TYPE_CHECKING, Any, cast
 
-import numpy as np
-
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import _get_dmm_name
 from pulser.channels.eom import BaseEOM
@@ -129,50 +127,37 @@ def switch_device(
                 return (" with an EOM configuration.", "")
             # If the Channels are of the same type, so must be the EOM configs
             assert type(new_ch_obj.eom_config) is type(old_ch_obj.eom_config)
-            if strict:
-                if not seq.is_parametrized():
-                    if (
-                        new_ch_obj.eom_config.mod_bandwidth
-                        != cast(BaseEOM, old_ch_obj.eom_config).mod_bandwidth
-                    ):
-                        return (
-                            "",
-                            " with the same mod_bandwidth for the EOM.",
-                        )
-                else:
-                    # Eom configs have to match if Sequence is parametrized
-                    new_eom_config = dataclasses.asdict(new_ch_obj.eom_config)
-                    old_eom_config = dataclasses.asdict(
-                        cast(BaseEOM, old_ch_obj.eom_config)
-                    )
-                    # However, multiple_beam_control only matters when
-                    # the two beams are controlled
-                    if len(old_eom_config.get("controlled_beams", [])) <= 1:
-                        new_eom_config.pop("multiple_beam_control", None)
-                        old_eom_config.pop("multiple_beam_control", None)
-                        # Controlled beams only matter when only one beam
-                        # is controlled by the new eom
-                        if len(new_eom_config.get("controlled_beams", [])) > 1:
-                            new_eom_config.pop("controlled_beams", None)
-                            old_eom_config.pop("controlled_beams", None)
-                    # Controlled_beams doesn't matter if the two EOMs
-                    # control two beams
-                    elif set(
-                        new_eom_config.get("controlled_beams", [])
-                    ) == set(old_eom_config.get("controlled_beams", [])):
+            if strict and seq.is_parametrized():
+                # Eom configs have to match if Sequence is parametrized
+                new_eom_config = dataclasses.asdict(new_ch_obj.eom_config)
+                old_eom_config = dataclasses.asdict(
+                    cast(BaseEOM, old_ch_obj.eom_config)
+                )
+                # However, multiple_beam_control only matters when
+                # the two beams are controlled
+                if len(old_eom_config.get("controlled_beams", [])) <= 1:
+                    new_eom_config.pop("multiple_beam_control", None)
+                    old_eom_config.pop("multiple_beam_control", None)
+                    # Controlled beams only matter when only one beam
+                    # is controlled by the new eom
+                    if len(new_eom_config.get("controlled_beams", [])) > 1:
                         new_eom_config.pop("controlled_beams", None)
                         old_eom_config.pop("controlled_beams", None)
+                # Controlled_beams doesn't matter if the two EOMs
+                # control two beams
+                elif set(new_eom_config.get("controlled_beams", [])) == set(
+                    old_eom_config.get("controlled_beams", [])
+                ):
+                    new_eom_config.pop("controlled_beams", None)
+                    old_eom_config.pop("controlled_beams", None)
 
-                    # And custom_buffer_time doesn't have to match as long
-                    # as `Channel_eom_buffer_time`` does
-                    if (
-                        new_ch_obj._eom_buffer_time
-                        == old_ch_obj._eom_buffer_time
-                    ):
-                        new_eom_config.pop("custom_buffer_time")
-                        old_eom_config.pop("custom_buffer_time")
-                    if new_eom_config != old_eom_config:
-                        return ("", " with the same EOM configuration.")
+                # And custom_buffer_time doesn't have to match as long
+                # as `Channel_eom_buffer_time`` does
+                if new_ch_obj._eom_buffer_time == old_ch_obj._eom_buffer_time:
+                    new_eom_config.pop("custom_buffer_time")
+                    old_eom_config.pop("custom_buffer_time")
+                if new_eom_config != old_eom_config:
+                    return ("", " with the same EOM configuration.")
         if not strict:
             return ("", "")
 
@@ -270,7 +255,6 @@ def switch_device(
     def build_sequence_from_matching(
         new_device: BaseDevice,
         channel_match: dict[str, str],
-        active_eom_channels: list,
         strict: bool,
     ) -> Sequence:
         # Initialize the new sequence (works for Sequence subclasses too)
@@ -333,39 +317,21 @@ def switch_device(
             getattr(new_seq, call.name)(*sw_channel_args, **sw_channel_kw_args)
 
         if strict:
-            for eom_channel in active_eom_channels:
-                current_samples = seq._schedule[eom_channel].get_samples()
-                new_samples = new_seq._schedule[eom_channel].get_samples()
+            # Even if the sequence is parametrized, we can check the slots up
+            # to the moment they stop being added
+            for old_ch_name in seq._schedule:
+                # Use the same name for the old and new by default
+                new_ch_name = old_to_new_ch_name.setdefault(
+                    old_ch_name, old_ch_name
+                )
                 if (
-                    not np.all(
-                        np.isclose(current_samples.amp, new_samples.amp)
-                    )
-                    or not np.all(
-                        np.isclose(current_samples.det, new_samples.det)
-                    )
-                    or not np.all(
-                        np.isclose(current_samples.phase, new_samples.phase)
-                    )
+                    new_seq._schedule[new_ch_name].slots
+                    != seq._schedule[old_ch_name].slots
                 ):
                     raise SwitchDeviceError(
-                        f"No match for channel {eom_channel} with an"
-                        " EOM configuration that does not change the"
-                        " samples."
+                        "Changing the device produced a sequence with "
+                        f"different samples for channel {old_ch_name!r}."
                     )
-            if not seq.is_parametrized():
-                for old_ch_name in seq._schedule:
-                    # Use the same name for the old and new by default
-                    new_ch_name = old_to_new_ch_name.setdefault(
-                        old_ch_name, old_ch_name
-                    )
-                    if (
-                        new_seq._schedule[new_ch_name].slots
-                        != seq._schedule[old_ch_name].slots
-                    ):
-                        raise SwitchDeviceError(
-                            "Changing the device produced a sequence with "
-                            f"different samples for channel {old_ch_name!r}."
-                        )
         return new_seq
 
     # Channel match
@@ -402,7 +368,7 @@ def switch_device(
     for channel_match in possible_channel_match:
         try:
             return build_sequence_from_matching(
-                new_device, channel_match, active_eom_channels, strict
+                new_device, channel_match, strict
             )
         except ValueError as e:
             err_channel_match[tuple(channel_match.items())] = str(e)
