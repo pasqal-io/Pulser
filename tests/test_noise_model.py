@@ -740,9 +740,9 @@ def test_noise_table_summary():
     noise_table["laser_waist"] = (100, "µm")
     assert noise_model.get_noise_table() == noise_table
     summary += (
-        "- Amplitude fluctuations:\n"
+        "- Amplitude inhomogeneities:\n"
         + "  - Finite-waist Gaussian damping σ=100 µm\n"
-        + "  - Shot-to-shot Amplitude Fluctuations**: 10 % Amplitude\n"
+        + "  - Shot-to-shot Amplitude Fluctuations**: 10 %\n"
         + detuning_summary
     )
     end_summary += ", amplitude, detuning"

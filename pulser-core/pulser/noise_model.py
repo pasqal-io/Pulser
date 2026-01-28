@@ -776,7 +776,7 @@ class NoiseModel:
 
         # 3. Pulse Shaping
         if "laser_waist" in noise_table or "amp_sigma" in noise_table:
-            summary_list.append("- Amplitude fluctuations:")
+            summary_list.append("- Amplitude inhomogeneities:")
             if "laser_waist" in noise_table:
                 summary_list += [
                     "  - Finite-waist Gaussian damping σ="
@@ -786,7 +786,6 @@ class NoiseModel:
                 summary_list += [
                     "  - Shot-to-shot Amplitude Fluctuations**:"
                     f" {_repr_value_unit(*noise_table['amp_sigma'])}"
-                    " Amplitude"
                 ]
                 add_to_traj_summary.append("amplitude")
         if (
