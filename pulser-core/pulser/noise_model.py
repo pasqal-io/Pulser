@@ -261,6 +261,14 @@ class NoiseModel:
         """Initializes a noise model."""
 
         def to_tuple(obj: tuple) -> tuple:
+            try:
+                # Transform qutip.Qobj objects into np.ndarray
+                obj = np.array(
+                    obj.to("Dense").data_as("ndarray"),  # type: ignore
+                    dtype=complex,
+                )
+            except AttributeError:
+                pass
             if isinstance(obj, (tuple, list, np.ndarray)):
                 obj = tuple(to_tuple(el) for el in obj)
             return obj
@@ -486,7 +494,7 @@ class NoiseModel:
                 f"({len(eff_noise_rates)}) must be equal."
             )
         for rate in eff_noise_rates:
-            if not isinstance(rate, float):
+            if not (isinstance(rate, float) or isinstance(rate, int)):
                 raise TypeError(
                     "eff_noise_rates is a list of floats,"
                     f" it must not contain a {type(rate)}."

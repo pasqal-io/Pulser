@@ -161,17 +161,17 @@ class QutipBackendV2(EmulatorBackend):
             self._sim_obj.set_initial_state(
                 self._config.initial_state.to_qobj()
             )
+        # setup the default qutip options
+        self._qutip_options = {"progress_bar": self._config.progress_bar}
+        self._sim_obj._validate_options(self._qutip_options)
 
     def run(self) -> Results:
         """Executes the sequence on the backend."""
         eigenstates = self._sim_obj._current_hamiltonian.basis_data.eigenbasis
-        options: dict = {}
-        self._sim_obj._validate_options(
-            options
-        )  # setup the default qutip options
+
         if not _has_stochastic_noise(self._sim_obj.noise_model):
             # A single run is needed, regardless of self.config.runs
-            single_res = self._sim_obj.run(**options)
+            single_res = self._sim_obj.run(**self._qutip_options)
             assert isinstance(single_res, CoherentResults)
             res = Results(
                 atom_order=tuple(self._sequence.qubit_info),
@@ -207,7 +207,7 @@ class QutipBackendV2(EmulatorBackend):
         else:
             results: list[Results] = []
             for cleanres_noisyseq, reps in self._sim_obj._noisy_runs(
-                progress_bar=False, **options
+                **self._qutip_options
             ):
                 for _ in range(reps):
                     res = Results(

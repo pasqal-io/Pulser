@@ -161,7 +161,7 @@ class SampledResult(Result):
         super().__post_init__()
         self.n_samples = sum(self.bitstring_counts.values())
         # TODO: Make sure this is not too hacky
-        bitstrings_obs = BitStrings()
+        bitstrings_obs = BitStrings(num_shots=self.n_samples)
         # Override UUID so that two SampledResult instances with
         # the same counts are identical
         bitstrings_obs._uuid = uuid.UUID(

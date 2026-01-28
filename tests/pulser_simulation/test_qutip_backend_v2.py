@@ -105,7 +105,7 @@ def test_callback():
     assert backend._config.callbacks[0].counter == seq.get_duration() + 1
 
 
-def test_qutip_backend_v2_energy():
+def test_qutip_backend_v2_energy(capfd):
     seq = sequence()
     with pytest.raises(
         TypeError, match="'config' must be an instance of 'EmulationConfig'"
@@ -120,6 +120,8 @@ def test_qutip_backend_v2_energy():
     )
     backend = QutipBackendV2(seq, config=config)
     results = backend.run()
+    out, _ = capfd.readouterr()
+    assert out == "Emulating Trajectory 1/1\n"
     assert (
         results.get_result("energy", 0.0)
         == results.energy[0]
@@ -144,7 +146,7 @@ def test_qutip_backend_v2_energy():
     )
 
 
-def test_qutip_backend_v2_default_noise_model():
+def test_qutip_backend_v2_default_noise_model(capfd):
     noisy_device = dataclasses.replace(
         pulser.devices.MockDevice,
         default_noise_model=pulser.NoiseModel(
@@ -178,6 +180,8 @@ def test_qutip_backend_v2_default_noise_model():
     assert backend._config.noise_model.p_false_neg == 0.1
 
     backend.run()
+    out, _ = capfd.readouterr()
+    assert out == "Emulating Trajectory 1/2\nEmulating Trajectory 2/2\n"
 
 
 def test_qutip_backend_v2_stochastic_noise():
