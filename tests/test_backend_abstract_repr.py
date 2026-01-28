@@ -134,6 +134,11 @@ class TestObservableRepr:
                 "num_shots", None
             )
 
+        # Check observable against the schema via config serialization
+        EmulationConfig(observables=[obs]).to_abstract_repr(
+            skip_validation=False
+        )
+
     @mark.parametrize(
         "state_kwargs",
         [
