@@ -2501,10 +2501,18 @@ class Sequence(Generic[DeviceType]):
                     float(optimal_detuning_off),
                     return_switching_beams=True,
                 )
-                off_pulse = Pulse.ConstantPulse(
-                    channel_obj.min_duration, 0.0, detuning_off, 0.0
+                # Detuning sent by laser is constant equal to detuning_on
+                lightshift = eom_config._lightshift(
+                    pm.AbstractArray(amp_on), *switching_beams
                 )
-                channel_obj.validate_pulse(off_pulse)
+                if channel_obj.max_abs_detuning is not None:
+                    assert (
+                        detuning_off - lightshift
+                        >= -channel_obj.max_abs_detuning
+                        if lightshift < 0
+                        else detuning_off - lightshift
+                        <= channel_obj.max_abs_detuning
+                    )
                 # Update optimal_detuning_off to match the chosen detuning_off
                 # This minimizes the changes to the sequence when the device
                 # is switched

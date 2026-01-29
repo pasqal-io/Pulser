@@ -161,7 +161,10 @@ class Observable(Callback):
             and config.is_time_in_evaluation_times(
                 t, self.evaluation_times, tol=time_tol
             )
-        ) or config.is_evaluation_time(t, tol=time_tol):
+        ) or (
+            self.evaluation_times is None
+            and config.is_evaluation_time(t, tol=time_tol)
+        ):
             value_to_store = self.apply(
                 config=config, state=state, hamiltonian=hamiltonian
             )
