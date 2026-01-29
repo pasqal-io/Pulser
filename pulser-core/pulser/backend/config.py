@@ -49,6 +49,9 @@ EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 
 StateType = TypeVar("StateType", bound=State)
 
+# TODO: Replace with built-in Self when python >= 3.11
+Self = TypeVar("Self", bound="BackendConfig")
+
 
 class BackendConfig:
     """The base backend configuration.
@@ -86,7 +89,7 @@ class BackendConfig:
             )
         # Store the abstract repr of the config in _backend_options
         # Prevents potential issues with mutable arguments
-        self._backend_options = copy.deepcopy(backend_options)
+        super().__setattr__("_backend_options", copy.deepcopy(backend_options))
         if "backend_options" in backend_options:
             with warnings.catch_warnings():
                 warnings.filterwarnings("always")
@@ -109,6 +112,10 @@ class BackendConfig:
         # Store in _backend_options together with all the other paramters
         self._backend_options["default_num_shots"] = default_num_shots
 
+    def with_changes(self: Self, **changes: Any) -> Self:
+        """Returns a copy of the config with the given changes."""
+        return type(self)(**(self._backend_options | changes))
+
     def _expected_kwargs(self) -> set[str]:
         return set()
 
@@ -120,6 +127,14 @@ class BackendConfig:
         ):
             return self._backend_options[name]
         raise AttributeError(f"{name!r} has not been passed to {self!r}.")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        cls_name = type(self).__name__
+        raise AttributeError(
+            f"{cls_name!r} is read-only. Please use "
+            f"'{cls_name}.with_changes({name}=...)' to make a copy with the "
+            "desired changes."
+        )
 
 
 class EmulationConfig(BackendConfig, Generic[StateType]):
@@ -409,7 +424,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
 # Legacy class
 
 
-@dataclass
+@dataclass(frozen=True)
 class EmulatorConfig(BackendConfig):
     """The configuration for emulator backends.
 
