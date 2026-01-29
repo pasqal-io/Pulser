@@ -15,13 +15,20 @@ from __future__ import annotations
 
 import dataclasses
 import math
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 import qutip
 
 import pulser
-from pulser.backend.default_observables import Energy, Occupation, StateResult
+from pulser.backend.default_observables import (
+    BitStrings,
+    Energy,
+    EnergyVariance,
+    Occupation,
+    StateResult,
+)
 from pulser.backend.observable import Callback
 from pulser_simulation.qutip_backend import QutipBackendV2
 from pulser_simulation.qutip_config import QutipConfig, Solver
@@ -367,3 +374,67 @@ def test_register_detuning_detection():
     qutip_sim = QutipBackendV2(seq, config=qutip_config)
     result_qut = qutip_sim.run()
     assert result_qut.final_state._state.shape == (4, 4)  # density matrix
+
+
+def test_aggregation():
+    reg = pulser.Register({"q0": [-1e5, 0], "q1": [1e5, 0], "q2": [0, 1e5]})
+    seq = pulser.Sequence(reg, pulser.MockDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(
+        pulser.Pulse.ConstantDetuning(
+            pulser.BlackmanWaveform(100, np.pi), 0.0, 0.0
+        ),
+        "ryd",
+    )
+
+    occup = Occupation(evaluation_times=[1.0])
+    state = StateResult(evaluation_times=[1.0])
+    bitstrings = BitStrings(evaluation_times=[1.0])
+    variance = EnergyVariance(evaluation_times=[1.0])
+
+    qutip_config = QutipConfig(
+        observables=(occup, state, bitstrings, variance),
+        n_trajectories=5,
+        noise_model=pulser.NoiseModel(state_prep_error=1 / 3),
+    )
+    with pytest.warns(
+        UserWarning, match="Skipping aggregation of `energy_variance`."
+    ):
+        with patch(
+            "pulser._hamiltonian_data.hamiltonian_data.np.random.uniform"
+        ) as bad_atoms_mock:
+            # The bad qubits for each trajectory (0,0,1,1,2 respectively)
+            # and a 6th item for the noiseless hamiltonian
+            bad_atoms_mock.side_effect = [
+                np.array([0.1, 0.5, 0.6]),
+                np.array([0.1, 0.5, 0.6]),
+                np.array([0.5, 0.1, 0.6]),
+                np.array([0.5, 0.1, 0.6]),
+                np.array([0.5, 0.6, 0.1]),
+                np.array([0.1, 0.2, 0.3]),
+            ]
+            qutip_backend = QutipBackendV2(seq, config=qutip_config)
+            qutip_results = qutip_backend.run()
+
+    expected_state = [
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.4, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    ]
+    assert np.allclose(
+        qutip_results.final_state._state.full(), expected_state, atol=1e-4
+    )
+    assert np.allclose(
+        qutip_results.occupation[-1], np.array([0.6, 0.6, 0.8]), atol=1e-4
+    )
+    assert qutip_results.final_bitstrings == {
+        "011": 2000,
+        "101": 2000,
+        "110": 1000,
+    }
+    assert "energy_variance" not in qutip_results.get_result_tags()
