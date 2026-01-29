@@ -694,6 +694,14 @@ def test_emulation_config():
     # The config stayed the same
     assert config.n_trajectories == 1
 
+    # EmulationConfig would error on receiving a numpy array of len > 1
+    times = np.array([0.5, 1.0])
+    conf = EmulationConfig(
+        default_evaluation_times=times,
+        observables=(BitStrings(),),
+    )
+    np.testing.assert_equal(conf.default_evaluation_times, times)
+
 
 def test_results_aggregation():
     results1 = Results(atom_order=[0, 1], total_duration=100)
