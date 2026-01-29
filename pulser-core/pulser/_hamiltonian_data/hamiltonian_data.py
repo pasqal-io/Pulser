@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import functools
-import math
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import replace
@@ -32,9 +31,10 @@ from pulser._hamiltonian_data.lindblad_data import LindbladData
 from pulser._hamiltonian_data.noise_trajectory import NoiseTrajectory
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import STATES_RANK, Channel, States
-from pulser.constants import KB, KEFF, MASS, TRAP_WAVELENGTH
 from pulser.devices._device_datacls import COORD_PRECISION, BaseDevice
 from pulser.noise_model import NoiseModel
+from pulser.noise_model import _doppler_sigma as doppler_sigma
+from pulser.noise_model import _register_sigma_xy_z
 from pulser.register import Register3D
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler import sampler
@@ -100,53 +100,6 @@ def has_shot_to_shot_except_spam(noise_model: NoiseModel) -> bool:
         or "detuning" in noise_model.noise_types
         or "register" in noise_model.noise_types
     )
-
-
-def doppler_sigma(temperature: float) -> float:
-    """Standard deviation for Doppler shifting due to thermal motion.
-
-    Arg:
-        temperature: The temperature in K.
-    """
-    return KEFF * math.sqrt(KB * temperature / MASS)
-
-
-def _register_sigma_xy_z(
-    temperature: float, trap_waist: float, trap_depth: float
-) -> tuple[float, float]:
-    """Standard deviation for fluctuations in atom position in the trap.
-
-    - Plane fluctuation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,
-      w is the trap waist and Uₜᵣₐₚ is the trap depth.
-    - Off plane fluctuation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the trap
-    wavelength with a constant value of 0.85 µm
-
-    Note: a k_B factor is absorbed in the trap depth (Uₜᵣₐₚ), so the units
-    of temperature and trap depth are the same.
-
-    Args:
-        temperature (float): Temperature (T) of the atoms in the trap
-            (in Kelvin).
-        trap_depth (float): Depth of the trap (Uₜᵣₐₚ)
-            (same units as temperature).
-        trap_waist (float): Waist of the trap (w) (in µmeters).
-
-    Returns:
-        tuple: The standard deviations of the spatial position fluctuations
-        in the xy-plane (register_sigma_xy) and along the z-axis
-        (register_sigma_z).
-    """
-    register_sigma_xy = math.sqrt(
-        temperature * trap_waist**2 / (4 * trap_depth)
-    )
-    register_sigma_z = (
-        math.pi
-        / TRAP_WAVELENGTH
-        * math.sqrt(2)
-        * trap_waist
-        * register_sigma_xy
-    )
-    return register_sigma_xy, register_sigma_z
 
 
 def _noisy_register(
