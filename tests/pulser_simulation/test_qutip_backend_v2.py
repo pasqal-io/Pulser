@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import dataclasses
 import math
-import warnings
 from unittest.mock import patch
 
 import numpy as np
@@ -398,7 +397,9 @@ def test_aggregation():
         n_trajectories=5,
         noise_model=pulser.NoiseModel(state_prep_error=1 / 3),
     )
-    with warnings.catch_warnings(record=True) as w:
+    with pytest.warns(
+        UserWarning, match="Skipping aggregation of `energy_variance`."
+    ):
         with patch(
             "pulser._hamiltonian_data.hamiltonian_data.np.random.uniform"
         ) as bad_atoms_mock:
@@ -437,5 +438,3 @@ def test_aggregation():
         "110": 1000,
     }
     assert "energy_variance" not in qutip_results.get_result_tags()
-    assert issubclass(w[0].category, UserWarning)
-    assert "Skipping aggregation of `energy_variance`." in str(w[0].message)
