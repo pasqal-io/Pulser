@@ -248,7 +248,10 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
                 f"Repeated tags found: {repeated_tags}"
             )
 
-        if default_evaluation_times != "Full":
+        if not (
+            isinstance(default_evaluation_times, str)
+            and default_evaluation_times == "Full"
+        ):
             eval_times_arr = Observable._validate_eval_times(
                 list(map(float, default_evaluation_times))
             )
