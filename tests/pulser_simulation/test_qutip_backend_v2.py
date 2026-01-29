@@ -380,6 +380,10 @@ def test_register_detuning_detection():
     assert result_qut.final_state._state.shape == (4, 4)  # density matrix
 
 
+def test_config_type():
+    assert QutipBackendV2.config_type is QutipConfig
+
+
 def test_aggregation():
     reg = pulser.Register({"q0": [-1e5, 0], "q1": [1e5, 0], "q2": [0, 1e5]})
     seq = pulser.Sequence(reg, pulser.MockDevice)

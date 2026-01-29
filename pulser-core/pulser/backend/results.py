@@ -31,7 +31,7 @@ from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import stringify_qubit_ids
 
 
-@dataclass
+@dataclass(repr=False)
 class Results:
     """A collection of results.
 
@@ -41,13 +41,15 @@ class Results:
     """
 
     atom_order: tuple[str, ...]
+    """The order of the atoms/qudits in the results."""
     total_duration: int
-    _results: dict[uuid.UUID, list[Any]] = field(init=False)
-    _times: dict[uuid.UUID, list[float]] = field(init=False)
+    """The total duration of the sequence, in ns."""
+    _results: dict[uuid.UUID, list[Any]] = field(init=False, repr=False)
+    _times: dict[uuid.UUID, list[float]] = field(init=False, repr=False)
     _aggregation_methods: dict[uuid.UUID, AggregationMethod] = field(
-        init=False
+        init=False, repr=False
     )
-    _tagmap: dict[str, uuid.UUID] = field(init=False)
+    _tagmap: dict[str, uuid.UUID] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self._results = {}
@@ -104,7 +106,7 @@ class Results:
 
     @property
     def final_bitstrings(self) -> dict[str, int]:
-        """Returns the bitstrings at the end of the sequence, if available."""
+        """The bitstrings at the end of the sequence, if available."""
         try:
             return cast(
                 typing.Dict[str, int], self.get_result("bitstrings", time=1.0)
@@ -119,7 +121,7 @@ class Results:
 
     @property
     def final_state(self) -> State:
-        """Returns the state at the end of the sequence, if available."""
+        """The state at the end of the sequence, if available."""
         try:
             return cast(State, self.get_result("state", time=1.0))
         except ValueError:
@@ -400,6 +402,22 @@ class Results:
                 )
 
         return aggregated
+
+    def __str__(self) -> str:
+        evaluation_times = {
+            tag: self._times[_uuid] for tag, _uuid in self._tagmap.items()
+        }
+
+        cls_name = self.__class__.__name__
+        lines = [
+            cls_name,
+            "-" * len(cls_name),  # Separator
+            f"Stored results: {self.get_result_tags()}",
+            f"Evaluation times per result: {evaluation_times}",
+            f"Atom order in states and bitstrings: {self.atom_order}",
+            f"Total sequence duration: {self.total_duration} ns",
+        ]
+        return "\n".join(lines)
 
 
 ResultsType = TypeVar("ResultsType", bound=Results)
