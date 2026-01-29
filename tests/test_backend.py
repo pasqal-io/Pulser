@@ -674,7 +674,7 @@ def test_emulation_config():
         default_evaluation_times=times,
         observables=(BitStrings(),),
     )
-    assert np.allclose(conf.default_evaluation_times, times)
+    np.testing.assert_equal(conf.default_evaluation_times, times)
 
 
 def test_results_aggregation():
