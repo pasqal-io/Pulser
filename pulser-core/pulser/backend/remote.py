@@ -346,12 +346,10 @@ class RemoteBackend(Backend):
         """Runs the sequence on the remote backend and returns the result.
 
         Args:
-            job_params: A list of parameters for each job to execute. Each
-                mapping must contain a defined 'runs' field specifying
-                the number of times to run the same sequence. If the sequence
-                is parametrized, the values for all the variables necessary
-                to build the sequence must be given in it's own mapping, for
-                each job, under the 'variables' field.
+            job_params: A list of dictionaries with the parameters to execute
+                each job. If the sequence is parametrized, the values for all
+                the variables necessary to build the sequence must be given in
+                its own dictionary, for each job, under the 'variables' field.
             wait: Whether to wait until the results of the jobs become
                 available.  If set to False, the call is non-blocking and the
                 obtained results' status can be checked using their `status`

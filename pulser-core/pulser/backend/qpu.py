@@ -57,7 +57,7 @@ class QPUBackend(RemoteBackend):
                 job with 'BackendConfig.default_num_shots'.
                 If the sequence is parametrized, the values for all the
                 variables necessary to build the sequence must be given in
-                it's own dictionary, for each job, under the 'variables' field.
+                its own dictionary, for each job, under the 'variables' field.
                 Each dictionary may contain a custom 'runs' field specifying
                 the number of shots to take of the same sequence; if not given,
                 'BackendConfig.default_num_shots' is used when available.
