@@ -36,6 +36,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.math as pm
+from pulser.backend._classproperty import classproperty
 from pulser.backend.observable import Callback, Observable
 from pulser.backend.operator import Operator, OperatorRepr
 from pulser.backend.state import State, StateRepr
@@ -48,6 +49,9 @@ DEFAULT_N_TRAJECTORIES = 40
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 
 StateType = TypeVar("StateType", bound=State)
+
+# TODO: Replace with built-in Self when python >= 3.11
+Self = TypeVar("Self", bound="BackendConfig")
 
 
 class BackendConfig:
@@ -86,7 +90,7 @@ class BackendConfig:
             )
         # Store the abstract repr of the config in _backend_options
         # Prevents potential issues with mutable arguments
-        self._backend_options = copy.deepcopy(backend_options)
+        super().__setattr__("_backend_options", copy.deepcopy(backend_options))
         if "backend_options" in backend_options:
             with warnings.catch_warnings():
                 warnings.filterwarnings("always")
@@ -109,6 +113,10 @@ class BackendConfig:
         # Store in _backend_options together with all the other paramters
         self._backend_options["default_num_shots"] = default_num_shots
 
+    def with_changes(self: Self, **changes: Any) -> Self:
+        """Returns a copy of the config with the given changes."""
+        return type(self)(**(self._backend_options | changes))
+
     def _expected_kwargs(self) -> set[str]:
         return set()
 
@@ -120,6 +128,14 @@ class BackendConfig:
         ):
             return self._backend_options[name]
         raise AttributeError(f"{name!r} has not been passed to {self!r}.")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        cls_name = type(self).__name__
+        raise AttributeError(
+            f"{cls_name!r} is read-only. Please use "
+            f"'{cls_name}.with_changes({name}=...)' to make a copy with the "
+            "desired changes."
+        )
 
 
 class EmulationConfig(BackendConfig, Generic[StateType]):
@@ -190,8 +206,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     # Whether to error if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = False
 
-    _state_type: ClassVar[Type[State]]
-    _operator_type: ClassVar[Type[Operator]]
+    _state_type: ClassVar[Type[State]] = StateRepr
+    _operator_type: ClassVar[Type[Operator]] = OperatorRepr
 
     def __init__(
         self,
@@ -247,7 +263,10 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
                 f"Repeated tags found: {repeated_tags}"
             )
 
-        if default_evaluation_times != "Full":
+        if not (
+            isinstance(default_evaluation_times, str)
+            and default_evaluation_times == "Full"
+        ):
             eval_times_arr = Observable._validate_eval_times(
                 list(map(float, default_evaluation_times))
             )
@@ -349,6 +368,16 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             "n_trajectories",
         }
 
+    @classproperty
+    def state_type(cls) -> Type[State]:
+        """The preferred state type to use with this config class."""
+        return cls._state_type
+
+    @classproperty
+    def operator_type(cls) -> Type[Operator]:
+        """The preferred operator type to use with this config class."""
+        return cls._operator_type
+
     def is_evaluation_time(self, t: float, tol: float = 1e-6) -> bool:
         """Assesses whether a relative time is an evaluation time."""
         return (
@@ -398,15 +427,15 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         return _deserialize_emulation_config(
             json.loads(obj_str),
             cls,
-            getattr(cls, "_state_type", StateRepr),
-            getattr(cls, "_operator_type", OperatorRepr),
+            cls.state_type,
+            cls.operator_type,
         )
 
 
 # Legacy class
 
 
-@dataclass
+@dataclass(frozen=True)
 class EmulatorConfig(BackendConfig):
     """The configuration for emulator backends.
 

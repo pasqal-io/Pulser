@@ -62,6 +62,7 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    pulses
    sequence
    tutorials/backends
+   results
 
 .. toctree::
    :maxdepth: 1

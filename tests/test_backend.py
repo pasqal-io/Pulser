@@ -524,6 +524,18 @@ def test_backend_config():
     ):
         BackendConfig(default_num_shots=0.1)
 
+    with pytest.raises(
+        AttributeError,
+        match=re.escape(
+            "'BackendConfig' is read-only. Please use "
+            "'BackendConfig.with_changes(default_num_shots=...)'"
+        ),
+    ):
+        config1.default_num_shots = 1
+
+    assert config1.default_num_shots is None
+    assert config1.with_changes(default_num_shots=1).default_num_shots == 1
+
 
 def test_emulation_config():
     with pytest.warns(
@@ -699,8 +711,33 @@ def test_emulation_config():
         == 40
     )
 
-    # I prefer_device_noise_model=False, defaults to 1
-    assert EmulationConfig(observables=(BitStrings(),)).n_trajectories == 1
+    # If prefer_device_noise_model=False, defaults to 1
+    config = EmulationConfig(observables=(BitStrings(),))
+    assert config.n_trajectories == 1
+
+    with pytest.raises(
+        AttributeError,
+        match=re.escape(
+            "'EmulationConfig' is read-only. Please use "
+            "'EmulationConfig.with_changes(n_trajectories=...)'"
+        ),
+    ):
+        config.n_trajectories = 10
+
+    assert config.with_changes(n_trajectories=10).n_trajectories == 10
+    # The config stayed the same
+    assert config.n_trajectories == 1
+
+    assert EmulationConfig.state_type is pulser.backend.StateRepr
+    assert EmulationConfig.operator_type is pulser.backend.OperatorRepr
+
+    # EmulationConfig would error on receiving a numpy array of len > 1
+    times = np.array([0.5, 1.0])
+    conf = EmulationConfig(
+        default_evaluation_times=times,
+        observables=(BitStrings(),),
+    )
+    np.testing.assert_equal(conf.default_evaluation_times, times)
 
 
 def test_results_aggregation():
@@ -928,9 +965,20 @@ def test_results_aggregation_errors(caplog):
 
 
 def test_results():
-    res = Results(atom_order=(), total_duration=0)
+    res = Results(atom_order=(), total_duration=100)
     assert res.get_result_tags() == []
     assert res.get_tagged_results() == {}
+    res_str = "\n".join(
+        [
+            "Results",
+            "-------",
+            "Stored results: {stored_results}",
+            "Evaluation times per result: {evaluation_times}",
+            "Atom order in states and bitstrings: ()",
+            "Total sequence duration: 100 ns",
+        ]
+    )
+    assert str(res) == res_str.format(stored_results=[], evaluation_times={})
     with pytest.raises(
         AttributeError, match="'bitstrings' is not in the results"
     ):
@@ -976,6 +1024,11 @@ def test_results():
     )
     with pytest.raises(ValueError, match="not available at time 0.912"):
         res.get_result(obs, 0.912)
+
+    assert str(res) == res_str.format(
+        stored_results=["bitstrings_test"],
+        evaluation_times={"bitstrings_test": [1.0]},
+    )
 
 
 def test_results_final_bistrings():
@@ -1164,9 +1217,11 @@ class TestObservables:
         noise_model = pulser.NoiseModel(
             p_false_pos=p_false_pos, p_false_neg=p_false_neg
         )
-        config.noise_model = noise_model
-        # Different than the BitStrings default on purpose
-        config.default_num_shots = 2000
+        config = config.with_changes(
+            noise_model=noise_model,
+            # Different than the BitStrings default on purpose
+            default_num_shots=2000,
+        )
         assert config.noise_model.noise_types == (
             ("SPAM",) if p_false_pos or p_false_neg else ()
         )
