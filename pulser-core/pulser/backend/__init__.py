@@ -49,6 +49,7 @@ __all__ = [
     "EmulationConfig",
     "EmulatorConfig",
     "Results",
+    "RemoteResults",
     "State",
     "Operator",
     "StateRepr",
@@ -64,5 +65,4 @@ __all__ = [
     "Fidelity",
     "Occupation",
     "StateResult",
-    "RemoteResults",
 ]
