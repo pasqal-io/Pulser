@@ -25,10 +25,16 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.json.abstract_repr as pulser_abstract_repr
+import pulser.math as pm
 from pulser.constants import KB, KEFF, MASS, TRAP_WAVELENGTH
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults
+
+try:
+    import torch
+except ImportError:  # pragma: no cover
+    pass
 
 __all__ = ["NoiseModel"]
 
@@ -302,7 +308,7 @@ class NoiseModel:
     hyperfine_dephasing_rate: float = 0.0
     depolarizing_rate: float = 0.0
     eff_noise_rates: tuple[float, ...] = ()
-    eff_noise_opers: tuple[ArrayLike, ...] = ()
+    eff_noise_opers: tuple[pm.AbstractArrayLike, ...] = ()
     with_leakage: bool = False
     disable_doppler: bool = False
 
@@ -310,6 +316,9 @@ class NoiseModel:
         """Initializes a noise model."""
 
         def to_tuple(obj: tuple) -> tuple:
+            if pm.AbstractArray.has_torch() and isinstance(obj, torch.Tensor):
+                # Convert torch objects into np.ndarray
+                obj = pm.AbstractArray(obj).as_array(detach=True)
             try:
                 # Transform qutip.Qobj objects into np.ndarray
                 obj = np.array(
