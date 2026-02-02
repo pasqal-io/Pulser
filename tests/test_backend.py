@@ -536,6 +536,8 @@ def test_backend_config():
     assert config1.default_num_shots is None
     assert config1.with_changes(default_num_shots=1).default_num_shots == 1
 
+    assert repr(config1) == "BackendConfig(\n    default_num_shots=None,\n)"
+
 
 def test_emulation_config():
     with pytest.warns(
