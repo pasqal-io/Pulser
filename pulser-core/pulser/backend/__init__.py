@@ -18,7 +18,11 @@ from pulser.backend.abc import (
     Backend as Backend,
     EmulatorBackend as EmulatorBackend,
 )
-from pulser.backend.config import EmulatorConfig, EmulationConfig
+from pulser.backend.config import (
+    BackendConfig,
+    EmulatorConfig,
+    EmulationConfig,
+)
 from pulser.noise_model import NoiseModel as NoiseModel  # For backwards compat
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.results import Results
@@ -40,6 +44,7 @@ from pulser.backend.default_observables import (
 
 __all__ = [
     "AggregationMethod",
+    "BackendConfig",
     "QPUBackend",
     "EmulationConfig",
     "EmulatorConfig",

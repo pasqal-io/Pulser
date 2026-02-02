@@ -27,7 +27,7 @@ if "dev" in __version__:
 
 # Pulser packages not pinned to __version__
 requirements = [
-    "pulser-pasqal",
+    "pulser-pasqal >= 0.20.8",
 ]
 # Adding packages pinned to __version__
 with open("packages.txt", "r", encoding="utf-8") as f:
