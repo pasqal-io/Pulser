@@ -31,11 +31,6 @@ from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults
 
-try:
-    import torch
-except ImportError:  # pragma: no cover
-    pass
-
 __all__ = ["NoiseModel"]
 
 NoiseTypes = Literal[
@@ -316,9 +311,11 @@ class NoiseModel:
         """Initializes a noise model."""
 
         def to_tuple(obj: tuple) -> tuple:
-            if pm.AbstractArray.has_torch() and isinstance(obj, torch.Tensor):
+            if pm.AbstractArray.has_torch() and isinstance(
+                obj, pm.torch.Tensor
+            ):
                 # Convert torch objects into np.ndarray
-                obj = pm.AbstractArray(obj).as_array(detach=True)
+                obj = pm.AbstractArray(obj).as_array(detach=False)
             try:
                 # Transform qutip.Qobj objects into np.ndarray
                 obj = np.array(

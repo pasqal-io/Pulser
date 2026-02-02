@@ -353,6 +353,15 @@ class TestNoiseModel:
             eff_noise_rates=[1.0],
         ).eff_noise_opers == (((1.0, 0.0), (0.0, 1.0)),)
 
+        torch = pytest.importorskip("torch")
+        with pytest.raises(RuntimeError, match="on Tensor that requires grad"):
+            NoiseModel(
+                eff_noise_opers=[
+                    torch.from_numpy(matrices["I"]).requires_grad_()
+                ],
+                eff_noise_rates=[1.0],
+            )
+
     def test_hf_detuning_noise_validation(self):
         # list - expected format
         noise_mod = NoiseModel(
