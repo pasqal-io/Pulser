@@ -322,7 +322,7 @@ class NoiseModel:
                     obj.to("Dense").data_as("ndarray"),  # type: ignore
                     dtype=complex,
                 )
-            except AttributeError:
+            except Exception:
                 pass
             if isinstance(obj, (tuple, list, np.ndarray)):
                 obj = tuple(to_tuple(el) for el in obj)
