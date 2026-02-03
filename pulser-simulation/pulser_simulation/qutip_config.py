@@ -77,6 +77,7 @@ class QutipConfig(EmulationConfig[QutipState]):
     # Whether to error if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = True
     sampling_rate: float
+    """The fraction of sequence samples to extract for emulation."""
     _state_type = QutipState
     _operator_type = QutipOperator
 
