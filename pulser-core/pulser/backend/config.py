@@ -137,6 +137,12 @@ class BackendConfig:
             "desired changes."
         )
 
+    def __repr__(self) -> str:
+        params_str = ",\n    ".join(
+            f"{key}={value!r}" for key, value in self._backend_options.items()
+        )
+        return f"{self.__class__.__name__}(\n    {params_str},\n)"
+
 
 class EmulationConfig(BackendConfig, Generic[StateType]):
     """Configures an emulation on a backend.
