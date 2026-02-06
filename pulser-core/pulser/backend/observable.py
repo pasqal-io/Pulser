@@ -114,6 +114,7 @@ class Observable(Callback):
             "observable": self._base_tag,
             "evaluation_times": self.evaluation_times,
             "tag_suffix": self._tag_suffix,
+            "uuid": str(self._uuid),
         }
 
     @property

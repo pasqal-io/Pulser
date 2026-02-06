@@ -480,7 +480,7 @@ def test_emulator_backend(sequence):
         == json.loads(
             EmulationConfig(
                 # These come from the concrete config
-                observables=(BitStrings(),),
+                observables=concrete_config.observables,
                 default_evaluation_times="Full",
                 my_param="bar",
                 # with_modulation is not True because EmulationConfig has it
