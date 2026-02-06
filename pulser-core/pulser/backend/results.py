@@ -273,6 +273,13 @@ class Results:
         where the counters are joined.
         StateResult and EnergyVariance are not supported by default.
 
+        Warning:
+            The ability to access a result from an observable instance
+            (e.g. via Results.get_result(obs)) is only preserved if all
+            aggregated results originated from the same observable instance.
+            When that is not the case, the aggregated result can still
+            be accessed via the observable's tag.
+
         Args:
             results_to_aggregate: The list of Results to aggregate
 
@@ -383,7 +390,14 @@ class Results:
                     "incompatible simulations: "
                     f"the times for `{tag}` are not all the same."
                 )
-            uid = uuid.uuid4()
+
+            _uuids = set(res._tagmap[tag] for res in results_to_aggregate)
+            if len(_uuids) == 1:
+                # Preserve the UUID when all results share the same
+                uid = list(_uuids)[0]
+            else:
+                # Otherwise, create a new one
+                uid = uuid.uuid4()
 
             for t in result_0.get_result_times(tag):
                 v = aggregation_function(
