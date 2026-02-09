@@ -435,7 +435,7 @@ def test_aggregation():
         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
     ]
     assert np.allclose(
-        qutip_results.final_state._state.full(), expected_state, atol=1e-4
+        qutip_results.final_state.to_qobj().full(), expected_state, atol=1e-4
     )
     assert np.allclose(
         qutip_results.occupation[-1], np.array([0.6, 0.6, 0.8]), atol=1e-4
@@ -446,3 +446,8 @@ def test_aggregation():
         "110": 1000,
     }
     assert "energy_variance" not in qutip_results.get_result_tags()
+
+    # Check that the results are accessible via the original observables
+    # i.e. that the UUIDs were preserved in the aggregation
+    for obs_ in (occup, state, bitstrings):
+        assert qutip_results.get_result_times(obs_) == [1.0]
