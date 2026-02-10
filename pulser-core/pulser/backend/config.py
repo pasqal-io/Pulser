@@ -137,6 +137,9 @@ class BackendConfig:
             "desired changes."
         )
 
+    def __setstate__(self, d: dict) -> None:
+        super().__setattr__("__dict__", d)
+
 
 class EmulationConfig(BackendConfig, Generic[StateType]):
     """Configures an emulation on a backend.
