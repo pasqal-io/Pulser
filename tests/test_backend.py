@@ -481,7 +481,7 @@ def test_emulator_backend(sequence):
         == json.loads(
             EmulationConfig(
                 # These come from the concrete config
-                observables=(BitStrings(),),
+                observables=concrete_config.observables,
                 default_evaluation_times="Full",
                 my_param="bar",
                 # with_modulation is not True because EmulationConfig has it
@@ -536,6 +536,8 @@ def test_backend_config():
 
     assert config1.default_num_shots is None
     assert config1.with_changes(default_num_shots=1).default_num_shots == 1
+
+    assert repr(config1) == "BackendConfig(\n    default_num_shots=None,\n)"
 
 
 def test_backend_config_pickles(tmp_path):
@@ -763,7 +765,8 @@ def test_emulation_config():
     np.testing.assert_equal(conf.default_evaluation_times, times)
 
 
-def test_results_aggregation():
+@pytest.mark.parametrize("matching_uuids", [True, False])
+def test_results_aggregation(matching_uuids):
     results1 = Results(atom_order=[0, 1], total_duration=100)
     results2 = Results(atom_order=[0, 1], total_duration=100)
     uids = [uuid.uuid4() for _ in range(4)]
@@ -790,14 +793,14 @@ def test_results_aggregation():
         aggregation_method=AggregationMethod.SKIP,
     )
     results2._store_raw(
-        uuid=uids[2],
+        uuid=uids[0] if matching_uuids else uids[2],
         tag="dummy_result",
         time=0.1,
         value=3.0,
         aggregation_method=agg_type,
     )
     results2._store_raw(
-        uuid=uids[2],
+        uuid=uids[0] if matching_uuids else uids[2],
         tag="dummy_result",
         time=0.2,
         value=4.0,
@@ -827,8 +830,10 @@ def test_results_aggregation():
     )  # twice in agg, twice in agg2, once each for the 2 results added above.
     for ag in [agg, agg2]:
         ag_uuid = ag._find_uuid("dummy_result")
-        for uid in uids:
-            assert ag_uuid != uid
+        if matching_uuids:
+            assert ag_uuid == uids[0]
+        else:
+            assert all(ag_uuid != uid for uid in uids)
         assert ag._aggregation_methods[ag_uuid] == agg_type
         assert ag.dummy_result == [2.0, 3.0]
 

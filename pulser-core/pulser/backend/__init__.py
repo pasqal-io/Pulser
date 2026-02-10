@@ -26,6 +26,7 @@ from pulser.backend.config import (
 from pulser.noise_model import NoiseModel as NoiseModel  # For backwards compat
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.results import Results
+from pulser.backend.remote import RemoteResults
 from pulser.backend.state import State, StateRepr
 from pulser.backend.operator import Operator, OperatorRepr
 from pulser.backend.observable import Callback, Observable, AggregationMethod
@@ -48,6 +49,7 @@ __all__ = [
     "EmulationConfig",
     "EmulatorConfig",
     "Results",
+    "RemoteResults",
     "State",
     "Operator",
     "StateRepr",

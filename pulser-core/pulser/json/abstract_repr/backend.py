@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import TYPE_CHECKING, Type, TypeVar
 
 from pulser.backend.default_observables import (
@@ -76,34 +77,44 @@ def _deserialize_operator(
 def _deserialize_observable(
     ser_obs: dict, state_type: Type[State], op_type: Type[Operator]
 ) -> Observable:
-    obs = ser_obs.copy()
-    obs_name = obs.pop("observable")
-    if obs_name == "bitstrings":
-        return BitStrings(**obs)
-    if obs_name == "expectation":
-        return Expectation(
-            _deserialize_operator(obs.pop("operator"), op_type), **obs
-        )
-    if obs_name == "fidelity":
-        return Fidelity(
-            _deserialize_state(obs.pop("state"), state_type), **obs
-        )
-    if obs_name == "occupation":
-        return Occupation(**obs)
-    if obs_name == "correlation_matrix":
-        return CorrelationMatrix(**obs)
-    if obs_name == "energy":
-        return Energy(**obs)
-    if obs_name == "energy_second_moment":
-        return EnergySecondMoment(**obs)
-    if obs_name == "energy_variance":
-        return EnergyVariance(**obs)
-    raise AbstractReprError(
-        f"Failed to deserialize the observable tagged `{obs_name}` "
-        "as unknown or not supported. This likely implies that the JSON "
-        "abstract representation of the emulation configuration has not "
-        "been validated or has been corrupted."
-    )
+    obs_params = ser_obs.copy()
+    obs_name = obs_params.pop("observable")
+    obs_uuid = obs_params.pop("uuid", None)
+    obs: Observable
+    match obs_name:
+        case "bitstrings":
+            obs = BitStrings(**obs_params)
+        case "expectation":
+            obs = Expectation(
+                _deserialize_operator(obs_params.pop("operator"), op_type),
+                **obs_params,
+            )
+        case "fidelity":
+            obs = Fidelity(
+                _deserialize_state(obs_params.pop("state"), state_type),
+                **obs_params,
+            )
+        case "occupation":
+            obs = Occupation(**obs_params)
+        case "correlation_matrix":
+            obs = CorrelationMatrix(**obs_params)
+        case "energy":
+            obs = Energy(**obs_params)
+        case "energy_second_moment":
+            obs = EnergySecondMoment(**obs_params)
+        case "energy_variance":
+            obs = EnergyVariance(**obs_params)
+        case _:
+            raise AbstractReprError(
+                f"Failed to deserialize the observable tagged `{obs_name}` "
+                "as unknown or not supported. This likely implies that the "
+                "JSON abstract representation of the emulation configuration "
+                "has not been validated or has been corrupted."
+            )
+    if obs_uuid is not None:
+        # Replace the observable's UUID with the one in the schema
+        obs._uuid = uuid.UUID(obs_uuid)
+    return obs
 
 
 def _deserialize_emulation_config(
