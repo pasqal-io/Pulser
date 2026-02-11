@@ -16,6 +16,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import json
+import pickle
 import re
 import typing
 import uuid
@@ -537,6 +538,28 @@ def test_backend_config():
     assert config1.with_changes(default_num_shots=1).default_num_shots == 1
 
     assert repr(config1) == "BackendConfig(\n    default_num_shots=None,\n)"
+
+
+def test_backend_config_pickles(tmp_path):
+    cf = EmulationConfig(observables=[StateResult()])
+
+    filename = "config_pickle.pl"
+    with open(tmp_path / filename, "wb") as f:
+        pickle.dump(cf, f)
+
+    with open(tmp_path / filename, "rb") as f:
+        new_cf = pickle.load(f)
+
+    assert set(cf._backend_options.keys()) == set(
+        new_cf._backend_options.keys()
+    )
+    for k in cf._backend_options.keys():
+        if k != "observables":
+            assert cf._backend_options[k] == new_cf._backend_options[k]
+        else:
+            assert set(o.uuid for o in cf._backend_options[k]) == set(
+                o.uuid for o in new_cf._backend_options[k]
+            )
 
 
 def test_emulation_config():
