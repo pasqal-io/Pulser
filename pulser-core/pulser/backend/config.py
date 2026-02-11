@@ -138,6 +138,7 @@ class BackendConfig:
         )
 
     def __setstate__(self, d: dict) -> None:
+        # Allows the config to be unpickled
         super().__setattr__("__dict__", d)
 
     def __repr__(self) -> str:
