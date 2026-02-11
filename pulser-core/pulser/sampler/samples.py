@@ -205,9 +205,11 @@ class ChannelSamples:
         The channel is considered empty if all amplitude and detuning
         samples are zero.
         """
-        return (
-            np.count_nonzero(self.amp.as_array(detach=True))
-            + np.count_nonzero(self.det.as_array(detach=True))
+        return bool(
+            (
+                np.count_nonzero(self.amp.as_array(detach=True))
+                + np.count_nonzero(self.det.as_array(detach=True))
+            )
             == 0
         )
 
@@ -439,7 +441,7 @@ class ChannelSamples:
             new_samples[key] = new_samples[key].astype(float)[
                 slice(0, max_duration)
             ]
-        return replace(self, **new_samples)
+        return replace(self, **new_samples)  # type: ignore[arg-type]
 
 
 @dataclass

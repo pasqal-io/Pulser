@@ -235,6 +235,10 @@
                     "string",
                     "null"
                 ]
+            },
+            "uuid": {
+                "description": "The observable's internal UUID",
+                "type": "string"
             }
         },
         "required": [
@@ -276,6 +280,10 @@
                     "string",
                     "null"
                 ]
+            },
+            "uuid": {
+                "description": "The observable's internal UUID",
+                "type": "string"
             }
         },
         "required": [
@@ -307,6 +315,10 @@
                     "string",
                     "null"
                 ]
+            },
+            "uuid": {
+                "description": "The observable's internal UUID",
+                "type": "string"
             }
         },
         "required": [
@@ -341,6 +353,10 @@
                     "string",
                     "null"
                 ]
+            },
+            "uuid": {
+                "description": "The observable's internal UUID",
+                "type": "string"
             }
         },
         "required": [
@@ -375,6 +391,10 @@
                     "string",
                     "null"
                 ]
+            },
+            "uuid": {
+                "description": "The observable's internal UUID",
+                "type": "string"
             }
         },
         "required": [
@@ -402,6 +422,10 @@
                     "string",
                     "null"
                 ]
+            },
+            "uuid": {
+                "description": "The observable's internal UUID",
+                "type": "string"
             }
         },
         "required": [
@@ -428,6 +452,10 @@
                     "string",
                     "null"
                 ]
+            },
+            "uuid": {
+                "description": "The observable's internal UUID",
+                "type": "string"
             }
         },
         "required": [
@@ -447,14 +475,18 @@
             },
             "evaluation_times": {
                 "$ref": "#/evaluation_times"
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": [
+                    "string",
+                    "null"
+                ]
+            },
+            "uuid": {
+                "description": "The observable's internal UUID",
+                "type": "string"
             }
-        },
-        "tag_suffix": {
-            "description": "added to base_tag to distinguish different instances",
-            "type": [
-                "string",
-                "null"
-            ]
         },
         "required": [
             "observable",

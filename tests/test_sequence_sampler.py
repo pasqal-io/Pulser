@@ -41,7 +41,7 @@ def assert_same_samples_as_sim(seq: pulser.Sequence) -> None:
     got = sample(seq).to_nested_dict()
     want = (
         pulser_simulation.QutipEmulator.from_sequence(seq)
-        ._hamiltonian.data.noisy_samples.to_nested_dict()
+        ._current_hamiltonian.samples.to_nested_dict()
         .copy()
     )
 
@@ -247,9 +247,12 @@ def test_modulation_local(mod_device):
         np.testing.assert_array_equal(getattr(out_ch_samples, qty), combined)
 
 
+@pytest.mark.parametrize("min_detuning_on", [True, False])
 @pytest.mark.parametrize("custom_eom_buffer", [None, 400])
 @pytest.mark.parametrize("disable_eom", [True, False])
-def test_eom_modulation(mod_device, disable_eom, custom_eom_buffer):
+def test_eom_modulation(
+    mod_device, disable_eom, custom_eom_buffer, min_detuning_on
+):
     if custom_eom_buffer is not None:
         # Replace the EOM config with one that has custom_buffer_time
         ryd_ch = mod_device.channels["rydberg_global"]
@@ -263,7 +266,12 @@ def test_eom_modulation(mod_device, disable_eom, custom_eom_buffer):
         )
     seq = pulser.Sequence(pulser.Register.square(2, prefix="q"), mod_device)
     seq.declare_channel("ch0", "rydberg_global")
-    seq.enable_eom_mode("ch0", amp_on=1, detuning_on=0.0)
+    detuning_on = (
+        0.0
+        if not min_detuning_on
+        else -seq.declared_channels["ch0"].max_abs_detuning
+    )
+    seq.enable_eom_mode("ch0", amp_on=1, detuning_on=detuning_on)
     seq.add_eom_pulse("ch0", 100, 0.0)
     seq.delay(200, "ch0")
     seq.add_eom_pulse("ch0", 100, 0.0)
@@ -276,6 +284,8 @@ def test_eom_modulation(mod_device, disable_eom, custom_eom_buffer):
     eom_block = seq._schedule["ch0"].eom_blocks[-1]
     eom_config = seq.declared_channels["ch0"].eom_config
     det_off = eom_block.detuning_off
+    if min_detuning_on:
+        assert det_off < -seq.declared_channels["ch0"].max_abs_detuning
     # When finishing in EOM mode (block.tf is None), end = full_duration
     eom_end = full_duration if eom_block.tf is None else end_of_eom
     eom_mask = np.zeros(full_duration, dtype=bool)

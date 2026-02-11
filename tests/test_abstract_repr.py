@@ -19,7 +19,7 @@ import re
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import asdict, replace
-from typing import Any, Type, cast
+from typing import Any, Type
 from unittest.mock import patch
 
 import jsonschema
@@ -210,49 +210,52 @@ def test_register(reg: Register | Register3D):
             Register.from_abstract_repr(json.dumps(ser_reg_obj))
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
+)
 @pytest.mark.parametrize(
-    "noise_model",
+    "noise_model_factory",
     [
-        NoiseModel(),
-        NoiseModel(disable_doppler=True),
-        NoiseModel(laser_waist=100),
-        NoiseModel(laser_waist=100, disable_doppler=True),
-        NoiseModel(temperature=100, runs=10, samples_per_run=1),
-        NoiseModel(
+        lambda: NoiseModel(),
+        lambda: NoiseModel(disable_doppler=True),
+        lambda: NoiseModel(laser_waist=100),
+        lambda: NoiseModel(laser_waist=100, disable_doppler=True),
+        lambda: NoiseModel(temperature=100, runs=10, samples_per_run=1),
+        lambda: NoiseModel(
             temperature=100, runs=10, samples_per_run=1, disable_doppler=True
         ),
-        NoiseModel(
+        lambda: NoiseModel(
             eff_noise_rates=(0.1,),
             eff_noise_opers=(((0, -1j), (1j, 0)),),
         ),
-        NoiseModel(
+        lambda: NoiseModel(
             eff_noise_rates=(0.1,),
             eff_noise_opers=(((0, -1j, 0), (1j, 0, 0), (0, 0, 1)),),
             with_leakage=True,
         ),
-        NoiseModel(
+        lambda: NoiseModel(
             detuning_sigma=0.1,
             runs=1,
         ),
-        NoiseModel(
+        lambda: NoiseModel(
             detuning_hf_psd=(1, 2, 3),
             detuning_hf_omegas=(4, 5, 6),
             runs=1,
         ),
-        NoiseModel(
+        lambda: NoiseModel(
             detuning_sigma=0.1,
             detuning_hf_psd=(1, 2, 3),
             detuning_hf_omegas=(4, 5, 6),
             runs=1,
         ),
-        NoiseModel(
+        lambda: NoiseModel(
             temperature=50.0,
             trap_depth=150.0,
             trap_waist=1.0,
             runs=1,
             samples_per_run=1,
         ),
-        NoiseModel(
+        lambda: NoiseModel(
             temperature=50.0,
             trap_depth=150.0,
             trap_waist=1.0,
@@ -260,10 +263,13 @@ def test_register(reg: Register | Register3D):
             samples_per_run=1,
             disable_doppler=True,
         ),
-        NoiseModel(temperature=50.0, trap_depth=150.0, trap_waist=1.0, runs=1),
+        lambda: NoiseModel(
+            temperature=50.0, trap_depth=150.0, trap_waist=1.0, runs=1
+        ),
     ],
 )
-def test_noise_model(noise_model: NoiseModel):
+def test_noise_model(noise_model_factory):
+    noise_model: NoiseModel = noise_model_factory()
     ser_noise_model_str = noise_model.to_abstract_repr()
     re_noise_model = NoiseModel.from_abstract_repr(ser_noise_model_str)
 
@@ -279,19 +285,23 @@ def test_noise_model(noise_model: NoiseModel):
         assert noise_model == re_noise_model
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
+)
 @pytest.mark.parametrize(
-    "noise_model",
+    "noise_model_factory",
     [
-        NoiseModel(),
-        NoiseModel(laser_waist=100),
-        NoiseModel(temperature=100, runs=10, samples_per_run=1),
-        NoiseModel(
+        lambda: NoiseModel(),
+        lambda: NoiseModel(laser_waist=100),
+        lambda: NoiseModel(temperature=100, runs=10, samples_per_run=1),
+        lambda: NoiseModel(
             eff_noise_rates=(0.1,),
             eff_noise_opers=(((0, -1j), (1j, 0)),),
         ),
     ],
 )
-def test_legacy_noise_model(noise_model: NoiseModel):
+def test_legacy_noise_model(noise_model_factory):
+    noise_model: NoiseModel = noise_model_factory()
     ser_noise_model_str = noise_model.to_abstract_repr()
     re_noise_model = NoiseModel.from_abstract_repr(ser_noise_model_str)
     # Define parameters with defaults, like it was done before
@@ -374,7 +384,7 @@ class TestDevice:
             with pytest.raises(DeserializeDeviceError) as exc_info:
                 func(obj_str)
 
-            cause = cast(DeserializeDeviceError, exc_info.value).__cause__
+            cause = exc_info.value.__cause__
             assert isinstance(cause, original_err)
             assert re.search(re.escape(err_msg), str(cause)) is not None
             return cause
@@ -800,6 +810,7 @@ class TestSerialization:
                 "channels",
                 "operations",
                 "measurement",
+                "pulser_version",
             ]
         )
         device_name = abstract["device"]["name"]
@@ -1592,6 +1603,7 @@ def _get_serialized_seq(
         "operations": operations,
         "variables": variables,
         "measurement": None,
+        "pulser_version": pulser.__version__,
     }
     seq_dict.update(override_kwargs)
     return seq_dict
@@ -2939,8 +2951,6 @@ def test_noise_optional_params(
     trap_waist,
 ):
     noise = pulser.NoiseModel(
-        runs=1,  # TODO: connect this with MCArlo
-        samples_per_run=1,  # TODO: connect this with MCarlo or ignored
         state_prep_error=0.1,
         p_false_pos=0.1,
         p_false_neg=0.15,

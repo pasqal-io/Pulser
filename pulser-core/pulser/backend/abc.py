@@ -14,11 +14,13 @@
 """Base class for the backend interface."""
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import ClassVar
+from typing import ClassVar, Type, cast
 
 import pulser
+from pulser.backend._classproperty import classproperty
 from pulser.backend.config import EmulationConfig
 from pulser.backend.results import Results
 from pulser.devices import Device
@@ -97,6 +99,24 @@ class EmulatorBackend(Backend):
         """Initializes the backend."""
         super().__init__(sequence, mimic_qpu=mimic_qpu)
         self._config = self.validate_config(config or self.default_config)
+        if (
+            self._config.prefer_device_noise_model
+            and self._sequence.device.default_noise_model is not None
+            and self._sequence.device.default_noise_model.runs is not None
+            and self._sequence.device.default_noise_model.runs
+            != self._config.n_trajectories
+        ):
+            config = self._config
+            warnings.warn(
+                f"'{sequence.device.default_noise_model.runs=}' is being "
+                f"ignored; '{config.n_trajectories=}' will be used instead.",
+                stacklevel=2,
+            )
+
+    @classproperty
+    def config_type(cls) -> Type[EmulationConfig]:
+        """The config class to use with this backend."""
+        return type(cls.default_config)
 
     @classmethod
     def validate_config(cls, config: EmulationConfig) -> EmulationConfig:
@@ -117,9 +137,12 @@ class EmulatorBackend(Backend):
         # Use all the parameters in config and then fill the rest with the
         # ones of default_config
         # See the BackendConfig definition to see why this works
-        return type(cls.default_config)(
-            **{
-                **cls.default_config._backend_options,
-                **config._backend_options,
-            }
+        return cast(
+            EmulationConfig,
+            cls.config_type(
+                **{
+                    **cls.default_config._backend_options,
+                    **config._backend_options,
+                }
+            ),
         )

@@ -15,16 +15,23 @@ from __future__ import annotations
 
 import dataclasses
 import math
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 import qutip
 
 import pulser
-from pulser.backend.default_observables import Energy, Occupation, StateResult
+from pulser.backend.default_observables import (
+    BitStrings,
+    Energy,
+    EnergyVariance,
+    Occupation,
+    StateResult,
+)
 from pulser.backend.observable import Callback
 from pulser_simulation.qutip_backend import QutipBackendV2
-from pulser_simulation.qutip_config import QutipConfig
+from pulser_simulation.qutip_config import QutipConfig, Solver
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simulation import QutipEmulator
@@ -89,30 +96,35 @@ def test_callback():
 
     config = QutipConfig(
         callbacks=[CountCalls()],
-        noise_model=pulser.NoiseModel(
-            amp_sigma=0.1, runs=1, samples_per_run=1
-        ),
+        noise_model=pulser.NoiseModel(amp_sigma=0.1),
+        n_trajectories=1,
     )
     backend = QutipBackendV2(seq, config=config)
     backend.run()
     assert backend._config.callbacks[0].counter == seq.get_duration() + 1
 
 
-def test_qutip_backend_v2_energy():
+def test_qutip_backend_v2_energy(capfd):
     seq = sequence()
     with pytest.raises(
         TypeError, match="'config' must be an instance of 'EmulationConfig'"
     ):
         QutipBackendV2(seq, config="tralala")
+
     config = QutipConfig(
         default_evaluation_times="Full",
         observables=[
-            StateResult(evaluation_times=[1.0]),
+            StateResult(),
             Energy(evaluation_times=[0.001 * n for n in range(1001)]),
         ],
     )
     backend = QutipBackendV2(seq, config=config)
     results = backend.run()
+    assert results.get_result_times("state") != results.get_result_times(
+        "energy"
+    )
+    out, _ = capfd.readouterr()
+    assert out == "Emulating Trajectory 1/1\n"
     assert (
         results.get_result("energy", 0.0)
         == results.energy[0]
@@ -137,11 +149,11 @@ def test_qutip_backend_v2_energy():
     )
 
 
-def test_qutip_backend_v2_default_noise_model():
+def test_qutip_backend_v2_default_noise_model(capfd):
     noisy_device = dataclasses.replace(
         pulser.devices.MockDevice,
         default_noise_model=pulser.NoiseModel(
-            dephasing_rate=0.01, temperature=50, runs=2, samples_per_run=1
+            dephasing_rate=0.01, temperature=50
         ),
     )
 
@@ -155,15 +167,24 @@ def test_qutip_backend_v2_default_noise_model():
             qutip.tensor([qutip.basis(2, 0) for _ in range(2)]),
             eigenstates=("r", "g"),
         ),
+        n_trajectories=2,
     )
 
     backend = QutipBackendV2(sequence(noisy_device), config=config)
 
-    assert backend._sim_obj._hamiltonian.config.p_false_neg == 0.0
-    assert backend._sim_obj._hamiltonian.config.temperature == 50
-    assert backend._sim_obj._hamiltonian.config.dephasing_rate == 0.01
+    # The QutipEmulator should use the device noise model as per the config
+    assert backend._sim_obj._hamiltonian_data.noise_model.p_false_neg == 0.0
+    assert backend._sim_obj._hamiltonian_data.noise_model.temperature == 50
+    assert (
+        backend._sim_obj._hamiltonian_data.noise_model.dephasing_rate == 0.01
+    )
+
+    # However, the config will contain the given noise model
+    assert backend._config.noise_model.p_false_neg == 0.1
 
     backend.run()
+    out, _ = capfd.readouterr()
+    assert out == "Emulating Trajectory 1/2\nEmulating Trajectory 2/2\n"
 
 
 def test_qutip_backend_v2_stochastic_noise():
@@ -174,7 +195,6 @@ def test_qutip_backend_v2_stochastic_noise():
             temperature=50.0,
             p_false_neg=0.01,
             amp_sigma=1e-3,
-            runs=30,
             samples_per_run=samples_per_run,
         )
 
@@ -185,9 +205,14 @@ def test_qutip_backend_v2_stochastic_noise():
             Occupation(evaluation_times=[0.001 * n for n in range(1001)]),
         ],
         noise_model=get_noise_model(samples_per_run=1),
+        n_trajectories=30,
     )
     seq = sequence()
     backend = QutipBackendV2(seq, config=config)
+
+    # Check trajectories are passed to _sim_obj
+    assert backend._sim_obj.n_trajectories == config.n_trajectories
+
     results = backend.run()
 
     # Same run with old API
@@ -195,7 +220,9 @@ def test_qutip_backend_v2_stochastic_noise():
         DeprecationWarning, match="Setting samples_per_run different to 1 is"
     ):
         qutip_emulator = QutipEmulator.from_sequence(
-            seq, noise_model=get_noise_model(samples_per_run=100)
+            seq,
+            noise_model=get_noise_model(samples_per_run=100),
+            n_trajectories=30,
         )
     results_old_api = qutip_emulator.run()
 
@@ -269,7 +296,6 @@ def test_leakage(amp_sigma):
         eff_noise_opers=eff_ops,
         with_leakage=True,
         amp_sigma=amp_sigma,
-        runs=int(amp_sigma) or None,
     )
 
     eval_times = [1.0]
@@ -277,6 +303,8 @@ def test_leakage(amp_sigma):
         default_evaluation_times=eval_times,
         observables=[StateResult(evaluation_times=eval_times)],
         noise_model=noise_model,
+        solver=Solver.MESOLVER,
+        n_trajectories=1,
     )
 
     qutip_sim = QutipBackendV2(seq, config=qutip_config)
@@ -335,7 +363,6 @@ def test_register_detuning_detection():
         temperature=50.0,
         disable_doppler=True,
         detuning_sigma=5.0,
-        runs=10,
     )
 
     assert set(noise_model.noise_types) == {"register", "detuning"}
@@ -345,8 +372,82 @@ def test_register_detuning_detection():
         default_evaluation_times=eval_times,
         observables=[StateResult(evaluation_times=eval_times)],
         noise_model=noise_model,
+        n_trajectories=10,
     )
 
     qutip_sim = QutipBackendV2(seq, config=qutip_config)
     result_qut = qutip_sim.run()
     assert result_qut.final_state._state.shape == (4, 4)  # density matrix
+
+
+def test_config_type():
+    assert QutipBackendV2.config_type is QutipConfig
+
+
+def test_aggregation():
+    reg = pulser.Register({"q0": [-1e5, 0], "q1": [1e5, 0], "q2": [0, 1e5]})
+    seq = pulser.Sequence(reg, pulser.MockDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(
+        pulser.Pulse.ConstantDetuning(
+            pulser.BlackmanWaveform(100, np.pi), 0.0, 0.0
+        ),
+        "ryd",
+    )
+
+    occup = Occupation(evaluation_times=[1.0])
+    state = StateResult(evaluation_times=[1.0])
+    bitstrings = BitStrings(evaluation_times=[1.0])
+    variance = EnergyVariance(evaluation_times=[1.0])
+
+    qutip_config = QutipConfig(
+        observables=(occup, state, bitstrings, variance),
+        n_trajectories=5,
+        noise_model=pulser.NoiseModel(state_prep_error=1 / 3),
+    )
+    with pytest.warns(
+        UserWarning, match="Skipping aggregation of `energy_variance`."
+    ):
+        with patch(
+            "pulser._hamiltonian_data.hamiltonian_data.np.random.uniform"
+        ) as bad_atoms_mock:
+            # The bad qubits for each trajectory (0,0,1,1,2 respectively)
+            # and a 6th item for the noiseless hamiltonian
+            bad_atoms_mock.side_effect = [
+                np.array([0.1, 0.5, 0.6]),
+                np.array([0.1, 0.5, 0.6]),
+                np.array([0.5, 0.1, 0.6]),
+                np.array([0.5, 0.1, 0.6]),
+                np.array([0.5, 0.6, 0.1]),
+                np.array([0.1, 0.2, 0.3]),
+            ]
+            qutip_backend = QutipBackendV2(seq, config=qutip_config)
+            qutip_results = qutip_backend.run()
+
+    expected_state = [
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.4, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    ]
+    assert np.allclose(
+        qutip_results.final_state.to_qobj().full(), expected_state, atol=1e-4
+    )
+    assert np.allclose(
+        qutip_results.occupation[-1], np.array([0.6, 0.6, 0.8]), atol=1e-4
+    )
+    assert qutip_results.final_bitstrings == {
+        "011": 2000,
+        "101": 2000,
+        "110": 1000,
+    }
+    assert "energy_variance" not in qutip_results.get_result_tags()
+
+    # Check that the results are accessible via the original observables
+    # i.e. that the UUIDs were preserved in the aggregation
+    for obs_ in (occup, state, bitstrings):
+        assert qutip_results.get_result_times(obs_) == [1.0]

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import math
 import warnings
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field, fields
@@ -24,6 +25,8 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.json.abstract_repr as pulser_abstract_repr
+import pulser.math as pm
+from pulser.constants import KB, KEFF, MASS, TRAP_WAVELENGTH
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults
@@ -106,6 +109,53 @@ OPTIONAL_IN_ABSTR_REPR = (
 )
 
 
+def _doppler_sigma(temperature: float) -> float:
+    """Standard deviation for Doppler shifting due to thermal motion.
+
+    Arg:
+        temperature: The temperature in K.
+    """
+    return KEFF * math.sqrt(KB * temperature / MASS)
+
+
+def _register_sigma_xy_z(
+    temperature: float, trap_waist: float, trap_depth: float
+) -> tuple[float, float]:
+    """Standard deviation for fluctuations in atom position in the trap.
+
+    - Plane fluctuation: 𝜎ˣʸ = √(T w²/(4 Uₜᵣₐₚ)), where T is temperature,
+      w is the trap waist and Uₜᵣₐₚ is the trap depth.
+    - Off plane fluctuation: 𝜎ᶻ = 𝜋 / 𝜆 √2 w 𝜎ˣʸ, where 𝜆 is the trap
+    wavelength with a constant value of 0.85 µm
+
+    Note: a k_B factor is absorbed in the trap depth (Uₜᵣₐₚ), so the units
+    of temperature and trap depth are the same.
+
+    Args:
+        temperature (float): Temperature (T) of the atoms in the trap
+            (in Kelvin).
+        trap_depth (float): Depth of the trap (Uₜᵣₐₚ)
+            (same units as temperature).
+        trap_waist (float): Waist of the trap (w) (in µmeters).
+
+    Returns:
+        tuple: The standard deviations of the spatial position fluctuations
+        in the xy-plane (register_sigma_xy) and along the z-axis
+        (register_sigma_z).
+    """
+    register_sigma_xy = math.sqrt(
+        temperature * trap_waist**2 / (4 * trap_depth)
+    )
+    register_sigma_z = (
+        math.pi
+        / TRAP_WAVELENGTH
+        * math.sqrt(2)
+        * trap_waist
+        * register_sigma_xy
+    )
+    return register_sigma_xy, register_sigma_z
+
+
 @dataclass(init=True, repr=False, frozen=True)
 class NoiseModel:
     r"""Specifies the noise model parameters for emulation.
@@ -172,10 +222,12 @@ class NoiseModel:
             necessary, this determines how many times that happens. Not
             to be confused with the number of times the resulting
             bitstring distribution is sampled when calculating bitstring
-            counts.
+            counts. *Deprecated since v1.7; this parameter is only used by
+            deprecated backends. Please use 'EmulationConfig.n_trajectories'
+            instead.*
         samples_per_run: Number of samples per noisy Hamiltonian. Useful
             for cutting down on computing time, but unrealistic. *Deprecated
-            since v1.6, use only `runs`.*
+            since v1.6; this parameter is only used by deprecated backends.*
         state_prep_error: The state preparation error probability. Defaults
             to 0.
         p_false_pos: Probability of measuring a false positive. Defaults to 0.
@@ -251,7 +303,7 @@ class NoiseModel:
     hyperfine_dephasing_rate: float = 0.0
     depolarizing_rate: float = 0.0
     eff_noise_rates: tuple[float, ...] = ()
-    eff_noise_opers: tuple[ArrayLike, ...] = ()
+    eff_noise_opers: tuple[pm.AbstractArrayLike, ...] = ()
     with_leakage: bool = False
     disable_doppler: bool = False
 
@@ -259,6 +311,19 @@ class NoiseModel:
         """Initializes a noise model."""
 
         def to_tuple(obj: tuple) -> tuple:
+            if pm.AbstractArray.has_torch() and isinstance(
+                obj, pm.torch.Tensor
+            ):
+                # Convert torch objects into np.ndarray
+                obj = pm.AbstractArray(obj).as_array(detach=False)
+            try:
+                # Transform qutip.Qobj objects into np.ndarray
+                obj = np.array(
+                    obj.to("Dense").data_as("ndarray"),  # type: ignore
+                    dtype=complex,
+                )
+            except Exception:
+                pass
             if isinstance(obj, (tuple, list, np.ndarray)):
                 obj = tuple(to_tuple(el) for el in obj)
             return obj
@@ -316,6 +381,20 @@ class NoiseModel:
             for p in param_vals
             if param_vals[p] is not None or p in relevant_params
         }
+
+        if param_vals.get("runs") is not None:
+            warnings.warn(
+                "Defining the number of emulation trajectories via "
+                "'NoiseModel.runs' is deprecated since pulser v1.7. "
+                "Please favour using 'EmulationConfig.n_trajectories' "
+                "instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+        else:
+            # Exclude 'runs' from validation when it's None
+            relevant_param_vals.pop("runs", None)
+
         self._validate_parameters(relevant_param_vals)
 
         self._check_register_noise_params(
@@ -470,7 +549,7 @@ class NoiseModel:
                 f"({len(eff_noise_rates)}) must be equal."
             )
         for rate in eff_noise_rates:
-            if not isinstance(rate, float):
+            if not (isinstance(rate, float) or isinstance(rate, int)):
                 raise TypeError(
                     "eff_noise_rates is a list of floats,"
                     f" it must not contain a {type(rate)}."
@@ -542,9 +621,7 @@ class NoiseModel:
             if param == "samples_per_run" and value != 1:
                 warnings.warn(
                     "Setting samples_per_run different to 1 is "
-                    "deprecated since pulser v1.6. Please use only "
-                    "`runs` to define the number of noisy simulations "
-                    "to perform.",
+                    "deprecated since pulser v1.6.",
                     DeprecationWarning,
                     stacklevel=2,
                 )
@@ -584,7 +661,11 @@ class NoiseModel:
         relevant_params.add("noise_types")
         params_list = []
         for f in fields(self):
-            if f.name in relevant_params:
+            if (
+                f.name in relevant_params
+                and f.name != "runs"
+                and f.name != "samples_per_run"
+            ):
                 params_list.append(f"{f.name}={getattr(self, f.name)!r}")
         return f"{self.__class__.__name__}({', '.join(params_list)})"
 
@@ -614,3 +695,195 @@ class NoiseModel:
                 obj_str
             )
         )
+
+    def get_noise_table(self) -> dict[str, tuple[Any, str]]:
+        """Maps non-zero noise quantities with their value and units.
+
+        Returns:
+            A dictionnary, associating to each quantity (a string) a tuple
+            composed of their value and their units (a string, that is empty
+            if the quantity doesn't have units like for probabilities).
+        """
+        table: dict[str, tuple[Any, str]] = {}
+        if "register" in self.noise_types:
+            register_sigma_xy, register_sigma_z = _register_sigma_xy_z(
+                self.temperature * 1e-6,
+                self.trap_waist,
+                cast(float, self.trap_depth),
+            )
+            table["register_sigma_xy"] = (register_sigma_xy, "µm")
+            table["register_sigma_z"] = (register_sigma_z, "µm")
+        if self.state_prep_error > 0:
+            table["state_prep_error"] = (self.state_prep_error, "")
+        if self.laser_waist is not None and self.laser_waist > 0:
+            table["laser_waist"] = (self.laser_waist, "µm")
+        if self.amp_sigma > 0:
+            table["amp_sigma"] = (self.amp_sigma * 100, "%")
+        if self.detuning_sigma > 0:
+            table["detuning_sigma"] = (self.detuning_sigma, "rad/µs")
+        if "doppler" in self.noise_types:
+            table["doppler_sigma"] = (
+                _doppler_sigma(self.temperature * 1e-6),
+                "rad/µs",
+            )
+        if len(self.detuning_hf_psd) > 0:
+            psd = list(zip(self.detuning_hf_omegas, self.detuning_hf_psd))
+            table["detuning_psd"] = (psd, "(rad/µs, rad/µs)")
+        if "relaxation" in self.noise_types:
+            table["T1"] = (1 / self.relaxation_rate, "µs")
+        if self.dephasing_rate > 0:
+            table["T2* (r-g)"] = (1 / self.dephasing_rate, "µs")
+        if self.hyperfine_dephasing_rate > 0:
+            table["T2* (g-h)"] = (1 / self.hyperfine_dephasing_rate, "µs")
+        if "depolarizing" in self.noise_types:
+            table["depolarizing_rate"] = (self.depolarizing_rate, "1/µs")
+        if "eff_noise" in self.noise_types:
+            table["eff_noise"] = (
+                list(zip(self.eff_noise_rates, self.eff_noise_opers)),
+                "(1/µs, '')",
+            )
+            table["with_leakage"] = (self.with_leakage, "")
+        if self.p_false_pos > 0:
+            table["p_false_pos"] = (self.p_false_pos, "")
+        if self.p_false_neg > 0:
+            table["p_false_neg"] = (self.p_false_neg, "")
+        return table
+
+    def summary(self) -> str:
+        """A readable summary of the impact of the noise on the simulation."""
+
+        def _repr_value_unit(value: Any, unit: str) -> str:
+            if unit == "":
+                return f"{value:g}"
+            return f"{value:g} {unit}"
+
+        noise_table = self.get_noise_table()
+        summary_list = ["Noise summary:"]
+        add_to_traj_summary = []
+        # Follow the impact as in step-by-step tutorial
+        if "register_sigma_xy" in noise_table:
+            assert "register_sigma_z" in noise_table
+            # 1. Register
+            summary_list += [
+                "- Register Position Fluctuations**:",
+                "  - XY-Plane Position Fluctuations: "
+                f"{_repr_value_unit(*noise_table['register_sigma_xy'])}",
+                "  - Z-Axis Position Fluctuations: "
+                f"{_repr_value_unit(*noise_table['register_sigma_z'])}",
+            ]
+            add_to_traj_summary.append("register")
+        if "state_prep_error" in noise_table:
+            # 2. State Preparation
+            summary_list.append(
+                "- State Preparation Error Probability**: "
+                f"{_repr_value_unit(*noise_table['state_prep_error'])}"
+            )
+            add_to_traj_summary.append("initial state")
+
+        # 3. Pulse Shaping
+        if "laser_waist" in noise_table or "amp_sigma" in noise_table:
+            summary_list.append("- Amplitude inhomogeneities:")
+            if "laser_waist" in noise_table:
+                summary_list += [
+                    "  - Finite-waist Gaussian damping σ="
+                    f"{_repr_value_unit(*noise_table['laser_waist'])}"
+                ]
+            if "amp_sigma" in noise_table:
+                summary_list += [
+                    "  - Shot-to-shot Amplitude Fluctuations**:"
+                    f" {_repr_value_unit(*noise_table['amp_sigma'])}"
+                ]
+                add_to_traj_summary.append("amplitude")
+        if (
+            "detuning_sigma" in noise_table
+            or "doppler_sigma" in noise_table
+            or "detuning_psd" in noise_table
+        ):
+            summary_list.append("- Detuning fluctuations**:")
+            if (
+                "detuning_sigma" in noise_table
+                or "doppler_sigma" in noise_table
+            ):
+                summary_list += ["  - Shot-to-Shot Detuning fluctuations:"]
+                if "detuning_sigma" in noise_table:
+                    summary_list += [
+                        "       - Laser's Detuning fluctuations: "
+                        f"{_repr_value_unit(*noise_table['detuning_sigma'])}"
+                    ]
+                if "doppler_sigma" in noise_table:
+                    summary_list += [
+                        "       - Doppler fluctuations: "
+                        f"{_repr_value_unit(*noise_table['doppler_sigma'])}"
+                    ]
+            if "detuning_psd" in noise_table:
+                summary_list += [
+                    "  - High-Frequency Detuning fluctuations. See PSD in "
+                    "get_noise_table()['detuning_psd']."
+                ]
+            add_to_traj_summary.append("detuning")
+
+        # 4. Noise channels
+        if (
+            "T1" in noise_table
+            or "T2* (r-g)" in noise_table
+            or "T2* (g-h)" in noise_table
+        ):
+            summary_list += ["- Dissipation parameters:"]
+            if "T1" in noise_table:
+                summary_list += [
+                    f"   - T1: {_repr_value_unit(*noise_table['T1'])}"
+                ]
+            if "T2* (r-g)" in noise_table:
+                summary_list += [
+                    "   - T2* (r-g): "
+                    f"{_repr_value_unit(*noise_table['T2* (r-g)'])}"
+                ]
+            if "T2* (g-h)" in noise_table:
+                summary_list += [
+                    "   - T2* (g-h): "
+                    f"{_repr_value_unit(*noise_table['T2* (g-h)'])}"
+                ]
+
+        if "eff_noise" in noise_table or "depolarizing_rate" in noise_table:
+            summary_list += ["- Other Decoherence Processes:"]
+            if "depolarizing_rate" in noise_table:
+                summary_list += [
+                    "   - Depolarization at rate "
+                    f"{_repr_value_unit(*noise_table['depolarizing_rate'])}"
+                ]
+            if "eff_noise" in noise_table:
+                summary_list += [
+                    "   - Custom Lindblad operators (in 1/µs)"
+                    + (
+                        " including a leakage state:"
+                        if noise_table["with_leakage"][0]
+                        else ":"
+                    )
+                ]
+                for rate, oper in noise_table["eff_noise"][0]:
+                    oper_str = tuple(
+                        tuple(float(f"{val:g}") for val in lines)
+                        for lines in oper
+                    )
+                    summary_list += [f"       - {rate:g} * {oper_str}"]
+
+        # 5. Measurement noises
+        if "p_false_pos" in noise_table or "p_false_neg" in noise_table:
+            summary_list += ["- Measurement noises:"]
+            if "p_false_pos" in noise_table:
+                summary_list += [
+                    "   - False Positive Meas. Probability: "
+                    f"{_repr_value_unit(*noise_table['p_false_pos'])}"
+                ]
+            if "p_false_neg" in noise_table:
+                summary_list += [
+                    "   - False Negative Meas. Probability: "
+                    f"{_repr_value_unit(*noise_table['p_false_neg'])}"
+                ]
+        traj_summary = (
+            "**: Emulation will generate EmulationConfig.n_trajectories"
+            " trajectories with different "
+        )
+        if add_to_traj_summary != []:
+            summary_list += [traj_summary + ", ".join(add_to_traj_summary)]
+        return "\n".join(summary_list)

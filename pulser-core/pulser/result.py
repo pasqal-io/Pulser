@@ -51,7 +51,7 @@ class Result(ABC, backend_results.Results):
     """Base class for storing the result of an observable at specific time."""
 
     meas_basis: str
-    total_duration: int = field(default=0, init=False)
+    total_duration: int = field(default=0, init=False, repr=False)
 
     @property
     def sampling_dist(self) -> dict[str, float]:
@@ -139,6 +139,9 @@ class Result(ABC, backend_results.Results):
         if show:
             plt.show()
 
+    def __str__(self) -> str:
+        return self.__repr__()
+
 
 @dataclass
 class SampledResult(Result):
@@ -161,7 +164,7 @@ class SampledResult(Result):
         super().__post_init__()
         self.n_samples = sum(self.bitstring_counts.values())
         # TODO: Make sure this is not too hacky
-        bitstrings_obs = BitStrings()
+        bitstrings_obs = BitStrings(num_shots=self.n_samples)
         # Override UUID so that two SampledResult instances with
         # the same counts are identical
         bitstrings_obs._uuid = uuid.UUID(

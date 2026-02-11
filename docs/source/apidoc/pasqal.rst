@@ -20,6 +20,7 @@ Backends
 
    ~pulser_pasqal.backends.EmuFreeBackendV2
    EmuMPSBackend
+   EmuSVBackend
 
 Deprecated Backends
 --------------------

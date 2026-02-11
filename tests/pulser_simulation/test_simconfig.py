@@ -20,7 +20,8 @@ from pulser.noise_model import NoiseModel
 from pulser_simulation.simconfig import SimConfig, doppler_sigma
 
 pytestmark = pytest.mark.filterwarnings(
-    "ignore:'SimConfig' has been deprecated:DeprecationWarning"
+    "ignore:'SimConfig' has been deprecated:DeprecationWarning",
+    "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning",
 )
 
 

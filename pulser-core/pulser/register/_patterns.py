@@ -13,6 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 
 
@@ -29,7 +31,7 @@ def square_rect(rows: int, columns: int) -> np.ndarray:
     points = np.mgrid[:columns, :rows].transpose().reshape(-1, 2)
     # Centering
     points = points - np.ceil([columns / 2, rows / 2]) + 1
-    return points
+    return cast(np.ndarray, points)
 
 
 def triangular_rect(rows: int, columns: int) -> np.ndarray:

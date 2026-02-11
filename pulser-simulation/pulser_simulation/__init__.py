@@ -16,12 +16,13 @@
 from pulser import EmulatorConfig, NoiseModel
 
 from pulser_simulation._version import __version__ as __version__
+from pulser_simulation.aggregators import density_matrix_aggregator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_backend import QutipBackend, QutipBackendV2
 from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.simconfig import SimConfig
-from pulser_simulation.simulation import QutipEmulator
+from pulser_simulation.simulation import QutipEmulator, Solver
 
 # NOTE: If any of these change, remember to MANUALLY replicate them in the
 # API reference doc (ie they are not updated automatically).
@@ -35,4 +36,6 @@ __all__ = [
     "QutipBackendV2",
     "QutipEmulator",
     "SimConfig",
+    "Solver",
+    "density_matrix_aggregator",
 ]

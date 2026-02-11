@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, SupportsComplex, Type, TypeVar, cast
+from typing import Any, Type, TypeVar, cast
 
 import qutip
 
@@ -27,7 +27,7 @@ QutipStateType = TypeVar("QutipStateType", bound=QutipState)
 QutipOperatorType = TypeVar("QutipOperatorType", bound="QutipOperator")
 
 
-class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
+class QutipOperator(Operator[complex, complex, QutipStateType]):
     """A quantum operator stored as a qutip.Qobj.
 
     Args:
@@ -116,7 +116,7 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
         )
 
     def __rmul__(
-        self: QutipOperatorType, scalar: SupportsComplex
+        self: QutipOperatorType, scalar: complex
     ) -> QutipOperatorType:
         """Scale the operator by a scalar factor.
 
@@ -152,7 +152,7 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
         *,
         eigenstates: Sequence[Eigenstate],
         n_qudits: int,
-        operations: FullOp[SupportsComplex],
+        operations: FullOp[complex],
     ) -> tuple[QutipOperatorType, FullOp[complex]]:
         """Create an operator from the operator representation.
 
@@ -189,7 +189,7 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
         """
         qudit_dim = len(eigenstates)
 
-        def build_qudit_op(qudit_op: QuditOp[SupportsComplex]) -> qutip.Qobj:
+        def build_qudit_op(qudit_op: QuditOp[complex]) -> qutip.Qobj:
             op = qutip.identity(qudit_dim) * 0
             for proj_str, coeff in qudit_op.items():
                 ket = qutip.basis(qudit_dim, eigenstates.index(proj_str[0]))

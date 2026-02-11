@@ -36,6 +36,7 @@ from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
+from pulser.register.register_layout import RegisterLayout
 from pulser.register.weight_maps import DetuningMap
 from pulser.sampler.sampler import sample
 from pulser.sampler.samples import ChannelSamples, DMMSamples, SequenceSamples
@@ -431,8 +432,17 @@ def _draw_register_det_maps(
                 )
 
         elif isinstance(register, Register):
+            empty_traps_reg: None | BaseRegister
+            try:
+                empty_traps_reg = register._get_empty_traps_reg()
+            except ValueError:  # None if no layout in register
+                empty_traps_reg = None
             fig_reg, axes_reg = register._initialize_fig_axes(
-                pos,
+                (
+                    pos
+                    if empty_traps_reg is None
+                    else cast(RegisterLayout, register.layout).sorted_coords
+                ),
                 blockade_radius=35,
                 draw_half_radius=True,
                 nregisters=nregisters,
@@ -440,6 +450,15 @@ def _draw_register_det_maps(
             ax_reg = (
                 axes_reg if isinstance(axes_reg, plt.Axes) else axes_reg[0]
             )
+            if empty_traps_reg:
+                register._draw_2D(
+                    ax=ax_reg,
+                    ids=empty_traps_reg.qubit_ids,
+                    pos=empty_traps_reg._coords_arr.as_array(detach=True),
+                    with_labels=False,
+                    label_name="empty",
+                    are_traps=True,
+                )
             register._draw_2D(
                 ax=ax_reg,
                 pos=pos,
@@ -871,7 +890,7 @@ def _draw_channel_content(
                 )
                 for ax in axes:
                     ax.axvline(t_, **conf)
-                msg = "\u27F2 " + phase_str(delta)
+                msg = "\u27f2 " + phase_str(delta)
                 axes[0].text(
                     t_ - final_t * 8e-3,
                     tgt_txt_ymax,
@@ -1178,16 +1197,20 @@ def _draw_qubit_content(
                 )
                 # Add targets to legend if qubits are defined
                 if plot_index == 0 and qubits:
-                    ax_leg = (
-                        axes_legend
-                        if n_quantities == 1
-                        else cast(list, axes_legend)[subplot_index]
+                    ax_leg = cast(
+                        Axes,
+                        (
+                            axes_legend
+                            if n_quantities == 1
+                            else cast(list, axes_legend)[subplot_index]
+                        ),
                     )
                     targeted_atoms = {t: qubits[t] for t in target}
                     pos = np.array(list(targeted_atoms.values()))
                     if dimensionality_3d:
                         for sub_ax_leg, (ix, iy) in zip(
-                            ax_leg, combinations(np.arange(3), 2)
+                            cast(Iterable, ax_leg),
+                            combinations(np.arange(3), 2),
                         ):
                             Register._draw_2D(
                                 ax=sub_ax_leg,

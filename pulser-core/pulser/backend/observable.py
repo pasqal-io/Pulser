@@ -114,6 +114,7 @@ class Observable(Callback):
             "observable": self._base_tag,
             "evaluation_times": self.evaluation_times,
             "tag_suffix": self._tag_suffix,
+            "uuid": str(self._uuid),
         }
 
     @property
@@ -152,8 +153,6 @@ class Observable(Callback):
             state: The current state.
             hamiltonian: The Hamiltonian at this time.
             result: The Results object to store the result in.
-            time_tol: Tolerance below which two time values are considered
-                equal.
         """
         time_tol = (
             (0.5 / result.total_duration) if result.total_duration else 1e-6
@@ -163,7 +162,10 @@ class Observable(Callback):
             and config.is_time_in_evaluation_times(
                 t, self.evaluation_times, tol=time_tol
             )
-        ) or config.is_evaluation_time(t, tol=time_tol):
+        ) or (
+            self.evaluation_times is None
+            and config.is_evaluation_time(t, tol=time_tol)
+        ):
             value_to_store = self.apply(
                 config=config, state=state, hamiltonian=hamiltonian
             )

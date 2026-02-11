@@ -41,6 +41,7 @@ class TestObservableRepr:
         operations=[(0.3, [({"rr": 0.2j}, [0, 2])])],
     )
 
+    @mark.parametrize("with_uuid", [True, False])
     @mark.parametrize(
         "observable, arg, expected_kwargs",
         [
@@ -96,17 +97,29 @@ class TestObservableRepr:
             ),
         ],
     )
-    def test_observable_repr(self, observable, arg, expected_kwargs):
+    def test_observable_repr(
+        self, observable, arg, expected_kwargs, with_uuid
+    ):
         obs = observable(*arg, **expected_kwargs)
+        old_uuid = obs._uuid
 
         # serialized repr
         obs_repr = json.loads(json.dumps(obs, cls=AbstractReprEncoder))
+
+        if not with_uuid:
+            # Remove uuid from the repr
+            obs_repr.pop("uuid")
 
         # deserialized repr
         deserialized_obs = _deserialize_observable(
             obs_repr, StateRepr, OperatorRepr
         )
         deserialized_obs_repr = deserialized_obs._to_abstract_repr()
+
+        if with_uuid:
+            assert deserialized_obs._uuid == old_uuid
+        else:
+            assert deserialized_obs._uuid != old_uuid
 
         for repr in [obs_repr, deserialized_obs_repr]:
             # test default values
@@ -130,9 +143,22 @@ class TestObservableRepr:
             assert repr.get("one_state", None) == expected_kwargs.get(
                 "one_state", None
             )
-            assert repr.get("num_shots", 1000) == expected_kwargs.get(
-                "num_shots", 1000
+            assert repr.get("num_shots", None) == expected_kwargs.get(
+                "num_shots", None
             )
+
+        # Check observable against the schema via config serialization
+        ser_config = json.loads(
+            EmulationConfig(observables=[obs]).to_abstract_repr(
+                skip_validation=True
+            )
+        )
+        if not with_uuid:
+            # Take out the UUID to check it is not required by the schema
+            ser_config["observables"][0].pop("uuid")
+
+        # This checks the serialized object against the schema
+        EmulationConfig.from_abstract_repr(json.dumps(ser_config))
 
     @mark.parametrize(
         "state_kwargs",

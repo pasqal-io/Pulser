@@ -13,8 +13,10 @@
 # limitations under the License.
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import json
+import pickle
 import re
 import typing
 import uuid
@@ -136,6 +138,7 @@ class _MockConnection(RemoteConnection):
         self._support_open_batch = True
         self._got_closed = ""
         self._progress_calls = 0
+        self._last_submit_kwargs = {}
         self.result = SampledResult(
             ("q0", "q1"),
             meas_basis="ground-rydberg",
@@ -150,6 +153,7 @@ class _MockConnection(RemoteConnection):
         batch_id: str | None = None,
         **kwargs,
     ) -> RemoteResults:
+        self._last_submit_kwargs = kwargs
         if batch_id:
             return RemoteResults("dcba", self)
         return RemoteResults("abcd", self)
@@ -304,11 +308,19 @@ def test_remote_backend(sequence):
     with pytest.raises(TypeError, match="must be a valid RemoteConnection"):
         QPUBackend(seq, "fake_connection")
 
+    with pytest.raises(
+        TypeError,
+        match="'config' must be an instance of 'BackendConfig'; "
+        "got 'str' instead",
+    ):
+        QPUBackend(seq, connection, config="bad config")
+
     qpu_backend = QPUBackend(seq, connection)
     remote_backend = RemoteBackend(seq, connection)
     # Generic remote backend can run without job_params
     assert remote_backend.run().batch_id == "abcd"
-    # But QPUBackend requires job_params
+    # But QPUBackend requires job_params IF config.default_num_shots is None
+    assert qpu_backend._config.default_num_shots is None
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         qpu_backend.run()
     for backend in [qpu_backend, remote_backend]:
@@ -388,6 +400,30 @@ def test_remote_backend(sequence):
     assert available_results == {"abcd": connection.result}
 
 
+def test_qpu_backend_default_num_shots(sequence):
+    seq = pulser.Sequence(
+        sequence.register.with_automatic_layout(AnalogDevice), AnalogDevice
+    )
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.delay(1000, "ryd")
+    connection = _MockConnection()
+    default_num_shots = 123
+    qpu_backend = QPUBackend(
+        seq,
+        connection,
+        config=BackendConfig(default_num_shots=default_num_shots),
+    )
+
+    # Run without job params uses default_num_shots
+    qpu_backend.run()
+    assert connection._last_submit_kwargs["job_params"][0]["runs"] == 123
+
+    # For jobs that don't specify "runs", uses the default
+    qpu_backend.run(job_params=[{"runs": 2}, {}])
+    assert connection._last_submit_kwargs["job_params"][0]["runs"] == 2
+    assert connection._last_submit_kwargs["job_params"][1]["runs"] == 123
+
+
 def test_emulator_backend(sequence):
 
     class ConcreteEmulator(EmulatorBackend):
@@ -411,6 +447,26 @@ def test_emulator_backend(sequence):
         default_evaluation_times="Full",
         my_param="bar",
     )
+
+    with pytest.warns(
+        UserWarning,
+        match="'sequence.device.default_noise_model.runs=3' is being "
+        "ignored; 'config.n_trajectories=40' will be used instead",
+    ):
+        _config = EmulationConfig(
+            observables=(BitStrings(),), prefer_device_noise_model=True
+        )
+        assert _config.n_trajectories == 40
+        with pytest.deprecated_call():
+            _device = dataclasses.replace(
+                sequence.device,
+                default_noise_model=pulser.NoiseModel(amp_sigma=0.1, runs=3),
+            )
+        ConcreteEmulator(
+            pulser.Sequence(sequence.register, _device),
+            config=_config,
+        )
+
     emu = ConcreteEmulator(sequence, config=concrete_config)
 
     # The adopted configuration, as given by validate_config
@@ -425,7 +481,7 @@ def test_emulator_backend(sequence):
         == json.loads(
             EmulationConfig(
                 # These come from the concrete config
-                observables=(BitStrings(),),
+                observables=concrete_config.observables,
                 default_evaluation_times="Full",
                 my_param="bar",
                 # with_modulation is not True because EmulationConfig has it
@@ -449,15 +505,61 @@ def test_backend_config():
     config1 = BackendConfig()
     with pytest.raises(AttributeError, match="'dt' has not been passed"):
         config1.dt
+    assert config1.default_num_shots is None
 
     with pytest.warns(
         DeprecationWarning,
         match="The 'backend_options' argument of 'BackendConfig' has been "
         "deprecated",
     ):
-        config2 = BackendConfig(backend_options={"dt": 10})
+        config2 = BackendConfig(
+            default_num_shots=1, backend_options={"dt": 10}
+        )
         assert config2.backend_options["dt"] == 10
         assert config2.dt == 10
+        assert config2.default_num_shots == 1
+
+    with pytest.raises(
+        ValueError,
+        match="'default_num_shots' must be greater than or equal to 1",
+    ):
+        BackendConfig(default_num_shots=0.1)
+
+    with pytest.raises(
+        AttributeError,
+        match=re.escape(
+            "'BackendConfig' is read-only. Please use "
+            "'BackendConfig.with_changes(default_num_shots=...)'"
+        ),
+    ):
+        config1.default_num_shots = 1
+
+    assert config1.default_num_shots is None
+    assert config1.with_changes(default_num_shots=1).default_num_shots == 1
+
+    assert repr(config1) == "BackendConfig(\n    default_num_shots=None,\n)"
+
+
+def test_backend_config_pickles(tmp_path):
+    cf = EmulationConfig(observables=[StateResult()])
+
+    filename = "config_pickle.pl"
+    with open(tmp_path / filename, "wb") as f:
+        pickle.dump(cf, f)
+
+    with open(tmp_path / filename, "rb") as f:
+        new_cf = pickle.load(f)
+
+    assert set(cf._backend_options.keys()) == set(
+        new_cf._backend_options.keys()
+    )
+    for k in cf._backend_options.keys():
+        if k != "observables":
+            assert cf._backend_options[k] == new_cf._backend_options[k]
+        else:
+            assert set(o.uuid for o in cf._backend_options[k]) == set(
+                o.uuid for o in new_cf._backend_options[k]
+            )
 
 
 def test_emulation_config():
@@ -579,8 +681,92 @@ def test_emulation_config():
         # Just to ensure subsequent tests are not affected
         EmulationConfig._enforce_expected_kwargs = False
 
+    with pytest.raises(ValueError, match="strictly positive integer"):
+        EmulationConfig(
+            observables=(BitStrings(),),
+            n_trajectories=0,
+        )
 
-def test_results_aggregation():
+    with pytest.raises(ValueError, match="strictly positive integer"):
+        EmulationConfig(
+            observables=(BitStrings(),),
+            n_trajectories=1.001,
+        )
+
+    with pytest.deprecated_call():
+        runs_noise_model = pulser.NoiseModel(amp_sigma=0.1, runs=10)
+
+    with pytest.raises(
+        ValueError,
+        match="`EmulationConfig.n_trajectories` and `NoiseModel.runs` can't be"
+        " simultaneously defined",
+    ):
+        assert runs_noise_model != 2
+        EmulationConfig(
+            observables=(BitStrings(),),
+            noise_model=runs_noise_model,
+            n_trajectories=2,
+        )
+
+    # If n_trajectories == noise_model.runs, it's ok
+    assert (
+        EmulationConfig(
+            observables=(BitStrings(),),
+            noise_model=runs_noise_model,
+            n_trajectories=10.0,  # float still works if it matches an
+        ).n_trajectories
+        == 10
+    )
+
+    # If n_trajectories is not given, noise_model.runs is used
+    assert (
+        EmulationConfig(
+            observables=(BitStrings(),), noise_model=runs_noise_model
+        ).n_trajectories
+        == runs_noise_model.runs
+    )
+
+    # prefer_device_model=True, noise_model.runs is ignored and defaults to 40
+    assert (
+        EmulationConfig(
+            observables=(BitStrings(),),
+            noise_model=runs_noise_model,
+            prefer_device_noise_model=True,
+        ).n_trajectories
+        == 40
+    )
+
+    # If prefer_device_noise_model=False, defaults to 1
+    config = EmulationConfig(observables=(BitStrings(),))
+    assert config.n_trajectories == 1
+
+    with pytest.raises(
+        AttributeError,
+        match=re.escape(
+            "'EmulationConfig' is read-only. Please use "
+            "'EmulationConfig.with_changes(n_trajectories=...)'"
+        ),
+    ):
+        config.n_trajectories = 10
+
+    assert config.with_changes(n_trajectories=10).n_trajectories == 10
+    # The config stayed the same
+    assert config.n_trajectories == 1
+
+    assert EmulationConfig.state_type is pulser.backend.StateRepr
+    assert EmulationConfig.operator_type is pulser.backend.OperatorRepr
+
+    # EmulationConfig would error on receiving a numpy array of len > 1
+    times = np.array([0.5, 1.0])
+    conf = EmulationConfig(
+        default_evaluation_times=times,
+        observables=(BitStrings(),),
+    )
+    np.testing.assert_equal(conf.default_evaluation_times, times)
+
+
+@pytest.mark.parametrize("matching_uuids", [True, False])
+def test_results_aggregation(matching_uuids):
     results1 = Results(atom_order=[0, 1], total_duration=100)
     results2 = Results(atom_order=[0, 1], total_duration=100)
     uids = [uuid.uuid4() for _ in range(4)]
@@ -607,14 +793,14 @@ def test_results_aggregation():
         aggregation_method=AggregationMethod.SKIP,
     )
     results2._store_raw(
-        uuid=uids[2],
+        uuid=uids[0] if matching_uuids else uids[2],
         tag="dummy_result",
         time=0.1,
         value=3.0,
         aggregation_method=agg_type,
     )
     results2._store_raw(
-        uuid=uids[2],
+        uuid=uids[0] if matching_uuids else uids[2],
         tag="dummy_result",
         time=0.2,
         value=4.0,
@@ -644,8 +830,10 @@ def test_results_aggregation():
     )  # twice in agg, twice in agg2, once each for the 2 results added above.
     for ag in [agg, agg2]:
         ag_uuid = ag._find_uuid("dummy_result")
-        for uid in uids:
-            assert ag_uuid != uid
+        if matching_uuids:
+            assert ag_uuid == uids[0]
+        else:
+            assert all(ag_uuid != uid for uid in uids)
         assert ag._aggregation_methods[ag_uuid] == agg_type
         assert ag.dummy_result == [2.0, 3.0]
 
@@ -805,9 +993,20 @@ def test_results_aggregation_errors(caplog):
 
 
 def test_results():
-    res = Results(atom_order=(), total_duration=0)
+    res = Results(atom_order=(), total_duration=100)
     assert res.get_result_tags() == []
     assert res.get_tagged_results() == {}
+    res_str = "\n".join(
+        [
+            "Results",
+            "-------",
+            "Stored results: {stored_results}",
+            "Evaluation times per result: {evaluation_times}",
+            "Atom order in states and bitstrings: ()",
+            "Total sequence duration: 100 ns",
+        ]
+    )
+    assert str(res) == res_str.format(stored_results=[], evaluation_times={})
     with pytest.raises(
         AttributeError, match="'bitstrings' is not in the results"
     ):
@@ -819,7 +1018,7 @@ def test_results():
     ):
         assert res.get_result_times("bitstrings")
 
-    obs = BitStrings(tag_suffix="test")
+    obs = BitStrings(num_shots=100, tag_suffix="test")
     with pytest.raises(
         ValueError,
         match=f"'bitstrings_test:{obs.uuid}' has not been stored",
@@ -827,7 +1026,7 @@ def test_results():
         assert res.get_result(obs, 1.0)
 
     obs(
-        config=EmulationConfig(observables=(BitStrings(),)),
+        config=EmulationConfig(observables=(obs,)),
         t=1.0,
         state=QutipState.from_state_amplitudes(
             eigenstates=("r", "g"), amplitudes={"rrr": 1.0}
@@ -853,6 +1052,11 @@ def test_results():
     )
     with pytest.raises(ValueError, match="not available at time 0.912"):
         res.get_result(obs, 0.912)
+
+    assert str(res) == res_str.format(
+        stored_results=["bitstrings_test"],
+        evaluation_times={"bitstrings_test": [1.0]},
+    )
 
 
 def test_results_final_bistrings():
@@ -1007,7 +1211,7 @@ class TestObservables:
     @pytest.mark.parametrize("p_false_pos", [0, 0.4])
     @pytest.mark.parametrize("p_false_neg", [0, 0.3])
     @pytest.mark.parametrize("one_state", [0, "g"])
-    @pytest.mark.parametrize("num_shots", [0, 100])
+    @pytest.mark.parametrize("num_shots", [None, 100])
     def test_bitstrings(
         self,
         config: EmulationConfig,
@@ -1022,17 +1226,35 @@ class TestObservables:
         kwargs = {}
         if num_shots:
             kwargs["num_shots"] = num_shots
-        obs = BitStrings(one_state=one_state, **kwargs)
+        obs = BitStrings(
+            one_state=one_state,
+            **kwargs,
+        )
+        context_manager = (
+            pytest.raises(
+                RuntimeWarning,
+                match="The default value of `BitStrings.num_shots` was "
+                "changed from 1000 to None in Pulser v1.7",
+            )
+            if num_shots is None
+            else contextlib.nullcontext()
+        )
+        with context_manager:
+            assert obs.num_shots == num_shots
         assert obs.tag == "bitstrings"
         noise_model = pulser.NoiseModel(
             p_false_pos=p_false_pos, p_false_neg=p_false_neg
         )
-        config.noise_model = noise_model
+        config = config.with_changes(
+            noise_model=noise_model,
+            # Different than the BitStrings default on purpose
+            default_num_shots=2000,
+        )
         assert config.noise_model.noise_types == (
             ("SPAM",) if p_false_pos or p_false_neg else ()
         )
         np.random.seed(123)
-        expected_shots = num_shots or obs.num_shots
+        expected_shots = num_shots or config.default_num_shots
         expected_counts = ghz_state.sample(
             num_shots=expected_shots,
             one_state=one_state or ghz_state.infer_one_state(),

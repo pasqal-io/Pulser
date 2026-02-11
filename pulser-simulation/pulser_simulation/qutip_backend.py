@@ -17,23 +17,25 @@ from __future__ import annotations
 import warnings
 from typing import Any
 
-import numpy as np
-import qutip
-
 import pulser
 from pulser.backend.abc import Backend, EmulatorBackend
 from pulser.backend.config import EmulationConfig, EmulatorConfig
 from pulser.backend.default_observables import BitStrings, StateResult
 from pulser.backend.results import Results
 from pulser.noise_model import NoiseModel
+from pulser_simulation.aggregators import density_matrix_aggregator
 from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simresults import CoherentResults, SimulationResults
-from pulser_simulation.simulation import (
-    QutipEmulator,
-    _has_shot_to_shot_except_spam,
-)
+from pulser_simulation.simulation import QutipEmulator, _has_stochastic_noise
+
+
+def _get_state_tag(results: Results) -> str | None:
+    for tag in results.get_result_tags():
+        if tag.startswith(StateResult()._base_tag):
+            return tag
+    return None
 
 
 class QutipBackend(Backend):
@@ -147,6 +149,8 @@ class QutipBackendV2(EmulatorBackend):
             sampling_rate=self._config.sampling_rate,
             noise_model=noise_model,
             with_modulation=self._config.with_modulation,
+            solver=self._config.solver,
+            n_trajectories=self._config.n_trajectories,
         )
         self._sim_obj.set_evaluation_times(
             self._config._get_legacy_evaluation_times(
@@ -157,27 +161,22 @@ class QutipBackendV2(EmulatorBackend):
             self._sim_obj.set_initial_state(
                 self._config.initial_state.to_qobj()
             )
+        # setup the default qutip options
+        self._qutip_options = {"progress_bar": self._config.progress_bar}
+        self._sim_obj._validate_options(self._qutip_options)
 
     def run(self) -> Results:
         """Executes the sequence on the backend."""
-        res = Results(
-            atom_order=tuple(self._sequence.qubit_info),
-            total_duration=self._sim_obj.total_duration_ns,
-        )
-        eigenstates = self._sim_obj._hamiltonian.data.eigenbasis
-        options: dict = {}
-        self._sim_obj._validate_options(
-            options
-        )  # setup the default qutip options
-        if (
-            "SPAM" not in self._sim_obj.noise_model.noise_types
-            or self._sim_obj.noise_model.state_prep_error == 0
-        ) and not _has_shot_to_shot_except_spam(self._sim_obj.noise_model):
+        eigenstates = self._sim_obj._current_hamiltonian.basis_data.eigenbasis
+
+        if not _has_stochastic_noise(self._sim_obj.noise_model):
             # A single run is needed, regardless of self.config.runs
-            single_res = self._sim_obj._run_solver(
-                progress_bar=False, **options
-            )
+            single_res = self._sim_obj.run(**self._qutip_options)
             assert isinstance(single_res, CoherentResults)
+            res = Results(
+                atom_order=tuple(self._sequence.qubit_info),
+                total_duration=self._sim_obj.total_duration_ns,
+            )
 
             for qutip_res in single_res:
                 t = qutip_res.evaluation_time
@@ -204,62 +203,48 @@ class QutipBackendV2(EmulatorBackend):
                         hamiltonian=ham,
                         result=res,
                     )
-
+            return res
         else:
-            density_matrices: dict[float, qutip.Qobj] = {}
-            total_reps = 0
-            dim = len(self._sim_obj.basis)
+            results: list[Results] = []
             for cleanres_noisyseq, reps in self._sim_obj._noisy_runs(
-                progress_bar=False, **options
+                **self._qutip_options
             ):
-                total_reps += reps
-                for qutip_res in cleanres_noisyseq:
-                    t = qutip_res.evaluation_time
+                for _ in range(reps):
+                    res = Results(
+                        atom_order=tuple(self._sequence.qubit_info),
+                        total_duration=self._sim_obj.total_duration_ns,
+                    )
+                    for qutip_res in cleanres_noisyseq:
+                        t = qutip_res.evaluation_time
 
-                    if t not in density_matrices:
-                        density_matrices[t] = qutip.tensor(
-                            [
-                                qutip.Qobj(np.zeros((dim, dim)))
-                                for _ in range(
-                                    self._sim_obj._hamiltonian.nbqudits
-                                )
-                            ]
+                        state = QutipState(
+                            qutip_res.state, eigenstates=eigenstates
+                        )
+                        ham = QutipOperator(
+                            self._sim_obj._get_noiseless_hamiltonian(
+                                self._config.noise_model.with_leakage
+                            )._hamiltonian(t * res.total_duration / 1000),
+                            eigenstates=eigenstates,
                         )
 
-                    if qutip_res.state.isoper:
-                        density_matrices[t] += reps * qutip_res.state
-                    else:
-                        density_matrices[t] += (
-                            reps * qutip_res.state * qutip_res.state.dag()
-                        )
-
-            density_matrices = {
-                t: m / total_reps for t, m in density_matrices.items()
-            }
-
-            for t, dm in density_matrices.items():
-                state = QutipState(dm, eigenstates=eigenstates)
-                ham = QutipOperator(
-                    self._sim_obj._get_noiseless_hamiltonian(
-                        self._config.noise_model.with_leakage
-                    )._hamiltonian(t * res.total_duration / 1000),
-                    eigenstates=eigenstates,
-                )
-                for callback in self._config.callbacks:
-                    callback(
-                        config=self._config,
-                        t=float(t),
-                        state=state,
-                        hamiltonian=ham,
-                        result=res,
-                    )
-                for obs in self._config.observables:
-                    obs(
-                        config=self._config,
-                        t=float(t),
-                        state=state,
-                        hamiltonian=ham,
-                        result=res,
-                    )
-
-        return res
+                        for callback in self._config.callbacks:
+                            callback(
+                                config=self._config,
+                                t=float(t),
+                                state=state,
+                                hamiltonian=ham,
+                                result=res,
+                            )
+                        for obs in self._config.observables:
+                            obs(
+                                config=self._config,
+                                t=float(t),
+                                state=state,
+                                hamiltonian=ham,
+                                result=res,
+                            )
+                    results.append(res)
+            custom_aggregators = {}
+            if (state_tag := _get_state_tag(results[0])) is not None:
+                custom_aggregators[state_tag] = density_matrix_aggregator
+            return Results.aggregate(results, **custom_aggregators)

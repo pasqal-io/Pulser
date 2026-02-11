@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import pprint
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Mapping
@@ -152,7 +153,7 @@ class BaseDevice(ABC):
 
     def __post_init__(self) -> None:
         def type_check(
-            param: str, type_: type, value_override: Any = None
+            param: str, type_: type, value_override: Any | None = None
         ) -> None:
             """Check that one instance attribute has the right type.
 
@@ -779,7 +780,7 @@ class BaseDevice(ABC):
                     f"\t- Minimum instruction duration: {ch.min_duration} ns",
                 ]
             else:
-                ch_lines.append(f" - '{name}': {ch!r}")
+                ch_lines.append(f" - '{name}': {pprint.pformat(ch)}")
 
         return [line for line in ch_lines if line != ""]
 

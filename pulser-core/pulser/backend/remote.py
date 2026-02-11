@@ -23,6 +23,7 @@ from types import TracebackType
 from typing import Any, Mapping, Type, TypedDict
 
 from pulser.backend.abc import Backend
+from pulser.backend.config import BackendConfig
 from pulser.backend.results import Results, ResultsSequence
 from pulser.devices import Device
 from pulser.sequence import Sequence
@@ -310,13 +311,18 @@ class RemoteBackend(Backend):
             are executed.
         mimic_qpu: Whether to mimic the validations necessary for
             execution on a QPU.
+        config: An optional backend configuration.
     """
+
+    _config: BackendConfig
 
     def __init__(
         self,
         sequence: Sequence,
         connection: RemoteConnection,
         mimic_qpu: bool = False,
+        *,
+        config: BackendConfig | None = None,
     ) -> None:
         """Starts a new remote backend instance."""
         super().__init__(sequence, mimic_qpu=mimic_qpu)
@@ -325,6 +331,13 @@ class RemoteBackend(Backend):
                 "'connection' must be a valid RemoteConnection instance."
             )
         self._connection = connection
+        config = config if config is not None else BackendConfig()
+        if not isinstance(config, BackendConfig):
+            raise TypeError(
+                "When given, a 'config' must be an instance of "
+                f"'BackendConfig'; got {type(config).__name__!r} instead."
+            )
+        self._config = config
         self._batch_id: str | None = None
 
     def run(
@@ -333,12 +346,10 @@ class RemoteBackend(Backend):
         """Runs the sequence on the remote backend and returns the result.
 
         Args:
-            job_params: A list of parameters for each job to execute. Each
-                mapping must contain a defined 'runs' field specifying
-                the number of times to run the same sequence. If the sequence
-                is parametrized, the values for all the variables necessary
-                to build the sequence must be given in it's own mapping, for
-                each job, under the 'variables' field.
+            job_params: A list of dictionaries with the parameters to execute
+                each job. If the sequence is parametrized, the values for all
+                the variables necessary to build the sequence must be given in
+                its own dictionary, for each job, under the 'variables' field.
             wait: Whether to wait until the results of the jobs become
                 available.  If set to False, the call is non-blocking and the
                 obtained results' status can be checked using their `status`

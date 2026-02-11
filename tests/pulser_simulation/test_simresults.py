@@ -69,7 +69,6 @@ def results_noisy(seq_no_meas):
         sim = QutipEmulator.from_sequence(
             seq_no_meas,
             noise_model=NoiseModel(
-                runs=15,
                 samples_per_run=5,
                 temperature=50.0,
                 state_prep_error=0.005,
@@ -78,6 +77,7 @@ def results_noisy(seq_no_meas):
                 amp_sigma=1e-3,
                 laser_waist=175.0,
             ),
+            n_trajectories=15,
         )
     return sim.run()
 
@@ -233,7 +233,6 @@ def test_get_final_state_noisy(reg, pi_pulse):
     sim_noisy = QutipEmulator.from_sequence(
         seq_,
         noise_model=NoiseModel(
-            runs=15,
             samples_per_run=5,
             temperature=50.0,
             trap_depth=0.01,
@@ -242,14 +241,15 @@ def test_get_final_state_noisy(reg, pi_pulse):
             p_false_pos=0.01,
             p_false_neg=0.05,
         ),
+        n_trajectories=15,
     )
     res3 = sim_noisy.run()
     res3._meas_basis = "digital"
     final_state = res3.get_final_state()
     assert isdiagonal(final_state)
     res3._meas_basis = "ground-rydberg"
-    a1 = 0.02666666666666667 + 0j
-    a2 = 0.9733333333333334 + 0j
+    a1 = 0.04 + 0j
+    a2 = 0.96 + 0j
     assert final_state[0, 0] == a1 and final_state[2, 2] == a2
     assert res3.states[-1] == final_state
     assert res3.results[-1] == Counter({"10": a2, "00": a1})
@@ -350,7 +350,7 @@ def test_expect_noisy(results_noisy):
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    assert np.isclose(results_noisy.expect([op])[0][-1], 0.72)
+    assert np.isclose(results_noisy.expect([op])[0][-1], 0.68)
 
 
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
@@ -404,28 +404,28 @@ def test_sample_final_state_noisy(seq_no_meas, results_noisy):
         ),
     ):
         assert results_noisy.sample_final_state(N_samples=1234) == Counter(
-            {"11": 588, "10": 250, "01": 270, "00": 126}
+            {"11": 676, "10": 295, "01": 137, "00": 126}
         )
     res_3level = QutipEmulator.from_sequence(
         seq_no_meas,
         noise_model=NoiseModel(
-            runs=10,
             samples_per_run=5,
             temperature=50.0,
             state_prep_error=0.005,
             p_false_pos=0.01,
             p_false_neg=0.05,
         ),
+        n_trajectories=10,
     )
     final_state = res_3level.run().states[-1]
     assert np.isclose(
         final_state.full(),
         np.array(
             [
-                [0.54 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.18 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+                [0.38 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+                [0.0 + 0.0j, 0.32 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
                 [0.0 + 0.0j, 0.0 + 0.0j, 0.2 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.08 + 0.0j],
+                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.1 + 0.0j],
             ]
         ),
     ).all()

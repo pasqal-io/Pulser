@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -11,6 +12,7 @@ from pulser._hamiltonian_data.hamiltonian_data import (
     _generate_detuning_fluctuations,
     _noisy_register,
     _register_sigma_xy_z,
+    has_shot_to_shot_except_spam,
 )
 from pulser.sampler import sample
 
@@ -187,17 +189,19 @@ def test_init_errors():
             "valid SequenceSamples instance."
         ),
     ):
-        HamiltonianData(None, None, None, None)
+        HamiltonianData(None, None, None, None, None)
 
     with pytest.raises(
         TypeError, match="The device must be a Device or BaseDevice."
     ):
-        HamiltonianData(seq_samples, None, None, None)
+        HamiltonianData(seq_samples, None, None, None, None)
 
     with pytest.raises(
         ValueError, match="Samples use SLM mask but device does not have one."
     ):
-        HamiltonianData(seq_samples, seq.register, pulser.AnalogDevice, None)
+        HamiltonianData(
+            seq_samples, seq.register, pulser.AnalogDevice, None, None
+        )
 
     with pytest.raises(
         ValueError,
@@ -207,7 +211,7 @@ def test_init_errors():
         ),
     ):
         HamiltonianData(
-            seq_samples, register, pulser.DigitalAnalogDevice, None
+            seq_samples, register, pulser.DigitalAnalogDevice, None, None
         )
 
     with pytest.raises(
@@ -218,13 +222,25 @@ def test_init_errors():
         ),
     ):
         HamiltonianData(
-            sample(seq_rydberg()), register, pulser.DigitalAnalogDevice, None
+            sample(seq_rydberg()),
+            register,
+            pulser.DigitalAnalogDevice,
+            None,
+            None,
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=("Object None is not a valid `NoiseModel`."),
+    ):
+        HamiltonianData(
+            seq_samples, seq.register, pulser.DigitalAnalogDevice, None, None
         )
 
     seq = pulser.Sequence(register, pulser.AnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
     with pytest.raises(ValueError, match="SequenceSamples is empty."):
-        HamiltonianData(sample(seq), None, None, None)
+        HamiltonianData(sample(seq), None, None, None, None)
 
     seq = seq_with_SLM("mw_global")
     seq_samples = sample(seq)
@@ -233,13 +249,13 @@ def test_init_errors():
         match="Bases used in samples should be supported by device.",
     ):
         HamiltonianData(
-            seq_samples, seq.register, pulser.DigitalAnalogDevice, None
+            seq_samples, seq.register, pulser.DigitalAnalogDevice, None, None
         )
 
 
 def test_from_sequence():
     seq = seq_with_SLM("rydberg_global")
-    noise_model = pulser.NoiseModel(detuning_sigma=0.5, runs=1)
+    noise_model = pulser.NoiseModel(detuning_sigma=0.5)
     samples = 5  # something that implements __eq__
     with unittest.mock.patch(
         "pulser._hamiltonian_data.hamiltonian_data.sampler.sample"
@@ -250,9 +266,11 @@ def test_from_sequence():
         ) as mock_init:
             mock_init.return_value = None
             mock_sample.return_value = samples
-            HamiltonianData.from_sequence(seq, noise_model=noise_model)
+            HamiltonianData.from_sequence(
+                seq, noise_model=noise_model, n_trajectories=1
+            )
             mock_init.assert_called_once_with(
-                samples, seq.register, seq.device, noise_model
+                samples, seq.register, seq.device, noise_model, 1
             )
 
     with pytest.raises(
@@ -300,9 +318,11 @@ def test_from_sequence():
         seq2.declare_channel("ch0", "rydberg_global")
         HamiltonianData.from_sequence(seq2)
 
-    ham = HamiltonianData.from_sequence(seq, noise_model=noise_model)
+    ham = HamiltonianData.from_sequence(
+        seq, noise_model=noise_model, n_trajectories=1
+    )
     noiseless = ham.samples.to_nested_dict(all_local=True)
-    full = ham.noisy_samples.to_nested_dict()
+    full = ham.noisy_samples.__next__().samples.to_nested_dict()
     diff = (
         noiseless["Local"]["ground-rydberg"]["superman"]["det"]
         - full["Local"]["ground-rydberg"]["superman"]["det"]
@@ -335,9 +355,11 @@ def test_int_qubit_ids():
         ),
         "ch0",
     )
-    noise_model = pulser.NoiseModel(detuning_sigma=0.5, runs=1)
+    noise_model = pulser.NoiseModel(detuning_sigma=0.5)
 
-    ham = HamiltonianData.from_sequence(seq, noise_model=noise_model)
+    ham = HamiltonianData.from_sequence(
+        seq, noise_model=noise_model, n_trajectories=1
+    )
 
     # this should not error
     ham.noisy_samples
@@ -351,10 +373,12 @@ def test_register():
 
 def test_bad_atoms():
     seq = seq_with_SLM("rydberg_global")
-    noise = pulser.NoiseModel(state_prep_error=1.0, runs=1)
-    ham = HamiltonianData.from_sequence(seq, noise_model=noise)
+    noise = pulser.NoiseModel(state_prep_error=1.0)
+    ham = HamiltonianData.from_sequence(
+        seq, noise_model=noise, n_trajectories=1
+    )
     for key in seq.register.qubit_ids:
-        assert ham.bad_atoms[key]
+        assert ham.noise_trajectories[0].trajectory.bad_atoms[key]
 
 
 @pytest.mark.parametrize("channel_type", ["rydberg_global", "mw_global"])
@@ -379,13 +403,17 @@ def test_interaction_matrix(channel_type):
     if channel_type == "rydberg_global":
         interaction_size = ham._device.interaction_coeff / 8**6
         assert np.allclose(
-            ham._interaction_matrix,
+            ham._interaction_matrix(
+                ham.noise_trajectories[0].trajectory.register
+            ),
             np.array([[0.0, interaction_size], [interaction_size, 0.0]]),
         )
     elif channel_type == "mw_global":
         interaction_size = ham._device.interaction_coeff_xy / 8**3
         assert np.allclose(
-            ham._interaction_matrix,
+            ham._interaction_matrix(
+                ham.noise_trajectories[0].trajectory.register
+            ),
             np.array([[0.0, interaction_size], [interaction_size, 0.0]]),
         )
     else:
@@ -418,14 +446,19 @@ def test_interaction_matrix_torch(channel_type):
     if channel_type == "rydberg_global":
         interaction_size = ham._device.interaction_coeff / 8**6
         assert torch.allclose(
-            ham._interaction_matrix,
+            ham._interaction_matrix(
+                ham.noise_trajectories[0].trajectory.register
+            ),
             torch.tensor(
                 [[0.0, interaction_size], [interaction_size, 0.0]],
                 dtype=torch.float64,
             ),
         )
         gr = torch.autograd.grad(
-            ham._interaction_matrix[0, 1], q_dict["superman"]
+            ham._interaction_matrix(
+                ham.noise_trajectories[0].trajectory.register
+            )[0, 1],
+            q_dict["superman"],
         )
         assert torch.allclose(
             gr[0],
@@ -437,14 +470,19 @@ def test_interaction_matrix_torch(channel_type):
     elif channel_type == "mw_global":
         interaction_size = ham._device.interaction_coeff_xy / 8**3
         assert torch.allclose(
-            ham._interaction_matrix,
+            ham._interaction_matrix(
+                ham.noise_trajectories[0].trajectory.register
+            ),
             torch.tensor(
                 [[0.0, interaction_size], [interaction_size, 0.0]],
                 dtype=torch.float64,
             ),
         )
         gr = torch.autograd.grad(
-            ham._interaction_matrix[0, 1], q_dict["superman"]
+            ham._interaction_matrix(
+                ham.noise_trajectories[0].trajectory.register
+            )[0, 1],
+            q_dict["superman"],
         )
         assert torch.allclose(
             gr[0],
@@ -476,17 +514,20 @@ def test_noisy_interaction_matrix():
         ),
         "ch0",
     )
-    noise = pulser.NoiseModel(state_prep_error=0.5, runs=1)
-    ham = HamiltonianData.from_sequence(seq, noise_model=noise)
+    noise = pulser.NoiseModel(state_prep_error=0.5)
+    ham = HamiltonianData.from_sequence(
+        seq, noise_model=noise, n_trajectories=1
+    )
 
-    assert ham.bad_atoms == {
+    assert ham.noise_trajectories[0].trajectory.bad_atoms == {
         "batman": True,
         "superman": False,
         "ironman": False,
         "aquaman": True,
     }
 
-    actual = ham.noisy_interaction_matrix._array
+    assert len(ham.noisy_interaction_matrices) == 1
+    actual = ham.noisy_interaction_matrices[0]._array
     assert np.allclose(
         actual,
         np.array(
@@ -498,7 +539,12 @@ def test_noisy_interaction_matrix():
             ]
         ),
     )
-    assert actual[1, 2] == ham._interaction_matrix[1, 2]
+    assert (
+        actual[1, 2]
+        == ham._interaction_matrix(
+            ham.noise_trajectories[0].trajectory.register
+        )[1, 2]
+    )
 
 
 def test_noisy_interaction_matrix_torch():
@@ -521,15 +567,18 @@ def test_noisy_interaction_matrix_torch():
         ),
         "ch0",
     )
-    noise = pulser.NoiseModel(state_prep_error=0.5, runs=1)
-    ham = HamiltonianData.from_sequence(seq, noise_model=noise)
-    assert ham.bad_atoms == {
+    noise = pulser.NoiseModel(state_prep_error=0.5)
+    ham = HamiltonianData.from_sequence(
+        seq, noise_model=noise, n_trajectories=1
+    )
+    assert ham.noise_trajectories[0].trajectory.bad_atoms == {
         "batman": True,
         "superman": False,
         "ironman": False,
         "aquaman": True,
     }
-    actual = ham.noisy_interaction_matrix._array
+    assert len(ham.noisy_interaction_matrices) == 1
+    actual = ham.noisy_interaction_matrices[0]._array
     assert torch.allclose(
         actual,
         torch.tensor(
@@ -543,7 +592,12 @@ def test_noisy_interaction_matrix_torch():
         ),
     )
 
-    assert actual[1, 2] == ham._interaction_matrix[1, 2]
+    assert (
+        actual[1, 2]
+        == ham._interaction_matrix(
+            ham.noise_trajectories[0].trajectory.register
+        )[1, 2]
+    )
 
 
 def test_noise_hf_detuning_generation():
@@ -570,11 +624,37 @@ def test_noise_hf_detuning_generation():
     times = np.arange(0, 10, 0.1)
     phases = np.random.uniform(0, 2 * np.pi, size=(2,))
 
-    noise_m = pulser.NoiseModel(
-        detuning_hf_psd=psd, detuning_hf_omegas=freqs, runs=1
-    )
+    noise_m = pulser.NoiseModel(detuning_hf_psd=psd, detuning_hf_omegas=freqs)
     hf_det = _generate_detuning_fluctuations(noise_m, 0.0, phases, times)
     hd_det_expected = original_formula_gen_noise(psd, freqs, times, phases)
 
     assert np.allclose(hf_det, hd_det_expected)
     assert hf_det.size == times.size
+
+
+@pytest.mark.parametrize(
+    "noise_data, expected",
+    [
+        (dict(noise_types="doppler"), True),
+        (dict(noise_types="amplitude", amp_sigma=1), True),
+        (dict(noise_types="amplitude", amp_sigma=0), False),
+        (dict(noise_types="detuning"), True),
+        (dict(noise_types="register"), True),
+        (dict(noise_types="SPAM"), False),
+        (dict(noise_types="other"), False),
+        (dict(noise_types={"other", "doppler"}), True),
+    ],
+    ids=[
+        "doppler",
+        "amplitude!=0",
+        "amplitude=0",
+        "detuning",
+        "register",
+        "SPAM",
+        "not shot to shot noise",
+        "doppler + other noise",
+    ],
+)
+def test_has_shot_to_shot_except_spam(noise_data, expected):
+    fake_noise_model = SimpleNamespace(**noise_data)
+    assert has_shot_to_shot_except_spam(fake_noise_model) is expected

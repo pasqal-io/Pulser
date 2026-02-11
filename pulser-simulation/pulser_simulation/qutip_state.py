@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 from collections import Counter, defaultdict
 from collections.abc import Collection, Mapping, Sequence
-from typing import Any, SupportsComplex, Type, TypeVar
+from typing import Any, Type, TypeVar
 
 import numpy as np
 import qutip
@@ -27,12 +27,12 @@ from pulser.math.multinomial import multinomial
 
 QutipStateType = TypeVar("QutipStateType", bound="QutipState")
 
-QuditOp = Mapping[str, SupportsComplex]
+QuditOp = Mapping[str, complex]
 TensorOp = Sequence[tuple[QuditOp, Collection[int]]]
-FullOp = Sequence[tuple[SupportsComplex, TensorOp]]
+FullOp = Sequence[tuple[complex, TensorOp]]
 
 
-class QutipState(State[SupportsComplex, float]):
+class QutipState(State[complex, float]):
     """A quantum state stored as a qutip.Qobj.
 
     Args:
@@ -130,7 +130,15 @@ class QutipState(State[SupportsComplex, float]):
         # Renormalize to make the non-zero probablilites sum to 1.
         probs = probs[non_zero]
         probs = probs / np.sum(probs)
-        return dict(zip(map(self.get_basis_state_from_index, non_zero), probs))
+        return dict(
+            zip(
+                map(
+                    self.get_basis_state_from_index,  # type: ignore[arg-type]
+                    non_zero,
+                ),
+                probs,
+            )
+        )
 
     def bitstring_probabilities(
         self, *, one_state: Eigenstate | None = None, cutoff: float = 1e-12
@@ -214,7 +222,7 @@ class QutipState(State[SupportsComplex, float]):
         *,
         eigenstates: Sequence[Eigenstate],
         n_qudits: int,
-        amplitudes: Mapping[str, SupportsComplex],
+        amplitudes: Mapping[str, complex],
     ) -> tuple[QutipStateType, Mapping[str, complex]]:
         """Construct the state from its basis states' amplitudes.
 

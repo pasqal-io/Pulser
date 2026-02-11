@@ -36,6 +36,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.math as pm
+from pulser.backend._classproperty import classproperty
 from pulser.backend.observable import Callback, Observable
 from pulser.backend.operator import Operator, OperatorRepr
 from pulser.backend.state import State, StateRepr
@@ -44,19 +45,36 @@ from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.noise_model import NoiseModel
 
+DEFAULT_N_TRAJECTORIES = 40
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 
 StateType = TypeVar("StateType", bound=State)
 
+# TODO: Replace with built-in Self when python >= 3.11
+Self = TypeVar("Self", bound="BackendConfig")
+
 
 class BackendConfig:
-    """The base backend configuration."""
+    """The base backend configuration.
 
+    Args:
+        default_num_shots: The default number of shots for the backend. Must
+            be a strictly positive integer.
+
+    Note:
+        Additional parameters may be provided. It is up to the backend that
+        receives a configuration with extra parameters to assess whether it
+        recognizes them and how it will use them.
+    """
+
+    default_num_shots: int | None
     _backend_options: dict[str, Any]
-    # Whether to warn if unexpected kwargs are received
+    # Whether to error if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = True
 
-    def __init__(self, **backend_options: Any) -> None:
+    def __init__(
+        self, *, default_num_shots: int | None = None, **backend_options: Any
+    ) -> None:
         """Initializes the backend config."""
         cls_name = self.__class__.__name__
         if self._enforce_expected_kwargs and (
@@ -72,7 +90,7 @@ class BackendConfig:
             )
         # Store the abstract repr of the config in _backend_options
         # Prevents potential issues with mutable arguments
-        self._backend_options = copy.deepcopy(backend_options)
+        super().__setattr__("_backend_options", copy.deepcopy(backend_options))
         if "backend_options" in backend_options:
             with warnings.catch_warnings():
                 warnings.filterwarnings("always")
@@ -84,6 +102,20 @@ class BackendConfig:
                     stacklevel=2,
                 )
             self._backend_options.update(backend_options["backend_options"])
+
+        if default_num_shots is not None:
+            if default_num_shots < 1:
+                raise ValueError(
+                    "'default_num_shots' must be greater than or equal to 1, "
+                    f"not {default_num_shots}."
+                )
+            default_num_shots = int(default_num_shots)
+        # Store in _backend_options together with all the other paramters
+        self._backend_options["default_num_shots"] = default_num_shots
+
+    def with_changes(self: Self, **changes: Any) -> Self:
+        """Returns a copy of the config with the given changes."""
+        return type(self)(**(self._backend_options | changes))
 
     def _expected_kwargs(self) -> set[str]:
         return set()
@@ -97,9 +129,35 @@ class BackendConfig:
             return self._backend_options[name]
         raise AttributeError(f"{name!r} has not been passed to {self!r}.")
 
+    def __setattr__(self, name: str, value: Any) -> None:
+        cls_name = type(self).__name__
+        raise AttributeError(
+            f"{cls_name!r} is read-only. Please use "
+            f"'{cls_name}.with_changes({name}=...)' to make a copy with the "
+            "desired changes."
+        )
+
+    def __setstate__(self, d: dict) -> None:
+        # Allows the config to be unpickled
+        super().__setattr__("__dict__", d)
+
+    def __repr__(self) -> str:
+        params_str = ",\n    ".join(
+            f"{key}={value!r}" for key, value in self._backend_options.items()
+        )
+        return f"{self.__class__.__name__}(\n    {params_str},\n)"
+
 
 class EmulationConfig(BackendConfig, Generic[StateType]):
     """Configures an emulation on a backend.
+
+    Note:
+        Additional parameters may be provided. It is up to the emulation
+        backend that receives a configuration with extra parameters to assess
+        whether it recognizes them and how it will use them. To know all
+        parameters expected by an EmulatorBackend, **consult its associated
+        EmulationConfig subclass found under**
+        ``EmulatorBackend.config_type``.
 
     Args:
         observables: A sequence of observables to compute at specific
@@ -116,8 +174,10 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             every step in the emulation will also be an evaluation time.
         initial_state: The initial state from which emulation starts. If
             specified, the state type needs to be compatible with the emulator
-            backend. If left undefined, defaults to starting with all qudits
-            in the ground state.
+            backend (i.e. it must match
+            ``EmulatorBackend.config_type.state_type``).
+            If left undefined, defaults to starting with all qudits in the
+            ground state.
         with_modulation: Whether to emulate the sequence with the programmed
             input or the expected output.
         interaction_matrix: An optional interaction matrix to replace the
@@ -131,29 +191,47 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         noise_model: An optional noise model to emulate the sequence with.
             Ignored if the sequence's device has default noise model and
             `prefer_device_noise_model=True`.
+        n_trajectories: The number of trajectories to average over when the
+            emulation includes stochastic noise or is using a Monte Carlo
+            solver. When left undefined:
 
-    Note:
-        Additional parameters may be provided. It is up to the emulation
-        backend that receives a configuration with extra parameters to assess
-        whether it recognizes them and how it will use them. To know all
-        parameters expected by an EmulatorBackend, consult its associated
-        EmulationConfig subclass found under 'EmulatorBackend.default_config'.
+            (1) If 'prefer_device_noise_model=False', tries to use the (now
+            deprecated) value of `NoiseModel.runs`. If that is also not
+            defined, defaults to 1 trajectory.
+
+            (2) If 'prefer_device_noise_model=True', **defaults to 40**
+            trajectories.
+        default_num_shots: The default number of shots for ``BitStrings``, used
+            whenever the observable doesn't define its own. Defaults to 1000.
 
     """
 
     callbacks: Sequence[Callback]
+    """A sequence of callbacks that are not observables."""
     observables: Sequence[Observable]
+    """A sequence of observables to compute at specific evaluation times."""
     default_evaluation_times: np.ndarray | Literal["Full"]
+    """The default times at which observables are computed."""
     initial_state: StateType | None
+    """A custom initial state from which emulation starts."""
     with_modulation: bool
+    """Whether to emulate the sequence with output modulation effects."""
     interaction_matrix: pm.AbstractArray | None
+    """An interaction matrix to replace the Hamiltonian interaction terms."""
     prefer_device_noise_model: bool
+    """Whether to use the noise model of the sequence's ``Device``."""
     noise_model: NoiseModel
-    # Whether to warn if unexpected kwargs are received
+    """A custom noise model to emulate the sequence with."""
+    n_trajectories: int
+    """The number of trajectories to average over (when applicable)."""
+    default_num_shots: int
+    """The default number of shots for ``BitStrings``."""
+
+    # Whether to error if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = False
 
-    _state_type: ClassVar[Type[State]]
-    _operator_type: ClassVar[Type[Operator]]
+    _state_type: ClassVar[Type[State]] = StateRepr
+    _operator_type: ClassVar[Type[Operator]] = OperatorRepr
 
     def __init__(
         self,
@@ -168,7 +246,9 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         with_modulation: bool = False,
         interaction_matrix: ArrayLike | None = None,
         prefer_device_noise_model: bool = False,
-        noise_model: NoiseModel = NoiseModel(),
+        noise_model: NoiseModel | None = None,
+        n_trajectories: int | None = None,
+        default_num_shots: int = 1000,
         **backend_options: Any,
     ) -> None:
         """Initializes the EmulationConfig."""
@@ -207,7 +287,10 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
                 f"Repeated tags found: {repeated_tags}"
             )
 
-        if default_evaluation_times != "Full":
+        if not (
+            isinstance(default_evaluation_times, str)
+            and default_evaluation_times == "Full"
+        ):
             eval_times_arr = Observable._validate_eval_times(
                 list(map(float, default_evaluation_times))
             )
@@ -249,10 +332,37 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
                     stacklevel=2,
                 )
 
-        if not isinstance(noise_model, NoiseModel):
+        if noise_model is None:
+            noise_model = NoiseModel()
+        elif not isinstance(noise_model, NoiseModel):
             raise TypeError(
-                "'noise_model' must be a NoiseModel instance,"
+                "When defined, 'noise_model' must be a NoiseModel instance,"
                 f" not {type(noise_model)}."
+            )
+
+        if (
+            n_trajectories is not None
+            and noise_model.runs is not None
+            and n_trajectories != noise_model.runs
+        ):
+            raise ValueError(
+                "`EmulationConfig.n_trajectories` and `NoiseModel.runs` "
+                "can't be simultaneously defined. Please favour using only"
+                " `EmulationConfig.n_trajectories`."
+            )
+
+        if n_trajectories is None:
+            if prefer_device_noise_model:
+                n_trajectories = DEFAULT_N_TRAJECTORIES
+            else:
+                n_trajectories = (
+                    noise_model.runs if noise_model.runs is not None else 1
+                )
+
+        if n_trajectories < 1 or n_trajectories != int(n_trajectories):
+            raise ValueError(
+                "`n_trajectories` must be a strictly positive integer, "
+                f"not {n_trajectories}."
             )
 
         super().__init__(
@@ -264,6 +374,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             interaction_matrix=interaction_matrix,
             prefer_device_noise_model=bool(prefer_device_noise_model),
             noise_model=noise_model,
+            n_trajectories=int(n_trajectories),
+            default_num_shots=int(default_num_shots),
             **backend_options,
         )
 
@@ -277,7 +389,18 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             "interaction_matrix",
             "prefer_device_noise_model",
             "noise_model",
+            "n_trajectories",
         }
+
+    @classproperty
+    def state_type(cls) -> Type[State]:
+        """The preferred state type to use with this config class."""
+        return cls._state_type
+
+    @classproperty
+    def operator_type(cls) -> Type[Operator]:
+        """The preferred operator type to use with this config class."""
+        return cls._operator_type
 
     def is_evaluation_time(self, t: float, tol: float = 1e-6) -> bool:
         """Assesses whether a relative time is an evaluation time."""
@@ -313,7 +436,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         """Deserialize an EmulationConfig from an abstract JSON object.
 
         Args:
-            obj_str (str): the JSON string representing the sequence encoded
+            obj_str (str): The JSON string representing the config encoded
                 in the abstract JSON format.
 
         Returns:
@@ -328,15 +451,15 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         return _deserialize_emulation_config(
             json.loads(obj_str),
             cls,
-            getattr(cls, "_state_type", StateRepr),
-            getattr(cls, "_operator_type", OperatorRepr),
+            cls.state_type,
+            cls.operator_type,
         )
 
 
 # Legacy class
 
 
-@dataclass
+@dataclass(frozen=True)
 class EmulatorConfig(BackendConfig):
     """The configuration for emulator backends.
 

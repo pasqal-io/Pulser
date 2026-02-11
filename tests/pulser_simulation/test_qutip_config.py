@@ -5,7 +5,11 @@ import pytest
 
 from pulser import NoiseModel
 from pulser.backend.default_observables import StateResult
-from pulser_simulation.qutip_config import QutipConfig
+from pulser_simulation.qutip_config import (
+    QutipConfig,
+    QutipOperator,
+    QutipState,
+)
 
 
 def test_no_interaction_matrix():
@@ -56,9 +60,7 @@ def test_samples_per_run():
                 observables=[
                     StateResult(evaluation_times=[1.0]),
                 ],
-                noise_model=NoiseModel(
-                    temperature=45, runs=100, samples_per_run=5
-                ),
+                noise_model=NoiseModel(temperature=45, samples_per_run=5),
             )
 
 
@@ -75,3 +77,19 @@ def test_initial_state():
             ],
             initial_state="all-ground",
         )
+
+
+def test_preferred_types():
+    assert QutipConfig.state_type is QutipState
+    assert QutipConfig.operator_type is QutipOperator
+
+
+def test_progress_bar():
+    config = QutipConfig(
+        observables=[
+            StateResult(evaluation_times=[1.0]),
+        ],
+        progress_bar=True,
+    )
+    assert config.progress_bar
+    assert "progress_bar" in config._expected_kwargs()
