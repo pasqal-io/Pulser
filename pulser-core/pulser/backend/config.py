@@ -151,6 +151,14 @@ class BackendConfig:
 class EmulationConfig(BackendConfig, Generic[StateType]):
     """Configures an emulation on a backend.
 
+    Note:
+        Additional parameters may be provided. It is up to the emulation
+        backend that receives a configuration with extra parameters to assess
+        whether it recognizes them and how it will use them. To know all
+        parameters expected by an EmulatorBackend, **consult its associated
+        EmulationConfig subclass found under**
+        ``EmulatorBackend.config_type``.
+
     Args:
         observables: A sequence of observables to compute at specific
             evaluation times. The observables without specified evaluation
@@ -166,8 +174,10 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             every step in the emulation will also be an evaluation time.
         initial_state: The initial state from which emulation starts. If
             specified, the state type needs to be compatible with the emulator
-            backend. If left undefined, defaults to starting with all qudits
-            in the ground state.
+            backend (i.e. it must match
+            ``EmulatorBackend.config_type.state_type``).
+            If left undefined, defaults to starting with all qudits in the
+            ground state.
         with_modulation: Whether to emulate the sequence with the programmed
             input or the expected output.
         interaction_matrix: An optional interaction matrix to replace the
@@ -194,25 +204,29 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         default_num_shots: The default number of shots for ``BitStrings``, used
             whenever the observable doesn't define its own. Defaults to 1000.
 
-    Note:
-        Additional parameters may be provided. It is up to the emulation
-        backend that receives a configuration with extra parameters to assess
-        whether it recognizes them and how it will use them. To know all
-        parameters expected by an EmulatorBackend, consult its associated
-        EmulationConfig subclass found under 'EmulatorBackend.default_config'.
-
     """
 
     callbacks: Sequence[Callback]
+    """A sequence of callbacks that are not observables."""
     observables: Sequence[Observable]
+    """A sequence of observables to compute at specific evaluation times."""
     default_evaluation_times: np.ndarray | Literal["Full"]
+    """The default times at which observables are computed."""
     initial_state: StateType | None
+    """A custom initial state from which emulation starts."""
     with_modulation: bool
+    """Whether to emulate the sequence with output modulation effects."""
     interaction_matrix: pm.AbstractArray | None
+    """An interaction matrix to replace the Hamiltonian interaction terms."""
     prefer_device_noise_model: bool
+    """Whether to use the noise model of the sequence's ``Device``."""
     noise_model: NoiseModel
+    """A custom noise model to emulate the sequence with."""
     n_trajectories: int
+    """The number of trajectories to average over (when applicable)."""
     default_num_shots: int
+    """The default number of shots for ``BitStrings``."""
+
     # Whether to error if unexpected kwargs are received
     _enforce_expected_kwargs: ClassVar[bool] = False
 
