@@ -67,6 +67,8 @@ class QutipConfig(EmulationConfig[QutipState]):
 
             - ``Solver.MESOLVER``: use the master-equation
               solver ``qutip.mesolve``.
+        print_progress: Whether to print which noise trajectory is
+            being emulated.
         progress_bar: Whether or not to display the progress of the run
             of a trajectory inside qutip.
 
@@ -86,6 +88,7 @@ class QutipConfig(EmulationConfig[QutipState]):
         *,
         sampling_rate: float = 1.0,
         solver: Solver = Solver.DEFAULT,
+        print_progress: bool = False,
         progress_bar: bool = False,
         **backend_options: Any,
     ):
@@ -118,6 +121,7 @@ class QutipConfig(EmulationConfig[QutipState]):
         super().__init__(
             sampling_rate=sampling_rate,
             solver=solver,
+            print_progress=print_progress,
             progress_bar=progress_bar,
             **backend_options,
         )
@@ -126,6 +130,7 @@ class QutipConfig(EmulationConfig[QutipState]):
         return super()._expected_kwargs() | {
             "sampling_rate",
             "solver",
+            "print_progress",
             "progress_bar",
         }
 

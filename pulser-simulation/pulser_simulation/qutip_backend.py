@@ -162,7 +162,10 @@ class QutipBackendV2(EmulatorBackend):
                 self._config.initial_state.to_qobj()
             )
         # setup the default qutip options
-        self._qutip_options = {"progress_bar": self._config.progress_bar}
+        self._qutip_options = {
+            "print_progress": self._config.print_progress,
+            "progress_bar": self._config.progress_bar,
+        }
         self._sim_obj._validate_options(self._qutip_options)
 
     def run(self) -> Results:
