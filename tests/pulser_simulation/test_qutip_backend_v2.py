@@ -117,6 +117,7 @@ def test_qutip_backend_v2_energy(capfd):
             StateResult(),
             Energy(evaluation_times=[0.001 * n for n in range(1001)]),
         ],
+        print_progress=True,
     )
     backend = QutipBackendV2(seq, config=config)
     results = backend.run()
@@ -149,7 +150,8 @@ def test_qutip_backend_v2_energy(capfd):
     )
 
 
-def test_qutip_backend_v2_default_noise_model(capfd):
+@pytest.mark.parametrize("print_progress", [True, False])
+def test_qutip_backend_v2_default_noise_model(capfd, print_progress):
     noisy_device = dataclasses.replace(
         pulser.devices.MockDevice,
         default_noise_model=pulser.NoiseModel(
@@ -168,6 +170,7 @@ def test_qutip_backend_v2_default_noise_model(capfd):
             eigenstates=("r", "g"),
         ),
         n_trajectories=2,
+        print_progress=print_progress,
     )
 
     backend = QutipBackendV2(sequence(noisy_device), config=config)
@@ -184,7 +187,11 @@ def test_qutip_backend_v2_default_noise_model(capfd):
 
     backend.run()
     out, _ = capfd.readouterr()
-    assert out == "Emulating Trajectory 1/2\nEmulating Trajectory 2/2\n"
+    assert out == (
+        "Emulating Trajectory 1/2\nEmulating Trajectory 2/2\n"
+        if print_progress
+        else ""
+    )
 
 
 def test_qutip_backend_v2_stochastic_noise():
