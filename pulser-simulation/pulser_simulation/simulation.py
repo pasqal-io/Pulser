@@ -803,6 +803,7 @@ class QutipEmulator:
     def run(
         self,
         progress_bar: bool = False,
+        print_progress: bool = False,
         **options: Any,
     ) -> SimulationResults:
         """Simulates the sequence using QuTiP's solvers.
@@ -813,6 +814,8 @@ class QutipEmulator:
         Args:
             progress_bar: If True, the progress bar of QuTiP's
                 solver will be shown. If None or False, no text appears.
+            print_progress: Whether to print which noise trajectory
+                is being emulated.
             options: Given directly to the Qutip Solver. If specified, will
                 override SimConfig solver_options. If no `max_step` value is
                 provided, an automatic one is calculated from the `Sequence`'s
@@ -825,7 +828,8 @@ class QutipEmulator:
         self._validate_options(options)
 
         if not _has_stochastic_noise(self.noise_model):
-            print("Emulating Trajectory 1/1")
+            if print_progress:
+                print("Emulating Trajectory 1/1")
             # A single run is needed, regardless of self.config.runs
             return self._run_solver(
                 self._current_hamiltonian,
@@ -838,7 +842,7 @@ class QutipEmulator:
         total_count = np.array([Counter() for _ in self._eval_times_array])
 
         for cleanres_noisyseq, reps in self._noisy_runs(
-            progress_bar=progress_bar, **options
+            progress_bar=progress_bar, print_progress=print_progress, **options
         ):
             total_count += np.array(
                 [
@@ -871,18 +875,19 @@ class QutipEmulator:
         )
 
     def _noisy_runs(
-        self, progress_bar: bool, **options: Any
+        self, progress_bar: bool, print_progress: bool = False, **options: Any
     ) -> Iterator[tuple[SimulationResults, int]]:
         n_trajectories = self.n_trajectories
         traj_nb = 0
-        for i, (ham, reps) in enumerate(self._hamiltonians):
-            if reps == 1:
-                print(f"Emulating Trajectory {traj_nb+1}/{n_trajectories}")
-            else:
-                print(
-                    f"Emulating Trajectories [{traj_nb+1} - {traj_nb+reps}]"
-                    f"/{n_trajectories}"
-                )
+        for ham, reps in self._hamiltonians:
+            if print_progress:
+                if reps == 1:
+                    print(f"Emulating Trajectory {traj_nb+1}/{n_trajectories}")
+                else:
+                    print(
+                        "Emulating Trajectories "
+                        f"[{traj_nb+1} - {traj_nb+reps}]/{n_trajectories}"
+                    )
             self._current_hamiltonian = ham
             traj_nb += reps
             # Yield CoherentResults instance from sequence with added noise:

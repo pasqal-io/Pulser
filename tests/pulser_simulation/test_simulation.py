@@ -881,7 +881,7 @@ def test_noise(capfd, seq, matrices):
             "'SampledResult.get_samples()' resamples a sampling distribution"
         ),
     ):
-        assert sim2.run().sample_final_state() == Counter(
+        assert sim2.run(print_progress=True).sample_final_state() == Counter(
             {"000": 824, "100": 41, "101": 57, "001": 63, "010": 15}
         )
     out, _ = capfd.readouterr()
@@ -1017,7 +1017,7 @@ def test_relaxation_noise(capfd):
         op.type == qutip.core.data.CSR
         for op in sim._current_hamiltonian._collapse_ops
     ]
-    res = sim.run()
+    res = sim.run(print_progress=True)
     out, _ = capfd.readouterr()
     assert out.rstrip("\n").split("\n") == ["Emulating Trajectory 1/1"]
     start_samples = res.sample_state(1)
