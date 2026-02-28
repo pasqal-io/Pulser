@@ -31,6 +31,7 @@ from pulser.devices import (
     VirtualDevice,
 )
 from pulser.exceptions.base import PulserValueError
+from pulser.noise_model import NoiseModel
 from pulser.exceptions.sequence import (
     AtomsNumberError,
     DimensionError,
@@ -779,3 +780,15 @@ def test_dmm_channels():
             channel_objects=(Rydberg.Global(None, None),),
             channel_ids=("dmm_0",),
         )
+
+
+def test_noise_model_backwards_compatibility():
+    """Test that default_noise_model still works with deprecation (init and access)."""
+    nm = NoiseModel(amp_sigma=0.1)
+    # Init with default_noise_model (deprecated)
+    with pytest.warns(DeprecationWarning, match="default_noise_model"):
+        dev = replace(MockDevice, default_noise_model=nm)
+    assert dev.noise_model is nm
+    # Access via default_noise_model (deprecated)
+    with pytest.warns(DeprecationWarning, match="default_noise_model"):
+        assert dev.default_noise_model is nm

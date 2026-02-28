@@ -507,7 +507,11 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     device_fields = dataclasses.fields(device_cls)
     device_defaults = get_dataclass_defaults(device_fields)
     for param in device_fields:
-        use_default = param.name not in obj and param.name in device_defaults
+        # noise_model in JSON may be under default_noise_model (schema compat)
+        in_obj = param.name in obj or (
+            param.name == "noise_model" and "default_noise_model" in obj
+        )
+        use_default = not in_obj and param.name in device_defaults
         if (
             not param.init
             or param.name in PARAMS_WITH_ABSTR_REPR
@@ -519,8 +523,14 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
             params[key] = tuple(
                 _deserialize_layout(layout) for layout in obj[key]
             )
-        elif param.name == "default_noise_model":
-            params[param.name] = _deserialize_noise_model(obj[param.name])
+        elif param.name == "noise_model":
+            # JSON schema uses default_noise_model for compatibility
+            json_key = (
+                "default_noise_model"
+                if "default_noise_model" in obj
+                else "noise_model"
+            )
+            params["noise_model"] = _deserialize_noise_model(obj[json_key])
         else:
             params[param.name] = obj[param.name]
     try:

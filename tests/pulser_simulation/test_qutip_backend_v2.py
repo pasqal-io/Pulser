@@ -154,7 +154,7 @@ def test_qutip_backend_v2_energy(capfd):
 def test_qutip_backend_v2_default_noise_model(capfd, print_progress):
     noisy_device = dataclasses.replace(
         pulser.devices.MockDevice,
-        default_noise_model=pulser.NoiseModel(
+        noise_model=pulser.NoiseModel(
             dephasing_rate=0.01, temperature=50
         ),
     )

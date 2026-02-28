@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import warnings
 import json
 import pickle
 import re
@@ -448,24 +449,28 @@ def test_emulator_backend(sequence):
         my_param="bar",
     )
 
-    with pytest.warns(
-        UserWarning,
-        match="'sequence.device.default_noise_model.runs=3' is being "
-        "ignored; 'config.n_trajectories=40' will be used instead",
-    ):
-        _config = EmulationConfig(
-            observables=(BitStrings(),), prefer_device_noise_model=True
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", message=".*'NoiseModel.runs' is deprecated",
+            category=DeprecationWarning,
         )
-        assert _config.n_trajectories == 40
-        with pytest.deprecated_call():
+        with pytest.warns(
+            UserWarning,
+            match="'sequence.device.noise_model.runs=3' is being "
+            "ignored; 'config.n_trajectories=40' will be used instead",
+        ):
+            _config = EmulationConfig(
+                observables=(BitStrings(),), prefer_device_noise_model=True
+            )
+            assert _config.n_trajectories == 40
             _device = dataclasses.replace(
                 sequence.device,
-                default_noise_model=pulser.NoiseModel(amp_sigma=0.1, runs=3),
+                noise_model=pulser.NoiseModel(amp_sigma=0.1, runs=3),
             )
-        ConcreteEmulator(
-            pulser.Sequence(sequence.register, _device),
-            config=_config,
-        )
+            ConcreteEmulator(
+                pulser.Sequence(sequence.register, _device),
+                config=_config,
+            )
 
     emu = ConcreteEmulator(sequence, config=concrete_config)
 
