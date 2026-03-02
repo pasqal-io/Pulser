@@ -524,13 +524,8 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
                 _deserialize_layout(layout) for layout in obj[key]
             )
         elif param.name == "noise_model":
-            # JSON schema uses default_noise_model for compatibility
-            json_key = (
-                "default_noise_model"
-                if "default_noise_model" in obj
-                else "noise_model"
-            )
-            params["noise_model"] = _deserialize_noise_model(obj[json_key])
+            # JSON schema keeps default_noise_model key (unchanged)
+            params["noise_model"] = _deserialize_noise_model(obj["default_noise_model"])
         else:
             params[param.name] = obj[param.name]
     try:
