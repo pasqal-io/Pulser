@@ -820,7 +820,7 @@ def _wrap_init_for_default_noise_model(original_init):
                     "Cannot specify both 'noise_model' and 'default_noise_model'"
                 )
             warnings.warn(
-                "'default_noise_model' is deprecated, use 'noise_model' instead.",
+                "'default_noise_model' is deprecated since pulser 1.8.0, use 'noise_model' instead.",
                 category=DeprecationWarning,
                 stacklevel=2,
             )
