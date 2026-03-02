@@ -815,10 +815,10 @@ def _wrap_init_for_default_noise_model(original_init):
     @functools.wraps(original_init)
     def wrapped_init(self, *args, default_noise_model=None, **kwargs):
         if default_noise_model is not None:
-            if kwargs.get("noise_model") is not None:
-                raise TypeError(
-                    "Cannot specify both 'noise_model' and 'default_noise_model'"
-                )
+        if kwargs.get("noise_model") is not None:
+            raise ValueError(
+                "Cannot specify both 'noise_model' and 'default_noise_model'"
+            )
             warnings.warn(
                 "'default_noise_model' is deprecated, use 'noise_model' instead.",
                 category=DeprecationWarning,
