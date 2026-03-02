@@ -792,3 +792,13 @@ def test_noise_model_backwards_compatibility():
     # Access via default_noise_model (deprecated)
     with pytest.warns(DeprecationWarning, match="default_noise_model"):
         assert dev.default_noise_model is nm
+
+
+def test_noise_model_and_default_noise_model_mutually_exclusive():
+    """Test that specifying both noise_model and default_noise_model raises ValueError."""
+    nm = NoiseModel(amp_sigma=0.1)
+    with pytest.raises(
+        ValueError,
+        match="Cannot specify both 'noise_model' and 'default_noise_model'",
+    ):
+        replace(MockDevice, noise_model=nm, default_noise_model=nm)
