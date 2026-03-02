@@ -812,6 +812,7 @@ class BaseDevice(ABC):
 def _wrap_init_for_default_noise_model(original_init):
     """Wrap __init__ to accept deprecated default_noise_model parameter."""
 
+    @functools.wraps(original_init)
     def wrapped_init(self, *args, default_noise_model=None, **kwargs):
         if default_noise_model is not None:
             if kwargs.get("noise_model") is not None:
