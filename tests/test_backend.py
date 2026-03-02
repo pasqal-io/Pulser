@@ -448,11 +448,7 @@ def test_emulator_backend(sequence):
         my_param="bar",
     )
 
-    with pytest.warns(
-        UserWarning,
-        match="'sequence.device.noise_model.runs=3' is being "
-        "ignored; 'config.n_trajectories=40' will be used instead",
-    ):
+    with pytest.warns((UserWarning, DeprecationWarning)) as record:
         _config = EmulationConfig(
             observables=(BitStrings(),), prefer_device_noise_model=True
         )
@@ -465,6 +461,11 @@ def test_emulator_backend(sequence):
             pulser.Sequence(sequence.register, _device),
             config=_config,
         )
+    assert any(
+        "sequence.device.noise_model.runs=3" in str(w.message)
+        for w in record
+        if w.category is UserWarning
+    )
 
     emu = ConcreteEmulator(sequence, config=concrete_config)
 
