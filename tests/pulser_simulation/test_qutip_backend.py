@@ -84,9 +84,7 @@ def test_with_default_noise(sequence):
             runs=10,
             samples_per_run=1,
         )
-    new_device = dataclasses.replace(
-        MockDevice, noise_model=spam_noise
-    )
+    new_device = dataclasses.replace(MockDevice, noise_model=spam_noise)
     new_seq = sequence.with_new_device(new_device)
     with pytest.deprecated_call(match="'QutipBackend' is deprecated"):
         backend = QutipBackend(

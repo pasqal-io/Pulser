@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import functools
 import json
 import pprint
 import warnings
@@ -809,16 +810,20 @@ class BaseDevice(ABC):
         )
 
 
-def _wrap_init_for_default_noise_model(original_init):
+def _wrap_init_for_default_noise_model(
+    original_init: Callable[..., Any],
+) -> Callable[..., Any]:
     """Wrap __init__ to accept deprecated default_noise_model parameter."""
 
     @functools.wraps(original_init)
-    def wrapped_init(self, *args, default_noise_model=None, **kwargs):
+    def wrapped_init(
+        self: Any, *args: Any, default_noise_model: Any = None, **kwargs: Any
+    ) -> None:
         if default_noise_model is not None:
-        if kwargs.get("noise_model") is not None:
-            raise ValueError(
-                "Cannot specify both 'noise_model' and 'default_noise_model'"
-            )
+            if kwargs.get("noise_model") is not None:
+                raise ValueError(
+                    "Cannot specify both 'noise_model' and 'default_noise_model'"
+                )
             warnings.warn(
                 "'default_noise_model' is deprecated since pulser 1.8.0, use 'noise_model' instead.",
                 category=DeprecationWarning,
@@ -831,7 +836,7 @@ def _wrap_init_for_default_noise_model(original_init):
     return wrapped_init
 
 
-BaseDevice.__init__ = _wrap_init_for_default_noise_model(BaseDevice.__init__)
+BaseDevice.__init__ = _wrap_init_for_default_noise_model(BaseDevice.__init__)  # type: ignore[method-assign]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1144,5 +1149,5 @@ class VirtualDevice(BaseDevice):
 
 
 # Patch Device and VirtualDevice __init__ to accept deprecated default_noise_model
-Device.__init__ = _wrap_init_for_default_noise_model(Device.__init__)
-VirtualDevice.__init__ = _wrap_init_for_default_noise_model(VirtualDevice.__init__)
+Device.__init__ = _wrap_init_for_default_noise_model(Device.__init__)  # type: ignore[method-assign]
+VirtualDevice.__init__ = _wrap_init_for_default_noise_model(VirtualDevice.__init__)  # type: ignore[method-assign]

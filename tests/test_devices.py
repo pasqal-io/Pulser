@@ -31,7 +31,6 @@ from pulser.devices import (
     VirtualDevice,
 )
 from pulser.exceptions.base import PulserValueError
-from pulser.noise_model import NoiseModel
 from pulser.exceptions.sequence import (
     AtomsNumberError,
     DimensionError,
@@ -47,6 +46,7 @@ from pulser.exceptions.sequence import (
     TrapsNumberTooHighError,
     TrapsNumberTooLowError,
 )
+from pulser.noise_model import NoiseModel
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (

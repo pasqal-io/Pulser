@@ -15,12 +15,12 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
-import warnings
 import json
 import pickle
 import re
 import typing
 import uuid
+import warnings
 from collections import Counter
 from unittest.mock import patch
 
@@ -451,7 +451,8 @@ def test_emulator_backend(sequence):
 
     with warnings.catch_warnings():
         warnings.filterwarnings(
-            "ignore", message=".*'NoiseModel.runs' is deprecated",
+            "ignore",
+            message=".*'NoiseModel.runs' is deprecated",
             category=DeprecationWarning,
         )
         with pytest.warns(
