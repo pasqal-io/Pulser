@@ -838,9 +838,7 @@ def _wrap_init_for_default_noise_model(
     return wrapped_init
 
 
-BaseDevice.__init__ = _wrap_init_for_default_noise_model(
-    BaseDevice.__init__
-)  # type: ignore[method-assign]
+BaseDevice.__init__ = _wrap_init_for_default_noise_model(BaseDevice.__init__)  # type: ignore[method-assign]  # noqa: E501
 
 
 @dataclass(frozen=True, repr=False)
@@ -1154,9 +1152,5 @@ class VirtualDevice(BaseDevice):
 
 # Patch Device and VirtualDevice __init__ to accept deprecated
 # default_noise_model
-Device.__init__ = _wrap_init_for_default_noise_model(
-    Device.__init__
-)  # type: ignore[method-assign]
-VirtualDevice.__init__ = _wrap_init_for_default_noise_model(
-    VirtualDevice.__init__
-)  # type: ignore[method-assign]
+Device.__init__ = _wrap_init_for_default_noise_model(Device.__init__)  # type: ignore[method-assign]  # noqa: E501
+VirtualDevice.__init__ = _wrap_init_for_default_noise_model(VirtualDevice.__init__)  # type: ignore[method-assign]  # noqa: E501
