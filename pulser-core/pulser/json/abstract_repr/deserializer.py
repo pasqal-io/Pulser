@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Deserializer from JSON in the abstract representation."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -507,7 +508,11 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     device_fields = dataclasses.fields(device_cls)
     device_defaults = get_dataclass_defaults(device_fields)
     for param in device_fields:
-        use_default = param.name not in obj and param.name in device_defaults
+        # noise_model in JSON may be under default_noise_model (schema compat)
+        in_obj = param.name in obj or (
+            param.name == "noise_model" and "default_noise_model" in obj
+        )
+        use_default = not in_obj and param.name in device_defaults
         if (
             not param.init
             or param.name in PARAMS_WITH_ABSTR_REPR
@@ -519,8 +524,11 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
             params[key] = tuple(
                 _deserialize_layout(layout) for layout in obj[key]
             )
-        elif param.name == "default_noise_model":
-            params[param.name] = _deserialize_noise_model(obj[param.name])
+        elif param.name == "noise_model":
+            # JSON schema keeps default_noise_model key (unchanged)
+            params["noise_model"] = _deserialize_noise_model(
+                obj["default_noise_model"]
+            )
         else:
             params[param.name] = obj[param.name]
     try:

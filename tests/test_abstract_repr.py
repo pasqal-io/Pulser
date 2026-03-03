@@ -88,7 +88,7 @@ phys_Chadoq2 = replace(
             DigitalAnalogDevice.dmm_objects[0], total_bottom_detuning=-2000
         ),
     ),
-    default_noise_model=NoiseModel(
+    noise_model=NoiseModel(
         p_false_pos=0.02,
         p_false_neg=0.01,
         relaxation_rate=0.01,
