@@ -783,7 +783,7 @@ def test_dmm_channels():
 
 
 def test_noise_model_backwards_compatibility():
-    """Test that default_noise_model still works with deprecation (init and access)."""
+    """Test default_noise_model deprecation (init and access)."""
     nm = NoiseModel(amp_sigma=0.1)
     # Init with default_noise_model (deprecated)
     with pytest.warns(DeprecationWarning, match="default_noise_model"):
@@ -795,7 +795,7 @@ def test_noise_model_backwards_compatibility():
 
 
 def test_noise_model_and_default_noise_model_mutually_exclusive():
-    """Test that specifying both noise_model and default_noise_model raises ValueError."""
+    """Test that both noise_model and default_noise_model raises ValueError."""
     nm = NoiseModel(amp_sigma=0.1)
     with pytest.raises(
         ValueError,

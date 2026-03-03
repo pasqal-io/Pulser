@@ -822,10 +822,12 @@ def _wrap_init_for_default_noise_model(
         if default_noise_model is not None:
             if kwargs.get("noise_model") is not None:
                 raise ValueError(
-                    "Cannot specify both 'noise_model' and 'default_noise_model'"
+                    "Cannot specify both 'noise_model' and "
+                    "'default_noise_model'"
                 )
             warnings.warn(
-                "'default_noise_model' is deprecated since pulser 1.8.0, use 'noise_model' instead.",
+                "'default_noise_model' is deprecated since pulser 1.8.0, "
+                "use 'noise_model' instead.",
                 category=DeprecationWarning,
                 stacklevel=2,
             )
@@ -836,7 +838,9 @@ def _wrap_init_for_default_noise_model(
     return wrapped_init
 
 
-BaseDevice.__init__ = _wrap_init_for_default_noise_model(BaseDevice.__init__)  # type: ignore[method-assign]
+BaseDevice.__init__ = _wrap_init_for_default_noise_model(
+    BaseDevice.__init__
+)  # type: ignore[method-assign]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1148,6 +1152,11 @@ class VirtualDevice(BaseDevice):
         return device
 
 
-# Patch Device and VirtualDevice __init__ to accept deprecated default_noise_model
-Device.__init__ = _wrap_init_for_default_noise_model(Device.__init__)  # type: ignore[method-assign]
-VirtualDevice.__init__ = _wrap_init_for_default_noise_model(VirtualDevice.__init__)  # type: ignore[method-assign]
+# Patch Device and VirtualDevice __init__ to accept deprecated
+# default_noise_model
+Device.__init__ = _wrap_init_for_default_noise_model(
+    Device.__init__
+)  # type: ignore[method-assign]
+VirtualDevice.__init__ = _wrap_init_for_default_noise_model(
+    VirtualDevice.__init__
+)  # type: ignore[method-assign]
