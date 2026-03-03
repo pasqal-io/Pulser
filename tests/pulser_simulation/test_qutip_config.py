@@ -1,14 +1,16 @@
+import json
 import re
 
 import numpy as np
 import pytest
 
 from pulser import NoiseModel
-from pulser.backend.default_observables import StateResult
+from pulser.backend.default_observables import BitStrings, StateResult
 from pulser_simulation.qutip_config import (
     QutipConfig,
     QutipOperator,
     QutipState,
+    Solver,
 )
 
 
@@ -117,3 +119,29 @@ def test_evaluation_times_as_numpy_arrays():
     np.testing.assert_almost_equal(
         config._get_legacy_evaluation_times(1000), expected_times
     )
+
+
+@pytest.mark.parametrize("as_str", [True, False])
+@pytest.mark.parametrize("solver", list(Solver))
+def test_solver_deserialization(solver, as_str):
+    config = QutipConfig(
+        observables=[
+            BitStrings(evaluation_times=[1.0]),
+        ],
+        solver=solver if not as_str else str(solver.value),
+    )
+
+    ser_config = config.to_abstract_repr()
+    assert json.loads(ser_config)["solver"] == str(solver.value)
+    re_config = QutipConfig.from_abstract_repr(ser_config)
+    assert re_config.solver is solver
+
+
+def test_invalid_solver_error():
+    with pytest.raises(ValueError, match="Invalid solver 'fakesolver'"):
+        QutipConfig(
+            observables=[
+                BitStrings(evaluation_times=[1.0]),
+            ],
+            solver="fakesolver",
+        )

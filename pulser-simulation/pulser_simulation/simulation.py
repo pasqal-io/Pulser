@@ -152,7 +152,7 @@ class QutipEmulator:
         self._sampling_rate = sampling_rate
         device.validate_register(register)
         self._register = register
-        self.solver = solver
+        self.solver = Solver(solver)
         # Check compatibility of samples and device:
         if sampled_seq._slm_mask.end > 0 and not device.supports_slm_mask:
             raise ValueError(
@@ -699,13 +699,6 @@ class QutipEmulator:
             options["progress_bar"] = ""
         else:
             raise ValueError("`progress_bar` must be a bool.")
-
-        if not isinstance(self.solver, Solver):
-            allowed_str = ", ".join(s.value for s in Solver)
-            raise ValueError(
-                f"Invalid solver '{self.solver}'. "
-                f"Allowed solvers are: {allowed_str}."
-            )
 
         solver_fn: Callable[..., Any] = qutip.sesolve
 

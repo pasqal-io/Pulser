@@ -118,6 +118,15 @@ class QutipConfig(EmulationConfig[QutipState]):
                 stacklevel=2,
             )
 
+        try:
+            solver = Solver(solver)
+        except ValueError as e:
+            allowed_str = ", ".join(s.value for s in Solver)
+            raise ValueError(
+                f"Invalid solver '{solver}'. "
+                f"Allowed solvers are: {allowed_str}."
+            ) from e
+
         super().__init__(
             sampling_rate=sampling_rate,
             solver=solver,
