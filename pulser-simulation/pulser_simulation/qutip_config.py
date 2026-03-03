@@ -158,11 +158,12 @@ class QutipConfig(EmulationConfig[QutipState]):
         if self.callbacks:
             return "Full"
         for obs in self.observables:
-            extra_eval_times.update(obs.evaluation_times or [])
+            if obs.evaluation_times is not None:
+                extra_eval_times.update(obs.evaluation_times)
 
         rel_eval_times = self.default_evaluation_times
         if extra_eval_times:
-            if rel_eval_times == "Full":
+            if isinstance(rel_eval_times, str) and rel_eval_times == "Full":
                 rel_eval_times = (
                     self._get_sampling_indices(total_duration_ns)
                     / total_duration_ns

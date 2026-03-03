@@ -93,3 +93,27 @@ def test_progress_bar():
     )
     assert config.progress_bar
     assert "progress_bar" in config._expected_kwargs()
+
+
+def test_evaluation_times_as_numpy_arrays():
+    default_times = np.array([0.0, 0.25, 0.5, 0.75, 1.0])
+    obs_times_1 = np.array([0.2, 0.4, 0.8])
+    obs_times_2 = np.array([0.15, 0.35, 0.65, 0.95])
+
+    config = QutipConfig(
+        observables=[
+            StateResult(evaluation_times=obs_times_1),
+            StateResult(evaluation_times=obs_times_2, tag_suffix="second"),
+        ],
+        default_evaluation_times=default_times,
+    )
+
+    expected_times = np.union1d(
+        np.union1d(default_times, obs_times_1), obs_times_2
+    )
+
+    # By putting total_duration = 1000 ns, we get the legacy evaluation times
+    # in microseconds matching the relative evaluation times
+    np.testing.assert_almost_equal(
+        config._get_legacy_evaluation_times(1000), expected_times
+    )
