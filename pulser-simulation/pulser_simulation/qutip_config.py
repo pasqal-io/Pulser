@@ -83,11 +83,15 @@ class QutipConfig(EmulationConfig[QutipState]):
     _state_type = QutipState
     _operator_type = QutipOperator
 
+    solver: Solver
+
     def __init__(
         self,
         *,
         sampling_rate: float = 1.0,
-        solver: Solver = Solver.DEFAULT,
+        solver: (
+            Solver | Literal["default", "MasterEquation", "MonteCarlo"]
+        ) = Solver.DEFAULT,
         print_progress: bool = False,
         progress_bar: bool = False,
         **backend_options: Any,
@@ -118,18 +122,16 @@ class QutipConfig(EmulationConfig[QutipState]):
                 stacklevel=2,
             )
 
-        try:
-            solver = Solver(solver)
-        except ValueError as e:
+        if solver not in Solver:
             allowed_str = ", ".join(s.value for s in Solver)
             raise ValueError(
                 f"Invalid solver '{solver}'. "
                 f"Allowed solvers are: {allowed_str}."
-            ) from e
+            )
 
         super().__init__(
             sampling_rate=sampling_rate,
-            solver=solver,
+            solver=Solver(solver),
             print_progress=print_progress,
             progress_bar=progress_bar,
             **backend_options,
