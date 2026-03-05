@@ -122,7 +122,11 @@ class QutipConfig(EmulationConfig[QutipState]):
                 stacklevel=2,
             )
 
-        if solver not in Solver:
+        # TODO: Replace with this when Python >= 3.12
+        # if solver in Solver:
+        try:
+            solver = Solver(solver)
+        except ValueError:
             allowed_str = ", ".join(s.value for s in Solver)
             raise ValueError(
                 f"Invalid solver '{solver}'. "
