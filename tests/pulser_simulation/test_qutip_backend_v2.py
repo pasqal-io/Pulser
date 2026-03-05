@@ -458,3 +458,28 @@ def test_aggregation():
     # i.e. that the UUIDs were preserved in the aggregation
     for obs_ in (occup, state, bitstrings):
         assert qutip_results.get_result_times(obs_) == [1.0]
+
+
+def test_rounding_error_eval_time_duplication():
+    seq = pulser.Sequence(
+        pulser.Register.square(1, prefix="q"), pulser.AnalogDevice
+    )
+    seq.declare_channel("rydberg_global", "rydberg_global")
+    seq.add(pulser.Pulse.ConstantPulse(1000, 1, 0, 0), "rydberg_global")
+
+    dt = 0.001
+    evaluation_times = np.linspace(0.0, 1.0, int(1 / dt + 1))
+    config = QutipConfig(
+        observables=[
+            BitStrings(evaluation_times=evaluation_times),
+            BitStrings(
+                # This particular rounding error got repeated in the
+                # results due to rounding errors
+                evaluation_times=[0.49299999999999994],
+                tag_suffix="mod",
+            ),
+        ]
+    )
+    # It works because the rounding error was fixed
+    emu_backend = QutipBackendV2(seq, config=config)
+    emu_backend.run()
