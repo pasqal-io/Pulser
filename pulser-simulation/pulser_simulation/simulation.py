@@ -738,7 +738,7 @@ class QutipEmulator:
                 self._meas_basis,
                 state,
                 self._meas_basis in self.basis_name,
-                evaluation_time=t / self._tot_duration * 1e3,
+                evaluation_time=t / (self._tot_duration * 1e-3),
             )
             for state, t in zip(result.states, self._eval_times_array)
         ]
