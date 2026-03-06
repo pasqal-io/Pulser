@@ -2433,7 +2433,8 @@ def test_qutip_default_solver_call(seq):
                     mock.assert_not_called()
 
 
-def test_qutip_parametric_solver_call(seq):
+@pytest.mark.parametrize("as_str", [False, True])
+def test_qutip_parametric_solver_call(seq, as_str):
     eff_noise_params = dict(dephasing_rate=0.1)
     stochastic_noise_params = dict(detuning_sigma=0.1)
     all_noises = eff_noise_params | stochastic_noise_params
@@ -2447,7 +2448,7 @@ def test_qutip_parametric_solver_call(seq):
             Solver.MESOLVER: me,
             Solver.MCSOLVER: mc,
         }
-        for solver, solver_tocall in solver_mocks.items():
+        for solver in solver_mocks:
             for solver_mock in solver_mocks.values():
                 solver_mock.reset_mock()
                 solver_mock.side_effect = RuntimeError("stop after solver")
@@ -2456,7 +2457,7 @@ def test_qutip_parametric_solver_call(seq):
                 qutip_config = QutipConfig(
                     observables=[StateResult(evaluation_times=[1.0])],
                     noise_model=NoiseModel(**all_noises),
-                    solver=solver,
+                    solver=str(solver.value) if as_str else solver,
                     n_trajectories=1,
                 )
                 qutip_sim = QutipBackendV2(seq, config=qutip_config)
@@ -2471,7 +2472,7 @@ def test_qutip_parametric_solver_call(seq):
 
 def test_qutip_invalid_solver_error(seq):
     nm = NoiseModel(detuning_sigma=0.1)
-    with pytest.raises(ValueError, match=r"Invalid solver 'fakesolver'"):
+    with pytest.raises(ValueError, match="'fakesolver' is not a valid Solver"):
         sim = QutipEmulator.from_sequence(
             seq,
             noise_model=nm,

@@ -83,11 +83,15 @@ class QutipConfig(EmulationConfig[QutipState]):
     _state_type = QutipState
     _operator_type = QutipOperator
 
+    solver: Solver
+
     def __init__(
         self,
         *,
         sampling_rate: float = 1.0,
-        solver: Solver = Solver.DEFAULT,
+        solver: (
+            Solver | Literal["default", "MasterEquation", "MonteCarlo"]
+        ) = Solver.DEFAULT,
         print_progress: bool = False,
         progress_bar: bool = False,
         **backend_options: Any,
@@ -118,9 +122,20 @@ class QutipConfig(EmulationConfig[QutipState]):
                 stacklevel=2,
             )
 
+        # TODO: Replace with this when Python >= 3.12
+        # if solver in Solver:
+        try:
+            solver = Solver(solver)
+        except ValueError:
+            allowed_str = ", ".join(s.value for s in Solver)
+            raise ValueError(
+                f"Invalid solver '{solver}'. "
+                f"Allowed solvers are: {allowed_str}."
+            )
+
         super().__init__(
             sampling_rate=sampling_rate,
-            solver=solver,
+            solver=Solver(solver),
             print_progress=print_progress,
             progress_bar=progress_bar,
             **backend_options,
@@ -158,11 +173,12 @@ class QutipConfig(EmulationConfig[QutipState]):
         if self.callbacks:
             return "Full"
         for obs in self.observables:
-            extra_eval_times.update(obs.evaluation_times or [])
+            if obs.evaluation_times is not None:
+                extra_eval_times.update(obs.evaluation_times)
 
         rel_eval_times = self.default_evaluation_times
         if extra_eval_times:
-            if rel_eval_times == "Full":
+            if isinstance(rel_eval_times, str) and rel_eval_times == "Full":
                 rel_eval_times = (
                     self._get_sampling_indices(total_duration_ns)
                     / total_duration_ns
