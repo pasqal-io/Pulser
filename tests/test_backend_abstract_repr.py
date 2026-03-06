@@ -134,7 +134,7 @@ class TestObservableRepr:
                     repr["evaluation_times"],
                     expected_kwargs["evaluation_times"],
                 )
-                assert repr["evaluation_times"] == json.loads(
+                assert list(repr["evaluation_times"]) == json.loads(
                     json.dumps(
                         expected_kwargs["evaluation_times"],
                         cls=AbstractReprEncoder,
@@ -325,7 +325,11 @@ class TestConfigRepr:
         for obs, expected_obs in zip(
             deserialized_config.observables, config.observables
         ):
-            assert obs._to_abstract_repr() == expected_obs._to_abstract_repr()
+            assert json.dumps(
+                obs._to_abstract_repr(), cls=AbstractReprEncoder
+            ) == json.dumps(
+                expected_obs._to_abstract_repr(), cls=AbstractReprEncoder
+            )
         if isinstance(config.default_evaluation_times, np.ndarray):
             assert np.allclose(
                 config.default_evaluation_times,

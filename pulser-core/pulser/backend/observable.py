@@ -21,7 +21,7 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 
 from pulser.backend.operator import Operator
 from pulser.backend.state import State
@@ -91,6 +91,8 @@ class Observable(Callback):
             same EmulationConfig.
     """
 
+    evaluation_times: NDArray[np.floating[Any]] | None
+
     def __init__(
         self,
         *,
@@ -99,9 +101,11 @@ class Observable(Callback):
     ):
         """Initializes the observable."""
         super().__init__()
-        if evaluation_times is not None:
+        self.evaluation_times = (
             self._validate_eval_times(evaluation_times)
-        self.evaluation_times = evaluation_times
+            if evaluation_times is not None
+            else None
+        )
         self._tag_suffix = tag_suffix
 
     @property
@@ -197,7 +201,7 @@ class Observable(Callback):
     @staticmethod
     def _validate_eval_times(
         evaluation_times: ArrayLike | Sequence[float],
-    ) -> np.ndarray:
+    ) -> NDArray[np.floating[Any]]:
         eval_times_arr = np.array(evaluation_times, dtype=float)
         if np.any((eval_times_arr < 0.0) | (eval_times_arr > 1.0)):
             raise ValueError(
