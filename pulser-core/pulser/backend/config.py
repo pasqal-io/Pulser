@@ -33,7 +33,7 @@ from typing import (
 )
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 
 import pulser.math as pm
 from pulser.backend._classproperty import classproperty
@@ -210,7 +210,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     """A sequence of callbacks that are not observables."""
     observables: Sequence[Observable]
     """A sequence of observables to compute at specific evaluation times."""
-    default_evaluation_times: np.ndarray | Literal["Full"]
+    default_evaluation_times: NDArray[np.floating[Any]] | Literal["Full"]
     """The default times at which observables are computed."""
     initial_state: StateType | None
     """A custom initial state from which emulation starts."""

@@ -1,14 +1,16 @@
+import json
 import re
 
 import numpy as np
 import pytest
 
 from pulser import NoiseModel
-from pulser.backend.default_observables import StateResult
+from pulser.backend.default_observables import BitStrings, StateResult
 from pulser_simulation.qutip_config import (
     QutipConfig,
     QutipOperator,
     QutipState,
+    Solver,
 )
 
 
@@ -93,3 +95,53 @@ def test_progress_bar():
     )
     assert config.progress_bar
     assert "progress_bar" in config._expected_kwargs()
+
+
+def test_evaluation_times_as_numpy_arrays():
+    default_times = np.array([0.0, 0.25, 0.5, 0.75, 1.0])
+    obs_times_1 = np.array([0.2, 0.4, 0.8])
+    obs_times_2 = np.array([0.15, 0.35, 0.65, 0.95])
+
+    config = QutipConfig(
+        observables=[
+            StateResult(evaluation_times=obs_times_1),
+            StateResult(evaluation_times=obs_times_2, tag_suffix="second"),
+        ],
+        default_evaluation_times=default_times,
+    )
+
+    expected_times = np.union1d(
+        np.union1d(default_times, obs_times_1), obs_times_2
+    )
+
+    # By putting total_duration = 1000 ns, we get the legacy evaluation times
+    # in microseconds matching the relative evaluation times
+    np.testing.assert_almost_equal(
+        config._get_legacy_evaluation_times(1000), expected_times
+    )
+
+
+@pytest.mark.parametrize("as_str", [True, False])
+@pytest.mark.parametrize("solver", list(Solver))
+def test_solver_deserialization(solver, as_str):
+    config = QutipConfig(
+        observables=[
+            BitStrings(evaluation_times=[1.0]),
+        ],
+        solver=solver if not as_str else str(solver.value),
+    )
+
+    ser_config = config.to_abstract_repr()
+    assert json.loads(ser_config)["solver"] == str(solver.value)
+    re_config = QutipConfig.from_abstract_repr(ser_config)
+    assert re_config.solver is solver
+
+
+def test_invalid_solver_error():
+    with pytest.raises(ValueError, match="Invalid solver 'fakesolver'"):
+        QutipConfig(
+            observables=[
+                BitStrings(evaluation_times=[1.0]),
+            ],
+            solver="fakesolver",
+        )

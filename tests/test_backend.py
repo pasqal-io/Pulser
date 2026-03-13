@@ -1132,7 +1132,7 @@ class TestObservables:
         # We use StateResult because Observable is an ABC
         obs = StateResult(evaluation_times=eval_times, tag_suffix=tag_suffix)
         assert isinstance(obs.uuid, uuid.UUID)
-        assert obs.evaluation_times == eval_times
+        np.testing.assert_array_equal(obs.evaluation_times, eval_times)
         expected_tag = "state_foo" if tag_suffix else "state"
         assert obs.tag == expected_tag
         assert repr(obs) == f"{expected_tag}:{obs.uuid}"
