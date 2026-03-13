@@ -101,14 +101,14 @@ class EmulatorBackend(Backend):
         self._config = self.validate_config(config or self.default_config)
         if (
             self._config.prefer_device_noise_model
-            and self._sequence.device.default_noise_model is not None
-            and self._sequence.device.default_noise_model.runs is not None
-            and self._sequence.device.default_noise_model.runs
+            and self._sequence.device.noise_model is not None
+            and self._sequence.device.noise_model.runs is not None
+            and self._sequence.device.noise_model.runs
             != self._config.n_trajectories
         ):
             config = self._config
             warnings.warn(
-                f"'{sequence.device.default_noise_model.runs=}' is being "
+                f"'{sequence.device.noise_model.runs=}' is being "
                 f"ignored; '{config.n_trajectories=}' will be used instead.",
                 stacklevel=2,
             )

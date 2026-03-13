@@ -75,7 +75,7 @@ class QutipBackend(Backend):
         self._config = config
         noise_model: None | NoiseModel = None
         if self._config.prefer_device_noise_model:
-            noise_model = sequence.device.default_noise_model
+            noise_model = sequence.device.noise_model
         self._sim_obj = QutipEmulator.from_sequence(
             sequence,
             sampling_rate=self._config.sampling_rate,
@@ -142,7 +142,7 @@ class QutipBackendV2(EmulatorBackend):
         super().__init__(sequence, config=config, mimic_qpu=mimic_qpu)
         noise_model: None | NoiseModel = None
         if self._config.prefer_device_noise_model:
-            noise_model = sequence.device.default_noise_model
+            noise_model = sequence.device.noise_model
         noise_model = noise_model or self._config.noise_model
         self._sim_obj = QutipEmulator.from_sequence(
             sequence,
