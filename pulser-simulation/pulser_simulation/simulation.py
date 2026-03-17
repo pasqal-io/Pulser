@@ -204,6 +204,7 @@ class QutipEmulator:
         if not noise_model:
             noise_model = NoiseModel()
 
+        self.noise_trajectories_used = False
         self._hamiltonian_data = HamiltonianData(
             self.samples_obj,
             register,
@@ -379,6 +380,7 @@ class QutipEmulator:
         former_dim = self.dim
         former_basis = self.basis
         noise_model = cfg.to_noise_model()
+        self.noise_trajectories_used = False
         self._hamiltonian_data = HamiltonianData(
             self.samples_obj,
             self._register,
@@ -872,6 +874,18 @@ class QutipEmulator:
     ) -> Iterator[tuple[SimulationResults, int]]:
         n_trajectories = self.n_trajectories
         traj_nb = 0
+        # When run is called repeatedly, we want different noise trajectories
+        # to be used each time. After the first time, create new trajectories
+        if self.noise_trajectories_used:
+            noise_model = self._hamiltonian_data.noise_model
+            self._hamiltonian_data = HamiltonianData(
+                self.samples_obj,
+                self._register,
+                self.device,
+                noise_model,
+                self._get_n_trajectories(noise_model, check_value=True),
+            )
+        self.noise_trajectories_used = True
         for ham, reps in self._hamiltonians:
             if print_progress:
                 if reps == 1:
