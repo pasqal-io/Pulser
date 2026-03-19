@@ -223,6 +223,7 @@ class QutipBackendV2(EmulatorBackend):
                         state = QutipState(
                             qutip_res.state, eigenstates=eigenstates
                         )
+                        state._state /= state._state.norm()
                         ham = QutipOperator(
                             self._sim_obj._get_noiseless_hamiltonian(
                                 self._config.noise_model.with_leakage
