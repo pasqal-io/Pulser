@@ -483,15 +483,15 @@ def test_rounding_error_eval_time_duplication():
     emu_backend.run()
 
 
-def test_output_state_normalization():
-
-    device = pulser.AnalogDevice
+@pytest.mark.parametrize("amp_sigma", [0.0, 0.5])
+def test_output_state_normalization(amp_sigma):
+    factor = 1.2357175818662465 if not amp_sigma else 1.0
 
     # 2. Creating the Register
     R_interatomic = 5  # um
     register = pulser.Register.hexagon(1, R_interatomic, prefix="q")
 
-    seq = pulser.Sequence(register, device)
+    seq = pulser.Sequence(register, pulser.MockDevice)
 
     # 3. Picking the channels
     seq.declare_channel("rydberg_global", "rydberg_global")
@@ -499,7 +499,7 @@ def test_output_state_normalization():
     # 4. Adding the pulses
 
     # Parameters in rad/µs
-    U = device.interaction_coeff / R_interatomic**6
+    U = pulser.AnalogDevice.interaction_coeff / R_interatomic**6
 
     # Time parameters
     total_duration = 4000  # in ns
@@ -509,12 +509,12 @@ def test_output_state_normalization():
         pulser.Pulse(
             pulser.InterpolatedWaveform(
                 total_duration,
-                U * np.array([1e-9, 0.22, 0.2181, 1e-9]),
+                U * np.array([1e-9, 0.22, 0.2181, 1e-9]) * factor,
                 times=interp_pts,
             ),
             pulser.InterpolatedWaveform(
                 total_duration,
-                U * np.array([-1, 0.0556, 0.332, 1]),
+                U * np.array([-1, 0.0556, 0.332, 1]) * factor,
                 times=interp_pts,
             ),
             0,
@@ -526,7 +526,7 @@ def test_output_state_normalization():
     default_config = QutipBackendV2.default_config
     np.random.seed(1234)
     config = default_config.with_changes(
-        noise_model=pulser.NoiseModel(amp_sigma=0.5)
+        noise_model=pulser.NoiseModel(amp_sigma=amp_sigma)
     )
     qutip_bknd_custom = QutipBackendV2(seq, config=config)
     results = qutip_bknd_custom.run()

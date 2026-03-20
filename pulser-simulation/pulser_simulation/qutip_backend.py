@@ -183,7 +183,9 @@ class QutipBackendV2(EmulatorBackend):
 
             for qutip_res in single_res:
                 t = qutip_res.evaluation_time
-                state = QutipState(qutip_res.state, eigenstates=eigenstates)
+                state = QutipState(
+                    qutip_res.state.unit(), eigenstates=eigenstates
+                )
                 ham: QutipOperator = QutipOperator(
                     self._sim_obj._get_noiseless_hamiltonian(
                         self._config.noise_model.with_leakage
@@ -221,9 +223,8 @@ class QutipBackendV2(EmulatorBackend):
                         t = qutip_res.evaluation_time
 
                         state = QutipState(
-                            qutip_res.state, eigenstates=eigenstates
+                            qutip_res.state.unit(), eigenstates=eigenstates
                         )
-                        state._state = state._state / state._state.norm()
                         ham = QutipOperator(
                             self._sim_obj._get_noiseless_hamiltonian(
                                 self._config.noise_model.with_leakage
