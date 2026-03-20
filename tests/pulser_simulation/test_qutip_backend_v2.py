@@ -516,7 +516,7 @@ def test_output_state_normalization(amp_sigma):
             ),
             pulser.InterpolatedWaveform(
                 total_duration,
-                U * np.array([-1, 0.0556, 0.332, 1]) * factor,
+                U * np.array([-1, 0.0556, 0.332, 1]),
                 times=interp_pts,
             ),
             0,
