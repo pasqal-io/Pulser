@@ -485,6 +485,8 @@ def test_rounding_error_eval_time_duplication():
 
 @pytest.mark.parametrize("amp_sigma", [0.0, 0.5])
 def test_output_state_normalization(amp_sigma):
+    # The original issue was triggered with amp_sigma=0.5
+    # to test the noiseless path, we manually apply the amplitude fluctuation
     factor = 1.2357175818662465 if not amp_sigma else 1.0
 
     # 2. Creating the Register
@@ -522,7 +524,7 @@ def test_output_state_normalization(amp_sigma):
         "rydberg_global",
     )
 
-    # Start from the default_config and add the Fidelity observable
+    # Start from the default_config and add any noise
     default_config = QutipBackendV2.default_config
     np.random.seed(1234)
     config = default_config.with_changes(
