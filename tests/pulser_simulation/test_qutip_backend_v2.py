@@ -481,3 +481,28 @@ def test_rounding_error_eval_time_duplication():
     # It works because the rounding error was fixed
     emu_backend = QutipBackendV2(seq, config=config)
     emu_backend.run()
+
+
+def test_run_twice():
+    seq = sequence()
+    noise_model = pulser.NoiseModel(
+        trap_depth=1.0,
+        trap_waist=1.0,
+        temperature=50.0,
+        disable_doppler=True,
+        detuning_sigma=5.0,
+    )
+
+    eval_times = [1.0]
+    qutip_config = QutipConfig(
+        default_evaluation_times=eval_times,
+        observables=[StateResult(evaluation_times=eval_times)],
+        noise_model=noise_model,
+        n_trajectories=10,
+    )
+    backend = QutipBackendV2(seq, config=qutip_config)
+    results1 = backend.run()
+    results2 = backend.run()
+    s1 = results1.final_state._state
+    s2 = results2.final_state._state
+    assert s1.overlap(s2) / (s1.norm() * s2.norm()) != pytest.approx(1.0)
