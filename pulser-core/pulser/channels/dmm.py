@@ -55,7 +55,6 @@ class DMM(Channel):
             clock cycle.
         min_duration: The shortest duration an instruction can take.
         max_duration: The longest duration an instruction can take.
-        min_avg_amp: The minimum average amplitude of a pulse (when not zero).
         mod_bandwidth: The modulation bandwidth (in MHz), following Pulser's
             non-standard definition (2x the -3dB bandwidth, or the frequency at
             75% amplitude attenuation).
@@ -63,12 +62,27 @@ class DMM(Channel):
 
     bottom_detuning: float | None = None
     total_bottom_detuning: float | None = None
-    addressing: Literal["Global"] = field(default="Global", init=False)
-    max_abs_detuning: Optional[float] = field(default=None, init=False)
-    max_amp: float = field(default=0, init=False)
-    min_retarget_interval: Optional[int] = field(default=None, init=False)
-    fixed_retarget_t: Optional[int] = field(default=None, init=False)
-    max_targets: Optional[int] = field(default=None, init=False)
+    addressing: Literal["Global"] = field(
+        default="Global", init=False, repr=False
+    )
+    max_abs_detuning: Optional[float] = field(
+        default=None, init=False, repr=False
+    )
+    max_amp: float = field(default=0, init=False, repr=False)
+    min_retarget_interval: Optional[int] = field(
+        default=None, init=False, repr=False
+    )
+    fixed_retarget_t: Optional[int] = field(
+        default=None, init=False, repr=False
+    )
+    max_targets: Optional[int] = field(default=None, init=False, repr=False)
+    propagation_dir: tuple[float, float, float] | None = field(
+        default=None, init=False, repr=False
+    )
+    min_avg_amp: float = field(default=0, init=False, repr=False)
+    custom_phase_jump_time: int | None = field(
+        default=None, init=False, repr=False
+    )
 
     def __post_init__(self) -> None:
         super().__post_init__()
