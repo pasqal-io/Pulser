@@ -34,3 +34,4 @@ class NoiseTrajectory:
     det_phases: dict[ChannelName, np.ndarray]
     register: BaseRegister
     interaction_matrix: pm.AbstractArray
+    det_dmm_fluctuation: dict[ChannelName, float]

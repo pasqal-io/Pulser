@@ -29,7 +29,7 @@ import pulser.math as pm
 from pulser._hamiltonian_data.basis_data import BasisData
 from pulser._hamiltonian_data.lindblad_data import LindbladData
 from pulser._hamiltonian_data.noise_trajectory import NoiseTrajectory
-from pulser.channels import Microwave, Raman, Rydberg
+from pulser.channels import Microwave, Raman, Rydberg, DMM
 from pulser.channels.base_channel import STATES_RANK, Channel, States
 from pulser.devices._device_datacls import COORD_PRECISION, BaseDevice
 from pulser.noise_model import NoiseModel
@@ -73,6 +73,7 @@ SUPPORTED_NOISES: dict = {
         "SPAM",
         "leakage",
         "register",
+        "dmm_sigma",
     },
     "XY": {
         "dephasing",
@@ -99,6 +100,7 @@ def has_shot_to_shot_except_spam(noise_model: NoiseModel) -> bool:
         )
         or "detuning" in noise_model.noise_types
         or "register" in noise_model.noise_types
+        or "dmm_sigma" in noise_model.noise_types
     )
 
 
@@ -442,6 +444,8 @@ class HamiltonianData:
                     samples_dict[qid]["det"][t_window] += det_fluctuation[
                         t_window
                     ]
+                #if "dmm_sigma" in self.noise_model.noise_types:
+                    
 
         if self.local_noises:
             for ch, ch_samples in self._samples.channel_samples.items():
@@ -462,6 +466,7 @@ class HamiltonianData:
                         det_fluctuation=det_fluctuation,
                         propagation_dir=_ch_obj.propagation_dir,
                     )
+                    # we needs to call add_noise function with the arg DMM instead of global
             channels = []
             samples_list = []
             ch_objs = {}
@@ -821,6 +826,8 @@ class HamiltonianData:
                     doppler_detune = dict(zip(self._qid_index, detune))
                 else:
                     doppler_detune = {qid: 0.0 for qid in self._qid_index}
+                ##if "dmm_sigma" in ....:
+
                 for ch in self._samples.channel_samples:
                     amp_fluctuations[ch] = max(
                         0, np.random.normal(1.0, self.noise_model.amp_sigma)
