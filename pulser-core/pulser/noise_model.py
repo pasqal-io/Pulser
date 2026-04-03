@@ -223,9 +223,9 @@ class NoiseModel:
       ``p_false_pos`` and ``p_false_neg``.
     - **dmm_sigma**: intensity DC noise, defined by `dmm_sigma`.
       The global laser on the DMM channel has an error in the detuning 
-      :math:`\delta_{DMM} + \eta`, where :math:`eta` is normally distributed. 
+      :math:`\delta_{DMM}(1 + \eta)`, where :math:`eta` is normally distributed. 
       Each register sees the detuning offset 
-      :math:`\epsilon_k(\delta_{DMM} +\eta)`.
+      :math:`\epsilon_k \delta_{DMM}(1+\eta)`.
 
     Args:
         runs: When reconstructing the Hamiltonian from random noise is
@@ -294,7 +294,7 @@ class NoiseModel:
             from run to run as a standard deviation of a normal
             distribution centered in 0. Assumed to be the same for all registers
             (though each register has its own randomly sampled
-            value in each run). This noise is additive. Defaults to 0.
+            value in each run). This noise is multiplicative. Defaults to 0.
     """
 
     noise_types: tuple[NoiseTypes, ...] = field(init=False)
