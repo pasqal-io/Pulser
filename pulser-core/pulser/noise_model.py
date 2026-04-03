@@ -78,7 +78,12 @@ _POSITIVE = {
     "trap_waist",
     "dmm_sigma",
 }
-_STRICT_POSITIVE = {"runs", "samples_per_run", "laser_waist", "trap_depth",}
+_STRICT_POSITIVE = {
+    "runs",
+    "samples_per_run",
+    "laser_waist",
+    "trap_depth",
+}
 
 _PROBABILITY_LIKE = {
     "state_prep_error",
@@ -222,9 +227,9 @@ class NoiseModel:
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
     - **dmm_sigma**: intensity DC noise, defined by `dmm_sigma`.
-      The global laser on the DMM channel has an error in the detuning 
-      :math:`\delta_{DMM}(1 + \eta)`, where :math:`eta` is normally distributed. 
-      Each register sees the detuning offset 
+      The global laser on the DMM channel has an error in the detuning
+      :math:`\delta_{DMM}(1 + \eta)`, where :math:`eta` is normally
+      distributed. Each register sees the detuning offset
       :math:`\epsilon_k \delta_{DMM}(1+\eta)`.
 
     Args:
@@ -292,8 +297,8 @@ class NoiseModel:
             without doppler).
         dmm_sigma: Dictates the fluctuation in DMM detuning channel (in rad/µs)
             from run to run as a standard deviation of a normal
-            distribution centered in 0. Assumed to be the same for all registers
-            (though each register has its own randomly sampled
+            distribution centered in 0. Assumed to be the same for all
+            registers (though each register has its own randomly sampled
             value in each run). This noise is multiplicative. Defaults to 0.
     """
 
