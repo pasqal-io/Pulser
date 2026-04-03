@@ -44,6 +44,7 @@ NoiseTypes = Literal[
     "relaxation",
     "depolarizing",
     "eff_noise",
+    "dmm_sigma",
 ]
 
 _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
@@ -57,6 +58,7 @@ _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "relaxation": ("relaxation_rate",),
     "depolarizing": ("depolarizing_rate",),
     "eff_noise": ("eff_noise_rates", "eff_noise_opers"),
+    "dmm_sigma": ("dmm_sigma",),
 }
 
 _PARAM_TO_NOISE_TYPE: dict[str, NoiseTypes] = {
@@ -74,8 +76,10 @@ _POSITIVE = {
     "temperature",
     "detuning_sigma",
     "trap_waist",
+    "dmm_sigma",
 }
-_STRICT_POSITIVE = {"runs", "samples_per_run", "laser_waist", "trap_depth"}
+_STRICT_POSITIVE = {"runs", "samples_per_run", "laser_waist", "trap_depth",}
+
 _PROBABILITY_LIKE = {
     "state_prep_error",
     "p_false_pos",
@@ -106,6 +110,7 @@ OPTIONAL_IN_ABSTR_REPR = (
     "trap_depth",
     "detuning_hf_psd",
     "detuning_hf_omegas",
+    "dmm_sigma",
 )
 
 
@@ -216,6 +221,11 @@ class NoiseModel:
       and :math:`\Delta \omega_k = \omega_{k+1} - \omega_k`.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
+    - **dmm_sigma**: intensity DC noise, defined by `dmm_sigma`.
+      The global laser on the DMM channel has an error in the detuning 
+      :math:`\delta_{DMM} + \eta`, where :math:`eta` is normally distributed. 
+      Each register sees the detuning offset 
+      :math:`\epsilon_k(\delta_{DMM} +\eta)`.
 
     Args:
         runs: When reconstructing the Hamiltonian from random noise is
@@ -280,6 +290,11 @@ class NoiseModel:
             even if the temperature is defined. In this way, 'register' noise
             (which requires 'temperature') can be activated on its own (i.e
             without doppler).
+        dmm_sigma: Dictates the fluctuation in DMM detuning channel (in rad/µs)
+            from run to run as a standard deviation of a normal
+            distribution centered in 0. Assumed to be the same for all registers
+            (though each register has its own randomly sampled
+            value in each run). This noise is additive. Defaults to 0.
     """
 
     noise_types: tuple[NoiseTypes, ...] = field(init=False)
@@ -306,6 +321,7 @@ class NoiseModel:
     eff_noise_opers: tuple[pm.AbstractArrayLike, ...] = ()
     with_leakage: bool = False
     disable_doppler: bool = False
+    dmm_sigma: float = 0
 
     def __post_init__(self) -> None:
         """Initializes a noise model."""
@@ -747,6 +763,8 @@ class NoiseModel:
             table["p_false_pos"] = (self.p_false_pos, "")
         if self.p_false_neg > 0:
             table["p_false_neg"] = (self.p_false_neg, "")
+        if self.dmm_sigma > 0:
+            table["dmm_sigma"] = (self.dmm_sigma, "rad/µs")
         return table
 
     def summary(self) -> str:
@@ -798,11 +816,13 @@ class NoiseModel:
             "detuning_sigma" in noise_table
             or "doppler_sigma" in noise_table
             or "detuning_psd" in noise_table
+            or "dmm_sigma" in noise_table
         ):
             summary_list.append("- Detuning fluctuations**:")
             if (
                 "detuning_sigma" in noise_table
                 or "doppler_sigma" in noise_table
+                or "dmm_sigma" in noise_table
             ):
                 summary_list += ["  - Shot-to-Shot Detuning fluctuations:"]
                 if "detuning_sigma" in noise_table:
@@ -814,6 +834,11 @@ class NoiseModel:
                     summary_list += [
                         "       - Doppler fluctuations: "
                         f"{_repr_value_unit(*noise_table['doppler_sigma'])}"
+                    ]
+                if "dmm_sigma" in noise_table:
+                    summary_list += [
+                        "       - DMM fluctuations: "
+                        f"{_repr_value_unit(*noise_table['dmm_sigma'])}"
                     ]
             if "detuning_psd" in noise_table:
                 summary_list += [
