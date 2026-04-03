@@ -296,11 +296,11 @@ class NoiseModel:
             even if the temperature is defined. In this way, 'register' noise
             (which requires 'temperature') can be activated on its own (i.e
             without doppler).
-        dmm_sigma: Dictates the fluctuation in DMM detuning channel (in rad/µs)
+        dmm_sigma: Dictates the fluctuation in DMM detuning channel
             from run to run as a standard deviation of a normal distribution
             centered at 0. `dmm_sigma` is assumed to be the same for all
             registers (though each register has its own randomly sampled
-            value in each run). This noise is multiplicative. Defaults to 0.
+            value in each run). This noise is multiplicative. Defaults to 1.
     """
 
     noise_types: tuple[NoiseTypes, ...] = field(init=False)
@@ -771,7 +771,7 @@ class NoiseModel:
         if self.p_false_neg > 0:
             table["p_false_neg"] = (self.p_false_neg, "")
         if self.dmm_sigma > 0:
-            table["dmm_sigma"] = (self.dmm_sigma * 100, "%")
+            table["dmm_sigma"] = (self.dmm_sigma, "")
         return table
 
     def summary(self) -> str:
