@@ -229,9 +229,9 @@ class NoiseModel:
     - **dmm_sigma**: intensity DC noise, defined by `dmm_sigma`.
       The global laser on the DMM channel has an error in the detuning,
       which leads to a register detuning offset
-      :math:`\epsilon_k \delta_{DMM}(1+\eta)` where :math:`eta` is normally
-      distributed and weights :math:`\epsilon_k` are defined
-      by a `DetuningMap`.
+      :math:`\epsilon_k \delta_{DMM}(1+\eta)` where :math:`eta` is drawn from 
+      \mathcal{N(0, \sigma_{dmm})}`, while weights :math:`\epsilon_k` are 
+      defined by a `DetuningMap`.
 
     Args:
         runs: When reconstructing the Hamiltonian from random noise is
