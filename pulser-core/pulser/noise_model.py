@@ -77,12 +77,7 @@ _POSITIVE = {
     "trap_waist",
 }
 
-_STRICT_POSITIVE = {
-    "runs",
-    "samples_per_run",
-    "laser_waist",
-    "trap_depth",
-}
+_STRICT_POSITIVE = {"runs", "samples_per_run", "laser_waist", "trap_depth"}
 
 _PROBABILITY_LIKE = {
     "state_prep_error",
@@ -226,11 +221,11 @@ class NoiseModel:
       and :math:`\Delta \omega_k = \omega_{k+1} - \omega_k`.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
-    - **dmm_sigma**: intensity DC noise, defined by `dmm_sigma`.
-      The global laser on the DMM channel has an error in the detuning,
-      which leads to a register detuning offset
-      :math:`\epsilon_k \delta_{DMM}(1+\eta)` where :math:`eta` is drawn from 
-      \mathcal{N(0, \sigma_{dmm})}`, while weights :math:`\epsilon_k` are 
+    - **dmm_sigma**:  Fluctuations in the detuning from the DMM channel,
+      defined by `dmm_sigma`. From shot to shot, the local detuning on site k
+      is given by
+      :math:`\epsilon_k \delta_{DMM}(1+\eta)` where :math:`eta` is drawn from
+      \mathcal{N(0, \sigma_{dmm})}`, while weights :math:`\epsilon_k` are
       defined by a `DetuningMap`.
 
     Args:
@@ -258,7 +253,7 @@ class NoiseModel:
             centered in 1. Assumed to be the same for all channels (though
             each channel has its own randomly sampled value in each run).
         detuning_sigma: Dictates the fluctuation in detuning (in rad/µs)
-            of a channel from run to run as a standard deviation of a normal
+            of a channel from shot to shot as a standard deviation of a normal
             distribution centered in 0. Assumed to be the same for all
             channels (though each channel has its own randomly sampled
             value in each run). This noise is additive. Defaults to 0.
@@ -851,7 +846,7 @@ class NoiseModel:
         if "dmm_sigma" in noise_table:
             summary_list.append("- DMM detuning fluctuations**:")
             summary_list += [
-                " - Shot-to-shot DMM intensity fluctuations:"
+                " - Shot-to-shot DMM detuning fluctuations:"
                 f" {_repr_value_unit(*noise_table['dmm_sigma'])}"
             ]
             add_to_traj_summary.append("dmm_sigma")

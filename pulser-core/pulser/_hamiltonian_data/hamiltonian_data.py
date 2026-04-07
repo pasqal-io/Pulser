@@ -29,7 +29,7 @@ import pulser.math as pm
 from pulser._hamiltonian_data.basis_data import BasisData
 from pulser._hamiltonian_data.lindblad_data import LindbladData
 from pulser._hamiltonian_data.noise_trajectory import NoiseTrajectory
-from pulser.channels import Microwave, Raman, Rydberg, DMM
+from pulser.channels import DMM, Microwave, Raman, Rydberg
 from pulser.channels.base_channel import STATES_RANK, Channel, States
 from pulser.devices._device_datacls import COORD_PRECISION, BaseDevice
 from pulser.noise_model import NoiseModel
@@ -405,7 +405,25 @@ class HamiltonianData:
         self, traj: NoiseTrajectory
     ) -> SequenceSamples:
 
-        samples = self._samples.to_nested_dict(all_local=self.local_noises)
+        noisy_seq_samples = self._samples
+        if "dmm_sigma" in self.noise_model.noise_types:
+            noisy_samples_list: List[ChannelSamples] = []
+            for ch_name, ch_samples in self._samples.channel_samples.items():
+                _ch_obj = self._samples._ch_objs[ch_name]
+                if isinstance(_ch_obj, DMM) and isinstance(
+                    ch_samples, DMMSamples
+                ):
+                    factor = 1.0 + traj.dmm_det_fluctuation[ch_name]
+                    noisy_samples_list.append(
+                        replace(ch_samples, det=ch_samples.det * factor)
+                    )
+                else:
+                    noisy_samples_list.append(ch_samples)
+            noisy_seq_samples = replace(
+                self._samples, samples_list=noisy_samples_list
+            )
+
+        samples = noisy_seq_samples.to_nested_dict(all_local=self.local_noises)
 
         def add_noise(
             slot: _PulseTargetSlot,
@@ -465,28 +483,6 @@ class HamiltonianData:
                         det_fluctuation=det_fluctuation,
                         propagation_dir=_ch_obj.propagation_dir,
                     )
-                    
-                
-                if (
-                    "dmm_sigma" in self.noise_model.noise_types
-                    and isinstance(_ch_obj, DMM)
-                    and isinstance(ch_samples, DMMSamples)
-                ):
-                    if traj.dmm_det_fluctuation[ch] != 0.0:
-                        det_map = ch_samples.detuning_map
-                        det_weight_map = det_map.get_qubit_weight_map(
-                            ch_samples.qubits
-                        )
-                        for slot in ch_samples.slots:
-                            for qid in slot.targets:
-                                times = slice(slot.ti, slot.tf)
-                                dmm_contribution = (
-                                    ch_samples.det[times]
-                                    * det_weight_map[qid]
-                                )
-                                samples_dict[qid]["det"][
-                                    times
-                                ] += traj.dmm_det_fluctuation[ch] * dmm_contribution
 
             channels = []
             samples_list = []
@@ -783,6 +779,7 @@ class HamiltonianData:
         amp_fluctuations: dict[str, float] = {}
         det_fluctuations: dict[str, float] = {}
         det_phases: dict[str, np.ndarray] = {}
+        dmm_det_fluctuation: dict[str, float] = {}
         if not has_shot_to_shot_except_spam(self.noise_model):
             initial_configs = Counter(
                 "".join(
@@ -797,13 +794,12 @@ class HamiltonianData:
             ).most_common()
 
             doppler_detune = {qid: 0.0 for qid in self._qid_index}
-            dmm_det_fluctuation: dict[str, float] = {}
             for ch in self._samples.channel_samples:
                 assert self.noise_model.amp_sigma == 0.0
                 amp_fluctuations[ch] = 1.0
                 det_fluctuations[ch] = 0.0
                 det_phases[ch] = np.array(0.0)
-                dmm_det_fluctuation[ch] = 0.0 
+                dmm_det_fluctuation[ch] = 0.0
             for bool_string, n in initial_configs:
                 bad_atoms = dict(
                     zip(self._qid_index, map(lambda x: x == "1", bool_string))
@@ -820,7 +816,7 @@ class HamiltonianData:
                             self._noisy_interaction_matrix(
                                 self._register, bad_atoms
                             ),
-                            dmm_det_fluctuation, 
+                            dmm_det_fluctuation,
                         ),
                         n,
                     )
@@ -830,7 +826,6 @@ class HamiltonianData:
                 amp_fluctuations = {}
                 det_fluctuations = {}
                 det_phases = {}
-                dmm_det_fluctuation: dict[str, float] = {}
                 register: BaseRegister = self._register
                 if (
                     "SPAM" in self.noise_model.noise_types
@@ -870,15 +865,13 @@ class HamiltonianData:
                     else:
                         det_phases[ch] = np.array(0.0)
 
-                    if (
-                        self.noise_model.dmm_sigma
-                        and isinstance(self._samples._ch_objs[ch], DMM)
+                    if self.noise_model.dmm_sigma and isinstance(
+                        self._samples._ch_objs[ch], DMM
                     ):
                         dmm_det_fluctuation[ch] = np.random.normal(
-                            0.0,
-                            self.noise_model.dmm_sigma
+                            0.0, self.noise_model.dmm_sigma
                         )
-                        
+
                     else:
                         dmm_det_fluctuation[ch] = 0.0
                 if "register" in self._noise_model.noise_types:
