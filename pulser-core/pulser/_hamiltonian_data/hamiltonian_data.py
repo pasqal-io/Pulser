@@ -40,6 +40,7 @@ from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler import sampler
 from pulser.sampler.samples import (
     ChannelSamples,
+    DMMSamples,
     SequenceSamples,
     _PulseTargetSlot,
 )
@@ -466,16 +467,26 @@ class HamiltonianData:
                     )
                     
                 
-                
                 if (
-                    isinstance(_ch_obj, DMM) 
-                    and "dmm_sigma" in self.noise_model.noise_types
+                    "dmm_sigma" in self.noise_model.noise_types
+                    and isinstance(_ch_obj, DMM)
+                    and isinstance(ch_samples, DMMSamples)
                 ):
-                    for slot in ch_samples.slots:
-                        for qid in slot.targets:
-                            samples_dict[qid]["det"][
-                                slot.ti : slot.tf
-                            ] *= traj.dmm_det_fluctuation
+                    if traj.dmm_det_fluctuation[ch] != 0.0:
+                        det_map = ch_samples.detuning_map
+                        det_weight_map = det_map.get_qubit_weight_map(
+                            ch_samples.qubits
+                        )
+                        for slot in ch_samples.slots:
+                            for qid in slot.targets:
+                                times = slice(slot.ti, slot.tf)
+                                dmm_contribution = (
+                                    ch_samples.det[times]
+                                    * det_weight_map[qid]
+                                )
+                                samples_dict[qid]["det"][
+                                    times
+                                ] += traj.dmm_det_fluctuation[ch] * dmm_contribution
 
             channels = []
             samples_list = []
@@ -792,7 +803,7 @@ class HamiltonianData:
                 amp_fluctuations[ch] = 1.0
                 det_fluctuations[ch] = 0.0
                 det_phases[ch] = np.array(0.0)
-                dmm_det_fluctuation[ch] = 1.0 
+                dmm_det_fluctuation[ch] = 0.0 
             for bool_string, n in initial_configs:
                 bad_atoms = dict(
                     zip(self._qid_index, map(lambda x: x == "1", bool_string))
@@ -864,12 +875,12 @@ class HamiltonianData:
                         and isinstance(self._samples._ch_objs[ch], DMM)
                     ):
                         dmm_det_fluctuation[ch] = np.random.normal(
-                            1.0,
+                            0.0,
                             self.noise_model.dmm_sigma
                         )
                         
                     else:
-                        dmm_det_fluctuation[ch] = 1.0
+                        dmm_det_fluctuation[ch] = 0.0
                 if "register" in self._noise_model.noise_types:
                     register = _noisy_register(
                         self.register.qubits, self._noise_model
