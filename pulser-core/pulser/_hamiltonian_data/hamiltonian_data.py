@@ -868,9 +868,9 @@ class HamiltonianData:
                         dmm_det_fluctuation[ch] = np.random.normal(
                             1.0, self.noise_model.dmm_sigma
                         )
-
                     else:
                         dmm_det_fluctuation[ch] = 1.0
+
                 if "register" in self._noise_model.noise_types:
                     register = _noisy_register(
                         self.register.qubits, self._noise_model
