@@ -228,7 +228,11 @@ class TestNoiseModel:
     def test_init_prob_like(self, param, noise, value):
         if 0 <= value <= 1:
             kwargs = {param: value}
-            if value > 0 and param in ("amp_sigma", "state_prep_error", "dmm_sigma"):
+            if value > 0 and param in (
+                "amp_sigma",
+                "state_prep_error",
+                "dmm_sigma",
+            ):
                 kwargs.update(dict(runs=1, samples_per_run=1))
             noise_model = NoiseModel(**kwargs)
             assert getattr(noise_model, param) == value
@@ -559,11 +563,7 @@ class TestNoiseModel:
             0.0,
             0.0,
             None,
-        ) == {
-            "dmm_sigma",
-            "runs",
-            "samples_per_run"
-        }
+        ) == {"dmm_sigma", "runs", "samples_per_run"}
 
     @pytest.mark.filterwarnings(
         "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
@@ -880,9 +880,7 @@ def test_noise_table_summary():
     )
     # DMM sigma noise
     noise_model_dmm = NoiseModel(dmm_sigma=0.05)
-    assert noise_model_dmm.get_noise_table() == {
-        "dmm_sigma": (0.05, "")
-    }
+    assert noise_model_dmm.get_noise_table() == {"dmm_sigma": (0.05, "")}
     assert noise_model_dmm.summary() == (
         "Noise summary:\n"
         "- DMM detuning fluctuations**:\n"

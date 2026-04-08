@@ -84,7 +84,7 @@ _PROBABILITY_LIKE = {
     "p_false_pos",
     "p_false_neg",
     "amp_sigma",
-    "dmm_sigma"
+    "dmm_sigma",
 }
 
 _BOOLEAN = {"with_leakage", "disable_doppler"}
