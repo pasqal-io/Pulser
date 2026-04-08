@@ -75,6 +75,7 @@ _POSITIVE = {
     "temperature",
     "detuning_sigma",
     "trap_waist",
+    "dmm_sigma",
 }
 
 _STRICT_POSITIVE = {"runs", "samples_per_run", "laser_waist", "trap_depth"}
@@ -84,7 +85,6 @@ _PROBABILITY_LIKE = {
     "p_false_pos",
     "p_false_neg",
     "amp_sigma",
-    "dmm_sigma",
 }
 
 _BOOLEAN = {"with_leakage", "disable_doppler"}
