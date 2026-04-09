@@ -725,38 +725,28 @@ def test_dmm_detuning():
 
     traj_noise = ham_noisy.noise_trajectories[0].trajectory
     assert isinstance(traj_noise.dmm_det_fluctuation, dict)
-    for dmm_fluct in traj_noise.dmm_det_fluctuation.values():
-        assert dmm_fluct >= 0
+
+    dmm_fluct = traj_noise.dmm_det_fluctuation["dmm_0"]
+    assert dmm_fluct >= 0
 
     noisy_samples = ham_noisy._sample_with_trajectory(
         traj_noise
     ).to_nested_dict(all_local=True)
 
+    expected_noiseless = {
+        "q0": detuning + dmm_detuning * slm_weights[0],
+        "q1": detuning + dmm_detuning * slm_weights[1],
+    }
+    expected_noisy = {
+        "q0": (detuning + dmm_detuning * slm_weights[0] * dmm_fluct),
+        "q1": (detuning + dmm_detuning * slm_weights[1] * dmm_fluct),
+    }
+
     for q_id in ["q0", "q1"]:
-        expected_noiseless = {
-            "q0": detuning + dmm_detuning * slm_weights[0],
-            "q1": detuning + dmm_detuning * slm_weights[1],
-        }
         assert np.allclose(
             noiseless_sample["Local"]["ground-rydberg"][q_id]["det"],
             expected_noiseless[q_id],
         )
-
-    for q_id in ["q0", "q1"]:
-        expected_noisy = {
-            "q0": (
-                detuning
-                + dmm_detuning
-                * slm_weights[0]
-                * traj_noise.dmm_det_fluctuation["dmm_0"]
-            ),
-            "q1": (
-                detuning
-                + dmm_detuning
-                * slm_weights[1]
-                * traj_noise.dmm_det_fluctuation["dmm_0"]
-            ),
-        }
         assert np.allclose(
             noisy_samples["Local"]["ground-rydberg"][q_id]["det"],
             expected_noisy[q_id],
