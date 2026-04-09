@@ -292,7 +292,7 @@ class NoiseModel:
             (which requires 'temperature') can be activated on its own (i.e
             without doppler).
         dmm_sigma: Dictates the fluctuation in DMM detuning channel
-            from run to run as a standard deviation of a normal distribution
+            from shot to shot as a standard deviation of a normal distribution
             centered at 0. `dmm_sigma` is assumed to be the same for all
             registers (though each register has its own randomly sampled
             value in each run). This noise is multiplicative. Defaults to 1.
