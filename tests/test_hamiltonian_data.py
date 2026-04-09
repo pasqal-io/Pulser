@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -14,6 +15,9 @@ from pulser._hamiltonian_data.hamiltonian_data import (
     _register_sigma_xy_z,
     has_shot_to_shot_except_spam,
 )
+from pulser.channels.dmm import DMM
+from pulser.devices import AnalogDevice
+from pulser.register import RegisterLayout
 from pulser.sampler import sample
 
 from .test_sequence_sampler import seq_rydberg, seq_with_SLM
@@ -664,33 +668,15 @@ def test_has_shot_to_shot_except_spam(noise_data, expected):
 
 def test_dmm_detuning():
     np.random.seed(0xDEADBEEF)
-    trap_coordinates = [(0.0, 0.0), (0.0, 5.0)]
-    weights = [1.0, 0.5]
+    # x1 = 3, x2 = -3 bugs
+    coordinates = [(0.0, 0.0), (6.0, 0.0)] 
+    slm_weights = [1.0, 0.5]
 
-    from dataclasses import replace
-
-    from pulser.channels.dmm import DMM
-    from pulser.devices import AnalogDevice
-    from pulser.register import RegisterLayout
-
-    register_layout = RegisterLayout(trap_coordinates)
-    detuning_map = register_layout.define_detuning_map(
-        {idx: weight for idx, weight in enumerate(weights)}
+    detuning_map = RegisterLayout(coordinates).define_detuning_map(
+        {idx: weight for idx, weight in enumerate(slm_weights)}
     )
 
-    # map_reg = pulser.MappableRegister(register_layout)
-    # det_map_from_map_reg = map_reg.define_detuning_map(
-    #     {idx: weight for idx, weight in enumerate(weights)}
-    # )
-
-    register = pulser.Register.from_coordinates(
-        trap_coordinates, center=False, prefix="q"
-    )
-    # det_map_from_reg = register.define_detuning_map(
-    #     {
-    #         f"q{idx}": weight for idx, weight in enumerate(weights)
-    #     }  # mapping between qubit ids and weights
-    # )
+    register = pulser.Register.from_coordinates(coordinates,center = True,  prefix="q")
 
     dmm = DMM(
         clock_period=4,
@@ -751,20 +737,22 @@ def test_dmm_detuning():
     noiseless_det_q0 = noiseless["Local"]["ground-rydberg"]["q0"]["det"]
     noisy_det_q0 = noisy_samples["Local"]["ground-rydberg"]["q0"]["det"]
 
-    assert np.allclose(noiseless_det_q0, detuning + dmm_detuning * weights[0])
+    print('noiseless case LHS:', noiseless_det_q0,'\n\n')
+    print('noiseless case RHS:',detuning + dmm_detuning * slm_weights[0],'\n\n\n')
+    assert np.allclose(noiseless_det_q0, detuning + dmm_detuning * slm_weights[0])
     assert np.allclose(
         noisy_det_q0,
         detuning
-        + dmm_detuning * weights[0] * traj.dmm_det_fluctuation["dmm_0"],
+        + dmm_detuning * slm_weights[0] * traj.dmm_det_fluctuation["dmm_0"],
     )
 
     # we can do the same for q1
     noiseless_det_q1 = noiseless["Local"]["ground-rydberg"]["q1"]["det"]
     noisy_det_q1 = noisy_samples["Local"]["ground-rydberg"]["q1"]["det"]
 
-    assert np.allclose(noiseless_det_q1, detuning + dmm_detuning * weights[1])
+    assert np.allclose(noiseless_det_q1, detuning + dmm_detuning * slm_weights[1])
     assert np.allclose(
         noisy_det_q1,
         detuning
-        + dmm_detuning * weights[1] * traj.dmm_det_fluctuation["dmm_0"],
+        + dmm_detuning * slm_weights[1] * traj.dmm_det_fluctuation["dmm_0"],
     )
