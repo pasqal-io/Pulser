@@ -404,7 +404,7 @@ class HamiltonianData:
         self, traj: NoiseTrajectory
     ) -> SequenceSamples:
 
-        noisy_seq_samples = self._samples
+        noisy_seq_samples = self._samples  # copied (?)
         if "dmm_sigma" in self.noise_model.noise_types:
             noisy_samples_list: List[ChannelSamples] = []
             for ch_name, ch_samples in self._samples.channel_samples.items():
