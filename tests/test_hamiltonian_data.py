@@ -660,3 +660,111 @@ def test_noise_hf_detuning_generation():
 def test_has_shot_to_shot_except_spam(noise_data, expected):
     fake_noise_model = SimpleNamespace(**noise_data)
     assert has_shot_to_shot_except_spam(fake_noise_model) is expected
+
+
+def test_dmm_detuning():
+    np.random.seed(0xDEADBEEF)
+    trap_coordinates = [(0.0, 0.0), (0.0, 5.0)]
+    weights = [1.0, 0.5]
+
+    from dataclasses import replace
+
+    from pulser.channels.dmm import DMM
+    from pulser.devices import AnalogDevice
+    from pulser.register import RegisterLayout
+
+    register_layout = RegisterLayout(trap_coordinates)
+    detuning_map = register_layout.define_detuning_map(
+        {idx: weight for idx, weight in enumerate(weights)}
+    )
+
+    # map_reg = pulser.MappableRegister(register_layout)
+    # det_map_from_map_reg = map_reg.define_detuning_map(
+    #     {idx: weight for idx, weight in enumerate(weights)}
+    # )
+
+    register = pulser.Register.from_coordinates(
+        trap_coordinates, center=False, prefix="q"
+    )
+    # det_map_from_reg = register.define_detuning_map(
+    #     {
+    #         f"q{idx}": weight for idx, weight in enumerate(weights)
+    #     }  # mapping between qubit ids and weights
+    # )
+
+    dmm = DMM(
+        clock_period=4,
+        min_duration=16,
+        max_duration=2**26,
+        mod_bandwidth=8,
+        bottom_detuning=-2 * np.pi * 20,
+        total_bottom_detuning=-2 * np.pi * 2000,
+    )
+
+    mock_device = replace(
+        AnalogDevice.to_virtual(),
+        dmm_objects=(dmm, DMM()),
+        reusable_channels=True,
+    )
+
+    dmm_detuning = -10
+    seq = pulser.Sequence(register, mock_device)
+
+    detuning = -1
+    seq.declare_channel("ch0", "rydberg_global")
+
+    seq.add(
+        pulser.Pulse.ConstantPulse(
+            duration=100,
+            amplitude=1,
+            detuning=detuning,
+            phase=0,
+        ),
+        "ch0",
+    )
+
+    seq.config_detuning_map(detuning_map, "dmm_0")
+    seq.add_dmm_detuning(
+        pulser.pulse.ConstantWaveform(duration=100, value=dmm_detuning),
+        "dmm_0",
+    )
+
+    ham_no_noise = HamiltonianData.from_sequence(
+        seq, noise_model=pulser.NoiseModel(), n_trajectories=1
+    )
+    noiseless = ham_no_noise.samples.to_nested_dict(all_local=True)
+
+    noise_model = pulser.NoiseModel(dmm_sigma=0.5)
+    ham_noisy = HamiltonianData.from_sequence(
+        seq, noise_model=noise_model, n_trajectories=1
+    )
+
+    traj = ham_noisy.noise_trajectories[0].trajectory
+    assert isinstance(traj.dmm_det_fluctuation, dict)
+    for dmm_fluct in traj.dmm_det_fluctuation.values():
+        assert dmm_fluct > 0
+
+    noisy_samples = ham_noisy._sample_with_trajectory(traj).to_nested_dict(
+        all_local=True
+    )
+
+    noiseless_det_q0 = noiseless["Local"]["ground-rydberg"]["q0"]["det"]
+    noisy_det_q0 = noisy_samples["Local"]["ground-rydberg"]["q0"]["det"]
+
+    assert np.allclose(noiseless_det_q0, detuning + dmm_detuning * weights[0])
+    assert np.allclose(
+        noisy_det_q0,
+        detuning
+        + dmm_detuning * weights[0] * traj.dmm_det_fluctuation["dmm_0"],
+    )
+
+    # we can do the same for q1
+    noiseless_det_q1 = noiseless["Local"]["ground-rydberg"]["q1"]["det"]
+    noisy_det_q1 = noisy_samples["Local"]["ground-rydberg"]["q1"]["det"]
+
+    assert np.allclose(noiseless_det_q1, detuning + dmm_detuning * weights[1])
+    assert np.allclose(
+        noisy_det_q1,
+        detuning
+        + dmm_detuning * weights[1] * traj.dmm_det_fluctuation["dmm_0"],
+    )

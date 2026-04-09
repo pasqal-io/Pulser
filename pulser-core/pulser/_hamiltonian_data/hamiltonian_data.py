@@ -865,8 +865,9 @@ class HamiltonianData:
                     if self.noise_model.dmm_sigma and isinstance(
                         self._samples._ch_objs[ch], DMM
                     ):
-                        dmm_det_fluctuation[ch] = np.random.normal(
-                            1.0, self.noise_model.dmm_sigma
+                        dmm_det_fluctuation[ch] = max(
+                            0,
+                            np.random.normal(1.0, self.noise_model.dmm_sigma),
                         )
                     else:
                         dmm_det_fluctuation[ch] = 1.0
