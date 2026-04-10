@@ -109,6 +109,10 @@ class TestNoiseModel:
                 {"dmm_sigma", "runs", "samples_per_run"},
                 {"dmm_sigma"},
             ),
+            (
+                {"dmm_spot_waist", "runs", "samples_per_run"},
+                {"dmm_cross_talk"},
+            ),
         ],
     )
     def test_init(self, params, noise_types):
@@ -140,7 +144,14 @@ class TestNoiseModel:
         )
 
     @pytest.mark.parametrize(
-        "noise_param", ["relaxation_rate", "p_false_neg", "laser_waist"]
+        "noise_param",
+        [
+            "relaxation_rate",
+            "p_false_neg",
+            "laser_waist",
+            "trap_depth",
+            "dmm_spot_waist",
+        ],
     )
     @pytest.mark.parametrize("unused_param", ["runs", "samples_per_run"])
     @pytest.mark.filterwarnings(
@@ -165,7 +176,13 @@ class TestNoiseModel:
 
     @pytest.mark.parametrize(
         "param",
-        ["runs", "samples_per_run", "laser_waist"],
+        [
+            "runs",
+            "samples_per_run",
+            "laser_waist",
+            "trap_depth",
+            "dmm_spot_waist",
+        ],
     )
     @pytest.mark.filterwarnings(
         "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
@@ -223,6 +240,7 @@ class TestNoiseModel:
             ("p_false_neg", "SPAM"),
             ("amp_sigma", "amplitude"),
             ("dmm_sigma", "dmm_sigma"),
+            ("dmm_spot_waist", "dmm_crosstalk"),
         ],
     )
     def test_init_prob_like(self, param, noise, value):

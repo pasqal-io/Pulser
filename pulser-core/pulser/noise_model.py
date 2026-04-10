@@ -45,6 +45,7 @@ NoiseTypes = Literal[
     "depolarizing",
     "eff_noise",
     "dmm_sigma",
+    "dmm_crosstalk",
 ]
 
 _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
@@ -59,6 +60,7 @@ _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "depolarizing": ("depolarizing_rate",),
     "eff_noise": ("eff_noise_rates", "eff_noise_opers"),
     "dmm_sigma": ("dmm_sigma",),
+    "dmm_crosstalk": ("dmm_spot_waist",),
 }
 
 _PARAM_TO_NOISE_TYPE: dict[str, NoiseTypes] = {
@@ -77,7 +79,13 @@ _POSITIVE = {
     "trap_waist",
 }
 
-_STRICT_POSITIVE = {"runs", "samples_per_run", "laser_waist", "trap_depth"}
+_STRICT_POSITIVE = {
+    "runs",
+    "samples_per_run",
+    "laser_waist",
+    "trap_depth",
+    "dmm_spot_waist",
+}
 
 _PROBABILITY_LIKE = {
     "state_prep_error",
@@ -111,6 +119,7 @@ OPTIONAL_IN_ABSTR_REPR = (
     "detuning_hf_psd",
     "detuning_hf_omegas",
     "dmm_sigma",
+    "dmm_spot_waist",
 )
 
 
@@ -227,6 +236,12 @@ class NoiseModel:
       :math:`\epsilon_k \delta_{DMM}(1+\eta)` where :math:`eta` is drawn from
       \mathcal{N(0, \sigma_{dmm})}`, while weights :math:`\epsilon_k` are
       defined by a `DetuningMap`.
+    - **dmm_crosstalk**: In the presence of thermal noise on the atom position,
+      each individual atom sees an actual detuning
+      :math:`\exp{-\frac{\Delta x_k^2}{2\omega^2}}\epsilon_k\delta_{DMM}`,
+      where :math:`\Delta x_k` is the offset position at atom :math:`k` due to
+      temperature noise, and :math:`\omega` is the waist of each Gaussian laser
+      profile, which are assumed to be the same.
 
     Args:
         runs: When reconstructing the Hamiltonian from random noise is
@@ -296,6 +311,8 @@ class NoiseModel:
             centered at 0. `dmm_sigma` is assumed to be the same for all
             registers (though each register has its own randomly sampled
             value in each run). This noise is multiplicative. Defaults to 0.
+        dmm_spot_waist: Defines the waist of a Gaussian laser profile given
+            thermal fluctuations in DMM channel.
     """
 
     noise_types: tuple[NoiseTypes, ...] = field(init=False)
@@ -323,6 +340,7 @@ class NoiseModel:
     with_leakage: bool = False
     disable_doppler: bool = False
     dmm_sigma: float = 0.0
+    dmm_spot_waist: float | None = None
 
     def __post_init__(self) -> None:
         """Initializes a noise model."""
@@ -479,6 +497,7 @@ class NoiseModel:
                 or (nt_ == "SPAM" and state_prep_error != 0.0)
                 or nt_ == "register"
                 or nt_ == "dmm_sigma"
+                or nt_ == "dmm_crosstalk"
             ):
                 relevant_params.update(("runs", "samples_per_run"))
         # Disregard laser_waist when not defined
@@ -767,6 +786,8 @@ class NoiseModel:
             table["p_false_neg"] = (self.p_false_neg, "")
         if self.dmm_sigma > 0:
             table["dmm_sigma"] = (self.dmm_sigma, "")
+        if "dmm_crosstalk" in self.noise_types:
+            table["dmm_spot_waist"] = (self.dmm_spot_waist, "µm")
         return table
 
     def summary(self) -> str:
@@ -781,9 +802,9 @@ class NoiseModel:
         summary_list = ["Noise summary:"]
         add_to_traj_summary = []
         # Follow the impact as in step-by-step tutorial
+        # 1. Register
         if "register_sigma_xy" in noise_table:
             assert "register_sigma_z" in noise_table
-            # 1. Register
             summary_list += [
                 "- Register Position Fluctuations**:",
                 "  - XY-Plane Position Fluctuations: "
@@ -792,8 +813,9 @@ class NoiseModel:
                 f"{_repr_value_unit(*noise_table['register_sigma_z'])}",
             ]
             add_to_traj_summary.append("register")
+
+        # 2. State Preparation
         if "state_prep_error" in noise_table:
-            # 2. State Preparation
             summary_list.append(
                 "- State Preparation Error Probability**: "
                 f"{_repr_value_unit(*noise_table['state_prep_error'])}"
@@ -850,6 +872,14 @@ class NoiseModel:
                 f" {_repr_value_unit(*noise_table['dmm_sigma'])}"
             ]
             add_to_traj_summary.append("dmm_sigma")
+
+        if "dmm_spot_waist" in noise_table:
+            summary_list.append("- DMM thermal fluctuations**:")
+            summary_list += [
+                " - Shot-to-shot DMM spot waist fluctuations:"
+                f" {_repr_value_unit(*noise_table['dmm_spot_waist'])}"
+            ]
+            add_to_traj_summary.append("dmm_spot_waist")
 
         # 4. Noise channels
         if (

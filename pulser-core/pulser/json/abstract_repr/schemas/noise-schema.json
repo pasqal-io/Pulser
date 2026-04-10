@@ -88,6 +88,9 @@
             "null"
           ]
         },
+        "dmm_spot_waist": {
+          "type": "number"
+        },
         "noise_types": {
           "items": {
             "$ref": "#/definitions/NoiseType"
@@ -165,7 +168,8 @@
         "leakage",
         "eff_noise",
         "detuning",
-        "dmm_sigma"
+        "dmm_sigma",
+        "dmm_crosstalk"
       ],
       "type": "string"
     }
