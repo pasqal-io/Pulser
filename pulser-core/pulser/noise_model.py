@@ -221,7 +221,7 @@ class NoiseModel:
       and :math:`\Delta \omega_k = \omega_{k+1} - \omega_k`.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
-    - **dmm_sigma**:  Fluctuations in the detuning from the DMM channel,
+    - **dmm_sigma**: Fluctuations in the detuning from the DMM channel,
       defined by `dmm_sigma`. From shot to shot, the local detuning on site k
       is given by
       :math:`\epsilon_k \delta_{DMM}(1+\eta)` where :math:`eta` is drawn from

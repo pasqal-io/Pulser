@@ -723,6 +723,7 @@ def test_dmm_detuning():
 
     dmm_fluct = traj_noise.dmm_det_fluctuation["dmm_0"]
     assert not np.isclose(dmm_fluct, 1.0)
+    assert dmm_fluct >= 0
 
     noisy_samples = ham_noisy._sample_with_trajectory(
         traj_noise
