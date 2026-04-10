@@ -295,7 +295,7 @@ class NoiseModel:
             from shot to shot as a standard deviation of a normal distribution
             centered at 0. `dmm_sigma` is assumed to be the same for all
             registers (though each register has its own randomly sampled
-            value in each run). This noise is multiplicative. Defaults to 1.
+            value in each run). This noise is multiplicative. Defaults to 0.
     """
 
     noise_types: tuple[NoiseTypes, ...] = field(init=False)

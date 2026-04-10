@@ -17,7 +17,6 @@ from pulser._hamiltonian_data.hamiltonian_data import (
 )
 from pulser.channels.dmm import DMM
 from pulser.devices import AnalogDevice
-from pulser.register import RegisterLayout
 from pulser.sampler import sample
 
 from .test_sequence_sampler import seq_rydberg, seq_with_SLM
@@ -673,14 +672,10 @@ def test_dmm_detuning():
     dmm_detuning = -10
     detuning = -1
 
-    detuning_map = RegisterLayout(coordinates).define_detuning_map(
-        {idx: weight for idx, weight in enumerate(slm_weights)}
-    )
+    register = pulser.Register.from_coordinates(coordinates, prefix="q")
 
-    register = pulser.Register.from_coordinates(
-        coordinates,
-        center=False,  # True causes a BUG
-        prefix="q",
+    detuning_map = register.define_detuning_map(
+        {f"q{idx}": weight for idx, weight in enumerate(slm_weights)}
     )
 
     mock_device = replace(
@@ -727,7 +722,7 @@ def test_dmm_detuning():
     assert isinstance(traj_noise.dmm_det_fluctuation, dict)
 
     dmm_fluct = traj_noise.dmm_det_fluctuation["dmm_0"]
-    assert dmm_fluct >= 0
+    assert not np.isclose(dmm_fluct, 1.0)
 
     noisy_samples = ham_noisy._sample_with_trajectory(
         traj_noise
