@@ -452,6 +452,7 @@ class DMMSamples(ChannelSamples):
     # Although these shouldn't have a default, in this way we can
     # subclass ChannelSamples
     detuning_map: DetuningMap | None = None
+    spot_waist: float | None = None
     qubits: dict[QubitId, pm.AbstractArray] = field(default_factory=dict)
 
 
@@ -562,7 +563,10 @@ class SequenceSamples:
                 samples = cast(DMMSamples, samples)
                 det_map = cast(DetuningMap, samples.detuning_map)
                 det_weight_map = defaultdict(
-                    int, det_map.get_qubit_weight_map(samples.qubits)
+                    int,
+                    det_map.get_qubit_weight_map(
+                        samples.qubits, samples.spot_waist
+                    ),
                 )
             else:
                 det_weight_map = defaultdict(lambda: 1.0)

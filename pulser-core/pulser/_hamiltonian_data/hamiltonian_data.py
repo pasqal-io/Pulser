@@ -406,21 +406,26 @@ class HamiltonianData:
         self, traj: NoiseTrajectory
     ) -> SequenceSamples:
 
-        noisy_seq_samples = self._samples
-        if "dmm_sigma" in self.noise_model.noise_types:
-            noisy_samples_list: List[ChannelSamples] = []
-            for ch_name, ch_samples in self._samples.channel_samples.items():
-                _ch_obj = self._samples._ch_objs[ch_name]
-                if isinstance(_ch_obj, DMM):
-                    factor = traj.dmm_det_fluctuation[ch_name]
-                    noisy_samples_list.append(
-                        replace(ch_samples, det=ch_samples.det * factor)
-                    )
-                else:
-                    noisy_samples_list.append(ch_samples)
-            noisy_seq_samples = replace(
-                self._samples, samples_list=noisy_samples_list
+        noisy_samples_list: List[ChannelSamples] = []
+        for ch_name, ch_samples in self._samples.channel_samples.items():
+            _ch_obj = self._samples._ch_objs[ch_name]
+            if not isinstance(_ch_obj, DMM):
+                noisy_samples_list.append(ch_samples)
+                continue
+
+            factor = traj.dmm_det_fluctuation[ch_name]
+
+            ch_samples = replace(
+                ch_samples,
+                det=ch_samples.det * factor,  # Intensity DC noise
+                spot_waist=self.noise_model.dmm_spot_waist,  # thermal noise
             )
+
+            noisy_samples_list.append(ch_samples)
+
+        noisy_seq_samples = replace(
+            self._samples, samples_list=noisy_samples_list
+        )
 
         samples = noisy_seq_samples.to_nested_dict(all_local=self.local_noises)
 

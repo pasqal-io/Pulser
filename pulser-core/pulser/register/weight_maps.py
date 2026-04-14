@@ -74,26 +74,49 @@ class WeightMap(Traps, RegDrawer):
         return cast(np.ndarray, np.array(self.weights)[sorting])
 
     def get_qubit_weight_map(
-        self, qubits: Mapping[QubitId, ArrayLike]
+        self,
+        qubits: Mapping[QubitId, ArrayLike],
+        spot_waist: float | None,
     ) -> dict[QubitId, float]:
         """Creates a map between qubit IDs and the weight on their sites."""
         qubit_weight_map = {}
         coords_arr = self.sorted_coords
         weights_arr = self.sorted_weights
-        for qid, pos in qubits.items():
-            matches = np.argwhere(
-                np.all(
-                    np.isclose(
-                        coords_arr,
-                        pm.AbstractArray(pos)
-                        .astype(float)
-                        .as_array(detach=True),
-                        atol=10 ** (-COORD_PRECISION),
-                    ),
-                    axis=1,
+        if not spot_waist:
+
+            for qid, pos in qubits.items():
+                matches = np.argwhere(
+                    np.all(
+                        np.isclose(
+                            coords_arr,
+                            pm.AbstractArray(pos)
+                            .astype(float)
+                            .as_array(detach=True),
+                            atol=10 ** (-COORD_PRECISION),
+                        ),
+                        axis=1,
+                    )
                 )
-            )
-            qubit_weight_map[qid] = float(np.sum(weights_arr[matches]))
+                qubit_weight_map[qid] = float(np.sum(weights_arr[matches]))
+            return qubit_weight_map
+
+        # put our logic
+        # distance = lambda coord_1, coord_2: np.norm(
+        #     coord_1.as_array()[:2] - coord_2.as_arrray()[:2]
+        # )
+        for qid, q_pos in qubits.items():
+            damping_factor_list = []
+            for trap_coord in coords_arr:
+                # compute the distance between the trap and the noisy qubit
+                # dist = distance(trap_coord, q_pos)
+                dist = 1
+                damping_factor = np.exp(-(dist**2) / (2 * spot_waist**2))
+
+                damping_factor_list.append(damping_factor)
+
+            weight = np.dot(damping_factor_list, weights_arr)
+            qubit_weight_map[qid] = weight
+
         return qubit_weight_map
 
     def draw(
