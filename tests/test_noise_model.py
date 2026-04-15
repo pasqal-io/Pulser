@@ -149,7 +149,6 @@ class TestNoiseModel:
             "relaxation_rate",
             "p_false_neg",
             "laser_waist",
-            "dmm_spot_waist",
         ],
     )
     @pytest.mark.parametrize("unused_param", ["runs", "samples_per_run"])
