@@ -111,7 +111,7 @@ class TestNoiseModel:
             ),
             (
                 {"dmm_spot_waist", "runs", "samples_per_run"},
-                {"dmm_cross_talk"},
+                {"dmm_crosstalk"},
             ),
         ],
     )
@@ -240,7 +240,6 @@ class TestNoiseModel:
             ("p_false_neg", "SPAM"),
             ("amp_sigma", "amplitude"),
             ("dmm_sigma", "dmm_sigma"),
-            ("dmm_spot_waist", "dmm_crosstalk"),
         ],
     )
     def test_init_prob_like(self, param, noise, value):

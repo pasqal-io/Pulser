@@ -461,7 +461,7 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
         "with_leakage",
     }
 
-    detuning_sigma = noise_model_obj.get("detuning_sigma", 0)
+    detuning_sigma = noise_model_obj.get("detuning_sigma", None)
     relevant_params -= {"detuning_sigma"}  # Handled separately, optional arg
 
     detuning_hf_psd = []
