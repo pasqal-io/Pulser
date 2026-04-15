@@ -76,7 +76,7 @@ class WeightMap(Traps, RegDrawer):
     def get_qubit_weight_map(
         self,
         qubits: Mapping[QubitId, ArrayLike],
-        spot_waist: float | None,
+        spot_waist: float | None = None,
     ) -> dict[QubitId, float]:
         """Creates a map between qubit IDs and the weight on their sites."""
         qubit_weight_map = {}

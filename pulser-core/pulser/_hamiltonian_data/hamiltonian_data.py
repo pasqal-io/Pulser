@@ -40,6 +40,7 @@ from pulser.register.base_register import BaseRegister, QubitId
 from pulser.sampler import sampler
 from pulser.sampler.samples import (
     ChannelSamples,
+    DMMSamples,
     SequenceSamples,
     _PulseTargetSlot,
 )
@@ -408,18 +409,14 @@ class HamiltonianData:
 
         noisy_samples_list: List[ChannelSamples] = []
         for ch_name, ch_samples in self._samples.channel_samples.items():
-            _ch_obj = self._samples._ch_objs[ch_name]
-            if not isinstance(_ch_obj, DMM):
-                noisy_samples_list.append(ch_samples)
-                continue
-
-            factor = traj.dmm_det_fluctuation[ch_name]
-
-            ch_samples = replace(
-                ch_samples,
-                det=ch_samples.det * factor,  # Intensity DC noise
-                spot_waist=self.noise_model.dmm_spot_waist,  # thermal noise
-            )
+            if isinstance(ch_samples, DMMSamples):
+                factor = traj.dmm_det_fluctuation[ch_name]
+                spot_waist = self.noise_model.dmm_spot_waist
+                ch_samples = replace(
+                    ch_samples,
+                    det=ch_samples.det * factor,  # Intensity DC noise
+                    spot_waist=spot_waist,  # thermal noise
+                )
 
             noisy_samples_list.append(ch_samples)
 
