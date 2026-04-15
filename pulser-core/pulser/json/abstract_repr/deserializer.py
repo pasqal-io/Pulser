@@ -461,7 +461,7 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
         "with_leakage",
     }
 
-    detuning_sigma = noise_model_obj.get("detuning_sigma", None)
+    detuning_sigma = noise_model_obj.get("detuning_sigma", 0)
     relevant_params -= {"detuning_sigma"}  # Handled separately, optional arg
 
     detuning_hf_psd = []
@@ -478,9 +478,7 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
     dmm_sigma = noise_model_obj.get("dmm_sigma", 0)
     relevant_params -= {"dmm_sigma"}  # Handled separately, optional arg
 
-    dmm_spot_waist = noise_model_obj.get(
-        "dmm_spot_waist", 0
-    )  # Should default be None ?
+    dmm_spot_waist = noise_model_obj.get("dmm_spot_waist", None)
     relevant_params -= {"dmm_spot_waist"}  # Handled separately, optional arg
 
     noise_model = pulser.NoiseModel(

@@ -149,7 +149,6 @@ class TestNoiseModel:
             "relaxation_rate",
             "p_false_neg",
             "laser_waist",
-            "trap_depth",
             "dmm_spot_waist",
         ],
     )
@@ -180,7 +179,6 @@ class TestNoiseModel:
             "runs",
             "samples_per_run",
             "laser_waist",
-            "trap_depth",
             "dmm_spot_waist",
         ],
     )
