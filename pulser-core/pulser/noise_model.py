@@ -311,7 +311,8 @@ class NoiseModel:
             centered at 0. `dmm_sigma` is assumed to be the same for all
             registers (though each register has its own randomly sampled
             value in each run). This noise is multiplicative. Defaults to 0.
-        dmm_spot_waist: Defines the waist of each spot in the Detuning Map, in µm.
+        dmm_spot_waist: Defines the waist of each spot in the Detuning Map.
+            (in µm).
     """
 
     noise_types: tuple[NoiseTypes, ...] = field(init=False)

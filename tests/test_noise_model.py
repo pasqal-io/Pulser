@@ -578,6 +578,12 @@ class TestNoiseModel:
             0.0,
             None,
         ) == {"dmm_sigma", "runs", "samples_per_run"}
+        assert NoiseModel._find_relevant_params(
+            {"dmm_crosstalk"},
+            0.0,
+            0.0,
+            None,
+        ) == {"dmm_spot_waist", "runs", "samples_per_run"}
 
     @pytest.mark.filterwarnings(
         "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
@@ -901,4 +907,16 @@ def test_noise_table_summary():
         " - Shot-to-shot DMM detuning fluctuations: 0.05\n"
         "**: Emulation will generate EmulationConfig.n_trajectories"
         " trajectories with different dmm_sigma"
+    )
+    # DMM crosstalk noise
+    noise_model_crosstalk = NoiseModel(dmm_spot_waist=1.0)
+    assert noise_model_crosstalk.get_noise_table() == {
+        "dmm_spot_waist": (1.0, "µm")
+    }
+    assert noise_model_crosstalk.summary() == (
+        "Noise summary:\n"
+        "- DMM thermal fluctuations**:\n"
+        " - Shot-to-shot DMM spot waist fluctuations: 1 µm\n"
+        "**: Emulation will generate EmulationConfig.n_trajectories"
+        " trajectories with different dmm_spot_waist"
     )
