@@ -23,6 +23,7 @@ import pulser
 from pulser.backend._classproperty import classproperty
 from pulser.backend.config import EmulationConfig
 from pulser.backend.results import Results
+from pulser.channels.dmm import DMM
 from pulser.devices import Device
 
 
@@ -99,6 +100,26 @@ class EmulatorBackend(Backend):
         """Initializes the backend."""
         super().__init__(sequence, mimic_qpu=mimic_qpu)
         self._config = self.validate_config(config or self.default_config)
+
+        noise_model = self._config.noise_model
+
+        if noise_model is not None:
+            is_dmm_channel = any(
+                isinstance(ch, DMM)
+                for ch in self._sequence.declared_channels.values()
+            )
+
+            if (
+                is_dmm_channel
+                and noise_model.temperature > 0
+                and noise_model.dmm_spot_waist is None
+            ):
+                raise ValueError(
+                    "Using temperature noise with a DMM requires"
+                    "`dmm_spot_waist` to be defined. if not defined,"
+                    "atom thermal motion can lead to non-physical effects."
+                )
+
         if (
             self._config.prefer_device_noise_model
             and self._sequence.device.noise_model is not None

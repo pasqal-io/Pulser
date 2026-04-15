@@ -415,7 +415,7 @@ class HamiltonianData:
                 ch_samples = replace(
                     ch_samples,
                     det=ch_samples.det * factor,  # Intensity DC noise
-                    spot_waist=spot_waist,  # thermal noise
+                    spot_waist=spot_waist,
                 )
 
             noisy_samples_list.append(ch_samples)

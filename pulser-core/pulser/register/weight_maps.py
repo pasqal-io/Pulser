@@ -32,6 +32,8 @@ from pulser.register.traps import COORD_PRECISION, Traps
 if TYPE_CHECKING:
     from pulser.register.base_register import QubitId
 
+from scipy.spatial.distance import cdist
+
 import pulser.math as pm
 
 
@@ -83,16 +85,19 @@ class WeightMap(Traps, RegDrawer):
         coords_arr = self.sorted_coords
         weights_arr = self.sorted_weights
         if spot_waist:
-            for qid, pos in qubits.items():
-                q_pos = (
-                    pm.AbstractArray(pos).astype(float).as_array(detach=True)
-                )
-                dist = coords_arr - q_pos
-                damping_factors = np.exp(-(dist**2) / (2 * spot_waist**2))
-                total_weight_per_qubit = np.dot(damping_factors, weights_arr)
-                qubit_weight_map[qid] = total_weight_per_qubit
+            q_pos_arr = (
+                pm.vstack(list(qubits.values()))
+                .astype(float)
+                .as_array(detach=True)
+            )
 
-            return qubit_weight_map
+            dists = cdist(q_pos_arr, coords_arr)
+
+            damping_factors = np.exp(-(dists**2) / (2 * spot_waist**2))
+
+            total_weight_per_qubit = damping_factors @ weights_arr
+
+            return dict(zip(qubits.keys(), total_weight_per_qubit))
 
         for qid, pos in qubits.items():
             matches = np.argwhere(
