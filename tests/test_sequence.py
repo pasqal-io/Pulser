@@ -139,13 +139,29 @@ def test_channel_declaration(reg, device):
     assert seq2.get_addressed_states() == ["u", "d"]
 
 
-def test_dmm_declaration(reg, device, det_map):
+@pytest.mark.parametrize("first_dmm_id", ["dmm_0", None])
+def test_dmm_declaration(reg, device, det_map, first_dmm_id):
     seq = Sequence(reg, device)
     available_channels = set(seq.available_channels)
     assert seq.get_addressed_bases() == ()
-    seq.config_detuning_map(det_map, "dmm_0")
+    seq.config_detuning_map(det_map, first_dmm_id)
+    assert list(seq.declared_channels) == ["dmm_0"]
     assert seq.get_addressed_bases() == ("ground-rydberg",)
-    seq.config_detuning_map(det_map, "dmm_1")
+    assert [
+        ch_id
+        for ch_id, ch_obj in seq.available_channels.items()
+        if isinstance(ch_obj, DMM)
+    ] == ["dmm_1"]
+    # Not defining the dmm_id will make it pick the only available one
+    seq.config_detuning_map(det_map)
+    # No DMM is available now
+    assert not [
+        ch_id
+        for ch_id, ch_obj in seq.available_channels.items()
+        if isinstance(ch_obj, DMM)
+    ]
+    # Add dmm_1 is declared
+    assert list(seq.declared_channels) == ["dmm_0", "dmm_1"]
     with pytest.raises(
         ValueError,
         match=r"No DMM called dmm_2 is available in the device\. "
@@ -155,6 +171,8 @@ def test_dmm_declaration(reg, device, det_map):
         seq.config_detuning_map(det_map, "dmm_2")
     with pytest.raises(ValueError, match="DMM dmm_0 is not available"):
         seq.config_detuning_map(det_map, "dmm_0")
+    with pytest.raises(ValueError, match="No DMM channel is still available"):
+        seq.config_detuning_map(det_map)
 
     chs = {"dmm_0", "dmm_1"}
     assert seq._schedule["dmm_0"][-1] == _TimeSlot(
@@ -168,11 +186,11 @@ def test_dmm_declaration(reg, device, det_map):
         "dmm_0": "dmm_0",
         "dmm_0_1": "dmm_0",
     }
-    seq2.config_detuning_map(det_map, "dmm_0")
+    seq2.config_detuning_map(det_map, first_dmm_id)
     # If a DMM was declared but not as an SLM Mask,
     # MW channels are not available
     assert set(seq2.available_channels) == (available_channels - {"mw_global"})
-    seq2.config_detuning_map(det_map, "dmm_0")
+    seq2.config_detuning_map(det_map)  # Will use "dmm_0" again
     assert set(seq2.available_channels) == (available_channels - {"mw_global"})
     assert channel_map.keys() == seq2.declared_channels.keys()
     assert set(

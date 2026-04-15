@@ -626,7 +626,7 @@ class Sequence(Generic[DeviceType]):
     def config_detuning_map(
         self,
         detuning_map: DetuningMap,
-        dmm_id: str,
+        dmm_id: str | None = None,
     ) -> None:
         """Declares a new DMM channel to the Sequence.
 
@@ -641,8 +641,20 @@ class Sequence(Generic[DeviceType]):
                 atom receives.
             dmm_id: How the channel is identified in the device.
                 See in ``Sequence.available_channels`` which DMM IDs are still
-                available (start by "dmm" ) and the associated description.
+                available (start by "dmm" ) and the associated description. If
+                not given, takes the first available DMM in the device.
         """
+        if dmm_id is None:
+            for ch_id, ch_obj in self.available_channels.items():
+                if isinstance(ch_obj, DMM):
+                    dmm_id = ch_id
+                    break
+            else:
+                raise ValueError(
+                    "No DMM channel is still available in device "
+                    f"{self.device.name!r}."
+                )
+
         self._config_detuning_map(detuning_map, dmm_id)
 
     def _config_detuning_map(
