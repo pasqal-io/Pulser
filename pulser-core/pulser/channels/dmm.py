@@ -189,7 +189,9 @@ class DMM(Channel):
         min_non_zero_weight = np.min(
             # Can't be empty because the WeightMap enforces having at least one
             # non-zero weight
-            np.array(detuning_map.weights)[np.nonzero(detuning_map.weights)]
+            np.array(detuning_map.weights)[
+                np.nonzero(detuning_map.weights)  # type: ignore[arg-type]
+            ]
         )
         if (
             0

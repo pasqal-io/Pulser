@@ -176,6 +176,7 @@ class TestDetuningMap:
 
         for reg in (layout, map_reg, register):
             bad_weights: dict[int | str, float]
+            zero_weights: dict[int | str, float]
             if reg == register:
                 bad_weights = {"0": -1.0, "1": 1.0, "2": 1.0}
                 zero_weights = {"0": 0.0}
@@ -189,7 +190,7 @@ class TestDetuningMap:
             with pytest.raises(
                 ValueError, match="must have at least one non-zero weight"
             ):
-                reg.define_detuning_map(zero_weights)
+                reg.define_detuning_map(zero_weights)  # type: ignore
 
     def test_init(
         self,

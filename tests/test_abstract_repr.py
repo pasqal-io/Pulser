@@ -30,7 +30,7 @@ import pytest
 import pulser
 from pulser import Pulse, Register, Register3D, Sequence, devices
 from pulser.abstract_repr import deserialize_device
-from pulser.channels import Rydberg
+from pulser.channels import Rydberg, DMM
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import (
     AnalogDevice,
@@ -705,6 +705,16 @@ class TestDevice:
         device = replace(
             MockDevice, channel_objects=(ch_obj,), channel_ids=None
         )
+        dev_str = device.to_abstract_repr()
+        assert device == deserialize_device(dev_str)
+        assert device == VirtualDevice.from_abstract_repr(dev_str)
+
+    @pytest.mark.parametrize(
+        "dmm_ch_obj",
+        [DMM(total_bottom_detuning=-10), DMM(min_avg_abs_detuning=0.1)],
+    )
+    def test_optional_DMM_fields(self, dmm_ch_obj):
+        device = replace(MockDevice, dmm_objects=(dmm_ch_obj,))
         dev_str = device.to_abstract_repr()
         assert device == deserialize_device(dev_str)
         assert device == VirtualDevice.from_abstract_repr(dev_str)
