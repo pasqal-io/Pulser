@@ -529,12 +529,14 @@ def test_dmm_temperature_without_spot_waist():
     seq.add_dmm_detuning(pulser.ConstantWaveform(100, -10), "dmm_0")
 
     config = QutipConfig(
-        noise_model=pulser.NoiseModel(temperature=50.0),
+        noise_model=pulser.NoiseModel(
+            trap_waist=1, trap_depth=1, temperature=0.5
+        ),
         observables=[StateResult(evaluation_times=[1.0])],
     )
 
     with pytest.raises(
         ValueError,
-        match="Using temperature noise with a DMM requires",
+        match="Combining register noise with a DMM requires",
     ):
         QutipBackendV2(seq, config=config)
