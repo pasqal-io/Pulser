@@ -880,7 +880,6 @@ class NoiseModel:
                 " - Detuning Map spots' waist:"
                 f" {_repr_value_unit(*noise_table['dmm_spot_waist'])}"
             ]
-            add_to_traj_summary.append("dmm_spot_waist")
 
         # 4. Noise channels
         if (
