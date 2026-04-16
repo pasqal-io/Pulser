@@ -40,6 +40,7 @@ import pulser.math as pm
 @dataclass(init=False, repr=False, eq=False, frozen=True)
 class WeightMap(Traps, RegDrawer):
     """Defines a generic map of weights on traps.
+
     Args:
         trap_coordinates: An array containing the coordinates of the traps.
         weights: A list of weights (between 0 and 1) to associate to the traps.
