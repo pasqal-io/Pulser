@@ -236,12 +236,12 @@ class NoiseModel:
       :math:`\epsilon_k \delta_{DMM}(1+\eta)` where :math:`eta` is drawn from
       \mathcal{N(0, \sigma_{dmm})}`, while weights :math:`\epsilon_k` are
       defined by a `DetuningMap`.
-    - **dmm_crosstalk**: In the presence of thermal noise on the atom position,
-      each individual atom sees an actual detuning
+    - **dmm_crosstalk**: With a non-zero laser waist `dmm_spot_waist`, each
+      individual atom experiences an effective detuning of
       :math:`\exp{-\frac{\Delta x_k^2}{2\omega^2}}\epsilon_k\delta_{DMM}`,
-      where :math:`\Delta x_k` is the offset position at atom :math:`k` due to
-      temperature noise, and :math:`\omega` is the waist of each Gaussian laser
-      profile, which are assumed to be the same.
+      where :math:`\Delta x_k` is the offset position of atom :math:`k`,
+      and :math:`\omega` is the spot waist (`dmm_spot_waist`) of each
+      Gaussian laser profile, which are assumed to be the same.
 
     Args:
         runs: When reconstructing the Hamiltonian from random noise is
