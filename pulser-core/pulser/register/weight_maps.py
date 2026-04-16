@@ -34,6 +34,8 @@ if TYPE_CHECKING:
 
 import pulser.math as pm
 
+WEIGHT_PRECISION = 6
+
 
 @dataclass(init=False, repr=False, eq=False, frozen=True)
 class WeightMap(Traps, RegDrawer):
@@ -72,10 +74,14 @@ class WeightMap(Traps, RegDrawer):
         return self._coords_arr.as_array(detach=True)
 
     @property
+    def _rounded_weights(self) -> np.ndarray:
+        return np.round(self.weights, decimals=WEIGHT_PRECISION)
+
+    @property
     def sorted_weights(self) -> np.ndarray:
         """The weights sorted to match the sorted trap coordinates."""
         sorting = self._calc_sorting_order()
-        return cast(np.ndarray, np.array(self.weights)[sorting])
+        return cast(np.ndarray, self._rounded_weights[sorting])
 
     def get_qubit_weight_map(
         self, qubits: Mapping[QubitId, ArrayLike]

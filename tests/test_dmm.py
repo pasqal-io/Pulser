@@ -27,7 +27,11 @@ from pulser.register.base_register import BaseRegister
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import TriangularLatticeLayout
-from pulser.register.weight_maps import DetuningMap, WeightMap
+from pulser.register.weight_maps import (
+    WEIGHT_PRECISION,
+    DetuningMap,
+    WeightMap,
+)
 
 
 class TestDetuningMap:
@@ -135,7 +139,18 @@ class TestDetuningMap:
         assert np.any(det_map.trap_coordinates != det_map2.trap_coordinates)
         assert det_map.weights != det_map2.weights
 
-        # But are equal in sorted content
+        # We can even introduce small deviations (below the WEIGHT_PRECISION)
+        # in the weights and they should stil be equal
+        det_map2 = DetuningMap(
+            trap_coordinates=det_map2.trap_coordinates,
+            weights=np.clip(
+                np.array(det_map2.weights) + 10 ** -(WEIGHT_PRECISION + 1),
+                0.0,
+                1.0,
+            ),
+        )
+
+        # They are equal in sorted and rounded content
         np.testing.assert_equal(det_map.sorted_coords, det_map2.sorted_coords)
         np.testing.assert_equal(
             det_map.sorted_weights, det_map2.sorted_weights
