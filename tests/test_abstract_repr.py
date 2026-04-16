@@ -30,7 +30,7 @@ import pytest
 import pulser
 from pulser import Pulse, Register, Register3D, Sequence, devices
 from pulser.abstract_repr import deserialize_device
-from pulser.channels import Rydberg, DMM
+from pulser.channels import DMM, Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import (
     AnalogDevice,
