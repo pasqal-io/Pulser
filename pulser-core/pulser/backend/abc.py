@@ -111,12 +111,12 @@ class EmulatorBackend(Backend):
 
             if (
                 is_dmm_channel
-                and noise_model.temperature > 0
+                and "register" in noise_model.noise_types
                 and noise_model.dmm_spot_waist is None
             ):
                 raise ValueError(
-                    "Using temperature noise with a DMM requires"
-                    "`dmm_spot_waist` to be defined. if not defined,"
+                    "Combining register noise with a DMM requires"
+                    "`dmm_spot_waist` to be defined. If not defined,"
                     "atom thermal motion can lead to non-physical effects."
                 )
 

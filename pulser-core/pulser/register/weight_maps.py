@@ -93,7 +93,8 @@ class WeightMap(Traps, RegDrawer):
         if spot_waist:
             spots_shape = np.exp(-(dists**2) / (2 * spot_waist**2))
         else:
-            spots_shape = dists < (10 ** (-COORD_PRECISION))
+            # Allows for every point that's within COORD_PRECISION in x and y
+            spots_shape = dists < np.sqrt(2) * (10 ** (-COORD_PRECISION))
 
         total_weights = spots_shape @ weights_arr
         return dict(zip(qubits.keys(), total_weights))

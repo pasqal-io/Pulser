@@ -103,7 +103,6 @@ def has_shot_to_shot_except_spam(noise_model: NoiseModel) -> bool:
         or "detuning" in noise_model.noise_types
         or "register" in noise_model.noise_types
         or "dmm_sigma" in noise_model.noise_types
-        or "dmm_crosstalk" in noise_model.noise_types
     )
 
 

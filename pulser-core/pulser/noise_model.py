@@ -236,12 +236,14 @@ class NoiseModel:
       :math:`\epsilon_k \delta_{DMM}(1+\eta)` where :math:`eta` is drawn from
       \mathcal{N(0, \sigma_{dmm})}`, while weights :math:`\epsilon_k` are
       defined by a `DetuningMap`.
-    - **dmm_crosstalk**: With a non-zero laser waist `dmm_spot_waist`, each
-      individual atom experiences an effective detuning of
-      :math:`\exp{-\frac{\Delta x_k^2}{2\omega^2}}\epsilon_k\delta_{DMM}`,
-      where :math:`\Delta x_k` is the offset position of atom :math:`k`,
-      and :math:`\omega` is the spot waist (`dmm_spot_waist`) of each
-      Gaussian laser profile, which are assumed to be the same.
+    - **dmm_crosstalk**: With a non-zero `dmm_spot_waist`, each
+      detuning spot applies an effective detuning on atom :math:`k`
+      given by
+      :math:`\exp{-\frac{\Delta x_k^2}{2w^2}}\epsilon_k\delta_{DMM}`,
+      where :math:`\Delta x_k` is the distance between the detuning spot
+      and atom :math:`k`,
+      and :math:`w` is the gaussian waist (`dmm_spot_waist`) of each
+      detuning spot, which are assumed to be the same.
 
     Args:
         runs: When reconstructing the Hamiltonian from random noise is
@@ -497,7 +499,6 @@ class NoiseModel:
                 or (nt_ == "SPAM" and state_prep_error != 0.0)
                 or nt_ == "register"
                 or nt_ == "dmm_sigma"
-                or nt_ == "dmm_crosstalk"
             ):
                 relevant_params.update(("runs", "samples_per_run"))
         # Disregard laser_waist when not defined
@@ -786,7 +787,7 @@ class NoiseModel:
             table["p_false_neg"] = (self.p_false_neg, "")
         if self.dmm_sigma > 0:
             table["dmm_sigma"] = (self.dmm_sigma, "")
-        if "dmm_crosstalk" in self.noise_types:
+        if self.dmm_spot_waist is not None:
             table["dmm_spot_waist"] = (self.dmm_spot_waist, "µm")
         return table
 
@@ -874,9 +875,9 @@ class NoiseModel:
             add_to_traj_summary.append("dmm_sigma")
 
         if "dmm_spot_waist" in noise_table:
-            summary_list.append("- DMM thermal fluctuations**:")
+            summary_list.append("- DMM crosstalk**:")
             summary_list += [
-                " - Shot-to-shot DMM spot waist fluctuations:"
+                " - Detuning Map spots' waist:"
                 f" {_repr_value_unit(*noise_table['dmm_spot_waist'])}"
             ]
             add_to_traj_summary.append("dmm_spot_waist")
