@@ -47,6 +47,9 @@
         "detuning_sigma": {
           "type": "number"
         },
+        "dmm_sigma": {
+          "type": "number"
+        },
         "eff_noise": {
           "items": {
             "items": [
@@ -161,7 +164,8 @@
         "depolarizing",
         "leakage",
         "eff_noise",
-        "detuning"
+        "detuning",
+        "dmm_sigma"
       ],
       "type": "string"
     }
