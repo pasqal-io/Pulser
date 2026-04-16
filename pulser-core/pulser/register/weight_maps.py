@@ -60,6 +60,10 @@ class WeightMap(Traps, RegDrawer):
             np.all(np.array(weights) >= 0) and np.all(np.array(weights) <= 1)
         ):
             raise ValueError("All weights must be between 0 and 1.")
+        if np.count_nonzero(weights) == 0:
+            raise ValueError(
+                "A WeightMap must have at least one non-zero weight."
+            )
         object.__setattr__(self, "weights", tuple(weights))
 
     @property

@@ -65,7 +65,7 @@ class TestDetuningMap:
     ) -> DetuningMap:
         return layout.define_detuning_map(slm_dict)
 
-    @pytest.mark.parametrize("bad_key", [{1: 1.0}, {"4": 1.0}])
+    @pytest.mark.parametrize("bad_key", [{4: 1.0}, {"4": 1.0}])
     def test_define_detuning_map(
         self,
         layout: RegisterLayout,
@@ -74,13 +74,6 @@ class TestDetuningMap:
         bad_key: dict,
     ):
         for reg in (layout, map_reg):
-            if type(list(bad_key.keys())[0]) == int:
-                with pytest.raises(
-                    ValueError,
-                    match="'trap_coordinates' must be an array or list",
-                ):
-                    reg.define_detuning_map(bad_key)
-                continue
             with pytest.raises(
                 ValueError,
                 match=re.escape(
@@ -185,12 +178,18 @@ class TestDetuningMap:
             bad_weights: dict[int | str, float]
             if reg == register:
                 bad_weights = {"0": -1.0, "1": 1.0, "2": 1.0}
+                zero_weights = {"0": 0.0}
             else:
                 bad_weights = {0: -1.0, 1: 1.0, 2: 1.0}
+                zero_weights = {0: 0.0}
             with pytest.raises(
                 ValueError, match="All weights must be between 0 and 1."
             ):
                 reg.define_detuning_map(bad_weights)  # type: ignore
+            with pytest.raises(
+                ValueError, match="must have at least one non-zero weight"
+            ):
+                reg.define_detuning_map(zero_weights)
 
     def test_init(
         self,
@@ -267,6 +266,7 @@ class TestDMM:
         return DMM(
             bottom_detuning=-1,
             total_bottom_detuning=-10,
+            min_avg_abs_detuning=0.1,
             clock_period=1,
             min_duration=1,
             max_duration=1e6,
@@ -290,17 +290,41 @@ class TestDMM:
         ):
             assert value is None
         with pytest.raises(
-            ValueError, match="bottom_detuning must be negative."
+            ValueError,
+            match=re.escape("'bottom_detuning' must be negative (got 1)."),
         ):
             DMM(bottom_detuning=1)
         with pytest.raises(
-            ValueError, match="total_bottom_detuning must be negative."
+            ValueError,
+            match=re.escape(
+                "'total_bottom_detuning' must be negative (got 10)"
+            ),
         ):
             DMM(total_bottom_detuning=10)
         with pytest.raises(
-            ValueError, match="total_bottom_detuning must be lower"
+            ValueError,
+            match=re.escape(
+                "'total_bottom_detuning' (got -1) must be lower than "
+                "'bottom_detuning' (got -10)"
+            ),
         ):
             DMM(total_bottom_detuning=-1, bottom_detuning=-10)
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "'min_avg_abs_detuning' must be non-negative (got -0.5)"
+            ),
+        ):
+            DMM(min_avg_abs_detuning=-0.5)
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "'min_avg_abs_detuning' (got 10.1) must be lower than or equal"
+                " to -bottom_detuning=10."
+            ),
+        ):
+            DMM(min_avg_abs_detuning=10.1, bottom_detuning=-10)
+
         with pytest.raises(
             NotImplementedError,
             match=f"{DMM} cannot be initialized from `Global` method.",
@@ -327,15 +351,15 @@ class TestDMM:
             physical_dmm.validate_pulse(pos_det_pulse)
 
         # Local detuning is given by Pulse.detuning * local_weight
-        too_low_pulse = Pulse.ConstantPulse(
-            100, 0, physical_dmm.bottom_detuning - 0.01, 0
-        )
+        det_value = physical_dmm.bottom_detuning - 0.01
+        too_low_pulse = Pulse.ConstantPulse(100, 0, det_value, 0)
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "The detunings on some atoms go below the local "
-                "bottom detuning of the DMM "
-                f"({physical_dmm.bottom_detuning} rad/µs)"
+                "For a detuning map with a maximum weight of 1.0, a DMM pulse "
+                f"with minimum detuning {det_value} rad/µs "
+                "goes below the local bottom detuning of the DMM "
+                f"({physical_dmm.bottom_detuning} rad/µs)."
             ),
         ):
             # tested with detuning map with weight 1
@@ -348,11 +372,15 @@ class TestDMM:
         det_map = TriangularLatticeLayout(100, 10).define_detuning_map(
             {i: 0.5 if i < 20 else 0.0 for i in range(100)}
         )
+        summed_weight = sum(det_map.weights)
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "The applied detuning goes below the total bottom detuning "
-                f"of the DMM ({physical_dmm.total_bottom_detuning} rad/µs)"
+                "For a detuning map with a total summed weight of "
+                f"{summed_weight}, the total applied detuning from a DMM pulse"
+                f" with minimum detuning {det_value} rad/µs goes below the "
+                "total bottom detuning of the DMM "
+                f"({physical_dmm.total_bottom_detuning} rad/µs)."
             ),
         ):
             # local detunings match bottom_detuning, global don't
@@ -360,3 +388,20 @@ class TestDMM:
 
         # Should be valid in a virtual DMM without total bottom detuning
         virtual_local_dmm.validate_pulse(too_low_pulse, det_map)
+
+        min_weight = 0.05
+        det_map = TriangularLatticeLayout(100, 10).define_detuning_map(
+            {1: min_weight}
+        )
+        assert min_weight * abs(det_value) < physical_dmm.min_avg_abs_detuning
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "For a detuning map with a minimum non-zero weight of "
+                f"{min_weight}, a DMM pulse with an average absolute detuning"
+                f" of {-det_value:.3g} rad/µs does not respect "
+                "the minimum threshold for the average absolute detuning of "
+                f"the DMM ({physical_dmm.min_avg_abs_detuning} rad/µs)."
+            ),
+        ):
+            physical_dmm.validate_pulse(too_low_pulse, det_map)

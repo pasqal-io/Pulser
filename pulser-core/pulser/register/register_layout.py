@@ -20,7 +20,6 @@ import json
 from collections.abc import Mapping
 from collections.abc import Sequence as abcSequence
 from dataclasses import dataclass
-from operator import itemgetter
 from typing import Any, Optional, cast
 
 import matplotlib.pyplot as plt
@@ -134,7 +133,7 @@ class RegisterLayout(Traps, RegDrawer):
                 f" in [0, {self.number_of_traps-1}]."
             )
         return DetuningMap(
-            itemgetter(*detuning_weights.keys())(self.traps_dict),
+            [self.traps_dict[trap_id] for trap_id in detuning_weights],
             list(detuning_weights.values()),
             slug,
         )

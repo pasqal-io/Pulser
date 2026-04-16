@@ -856,10 +856,7 @@ def test_switch_device_down(
         "new device that does not modify the samples of the Sequence. "
         "Here is a list of matchings tested and their associated errors: "
         "{(('global', 'rydberg_global'), ('dmm_0', 'dmm_0'), ('dmm_0_1', "
-        "'dmm_1')): 'The detunings on some atoms go below the local bottom "
-        "detuning of the DMM (-10 rad/µs).', (('global', 'rydberg_global'), "
-        "('dmm_0', 'dmm_1'), ('dmm_0_1', 'dmm_0')): 'The detunings on some "
-        "atoms go below the local bottom detuning of the DMM (-10 rad/µs).'}"
+        "'dmm_1')):"
     )
     with helpers.raises_all(
         [ValueError, SwitchDeviceError], match=re.escape(error_msg)
