@@ -40,7 +40,6 @@ import pulser.math as pm
 @dataclass(init=False, repr=False, eq=False, frozen=True)
 class WeightMap(Traps, RegDrawer):
     """Defines a generic map of weights on traps.
-
     Args:
         trap_coordinates: An array containing the coordinates of the traps.
         weights: A list of weights (between 0 and 1) to associate to the traps.
@@ -81,39 +80,22 @@ class WeightMap(Traps, RegDrawer):
         spot_waist: float | None = None,
     ) -> dict[QubitId, float]:
         """Creates a map between qubit IDs and the weight on their sites."""
-        qubit_weight_map = {}
         coords_arr = self.sorted_coords
         weights_arr = self.sorted_weights
+        q_pos_arr = (
+            pm.vstack(list(qubits.values()))
+            .astype(float)
+            .as_array(detach=True)
+        )
+        dists = cdist(q_pos_arr, coords_arr)
+
         if spot_waist:
-            q_pos_arr = (
-                pm.vstack(list(qubits.values()))
-                .astype(float)
-                .as_array(detach=True)
-            )
+            spots_shape = np.exp(-(dists**2) / (2 * spot_waist**2))
+        else:
+            spots_shape = dists < (10 ** (-COORD_PRECISION))
 
-            dists = cdist(q_pos_arr, coords_arr)
-
-            damping_factors = np.exp(-(dists**2) / (2 * spot_waist**2))
-
-            total_weight_per_qubit = damping_factors @ weights_arr
-
-            return dict(zip(qubits.keys(), total_weight_per_qubit))
-
-        for qid, pos in qubits.items():
-            matches = np.argwhere(
-                np.all(
-                    np.isclose(
-                        coords_arr,
-                        pm.AbstractArray(pos)
-                        .astype(float)
-                        .as_array(detach=True),
-                        atol=10 ** (-COORD_PRECISION),
-                    ),
-                    axis=1,
-                )
-            )
-            qubit_weight_map[qid] = float(np.sum(weights_arr[matches]))
-        return qubit_weight_map
+        total_weights = spots_shape @ weights_arr
+        return dict(zip(qubits.keys(), total_weights))
 
     def draw(
         self,

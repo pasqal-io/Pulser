@@ -19,8 +19,10 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+from scipy.spatial.distance import cdist
 
 import pulser
+import pulser.math as pm
 from pulser.channels.dmm import DMM
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
@@ -110,12 +112,21 @@ class TestDetuningMap:
         np.testing.assert_equal(det_map.sorted_coords, coords)
         np.testing.assert_equal(det_map.sorted_weights, weights)
 
+        # case: spot_waist is None
         # We recover the original qid_weight_map (and undefined qids show as 0)
-        assert det_map.get_qubit_weight_map(qubits) == {
-            **qid_weight_map,
-            "2": 0.0,
-        }
+        expected = {**qid_weight_map, "2": 0.0}
+        assert det_map.get_qubit_weight_map(qubits) == expected
 
+        # case: spot_waist is NOT None
+        spot_waist = 1.2
+        dists = cdist(pm.vstack(qubits.values()), det_map.sorted_coords)
+        spots_shape = np.exp(-(dists**2) / (2 * spot_waist**2))
+
+        # effect of the Gaussian trap profile
+        expected = dict(zip(qubits.keys(), spots_shape @ weights))
+        assert det_map.get_qubit_weight_map(qubits, spot_waist) == expected
+
+        # Triangular layout
         tri_layout = TriangularLatticeLayout(100, spacing=5)
         sites = [31, 53, 39, 62, 43, 49, 42, 37, 48, 44, 55, 50]
         labels = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"]
