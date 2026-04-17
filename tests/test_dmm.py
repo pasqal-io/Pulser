@@ -392,7 +392,9 @@ class TestDMM:
                 "For a detuning map with a maximum weight of 1.0, a DMM pulse "
                 f"with minimum detuning {det_value} rad/µs "
                 "goes below the local bottom detuning of the DMM "
-                f"({physical_dmm.bottom_detuning} rad/µs)."
+                f"({physical_dmm.bottom_detuning} rad/µs). "
+                "To respect this constraint, keep the detuning above "
+                f"{float(physical_dmm.bottom_detuning)} rad/µs."
             ),
         ):
             # tested with detuning map with weight 1
@@ -413,7 +415,9 @@ class TestDMM:
                 f"{summed_weight}, the total applied detuning from a DMM pulse"
                 f" with minimum detuning {det_value} rad/µs goes below the "
                 "total bottom detuning of the DMM "
-                f"({physical_dmm.total_bottom_detuning} rad/µs)."
+                f"({physical_dmm.total_bottom_detuning} rad/µs). "
+                "To respect this constraint, keep the detuning above "
+                f"{physical_dmm.total_bottom_detuning/summed_weight} rad/µs."
             ),
         ):
             # local detunings match bottom_detuning, global don't

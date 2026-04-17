@@ -33,11 +33,13 @@ class DMM(Channel):
     """Defines a Detuning Map Modulator (DMM) Channel.
 
     A Detuning Map Modulator can be used to define `Global` detuning Pulses
-    (of zero amplitude and phase). These Pulses are locally modulated by the
-    weights of a `DetuningMap`, thus providing a local control over the
-    detuning. The detuning of the pulses added to a DMM has to be negative,
-    between 0 and `bottom_detuning`, and the sum of the weights multiplied by
-    that detuning has to be below `total_bottom_detuning`. Channel targeting
+    (of zero amplitude and phase). These detuning Pulses are locally weighted
+    by the weights of a `DetuningMap`, such that qubits experience a detuning
+    map spot i.e. a detuning pulse equal to
+    (detuning map weight on this qubit)*(detuning pulse value). The detuning
+    of the pulses added to a DMM has to be negative, such that each detuning
+    map spot is between 0 and `bottom_detuning`, and that the sum of all the
+    detuning map spots is below `total_bottom_detuning`. This Channel targets
     the transition between the ground and rydberg states, thus encoding the
     'ground-rydberg' basis.
 
@@ -48,10 +50,10 @@ class DMM(Channel):
     Args:
         bottom_detuning: Minimum possible detuning per detuning map spot
             (in rad/µs); must be below zero.
-        total_bottom_detuning: Minimum possible detuning distributed over all
+        total_bottom_detuning: Minimum possible total detuning summed over all
             detuning map spots (in rad/µs); must be below zero.
         min_avg_abs_detuning: The minimum acceptable value for the average
-            detuning (in absolute value and in rad/µs) applied on any detuning
+            absolute detuning (in rad/µs) applied on any detuning
             map spot (when not 0). Defaults to 0.
         clock_period: The duration of a clock cycle (in ns). The duration of a
             pulse or delay instruction is enforced to be a multiple of the
@@ -170,7 +172,9 @@ class DMM(Channel):
                 f"For a detuning map with a maximum weight of {max_weight},"
                 f" a DMM pulse with minimum detuning {min_round_detuning} "
                 "rad/µs goes below the local bottom "
-                f"detuning of the DMM ({self.bottom_detuning} rad/µs)."
+                f"detuning of the DMM ({self.bottom_detuning} rad/µs). "
+                "To respect this constraint, keep the detuning above "
+                f"{self.bottom_detuning/max_weight} rad/µs."
             )
         # Check that distributed detuning is above total_bottom_detuning
         sum_weight = np.sum(detuning_map.weights)
@@ -183,16 +187,18 @@ class DMM(Channel):
                 f"{sum_weight}, the total applied detuning from a DMM pulse "
                 f"with minimum detuning {min_round_detuning} rad/µs goes below"
                 " the total bottom detuning "
-                f"of the DMM ({self.total_bottom_detuning} rad/µs)."
+                f"of the DMM ({self.total_bottom_detuning} rad/µs). "
+                "To respect this constraint, keep the detuning above "
+                f"{self.total_bottom_detuning/sum_weight} rad/µs."
             )
         avg_abs_detuning = np.average(np.abs(round_detuning))
-        min_non_zero_weight = np.min(
-            # Can't be empty because the WeightMap enforces having at least one
-            # non-zero weight
-            np.array(detuning_map.weights)[
-                np.nonzero(detuning_map.weights)  # type: ignore[arg-type]
-            ]
-        )
+
+        weights_arr = np.array(detuning_map.weights)
+        non_zero_weight_inds = np.nonzero(weights_arr)
+        # Can't be empty because the WeightMap enforces having at least one
+        # non-zero weight
+        assert len(non_zero_weight_inds) > 0
+        min_non_zero_weight = np.min(weights_arr[non_zero_weight_inds])
         if (
             0
             < min_non_zero_weight * avg_abs_detuning
