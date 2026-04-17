@@ -45,7 +45,7 @@ OPTIONAL_ABSTR_CH_FIELDS = (
     "propagation_dir",
 )
 
-# States ranked in decreasing order of their associated eigenenergy
+# States ordered as they appear in the state-vector representation
 States = Literal["u", "d", "r", "g", "h", "x"]
 
 STATES_RANK = get_args(States)
