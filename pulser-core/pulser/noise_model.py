@@ -787,7 +787,7 @@ class NoiseModel:
             table["p_false_neg"] = (self.p_false_neg, "")
         if self.dmm_sigma > 0:
             table["dmm_sigma"] = (self.dmm_sigma, "")
-        if not self.detuning_map_spot_waist:
+        if self.detuning_map_spot_waist:
             table["detuning_map_spot_waist"] = (
                 self.detuning_map_spot_waist,
                 "µm",
