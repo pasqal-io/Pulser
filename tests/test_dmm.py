@@ -107,12 +107,29 @@ class TestDetuningMap:
         np.testing.assert_equal(det_map.sorted_coords, coords)
         np.testing.assert_equal(det_map.sorted_weights, weights)
 
+        # case: spot_waist is None
         # We recover the original qid_weight_map (and undefined qids show as 0)
         assert det_map.get_qubit_weight_map(qubits) == {
             **qid_weight_map,
             "2": 0.0,
         }
 
+        # case: spot_waist is NOT None
+        spot_waist = 1.2
+        new_weights = {}
+        for qid, q_coord in qubits.items():
+            eff_weight = 0
+            for trap_coord, trap_weight in zip(coords, weights):
+                dists = np.linalg.norm(q_coord - trap_coord)
+                eff_weight += (
+                    np.exp(-(dists**2) / (2 * spot_waist**2)) * trap_weight
+                )
+            new_weights[qid] = eff_weight
+
+        # effect of the Gaussian trap profile
+        assert det_map.get_qubit_weight_map(qubits, spot_waist) == new_weights
+
+        # Triangular layout
         tri_layout = TriangularLatticeLayout(100, spacing=5)
         sites = [31, 53, 39, 62, 43, 49, 42, 37, 48, 44, 55, 50]
         labels = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"]

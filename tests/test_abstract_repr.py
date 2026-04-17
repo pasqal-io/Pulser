@@ -270,6 +270,13 @@ def test_register(reg: Register | Register3D):
             dmm_sigma=0.1,
             runs=1,
         ),
+        lambda: NoiseModel(
+            temperature=50.0,
+            trap_depth=150.0,
+            trap_waist=1.0,
+            detuning_map_spot_waist=0.1,
+            runs=1,
+        ),
     ],
 )
 def test_noise_model(noise_model_factory):
