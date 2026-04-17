@@ -32,6 +32,8 @@ from pulser.register.traps import COORD_PRECISION, Traps
 if TYPE_CHECKING:
     from pulser.register.base_register import QubitId
 
+from scipy.spatial.distance import cdist
+
 import pulser.math as pm
 
 
@@ -74,27 +76,28 @@ class WeightMap(Traps, RegDrawer):
         return cast(np.ndarray, np.array(self.weights)[sorting])
 
     def get_qubit_weight_map(
-        self, qubits: Mapping[QubitId, ArrayLike]
+        self,
+        qubits: Mapping[QubitId, ArrayLike],
+        spot_waist: float | None = None,
     ) -> dict[QubitId, float]:
         """Creates a map between qubit IDs and the weight on their sites."""
-        qubit_weight_map = {}
         coords_arr = self.sorted_coords
         weights_arr = self.sorted_weights
-        for qid, pos in qubits.items():
-            matches = np.argwhere(
-                np.all(
-                    np.isclose(
-                        coords_arr,
-                        pm.AbstractArray(pos)
-                        .astype(float)
-                        .as_array(detach=True),
-                        atol=10 ** (-COORD_PRECISION),
-                    ),
-                    axis=1,
-                )
-            )
-            qubit_weight_map[qid] = float(np.sum(weights_arr[matches]))
-        return qubit_weight_map
+        q_pos_arr = (
+            pm.vstack(list(qubits.values()))
+            .astype(float)
+            .as_array(detach=True)
+        )
+        dists = cdist(q_pos_arr, coords_arr)
+
+        if spot_waist:
+            spots_shape = np.exp(-(dists**2) / (2 * spot_waist**2))
+        else:
+            # Allows for every point that's within COORD_PRECISION in x and y
+            spots_shape = dists < np.sqrt(2) * (10 ** (-COORD_PRECISION))
+
+        total_weights = spots_shape @ weights_arr
+        return dict(zip(qubits.keys(), total_weights))
 
     def draw(
         self,

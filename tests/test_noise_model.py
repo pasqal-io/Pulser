@@ -109,6 +109,10 @@ class TestNoiseModel:
                 {"dmm_sigma", "runs", "samples_per_run"},
                 {"dmm_sigma"},
             ),
+            (
+                {"detuning_map_spot_waist"},
+                {"dmm_crosstalk"},
+            ),
         ],
     )
     def test_init(self, params, noise_types):
@@ -140,7 +144,12 @@ class TestNoiseModel:
         )
 
     @pytest.mark.parametrize(
-        "noise_param", ["relaxation_rate", "p_false_neg", "laser_waist"]
+        "noise_param",
+        [
+            "relaxation_rate",
+            "p_false_neg",
+            "laser_waist",
+        ],
     )
     @pytest.mark.parametrize("unused_param", ["runs", "samples_per_run"])
     @pytest.mark.filterwarnings(
@@ -165,7 +174,12 @@ class TestNoiseModel:
 
     @pytest.mark.parametrize(
         "param",
-        ["runs", "samples_per_run", "laser_waist"],
+        [
+            "runs",
+            "samples_per_run",
+            "laser_waist",
+            "detuning_map_spot_waist",
+        ],
     )
     @pytest.mark.filterwarnings(
         "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
@@ -564,6 +578,12 @@ class TestNoiseModel:
             0.0,
             None,
         ) == {"dmm_sigma", "runs", "samples_per_run"}
+        assert NoiseModel._find_relevant_params(
+            {"dmm_crosstalk"},
+            0.0,
+            0.0,
+            None,
+        ) == {"detuning_map_spot_waist"}
 
     @pytest.mark.filterwarnings(
         "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
@@ -887,4 +907,14 @@ def test_noise_table_summary():
         " - Shot-to-shot DMM detuning fluctuations: 0.05\n"
         "**: Emulation will generate EmulationConfig.n_trajectories"
         " trajectories with different dmm_sigma"
+    )
+    # DMM crosstalk noise
+    noise_model_crosstalk = NoiseModel(detuning_map_spot_waist=1.0)
+    assert noise_model_crosstalk.get_noise_table() == {
+        "detuning_map_spot_waist": (1.0, "µm")
+    }
+    assert noise_model_crosstalk.summary() == (
+        "Noise summary:\n"
+        "- DMM crosstalk**:\n"
+        " - Detuning Map spots' waist: 1 µm"
     )
