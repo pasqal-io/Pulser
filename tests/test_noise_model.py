@@ -110,7 +110,7 @@ class TestNoiseModel:
                 {"dmm_sigma"},
             ),
             (
-                {"dmm_spot_waist"},
+                {"detuning_map_spot_waist"},
                 {"dmm_crosstalk"},
             ),
         ],
@@ -178,7 +178,7 @@ class TestNoiseModel:
             "runs",
             "samples_per_run",
             "laser_waist",
-            "dmm_spot_waist",
+            "detuning_map_spot_waist",
         ],
     )
     @pytest.mark.filterwarnings(
@@ -583,7 +583,7 @@ class TestNoiseModel:
             0.0,
             0.0,
             None,
-        ) == {"dmm_spot_waist"}
+        ) == {"detuning_map_spot_waist"}
 
     @pytest.mark.filterwarnings(
         "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
@@ -909,9 +909,9 @@ def test_noise_table_summary():
         " trajectories with different dmm_sigma"
     )
     # DMM crosstalk noise
-    noise_model_crosstalk = NoiseModel(dmm_spot_waist=1.0)
+    noise_model_crosstalk = NoiseModel(detuning_map_spot_waist=1.0)
     assert noise_model_crosstalk.get_noise_table() == {
-        "dmm_spot_waist": (1.0, "µm")
+        "detuning_map_spot_waist": (1.0, "µm")
     }
     assert noise_model_crosstalk.summary() == (
         "Noise summary:\n"

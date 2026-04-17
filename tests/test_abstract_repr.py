@@ -274,7 +274,7 @@ def test_register(reg: Register | Register3D):
             temperature=50.0,
             trap_depth=150.0,
             trap_waist=1.0,
-            dmm_spot_waist=0.1,
+            detuning_map_spot_waist=0.1,
             runs=1,
         ),
     ],

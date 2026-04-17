@@ -410,7 +410,7 @@ class HamiltonianData:
         for ch_name, ch_samples in self._samples.channel_samples.items():
             if isinstance(ch_samples, DMMSamples):
                 factor = traj.dmm_det_fluctuation[ch_name]
-                spot_waist = self.noise_model.dmm_spot_waist
+                spot_waist = self.noise_model.detuning_map_spot_waist
                 ch_samples = replace(
                     ch_samples,
                     det=ch_samples.det * factor,  # Intensity DC noise

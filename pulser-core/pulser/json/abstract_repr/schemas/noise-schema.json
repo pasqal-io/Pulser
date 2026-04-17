@@ -88,7 +88,7 @@
             "null"
           ]
         },
-        "dmm_spot_waist": {
+        "detuning_map_spot_waist": {
           "type": "number"
         },
         "noise_types": {
