@@ -169,10 +169,16 @@ A more conventional representation of the driving Hamiltonian uses Pauli operato
 instead of projectors. However, this form now **depends on the state vector definition**
 of $|a\rangle$ and $|b\rangle$.
 
-##### Pulser's state-vector definition
+##### Case 1. Descending energy order
 
-In Pulser, we consistently define the state vectors according to their relative energy.
-In this way we have, for any given basis, that
+:::{info}
+**In `pulser-simulation`, this is the case for the `ground-rydberg` basis**, since
+ $$
+ E_r > E_g \rightarrow \ket{r} \equiv \ket{b}, \ket{g} \equiv \ket{a}
+ $$
+:::
+
+When the basis vectors are defined in desceding energy order, we have
 
 $$
 |b\rangle = (1, 0)^T,~~|a\rangle = (0, 1)^T
@@ -195,17 +201,22 @@ H^D(t) / \hbar = \frac{\Omega(t)}{2} \cos\phi(t) \hat{\sigma}^x
 - \delta(t) \hat{n}
 $$
 
-##### Alternative state-vector definition
+##### Case 2. Asceding energy order
 
-Outside of Pulser, the alternative definition for the basis state
-vectors might be taken:
+:::{info}
+**In `pulser-simulation`, this is the case for the `XY` basis**, since
+ $$
+ E_0 < E_1 \rightarrow \ket{0} \equiv \ket{a}, \ket{1} \equiv \ket{b}
+ $$
+:::
+
+When the basis vectors are defined in asceding energy order, we have
 
 $$
 |a\rangle = (1, 0)^T,~~|b\rangle = (0, 1)^T
 $$
 
-This changes the operators and Hamiltonian definitions,
-as rewriten below with highlighted differences.
+This changes the operators and Hamiltonian definitions with respect to [Case 1](#case-1-descending-energy-order), as rewriten below with highlighted differences.
 
 $$
 \hat{\sigma}^x = |a\rangle\langle b| + |b\rangle\langle a|, \\
@@ -220,16 +231,6 @@ H^D(t) / \hbar = \frac{\Omega(t)}{2} \cos\phi(t) \hat{\sigma}^x
 - \delta(t) \hat{n}
 $$
 
-:::{note}
-A common case for the use of this alternative definition arises when
-trying to reconcile the basis states of the `ground-rydberg` basis
-(where $|r\rangle$ is the higher energy level) with the
-computational-basis state-vector convention, thus ending up with
-
-$$
-|0\rangle = |g\rangle = |a\rangle = (1, 0)^T,~~|1\rangle = |r\rangle = |b\rangle = (0, 1)^T
-$$
-:::
 
 ### Interaction Hamiltonian
 
@@ -250,15 +251,10 @@ On the other hand, with the two Rydberg states of the `XY`
 basis, the interaction Hamiltonian takes the form
 
 $$
-H^\text{int}_{ij} =  \frac{C_3}{R_{ij}^3} (\hat{\sigma}_i^{+}\hat{\sigma}_j^{-} + \hat{\sigma}_i^{-}\hat{\sigma}_j^{+})
+H^\text{int}_{ij} =  \frac{C_3}{R_{ij}^3} (|1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j)
 $$
 
-where $C_3$ is a coefficient that depends on the chosen Ryberg states
-and
-
-$$
-\hat{\sigma}_i^{+} =  |1\rangle\langle 0|_i,~~~\hat{\sigma}_i^{-} =  |0\rangle\langle 1|_i
-$$
+where $C_3$ is a coefficient that depends on the chosen Ryberg states.
 
 :::{note}
 The definitions given for both interaction Hamiltonians are independent of the chosen state vector convention.
