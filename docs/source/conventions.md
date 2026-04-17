@@ -173,12 +173,14 @@ of $|a\rangle$ and $|b\rangle$.
 
 :::{important}
 **In `pulser-simulation`, this is the case for the `ground-rydberg` basis**, since
+
  $$
  E_r > E_g \rightarrow \ket{r} \equiv \ket{b}, \ket{g} \equiv \ket{a}
  $$
+
 :::
 
-When the basis vectors are defined in desceding energy order, we have
+When the basis vectors are defined in descending energy order, we have
 
 $$
 |b\rangle = (1, 0)^T,~~|a\rangle = (0, 1)^T
@@ -201,16 +203,18 @@ H^D(t) / \hbar = \frac{\Omega(t)}{2} \cos\phi(t) \hat{\sigma}^x
 - \delta(t) \hat{n}
 $$
 
-##### Case 2. Asceding energy order
+##### Case 2. Ascending energy order
 
 :::{important}
 **In `pulser-simulation`, this is the case for the `XY` basis**, since
+
  $$
  E_0 < E_1 \rightarrow \ket{0} \equiv \ket{a}, \ket{1} \equiv \ket{b}
  $$
+
 :::
 
-When the basis vectors are defined in asceding energy order, we have
+When the basis vectors are defined in ascending energy order, we have
 
 $$
 |a\rangle = (1, 0)^T,~~|b\rangle = (0, 1)^T
