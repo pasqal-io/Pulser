@@ -171,7 +171,7 @@ of $|a\rangle$ and $|b\rangle$.
 
 ##### Case 1. Descending energy order
 
-:::{info}
+:::{important}
 **In `pulser-simulation`, this is the case for the `ground-rydberg` basis**, since
  $$
  E_r > E_g \rightarrow \ket{r} \equiv \ket{b}, \ket{g} \equiv \ket{a}
@@ -203,7 +203,7 @@ $$
 
 ##### Case 2. Asceding energy order
 
-:::{info}
+:::{important}
 **In `pulser-simulation`, this is the case for the `XY` basis**, since
  $$
  E_0 < E_1 \rightarrow \ket{0} \equiv \ket{a}, \ket{1} \equiv \ket{b}
