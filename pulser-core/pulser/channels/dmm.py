@@ -197,7 +197,9 @@ class DMM(Channel):
         non_zero_weight_inds = np.nonzero(weights_arr)
         # Can't be empty because the WeightMap enforces having at least one
         # non-zero weight
-        assert len(non_zero_weight_inds) == 1 and len(non_zero_weight_inds[0]) > 0
+        assert (
+            len(non_zero_weight_inds) == 1 and len(non_zero_weight_inds[0]) > 0
+        )
         min_non_zero_weight = np.min(weights_arr[non_zero_weight_inds])
         if (
             0
