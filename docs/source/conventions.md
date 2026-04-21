@@ -235,6 +235,15 @@ H^D(t) / \hbar = \frac{\Omega(t)}{2} \cos\phi(t) \hat{\sigma}^x
 - \delta(t) \hat{n}
 $$
 
+:::{note}
+This is also the Hamiltonian one should use when trying to reconcile the basis states of the `ground-rydberg` basis
+with the computational-basis state-vector convention, i.e.
+
+$$
+|0\rangle = |g\rangle = |a\rangle = (1, 0)^T,~~|1\rangle = |r\rangle = |b\rangle = (0, 1)^T
+$$
+:::
+
 
 ### Interaction Hamiltonian
 

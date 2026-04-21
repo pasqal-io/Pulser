@@ -53,7 +53,7 @@ STATES_RANK = get_args(States)
 EIGENSTATES: dict[str, list[States]] = {
     "ground-rydberg": ["r", "g"],
     "digital": ["g", "h"],
-    "XY": ["u", "d"],
+    "XY": ["u", "d"],  # u -> 0, d -> 1
 }
 
 
