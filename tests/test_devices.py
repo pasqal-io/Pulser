@@ -606,7 +606,10 @@ def test_layout_filling_too_low(helpers, register):
         match=re.escape(
             "the given register has too few qubits "
             f"({len(register.qubit_ids)}). "
-            "On this device, this layout must hold at least 30 qubits."
+            "On this device, this layout must hold at least 30 qubits. "
+            "Note that arbitrarily small registers can still be created "
+            "if the layout has exactly the minimum number of traps "
+            f"allowed ({mod_device.min_layout_traps})."
         ),
     ):
         mod_device.validate_layout_filling(register)
