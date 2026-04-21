@@ -44,6 +44,12 @@
           },
           "type": "array"
         },
+        "detuning_map_spot_waist": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
         "detuning_sigma": {
           "type": "number"
         },
@@ -87,9 +93,6 @@
             "number",
             "null"
           ]
-        },
-        "detuning_map_spot_waist": {
-          "type": "number"
         },
         "noise_types": {
           "items": {
