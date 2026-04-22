@@ -37,6 +37,17 @@ REGISTRY: Registry = Registry(
     ]
 )
 
+# Build one validator per schema at import time so that meta-schema
+# checking and $ref resolution are paid once, not on every call.
+_VALIDATORS: dict[str, jsonschema.Draft7Validator] = (
+    {}
+    if LEGACY_JSONSCHEMA
+    else {
+        name: jsonschema.Draft7Validator(schema, registry=REGISTRY)
+        for name, schema in SCHEMAS.items()
+    }
+)
+
 
 def validate_abstract_repr(
     obj_str: str,
@@ -57,16 +68,18 @@ def validate_abstract_repr(
         name: The type of object to validate (can be "sequence" or "device").
     """
     obj = json.loads(obj_str)
-    validate_args = dict(instance=obj, schema=SCHEMAS[name])
-    if LEGACY_JSONSCHEMA:  # pragma: no cover
-        validate_args["resolver"] = jsonschema.validators.RefResolver(
-            base_uri=f"{SCHEMAS_PATH.resolve().as_uri()}/",
-            referrer=SCHEMAS[name],
-        )
-    else:  # pragma: no cover
-        validate_args["registry"] = REGISTRY
     try:
-        jsonschema.validate(**validate_args)
+        if LEGACY_JSONSCHEMA:  # pragma: no cover
+            jsonschema.validate(
+                instance=obj,
+                schema=SCHEMAS[name],
+                resolver=jsonschema.validators.RefResolver(  # type: ignore[attr-defined] # noqa: E501
+                    base_uri=f"{SCHEMAS_PATH.resolve().as_uri()}/",
+                    referrer=SCHEMAS[name],
+                ),
+            )
+        else:
+            _VALIDATORS[name].validate(obj)
     except Exception as exc:
         try:
             ser_pulser_version = Version(obj.get("pulser_version", "0.0.0"))
