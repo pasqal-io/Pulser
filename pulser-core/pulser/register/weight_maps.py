@@ -113,7 +113,8 @@ class WeightMap(Traps, RegDrawer):
         Returns:
             A new instance of the weight map with the shift on all coordinates.
         """
-        new_coords = self.trap_coordinates
+        # Ensure new_coords are a copy of the array
+        new_coords = np.array(self.trap_coordinates)
         # Done this way in case the coordinates are in 3D
         new_coords[:, :2] += np.array([x_offset, y_offset])
         return type(self)(

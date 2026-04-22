@@ -284,6 +284,7 @@ class TestDetuningMap:
         new_det_map = det_map.with_pos_offset(*offset)
         # Original det map is unchaged
         np.testing.assert_equal(det_map.trap_coordinates, og_coords)
+        assert det_map != new_det_map
         assert new_det_map == DetuningMap(
             expected_coords, det_map.weights, det_map.slug
         )
