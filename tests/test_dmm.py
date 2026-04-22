@@ -292,6 +292,18 @@ class TestDetuningMap:
                 },
             )
 
+    @pytest.mark.parametrize("offset", [(0, 1.23), (-2.34, 0), (1.2, -3.4)])
+    def test_pos_offset(self, det_map, offset):
+        og_coords = det_map.trap_coordinates
+        expected_coords = og_coords + np.array(offset)
+        new_det_map = det_map.with_pos_offset(*offset)
+        # Original det map is unchaged
+        np.testing.assert_equal(det_map.trap_coordinates, og_coords)
+        assert det_map != new_det_map
+        assert new_det_map == DetuningMap(
+            expected_coords, det_map.weights, det_map.slug
+        )
+
 
 class TestDMM:
     @pytest.fixture

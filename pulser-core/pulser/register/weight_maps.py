@@ -18,7 +18,7 @@ from __future__ import annotations
 import hashlib
 import typing
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Mapping, Optional, cast
+from typing import TYPE_CHECKING, Any, Mapping, Optional, TypeVar, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -37,6 +37,8 @@ from scipy.spatial.distance import cdist
 import pulser.math as pm
 
 WEIGHT_PRECISION = 6
+
+WeightMapType = TypeVar("WeightMapType", bound="WeightMap")
 
 
 @dataclass(init=False, repr=False, eq=False, frozen=True)
@@ -108,6 +110,26 @@ class WeightMap(Traps, RegDrawer):
 
         total_weights = spots_shape @ weights_arr
         return dict(zip(qubits.keys(), total_weights))
+
+    def with_pos_offset(
+        self: WeightMapType, x_offset: float, y_offset: float
+    ) -> WeightMapType:
+        """Returns a new weight map with a common offset on all coordinates.
+
+        Args:
+            x_offset: The shift along x, in µm.
+            y_offset: The shift along y, in µm.
+
+        Returns:
+            A new instance of the weight map with the shift on all coordinates.
+        """
+        # Ensure new_coords are a copy of the array
+        new_coords = np.array(self.trap_coordinates)
+        # Done this way in case the coordinates are in 3D
+        new_coords[:, :2] += np.array([x_offset, y_offset])
+        return type(self)(
+            trap_coordinates=new_coords, weights=self.weights, slug=self.slug
+        )
 
     def draw(
         self,
