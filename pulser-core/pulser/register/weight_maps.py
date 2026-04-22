@@ -36,6 +36,8 @@ from scipy.spatial.distance import cdist
 
 import pulser.math as pm
 
+WEIGHT_PRECISION = 6
+
 WeightMapType = TypeVar("WeightMapType", bound="WeightMap")
 
 
@@ -64,6 +66,10 @@ class WeightMap(Traps, RegDrawer):
             np.all(np.array(weights) >= 0) and np.all(np.array(weights) <= 1)
         ):
             raise ValueError("All weights must be between 0 and 1.")
+        if np.count_nonzero(weights) == 0:
+            raise ValueError(
+                "A WeightMap must have at least one non-zero weight."
+            )
         object.__setattr__(self, "weights", tuple(weights))
 
     @property
@@ -72,10 +78,14 @@ class WeightMap(Traps, RegDrawer):
         return self._coords_arr.as_array(detach=True)
 
     @property
+    def _rounded_weights(self) -> np.ndarray:
+        return np.round(self.weights, decimals=WEIGHT_PRECISION)
+
+    @property
     def sorted_weights(self) -> np.ndarray:
         """The weights sorted to match the sorted trap coordinates."""
         sorting = self._calc_sorting_order()
-        return cast(np.ndarray, np.array(self.weights)[sorting])
+        return cast(np.ndarray, self._rounded_weights[sorting])
 
     def get_qubit_weight_map(
         self,

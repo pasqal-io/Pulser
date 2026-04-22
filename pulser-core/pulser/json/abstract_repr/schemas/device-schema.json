@@ -70,6 +70,10 @@
           "description": "How many atoms can be locally addressed at once by the same beam.",
           "type": "null"
         },
+        "min_avg_abs_detuning": {
+          "description": "Minimum acceptable value for the average absolute detuning applied on any detuning map spot.",
+          "type": "number"
+        },
         "min_avg_amp": {
           "description": "The minimum average amplitude of a pulse (when not zero).",
           "type": "number"
@@ -2045,6 +2049,10 @@
         "max_targets": {
           "description": "How many atoms can be locally addressed at once by the same beam.",
           "type": "null"
+        },
+        "min_avg_abs_detuning": {
+          "description": "Minimum acceptable value for the average absolute detuning applied on any detuning map spot.",
+          "type": "number"
         },
         "min_avg_amp": {
           "description": "The minimum average amplitude of a pulse (when not zero).",
