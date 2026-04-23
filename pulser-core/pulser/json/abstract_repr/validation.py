@@ -73,7 +73,7 @@ def validate_abstract_repr(
             jsonschema.validate(
                 instance=obj,
                 schema=SCHEMAS[name],
-                resolver=jsonschema.validators.RefResolver(  # type: ignore[attr-defined] # noqa: E501
+                resolver=jsonschema.validators.RefResolver(
                     base_uri=f"{SCHEMAS_PATH.resolve().as_uri()}/",
                     referrer=SCHEMAS[name],
                 ),
