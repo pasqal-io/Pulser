@@ -2894,7 +2894,9 @@ class TestDeserialization:
         extra_params = {}
         if patch_jsonschema:
             std_error = jsonschema.exceptions.ValidationError
-            with patch("jsonschema.validate"):
+            with patch(
+                "pulser.json.abstract_repr.deserializer.validate_abstract_repr"
+            ):
                 with pytest.raises(AbstractReprError, match=msg):
                     Sequence.from_abstract_repr(json.dumps(s))
         else:
@@ -2932,7 +2934,9 @@ class TestDeserialization:
             AbstractReprError,
             match="The object does not encode a known waveform.",
         ):
-            with patch("jsonschema.validate"):
+            with patch(
+                "pulser.json.abstract_repr.deserializer.validate_abstract_repr"
+            ):
                 Sequence.from_abstract_repr(json.dumps(s))
 
     def test_legacy_device(self):
