@@ -26,6 +26,7 @@ from pulser.backend.default_observables import (
     BitStrings,
     Energy,
     EnergyVariance,
+    Fidelity,
     Occupation,
     StateResult,
 )
@@ -528,14 +529,25 @@ def test_output_state_normalization(amp_sigma):
     )
 
     # Start from the default_config and add any noise
+    noise_model = pulser.NoiseModel(amp_sigma=amp_sigma)
     default_config = QutipBackendV2.default_config
     np.random.seed(1234)
+    config = default_config.with_changes(noise_model=noise_model)
+    qutip_bknd_custom = QutipBackendV2(seq, config=config)
+    results = qutip_bknd_custom.run()
+    final_state = results.final_state
+    assert final_state._state.norm() < 1 + 1e-8
+
+    np.random.seed(1234)
     config = default_config.with_changes(
-        noise_model=pulser.NoiseModel(amp_sigma=amp_sigma)
+        noise_model=noise_model,
+        observables=[
+            Fidelity(final_state)
+        ],  # easiest way to get a fidelity close to 1
     )
     qutip_bknd_custom = QutipBackendV2(seq, config=config)
     results = qutip_bknd_custom.run()
-    assert results.final_state._state.norm() < 1 + 1e-8
+    assert results.fidelity[-1] < 1 + 1e-8
 
 
 def test_run_twice():
