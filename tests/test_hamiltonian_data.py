@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -14,6 +15,8 @@ from pulser._hamiltonian_data.hamiltonian_data import (
     _register_sigma_xy_z,
     has_shot_to_shot_except_spam,
 )
+from pulser.channels.dmm import DMM
+from pulser.devices import AnalogDevice
 from pulser.sampler import sample
 
 from .test_sequence_sampler import seq_rydberg, seq_with_SLM
@@ -640,6 +643,7 @@ def test_noise_hf_detuning_generation():
         (dict(noise_types="amplitude", amp_sigma=0), False),
         (dict(noise_types="detuning"), True),
         (dict(noise_types="register"), True),
+        (dict(noise_types="dmm_sigma"), True),
         (dict(noise_types="SPAM"), False),
         (dict(noise_types="other"), False),
         (dict(noise_types={"other", "doppler"}), True),
@@ -650,6 +654,7 @@ def test_noise_hf_detuning_generation():
         "amplitude=0",
         "detuning",
         "register",
+        "dmm_sigma",
         "SPAM",
         "not shot to shot noise",
         "doppler + other noise",
@@ -658,3 +663,87 @@ def test_noise_hf_detuning_generation():
 def test_has_shot_to_shot_except_spam(noise_data, expected):
     fake_noise_model = SimpleNamespace(**noise_data)
     assert has_shot_to_shot_except_spam(fake_noise_model) is expected
+
+
+def test_dmm_detuning():
+    np.random.seed(0xDEADBEEF)
+    coordinates = [(0.0, 0.0), (0.0, 5.0)]
+    slm_weights = [1.0, 0.5]
+    dmm_detuning = -10
+    detuning = -1
+
+    register = pulser.Register.from_coordinates(coordinates, prefix="q")
+
+    detuning_map = register.define_detuning_map(
+        {f"q{idx}": weight for idx, weight in enumerate(slm_weights)}
+    )
+
+    mock_device = replace(
+        AnalogDevice.to_virtual(),
+        dmm_objects=(DMM(),),
+        reusable_channels=True,
+    )
+
+    seq = pulser.Sequence(register, mock_device)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.add(
+        pulser.Pulse.ConstantPulse(
+            duration=100,
+            amplitude=1,
+            detuning=detuning,
+            phase=0,
+        ),
+        "ch0",
+    )
+
+    seq.config_detuning_map(detuning_map, "dmm_0")
+    seq.add_dmm_detuning(
+        pulser.pulse.ConstantWaveform(duration=100, value=dmm_detuning),
+        "dmm_0",
+    )
+
+    ham_no_noise = HamiltonianData.from_sequence(
+        seq,
+        n_trajectories=1,
+    )
+
+    traj_no_noise = ham_no_noise.noise_trajectories[0].trajectory
+    noiseless_sample = ham_no_noise._sample_with_trajectory(
+        traj_no_noise
+    ).to_nested_dict(all_local=True)
+
+    ham_noisy = HamiltonianData.from_sequence(
+        seq,
+        noise_model=pulser.NoiseModel(dmm_sigma=0.5),
+        n_trajectories=1,
+    )
+
+    traj_noise = ham_noisy.noise_trajectories[0].trajectory
+    assert isinstance(traj_noise.dmm_det_fluctuation, dict)
+
+    dmm_fluct = traj_noise.dmm_det_fluctuation["dmm_0"]
+    assert not np.isclose(dmm_fluct, 1.0)
+    assert dmm_fluct >= 0
+
+    noisy_samples = ham_noisy._sample_with_trajectory(
+        traj_noise
+    ).to_nested_dict(all_local=True)
+
+    expected_noiseless = {
+        "q0": detuning + dmm_detuning * slm_weights[0],
+        "q1": detuning + dmm_detuning * slm_weights[1],
+    }
+    expected_noisy = {
+        "q0": (detuning + dmm_detuning * slm_weights[0] * dmm_fluct),
+        "q1": (detuning + dmm_detuning * slm_weights[1] * dmm_fluct),
+    }
+
+    for q_id in ["q0", "q1"]:
+        assert np.allclose(
+            noiseless_sample["Local"]["ground-rydberg"][q_id]["det"],
+            expected_noiseless[q_id],
+        )
+        assert np.allclose(
+            noisy_samples["Local"]["ground-rydberg"][q_id]["det"],
+            expected_noisy[q_id],
+        )

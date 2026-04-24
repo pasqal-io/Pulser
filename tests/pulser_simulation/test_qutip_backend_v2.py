@@ -30,6 +30,8 @@ from pulser.backend.default_observables import (
     StateResult,
 )
 from pulser.backend.observable import Callback
+from pulser.channels.dmm import DMM
+from pulser.devices import AnalogDevice
 from pulser_simulation.qutip_backend import QutipBackendV2
 from pulser_simulation.qutip_config import QutipConfig, Solver
 from pulser_simulation.qutip_op import QutipOperator
@@ -558,3 +560,35 @@ def test_run_twice():
     s1 = results1.final_state._state
     s2 = results2.final_state._state
     assert s1.overlap(s2) / (s1.norm() * s2.norm()) != pytest.approx(1.0)
+
+
+def test_dmm_temperature_without_spot_waist():
+    reg = pulser.Register.from_coordinates(
+        [(0.0, 0.0), (6.0, 0.0)], center=False, prefix="q"
+    )
+    det_map = reg.define_detuning_map({"q0": 1.0, "q1": 0.5})
+
+    mock_device = dataclasses.replace(
+        AnalogDevice.to_virtual(),
+        dmm_objects=(DMM(),),
+        reusable_channels=True,
+    )
+
+    seq = pulser.Sequence(reg, mock_device)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.add(pulser.Pulse.ConstantPulse(100, 1, -1, 0), "ch0")
+    seq.config_detuning_map(det_map, "dmm_0")
+    seq.add_dmm_detuning(pulser.ConstantWaveform(100, -10), "dmm_0")
+
+    config = QutipConfig(
+        noise_model=pulser.NoiseModel(
+            trap_waist=1, trap_depth=1, temperature=0.5
+        ),
+        observables=[StateResult(evaluation_times=[1.0])],
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Combining register noise with a DMM requires",
+    ):
+        QutipBackendV2(seq, config=config)

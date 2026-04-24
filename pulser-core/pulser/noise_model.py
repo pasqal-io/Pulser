@@ -44,6 +44,8 @@ NoiseTypes = Literal[
     "relaxation",
     "depolarizing",
     "eff_noise",
+    "dmm_sigma",
+    "dmm_crosstalk",
 ]
 
 _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
@@ -57,6 +59,8 @@ _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "relaxation": ("relaxation_rate",),
     "depolarizing": ("depolarizing_rate",),
     "eff_noise": ("eff_noise_rates", "eff_noise_opers"),
+    "dmm_sigma": ("dmm_sigma",),
+    "dmm_crosstalk": ("detuning_map_spot_waist",),
 }
 
 _PARAM_TO_NOISE_TYPE: dict[str, NoiseTypes] = {
@@ -64,7 +68,6 @@ _PARAM_TO_NOISE_TYPE: dict[str, NoiseTypes] = {
     for noise_type, params in _NOISE_TYPE_PARAMS.items()
     for param in params
 }
-
 
 _POSITIVE = {
     "dephasing_rate",
@@ -75,12 +78,21 @@ _POSITIVE = {
     "detuning_sigma",
     "trap_waist",
 }
-_STRICT_POSITIVE = {"runs", "samples_per_run", "laser_waist", "trap_depth"}
+
+_STRICT_POSITIVE = {
+    "runs",
+    "samples_per_run",
+    "laser_waist",
+    "trap_depth",
+    "detuning_map_spot_waist",
+}
+
 _PROBABILITY_LIKE = {
     "state_prep_error",
     "p_false_pos",
     "p_false_neg",
     "amp_sigma",
+    "dmm_sigma",
 }
 
 _BOOLEAN = {"with_leakage", "disable_doppler"}
@@ -106,6 +118,8 @@ OPTIONAL_IN_ABSTR_REPR = (
     "trap_depth",
     "detuning_hf_psd",
     "detuning_hf_omegas",
+    "dmm_sigma",
+    "detuning_map_spot_waist",
 )
 
 
@@ -216,6 +230,20 @@ class NoiseModel:
       and :math:`\Delta \omega_k = \omega_{k+1} - \omega_k`.
     - **SPAM**: SPAM errors. Parametrized by ``state_prep_error``,
       ``p_false_pos`` and ``p_false_neg``.
+    - **dmm_sigma**: Fluctuations in the detuning from the DMM channel,
+      defined by `dmm_sigma`. From shot to shot, the local detuning on site k
+      is given by
+      :math:`\epsilon_k \delta_{DMM}(1+\eta)` where :math:`eta` is drawn from
+      \mathcal{N(0, \sigma_{dmm})}`, while weights :math:`\epsilon_k` are
+      defined by a `DetuningMap`.
+    - **dmm_crosstalk**: With a non-zero `detuning_map_spot_waist`, each
+      detuning spot applies an effective detuning on atom :math:`k`
+      given by
+      :math:`\exp{-\frac{\Delta x_k^2}{2w^2}}\epsilon_k\delta_{DMM}`,
+      where :math:`\Delta x_k` is the distance between the detuning spot
+      and atom :math:`k`,
+      and :math:`w` is the gaussian waist (`detuning_map_spot_waist`) of each
+      detuning spot, which are assumed to be the same.
 
     Args:
         runs: When reconstructing the Hamiltonian from random noise is
@@ -242,7 +270,7 @@ class NoiseModel:
             centered in 1. Assumed to be the same for all channels (though
             each channel has its own randomly sampled value in each run).
         detuning_sigma: Dictates the fluctuation in detuning (in rad/µs)
-            of a channel from run to run as a standard deviation of a normal
+            of a channel from shot to shot as a standard deviation of a normal
             distribution centered in 0. Assumed to be the same for all
             channels (though each channel has its own randomly sampled
             value in each run). This noise is additive. Defaults to 0.
@@ -280,6 +308,13 @@ class NoiseModel:
             even if the temperature is defined. In this way, 'register' noise
             (which requires 'temperature') can be activated on its own (i.e
             without doppler).
+        dmm_sigma: Dictates the fluctuation in DMM detuning channel
+            from shot to shot as a standard deviation of a normal distribution
+            centered at 0. `dmm_sigma` is assumed to be the same for all
+            registers (though each register has its own randomly sampled
+            value in each run). This noise is multiplicative. Defaults to 0.
+        detuning_map_spot_waist: Defines the waist of each spot
+            in the DetuningMap (in µm).
     """
 
     noise_types: tuple[NoiseTypes, ...] = field(init=False)
@@ -306,6 +341,8 @@ class NoiseModel:
     eff_noise_opers: tuple[pm.AbstractArrayLike, ...] = ()
     with_leakage: bool = False
     disable_doppler: bool = False
+    dmm_sigma: float = 0.0
+    detuning_map_spot_waist: float | None = None
 
     def __post_init__(self) -> None:
         """Initializes a noise model."""
@@ -461,6 +498,7 @@ class NoiseModel:
                 or (nt_ == "amplitude" and amp_sigma != 0.0)
                 or (nt_ == "SPAM" and state_prep_error != 0.0)
                 or nt_ == "register"
+                or nt_ == "dmm_sigma"
             ):
                 relevant_params.update(("runs", "samples_per_run"))
         # Disregard laser_waist when not defined
@@ -747,6 +785,13 @@ class NoiseModel:
             table["p_false_pos"] = (self.p_false_pos, "")
         if self.p_false_neg > 0:
             table["p_false_neg"] = (self.p_false_neg, "")
+        if self.dmm_sigma > 0:
+            table["dmm_sigma"] = (self.dmm_sigma, "")
+        if self.detuning_map_spot_waist:
+            table["detuning_map_spot_waist"] = (
+                self.detuning_map_spot_waist,
+                "µm",
+            )
         return table
 
     def summary(self) -> str:
@@ -761,9 +806,9 @@ class NoiseModel:
         summary_list = ["Noise summary:"]
         add_to_traj_summary = []
         # Follow the impact as in step-by-step tutorial
+        # 1. Register
         if "register_sigma_xy" in noise_table:
             assert "register_sigma_z" in noise_table
-            # 1. Register
             summary_list += [
                 "- Register Position Fluctuations**:",
                 "  - XY-Plane Position Fluctuations: "
@@ -772,8 +817,9 @@ class NoiseModel:
                 f"{_repr_value_unit(*noise_table['register_sigma_z'])}",
             ]
             add_to_traj_summary.append("register")
+
+        # 2. State Preparation
         if "state_prep_error" in noise_table:
-            # 2. State Preparation
             summary_list.append(
                 "- State Preparation Error Probability**: "
                 f"{_repr_value_unit(*noise_table['state_prep_error'])}"
@@ -793,7 +839,8 @@ class NoiseModel:
                     "  - Shot-to-shot Amplitude Fluctuations**:"
                     f" {_repr_value_unit(*noise_table['amp_sigma'])}"
                 ]
-                add_to_traj_summary.append("amplitude")
+
+            add_to_traj_summary.append("amplitude")
         if (
             "detuning_sigma" in noise_table
             or "doppler_sigma" in noise_table
@@ -821,6 +868,21 @@ class NoiseModel:
                     "get_noise_table()['detuning_psd']."
                 ]
             add_to_traj_summary.append("detuning")
+
+        if "dmm_sigma" in noise_table:
+            summary_list.append("- DMM detuning fluctuations**:")
+            summary_list += [
+                " - Shot-to-shot DMM detuning fluctuations:"
+                f" {_repr_value_unit(*noise_table['dmm_sigma'])}"
+            ]
+            add_to_traj_summary.append("dmm_sigma")
+
+        if "detuning_map_spot_waist" in noise_table:
+            summary_list.append("- DMM crosstalk**:")
+            summary_list += [
+                " - Detuning Map spots' waist:"
+                f" {_repr_value_unit(*noise_table['detuning_map_spot_waist'])}"
+            ]
 
         # 4. Noise channels
         if (

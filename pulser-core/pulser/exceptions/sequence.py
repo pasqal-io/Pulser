@@ -124,14 +124,19 @@ class MinQubitNumberError(QubitsNumberError):
 
     invalid: int
     min: int
+    min_traps: int = 0  # For backwards compat
 
     def __str__(self) -> str:
+        last_line = f" ({self.min_traps})" if self.min_traps else ""
         return (
             "Given the number of traps in the layout and the "
             "device's minimum layout filling fraction, the given"
             f" register has too few qubits ({self.invalid}). "
             "On this device, this layout must hold at least "
-            f"{self.min} qubits."
+            f"{self.min} qubits. Note that arbitrarily small "
+            "registers can still be created if the layout has "
+            "exactly the minimum number of traps allowed"
+            f"{last_line}."
         )
 
 
