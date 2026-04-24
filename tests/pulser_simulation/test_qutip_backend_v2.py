@@ -26,6 +26,7 @@ from pulser.backend.default_observables import (
     BitStrings,
     Energy,
     EnergyVariance,
+    Fidelity,
     Occupation,
     StateResult,
 )
@@ -483,6 +484,70 @@ def test_rounding_error_eval_time_duplication():
     # It works because the rounding error was fixed
     emu_backend = QutipBackendV2(seq, config=config)
     emu_backend.run()
+
+
+@pytest.mark.parametrize("amp_sigma", [0.0, 0.5])
+def test_output_state_normalization(amp_sigma):
+    # The original issue was triggered with amp_sigma=0.5
+    # In which case the norm of the output state was 1.000012
+    # to test the noiseless path, we manually apply the amplitude fluctuation
+    factor = 1.2357175818662465 if not amp_sigma else 1.0
+
+    # 2. Creating the Register
+    R_interatomic = 5  # um
+    register = pulser.Register.hexagon(1, R_interatomic, prefix="q")
+
+    seq = pulser.Sequence(register, pulser.MockDevice)
+
+    # 3. Picking the channels
+    seq.declare_channel("rydberg_global", "rydberg_global")
+
+    # 4. Adding the pulses
+
+    # Parameters in rad/µs
+    U = pulser.AnalogDevice.interaction_coeff / R_interatomic**6
+
+    # Time parameters
+    total_duration = 4000  # in ns
+    interp_pts = np.linspace(0, 1, 4)  # between 0 and 1
+
+    seq.add(
+        pulser.Pulse(
+            pulser.InterpolatedWaveform(
+                total_duration,
+                U * np.array([1e-9, 0.22, 0.2181, 1e-9]) * factor,
+                times=interp_pts,
+            ),
+            pulser.InterpolatedWaveform(
+                total_duration,
+                U * np.array([-1, 0.0556, 0.332, 1]),
+                times=interp_pts,
+            ),
+            0,
+        ),
+        "rydberg_global",
+    )
+
+    # Start from the default_config and add any noise
+    noise_model = pulser.NoiseModel(amp_sigma=amp_sigma)
+    default_config = QutipBackendV2.default_config
+    np.random.seed(1234)
+    config = default_config.with_changes(noise_model=noise_model)
+    qutip_bknd_custom = QutipBackendV2(seq, config=config)
+    results = qutip_bknd_custom.run()
+    final_state = results.final_state
+    assert final_state._state.norm() < 1 + 1e-8
+
+    np.random.seed(1234)
+    config = default_config.with_changes(
+        noise_model=noise_model,
+        observables=[
+            Fidelity(final_state)
+        ],  # easiest way to get a fidelity close to 1
+    )
+    qutip_bknd_custom = QutipBackendV2(seq, config=config)
+    results = qutip_bknd_custom.run()
+    assert results.fidelity[-1] < 1 + 1e-8
 
 
 def test_run_twice():
