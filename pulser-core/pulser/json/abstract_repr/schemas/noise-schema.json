@@ -44,6 +44,12 @@
           },
           "type": "array"
         },
+        "detuning_map_spot_waist": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
         "detuning_sigma": {
           "type": "number"
         },
@@ -165,7 +171,8 @@
         "leakage",
         "eff_noise",
         "detuning",
-        "dmm_sigma"
+        "dmm_sigma",
+        "dmm_crosstalk"
       ],
       "type": "string"
     }

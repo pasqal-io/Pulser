@@ -478,6 +478,13 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
     dmm_sigma = noise_model_obj.get("dmm_sigma", 0)
     relevant_params -= {"dmm_sigma"}  # Handled separately, optional arg
 
+    detuning_map_spot_waist = noise_model_obj.get(
+        "detuning_map_spot_waist", None
+    )
+    relevant_params -= {
+        "detuning_map_spot_waist"
+    }  # Handled separately, optional arg
+
     noise_model = pulser.NoiseModel(
         **{param: noise_model_obj[param] for param in relevant_params},
         eff_noise_rates=tuple(eff_noise_rates),
@@ -488,6 +495,7 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
         detuning_hf_omegas=tuple(detuning_hf_omegas),
         detuning_sigma=detuning_sigma,
         dmm_sigma=dmm_sigma,
+        detuning_map_spot_waist=detuning_map_spot_waist,
     )
     assert set(noise_model.noise_types) == set(noise_types)
     return noise_model

@@ -515,6 +515,7 @@ class BaseDevice(ABC):
                 device=self,
                 invalid=n_qubits,
                 min=min_qubits,
+                min_traps=self.min_layout_traps,
             )
 
         max_qubits = int(

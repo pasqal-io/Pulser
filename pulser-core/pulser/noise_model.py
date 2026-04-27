@@ -45,6 +45,7 @@ NoiseTypes = Literal[
     "depolarizing",
     "eff_noise",
     "dmm_sigma",
+    "dmm_crosstalk",
 ]
 
 _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
@@ -59,6 +60,7 @@ _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "depolarizing": ("depolarizing_rate",),
     "eff_noise": ("eff_noise_rates", "eff_noise_opers"),
     "dmm_sigma": ("dmm_sigma",),
+    "dmm_crosstalk": ("detuning_map_spot_waist",),
 }
 
 _PARAM_TO_NOISE_TYPE: dict[str, NoiseTypes] = {
@@ -77,7 +79,13 @@ _POSITIVE = {
     "trap_waist",
 }
 
-_STRICT_POSITIVE = {"runs", "samples_per_run", "laser_waist", "trap_depth"}
+_STRICT_POSITIVE = {
+    "runs",
+    "samples_per_run",
+    "laser_waist",
+    "trap_depth",
+    "detuning_map_spot_waist",
+}
 
 _PROBABILITY_LIKE = {
     "state_prep_error",
@@ -111,6 +119,7 @@ OPTIONAL_IN_ABSTR_REPR = (
     "detuning_hf_psd",
     "detuning_hf_omegas",
     "dmm_sigma",
+    "detuning_map_spot_waist",
 )
 
 
@@ -227,6 +236,14 @@ class NoiseModel:
       :math:`\epsilon_k \delta_{DMM}(1+\eta)` where :math:`eta` is drawn from
       \mathcal{N(0, \sigma_{dmm})}`, while weights :math:`\epsilon_k` are
       defined by a `DetuningMap`.
+    - **dmm_crosstalk**: With a non-zero `detuning_map_spot_waist`, each
+      detuning spot applies an effective detuning on atom :math:`k`
+      given by
+      :math:`\exp{-\frac{\Delta x_k^2}{2w^2}}\epsilon_k\delta_{DMM}`,
+      where :math:`\Delta x_k` is the distance between the detuning spot
+      and atom :math:`k`,
+      and :math:`w` is the gaussian waist (`detuning_map_spot_waist`) of each
+      detuning spot, which are assumed to be the same.
 
     Args:
         runs: When reconstructing the Hamiltonian from random noise is
@@ -296,6 +313,8 @@ class NoiseModel:
             centered at 0. `dmm_sigma` is assumed to be the same for all
             registers (though each register has its own randomly sampled
             value in each run). This noise is multiplicative. Defaults to 0.
+        detuning_map_spot_waist: Defines the waist of each spot
+            in the DetuningMap (in µm).
     """
 
     noise_types: tuple[NoiseTypes, ...] = field(init=False)
@@ -323,6 +342,7 @@ class NoiseModel:
     with_leakage: bool = False
     disable_doppler: bool = False
     dmm_sigma: float = 0.0
+    detuning_map_spot_waist: float | None = None
 
     def __post_init__(self) -> None:
         """Initializes a noise model."""
@@ -767,6 +787,11 @@ class NoiseModel:
             table["p_false_neg"] = (self.p_false_neg, "")
         if self.dmm_sigma > 0:
             table["dmm_sigma"] = (self.dmm_sigma, "")
+        if self.detuning_map_spot_waist:
+            table["detuning_map_spot_waist"] = (
+                self.detuning_map_spot_waist,
+                "µm",
+            )
         return table
 
     def summary(self) -> str:
@@ -781,9 +806,9 @@ class NoiseModel:
         summary_list = ["Noise summary:"]
         add_to_traj_summary = []
         # Follow the impact as in step-by-step tutorial
+        # 1. Register
         if "register_sigma_xy" in noise_table:
             assert "register_sigma_z" in noise_table
-            # 1. Register
             summary_list += [
                 "- Register Position Fluctuations**:",
                 "  - XY-Plane Position Fluctuations: "
@@ -792,8 +817,9 @@ class NoiseModel:
                 f"{_repr_value_unit(*noise_table['register_sigma_z'])}",
             ]
             add_to_traj_summary.append("register")
+
+        # 2. State Preparation
         if "state_prep_error" in noise_table:
-            # 2. State Preparation
             summary_list.append(
                 "- State Preparation Error Probability**: "
                 f"{_repr_value_unit(*noise_table['state_prep_error'])}"
@@ -850,6 +876,13 @@ class NoiseModel:
                 f" {_repr_value_unit(*noise_table['dmm_sigma'])}"
             ]
             add_to_traj_summary.append("dmm_sigma")
+
+        if "detuning_map_spot_waist" in noise_table:
+            summary_list.append("- DMM crosstalk**:")
+            summary_list += [
+                " - Detuning Map spots' waist:"
+                f" {_repr_value_unit(*noise_table['detuning_map_spot_waist'])}"
+            ]
 
         # 4. Noise channels
         if (

@@ -30,7 +30,7 @@ import pytest
 import pulser
 from pulser import Pulse, Register, Register3D, Sequence, devices
 from pulser.abstract_repr import deserialize_device
-from pulser.channels import Rydberg
+from pulser.channels import DMM, Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import (
     AnalogDevice,
@@ -268,6 +268,13 @@ def test_register(reg: Register | Register3D):
         ),
         lambda: NoiseModel(
             dmm_sigma=0.1,
+            runs=1,
+        ),
+        lambda: NoiseModel(
+            temperature=50.0,
+            trap_depth=150.0,
+            trap_waist=1.0,
+            detuning_map_spot_waist=0.1,
             runs=1,
         ),
     ],
@@ -709,6 +716,16 @@ class TestDevice:
         device = replace(
             MockDevice, channel_objects=(ch_obj,), channel_ids=None
         )
+        dev_str = device.to_abstract_repr()
+        assert device == deserialize_device(dev_str)
+        assert device == VirtualDevice.from_abstract_repr(dev_str)
+
+    @pytest.mark.parametrize(
+        "dmm_ch_obj",
+        [DMM(total_bottom_detuning=-10), DMM(min_avg_abs_detuning=0.1)],
+    )
+    def test_optional_DMM_fields(self, dmm_ch_obj):
+        device = replace(MockDevice, dmm_objects=(dmm_ch_obj,))
         dev_str = device.to_abstract_repr()
         assert device == deserialize_device(dev_str)
         assert device == VirtualDevice.from_abstract_repr(dev_str)
@@ -2877,7 +2894,9 @@ class TestDeserialization:
         extra_params = {}
         if patch_jsonschema:
             std_error = jsonschema.exceptions.ValidationError
-            with patch("jsonschema.validate"):
+            with patch(
+                "pulser.json.abstract_repr.deserializer.validate_abstract_repr"
+            ):
                 with pytest.raises(AbstractReprError, match=msg):
                     Sequence.from_abstract_repr(json.dumps(s))
         else:
@@ -2915,7 +2934,9 @@ class TestDeserialization:
             AbstractReprError,
             match="The object does not encode a known waveform.",
         ):
-            with patch("jsonschema.validate"):
+            with patch(
+                "pulser.json.abstract_repr.deserializer.validate_abstract_repr"
+            ):
                 Sequence.from_abstract_repr(json.dumps(s))
 
     def test_legacy_device(self):

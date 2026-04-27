@@ -26,10 +26,13 @@ from pulser.backend.default_observables import (
     BitStrings,
     Energy,
     EnergyVariance,
+    Fidelity,
     Occupation,
     StateResult,
 )
 from pulser.backend.observable import Callback
+from pulser.channels.dmm import DMM
+from pulser.devices import AnalogDevice
 from pulser_simulation.qutip_backend import QutipBackendV2
 from pulser_simulation.qutip_config import QutipConfig, Solver
 from pulser_simulation.qutip_op import QutipOperator
@@ -483,6 +486,70 @@ def test_rounding_error_eval_time_duplication():
     emu_backend.run()
 
 
+@pytest.mark.parametrize("amp_sigma", [0.0, 0.5])
+def test_output_state_normalization(amp_sigma):
+    # The original issue was triggered with amp_sigma=0.5
+    # In which case the norm of the output state was 1.000012
+    # to test the noiseless path, we manually apply the amplitude fluctuation
+    factor = 1.2357175818662465 if not amp_sigma else 1.0
+
+    # 2. Creating the Register
+    R_interatomic = 5  # um
+    register = pulser.Register.hexagon(1, R_interatomic, prefix="q")
+
+    seq = pulser.Sequence(register, pulser.MockDevice)
+
+    # 3. Picking the channels
+    seq.declare_channel("rydberg_global", "rydberg_global")
+
+    # 4. Adding the pulses
+
+    # Parameters in rad/µs
+    U = pulser.AnalogDevice.interaction_coeff / R_interatomic**6
+
+    # Time parameters
+    total_duration = 4000  # in ns
+    interp_pts = np.linspace(0, 1, 4)  # between 0 and 1
+
+    seq.add(
+        pulser.Pulse(
+            pulser.InterpolatedWaveform(
+                total_duration,
+                U * np.array([1e-9, 0.22, 0.2181, 1e-9]) * factor,
+                times=interp_pts,
+            ),
+            pulser.InterpolatedWaveform(
+                total_duration,
+                U * np.array([-1, 0.0556, 0.332, 1]),
+                times=interp_pts,
+            ),
+            0,
+        ),
+        "rydberg_global",
+    )
+
+    # Start from the default_config and add any noise
+    noise_model = pulser.NoiseModel(amp_sigma=amp_sigma)
+    default_config = QutipBackendV2.default_config
+    np.random.seed(1234)
+    config = default_config.with_changes(noise_model=noise_model)
+    qutip_bknd_custom = QutipBackendV2(seq, config=config)
+    results = qutip_bknd_custom.run()
+    final_state = results.final_state
+    assert final_state._state.norm() < 1 + 1e-8
+
+    np.random.seed(1234)
+    config = default_config.with_changes(
+        noise_model=noise_model,
+        observables=[
+            Fidelity(final_state)
+        ],  # easiest way to get a fidelity close to 1
+    )
+    qutip_bknd_custom = QutipBackendV2(seq, config=config)
+    results = qutip_bknd_custom.run()
+    assert results.fidelity[-1] < 1 + 1e-8
+
+
 def test_run_twice():
     seq = sequence()
     noise_model = pulser.NoiseModel(
@@ -506,3 +573,35 @@ def test_run_twice():
     s1 = results1.final_state._state
     s2 = results2.final_state._state
     assert s1.overlap(s2) / (s1.norm() * s2.norm()) != pytest.approx(1.0)
+
+
+def test_dmm_temperature_without_spot_waist():
+    reg = pulser.Register.from_coordinates(
+        [(0.0, 0.0), (6.0, 0.0)], center=False, prefix="q"
+    )
+    det_map = reg.define_detuning_map({"q0": 1.0, "q1": 0.5})
+
+    mock_device = dataclasses.replace(
+        AnalogDevice.to_virtual(),
+        dmm_objects=(DMM(),),
+        reusable_channels=True,
+    )
+
+    seq = pulser.Sequence(reg, mock_device)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.add(pulser.Pulse.ConstantPulse(100, 1, -1, 0), "ch0")
+    seq.config_detuning_map(det_map, "dmm_0")
+    seq.add_dmm_detuning(pulser.ConstantWaveform(100, -10), "dmm_0")
+
+    config = QutipConfig(
+        noise_model=pulser.NoiseModel(
+            trap_waist=1, trap_depth=1, temperature=0.5
+        ),
+        observables=[StateResult(evaluation_times=[1.0])],
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Combining register noise with a DMM requires",
+    ):
+        QutipBackendV2(seq, config=config)

@@ -1034,17 +1034,17 @@
             },
             "metadata": {
               "additionalProperties": false,
-              "description": "Any metadata to attach to the serialized Sequence.",
+              "description": "Metadata related to the serialized Sequence.",
               "properties": {
                 "extra": {
-                  "description": "A place to include any extra metadata.",
+                  "description": "Any extra metadata.",
                   "type": "object"
                 },
                 "package_versions": {
                   "additionalProperties": {
                     "type": "string"
                   },
-                  "description": "The packages used to generate the sequence and their versions.",
+                  "description": "The packages used to create the sequence and their respective versions.",
                   "type": "object"
                 }
               },
@@ -1156,17 +1156,17 @@
             },
             "metadata": {
               "additionalProperties": false,
-              "description": "Any metadata to attach to the serialized Sequence.",
+              "description": "Metadata related to the serialized Sequence.",
               "properties": {
                 "extra": {
-                  "description": "A place to include any extra metadata.",
+                  "description": "Any extra metadata.",
                   "type": "object"
                 },
                 "package_versions": {
                   "additionalProperties": {
                     "type": "string"
                   },
-                  "description": "The packages used to generate the sequence and their versions.",
+                  "description": "The packages used to create the sequence and their respective versions.",
                   "type": "object"
                 }
               },
@@ -1278,17 +1278,17 @@
             },
             "metadata": {
               "additionalProperties": false,
-              "description": "Any metadata to attach to the serialized Sequence.",
+              "description": "Metadata related to the serialized Sequence.",
               "properties": {
                 "extra": {
-                  "description": "A place to include any extra metadata.",
+                  "description": "Any extra metadata.",
                   "type": "object"
                 },
                 "package_versions": {
                   "additionalProperties": {
                     "type": "string"
                   },
-                  "description": "The packages used to generate the sequence and their versions.",
+                  "description": "The packages used to create the sequence and their respective versions.",
                   "type": "object"
                 }
               },
