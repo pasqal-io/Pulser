@@ -337,7 +337,7 @@ class Hamiltonian:
             elif basis == "digital":
                 op_ids = ["sigma_hg", "sigma_gg"]
             elif basis == "XY":
-                op_ids = ["sigma_du", "sigma_uu"]
+                op_ids = ["sigma_ud", "sigma_dd"]
 
             terms = []
             if addr == "Global":

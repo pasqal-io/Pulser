@@ -139,10 +139,10 @@ $$
 $$
 <details>
 
-  <summary>Interaction strength and entangling operator</summary>
+  <summary>Interaction strength in the XY Hamiltonian</summary>
 
 - The interaction strength is $\frac{C_3}{R_{ij}^3}$, with $C_3$ a coefficient that depends on the energy levels used to encode $\left|0\right>$ and $\left|1\right>$. 
-- The entangling operator between atom $i$ and $j$ is $\hat{\sigma}_i^{+}\hat{\sigma}_j^{-} + \hat{\sigma}_i^{-}\hat{\sigma}_j^{+} = |1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j$. 
+
 
 </details>
 
