@@ -317,6 +317,13 @@ def test_interpolated():
     ):
         interp_wvf.build()
 
+    # Make sure Interpolated Waveform stays within the range of values
+    # (this used to fail), see #1051
+    max_amp = 2.5 * 2 * np.pi
+    interpolated_wf = InterpolatedWaveform(60.0, [0.0, 0.5, max_amp, 0.5, 0.0])
+    assert np.all(interpolated_wf.samples.as_array() <= max_amp)
+    assert np.all(interpolated_wf.samples.as_array() >= 0)
+
 
 def test_kaiser():
     duration: int = 40
