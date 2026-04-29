@@ -23,6 +23,7 @@ import pulser
 from pulser.backend._classproperty import classproperty
 from pulser.backend.config import EmulationConfig
 from pulser.backend.results import Results
+from pulser.channels.dmm import DMM
 from pulser.devices import Device
 
 
@@ -99,16 +100,36 @@ class EmulatorBackend(Backend):
         """Initializes the backend."""
         super().__init__(sequence, mimic_qpu=mimic_qpu)
         self._config = self.validate_config(config or self.default_config)
+
+        noise_model = self._config.noise_model
+
+        if noise_model is not None:
+            is_dmm_channel = any(
+                isinstance(ch, DMM)
+                for ch in self._sequence.declared_channels.values()
+            )
+
+            if (
+                is_dmm_channel
+                and "register" in noise_model.noise_types
+                and noise_model.detuning_map_spot_waist is None
+            ):
+                raise ValueError(
+                    "Combining register noise with a DMM requires"
+                    "`detuning_map_spot_waist` to be defined. If not defined,"
+                    "atom thermal motion can lead to non-physical effects."
+                )
+
         if (
             self._config.prefer_device_noise_model
-            and self._sequence.device.default_noise_model is not None
-            and self._sequence.device.default_noise_model.runs is not None
-            and self._sequence.device.default_noise_model.runs
+            and self._sequence.device.noise_model is not None
+            and self._sequence.device.noise_model.runs is not None
+            and self._sequence.device.noise_model.runs
             != self._config.n_trajectories
         ):
             config = self._config
             warnings.warn(
-                f"'{sequence.device.default_noise_model.runs=}' is being "
+                f"'{sequence.device.noise_model.runs=}' is being "
                 f"ignored; '{config.n_trajectories=}' will be used instead.",
                 stacklevel=2,
             )

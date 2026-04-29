@@ -450,7 +450,7 @@ def test_emulator_backend(sequence):
 
     with pytest.warns(
         UserWarning,
-        match="'sequence.device.default_noise_model.runs=3' is being "
+        match="'sequence.device.noise_model.runs=3' is being "
         "ignored; 'config.n_trajectories=40' will be used instead",
     ):
         _config = EmulationConfig(
@@ -460,7 +460,7 @@ def test_emulator_backend(sequence):
         with pytest.deprecated_call():
             _device = dataclasses.replace(
                 sequence.device,
-                default_noise_model=pulser.NoiseModel(amp_sigma=0.1, runs=3),
+                noise_model=pulser.NoiseModel(amp_sigma=0.1, runs=3),
             )
         ConcreteEmulator(
             pulser.Sequence(sequence.register, _device),

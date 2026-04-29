@@ -974,6 +974,10 @@ class InterpolatedWaveform(Waveform):
     def _samples(self) -> pm.AbstractArray:
         """The value at each time step that describes the waveform."""
         samples = self._interp_func(np.arange(self._duration))
+        if self._kwargs["interpolator"] == "PchipInterpolator" and set(
+            self._kwargs  # Checks if there are no custom kwargs
+        ) == {"times", "interpolator"}:
+            return pm.clip(samples, np.min(self._values), np.max(self._values))
         value_range = np.max(np.abs(samples))
         decimals = int(
             min(np.finfo(samples.dtype).precision - np.log10(value_range), 9)

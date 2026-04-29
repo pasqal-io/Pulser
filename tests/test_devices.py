@@ -46,6 +46,7 @@ from pulser.exceptions.sequence import (
     TrapsNumberTooHighError,
     TrapsNumberTooLowError,
 )
+from pulser.noise_model import NoiseModel
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
@@ -605,7 +606,10 @@ def test_layout_filling_too_low(helpers, register):
         match=re.escape(
             "the given register has too few qubits "
             f"({len(register.qubit_ids)}). "
-            "On this device, this layout must hold at least 30 qubits."
+            "On this device, this layout must hold at least 30 qubits. "
+            "Note that arbitrarily small registers can still be created "
+            "if the layout has exactly the minimum number of traps "
+            f"allowed ({mod_device.min_layout_traps})."
         ),
     ):
         mod_device.validate_layout_filling(register)
@@ -779,3 +783,25 @@ def test_dmm_channels():
             channel_objects=(Rydberg.Global(None, None),),
             channel_ids=("dmm_0",),
         )
+
+
+def test_noise_model_backwards_compatibility():
+    """Test default_noise_model deprecation (init and access)."""
+    nm = NoiseModel(amp_sigma=0.1)
+    # Init with default_noise_model (deprecated)
+    with pytest.warns(DeprecationWarning, match="default_noise_model"):
+        dev = replace(MockDevice, default_noise_model=nm)
+    assert dev.noise_model is nm
+    # Access via default_noise_model (deprecated)
+    with pytest.warns(DeprecationWarning, match="default_noise_model"):
+        assert dev.default_noise_model is nm
+
+
+def test_noise_model_and_default_noise_model_mutually_exclusive():
+    """Test that both noise_model and default_noise_model raises ValueError."""
+    nm = NoiseModel(amp_sigma=0.1)
+    with pytest.raises(
+        ValueError,
+        match="Cannot specify both 'noise_model' and 'default_noise_model'",
+    ):
+        replace(MockDevice, noise_model=nm, default_noise_model=nm)

@@ -105,6 +105,14 @@ class TestNoiseModel:
                 },
                 {"register"},
             ),
+            (
+                {"dmm_sigma", "runs", "samples_per_run"},
+                {"dmm_sigma"},
+            ),
+            (
+                {"detuning_map_spot_waist"},
+                {"dmm_crosstalk"},
+            ),
         ],
     )
     def test_init(self, params, noise_types):
@@ -136,7 +144,12 @@ class TestNoiseModel:
         )
 
     @pytest.mark.parametrize(
-        "noise_param", ["relaxation_rate", "p_false_neg", "laser_waist"]
+        "noise_param",
+        [
+            "relaxation_rate",
+            "p_false_neg",
+            "laser_waist",
+        ],
     )
     @pytest.mark.parametrize("unused_param", ["runs", "samples_per_run"])
     @pytest.mark.filterwarnings(
@@ -161,7 +174,12 @@ class TestNoiseModel:
 
     @pytest.mark.parametrize(
         "param",
-        ["runs", "samples_per_run", "laser_waist"],
+        [
+            "runs",
+            "samples_per_run",
+            "laser_waist",
+            "detuning_map_spot_waist",
+        ],
     )
     @pytest.mark.filterwarnings(
         "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
@@ -218,12 +236,17 @@ class TestNoiseModel:
             ("p_false_pos", "SPAM"),
             ("p_false_neg", "SPAM"),
             ("amp_sigma", "amplitude"),
+            ("dmm_sigma", "dmm_sigma"),
         ],
     )
     def test_init_prob_like(self, param, noise, value):
         if 0 <= value <= 1:
             kwargs = {param: value}
-            if value > 0 and param in ("amp_sigma", "state_prep_error"):
+            if value > 0 and param in (
+                "amp_sigma",
+                "state_prep_error",
+                "dmm_sigma",
+            ):
                 kwargs.update(dict(runs=1, samples_per_run=1))
             noise_model = NoiseModel(**kwargs)
             assert getattr(noise_model, param) == value
@@ -549,6 +572,18 @@ class TestNoiseModel:
             "runs",
             "samples_per_run",
         }
+        assert NoiseModel._find_relevant_params(
+            {"dmm_sigma"},
+            0.0,
+            0.0,
+            None,
+        ) == {"dmm_sigma", "runs", "samples_per_run"}
+        assert NoiseModel._find_relevant_params(
+            {"dmm_crosstalk"},
+            0.0,
+            0.0,
+            None,
+        ) == {"detuning_map_spot_waist"}
 
     @pytest.mark.filterwarnings(
         "ignore:.*'NoiseModel.runs' is deprecated:DeprecationWarning"
@@ -862,4 +897,24 @@ def test_noise_table_summary():
     assert (
         noise_model.summary()
         == "Noise summary:\n- Dissipation parameters:\n   - T1: 5 µs"
+    )
+    # DMM sigma noise
+    noise_model_dmm = NoiseModel(dmm_sigma=0.05)
+    assert noise_model_dmm.get_noise_table() == {"dmm_sigma": (0.05, "")}
+    assert noise_model_dmm.summary() == (
+        "Noise summary:\n"
+        "- DMM detuning fluctuations**:\n"
+        " - Shot-to-shot DMM detuning fluctuations: 0.05\n"
+        "**: Emulation will generate EmulationConfig.n_trajectories"
+        " trajectories with different dmm_sigma"
+    )
+    # DMM crosstalk noise
+    noise_model_crosstalk = NoiseModel(detuning_map_spot_waist=1.0)
+    assert noise_model_crosstalk.get_noise_table() == {
+        "detuning_map_spot_waist": (1.0, "µm")
+    }
+    assert noise_model_crosstalk.summary() == (
+        "Noise summary:\n"
+        "- DMM crosstalk**:\n"
+        " - Detuning Map spots' waist: 1 µm"
     )

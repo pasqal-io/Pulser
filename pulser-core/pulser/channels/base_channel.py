@@ -45,7 +45,7 @@ OPTIONAL_ABSTR_CH_FIELDS = (
     "propagation_dir",
 )
 
-# States ranked in decreasing order of their associated eigenenergy
+# States ordered as they appear in the state-vector representation
 States = Literal["u", "d", "r", "g", "h", "x"]
 
 STATES_RANK = get_args(States)
@@ -53,7 +53,7 @@ STATES_RANK = get_args(States)
 EIGENSTATES: dict[str, list[States]] = {
     "ground-rydberg": ["r", "g"],
     "digital": ["g", "h"],
-    "XY": ["u", "d"],
+    "XY": ["u", "d"],  # u -> 0, d -> 1
 }
 
 
