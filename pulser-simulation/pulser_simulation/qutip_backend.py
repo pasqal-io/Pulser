@@ -75,7 +75,7 @@ class QutipBackend(Backend):
         self._config = config
         noise_model: None | NoiseModel = None
         if self._config.prefer_device_noise_model:
-            noise_model = sequence.device.default_noise_model
+            noise_model = sequence.device.noise_model
         self._sim_obj = QutipEmulator.from_sequence(
             sequence,
             sampling_rate=self._config.sampling_rate,
@@ -142,7 +142,7 @@ class QutipBackendV2(EmulatorBackend):
         super().__init__(sequence, config=config, mimic_qpu=mimic_qpu)
         noise_model: None | NoiseModel = None
         if self._config.prefer_device_noise_model:
-            noise_model = sequence.device.default_noise_model
+            noise_model = sequence.device.noise_model
         noise_model = noise_model or self._config.noise_model
         self._sim_obj = QutipEmulator.from_sequence(
             sequence,
@@ -183,7 +183,9 @@ class QutipBackendV2(EmulatorBackend):
 
             for qutip_res in single_res:
                 t = qutip_res.evaluation_time
-                state = QutipState(qutip_res.state, eigenstates=eigenstates)
+                state = QutipState(
+                    qutip_res.state.unit(), eigenstates=eigenstates
+                )
                 ham: QutipOperator = QutipOperator(
                     self._sim_obj._get_noiseless_hamiltonian(
                         self._config.noise_model.with_leakage
@@ -221,7 +223,7 @@ class QutipBackendV2(EmulatorBackend):
                         t = qutip_res.evaluation_time
 
                         state = QutipState(
-                            qutip_res.state, eigenstates=eigenstates
+                            qutip_res.state.unit(), eigenstates=eigenstates
                         )
                         ham = QutipOperator(
                             self._sim_obj._get_noiseless_hamiltonian(

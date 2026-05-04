@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Deserializer from JSON in the abstract representation."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -474,6 +475,16 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
         "detuning_hf_omegas",
     }
 
+    dmm_sigma = noise_model_obj.get("dmm_sigma", 0)
+    relevant_params -= {"dmm_sigma"}  # Handled separately, optional arg
+
+    detuning_map_spot_waist = noise_model_obj.get(
+        "detuning_map_spot_waist", None
+    )
+    relevant_params -= {
+        "detuning_map_spot_waist"
+    }  # Handled separately, optional arg
+
     noise_model = pulser.NoiseModel(
         **{param: noise_model_obj[param] for param in relevant_params},
         eff_noise_rates=tuple(eff_noise_rates),
@@ -483,6 +494,8 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
         detuning_hf_psd=tuple(detuning_hf_psd),
         detuning_hf_omegas=tuple(detuning_hf_omegas),
         detuning_sigma=detuning_sigma,
+        dmm_sigma=dmm_sigma,
+        detuning_map_spot_waist=detuning_map_spot_waist,
     )
     assert set(noise_model.noise_types) == set(noise_types)
     return noise_model
@@ -507,7 +520,11 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     device_fields = dataclasses.fields(device_cls)
     device_defaults = get_dataclass_defaults(device_fields)
     for param in device_fields:
-        use_default = param.name not in obj and param.name in device_defaults
+        # noise_model in JSON may be under default_noise_model (schema compat)
+        in_obj = param.name in obj or (
+            param.name == "noise_model" and "default_noise_model" in obj
+        )
+        use_default = not in_obj and param.name in device_defaults
         if (
             not param.init
             or param.name in PARAMS_WITH_ABSTR_REPR
@@ -519,8 +536,11 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
             params[key] = tuple(
                 _deserialize_layout(layout) for layout in obj[key]
             )
-        elif param.name == "default_noise_model":
-            params[param.name] = _deserialize_noise_model(obj[param.name])
+        elif param.name == "noise_model":
+            # JSON schema keeps default_noise_model key (unchanged)
+            params["noise_model"] = _deserialize_noise_model(
+                obj["default_noise_model"]
+            )
         else:
             params[param.name] = obj[param.name]
     try:

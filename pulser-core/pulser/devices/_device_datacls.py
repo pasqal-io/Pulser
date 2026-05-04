@@ -14,8 +14,10 @@
 
 from __future__ import annotations
 
+import functools
 import json
 import pprint
+import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Mapping
@@ -69,7 +71,7 @@ OPTIONAL_IN_ABSTR_REPR = tuple(
     list(ALWAYS_OPTIONAL_PARAMS)
     + [
         "dmm_objects",
-        "default_noise_model",
+        "noise_model",
         "requires_layout",
         "accepts_new_layouts",
         "min_layout_traps",
@@ -123,7 +125,7 @@ class BaseDevice(ABC):
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
-        default_noise_model: An optional noise model characterizing the default
+        noise_model: An optional noise model characterizing the default
             noise of the device. Can be used by emulator backends that support
             noise.
     """
@@ -148,7 +150,7 @@ class BaseDevice(ABC):
     channel_ids: tuple[str, ...] | None = None
     channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
     dmm_objects: tuple[DMM, ...] = field(default_factory=tuple)
-    default_noise_model: NoiseModel | None = None
+    noise_model: NoiseModel | None = None
     short_description: str = field(default="", repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -332,8 +334,8 @@ class BaseDevice(ABC):
                 f" not '{type(self.interaction_coeff_xy)}'."
             )
 
-        if self.default_noise_model is not None:
-            type_check("default_noise_model", NoiseModel)
+        if self.noise_model is not None:
+            type_check("noise_model", NoiseModel)
 
         type_check("short_description", str)
 
@@ -354,6 +356,16 @@ class BaseDevice(ABC):
     @abstractmethod
     def _optional_parameters(self) -> tuple[str, ...]:
         pass
+
+    @property
+    def default_noise_model(self) -> NoiseModel | None:
+        """Deprecated: use :attr:`noise_model` instead."""
+        warnings.warn(
+            "'default_noise_model' is deprecated, use 'noise_model' instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.noise_model
 
     @property
     def channels(self) -> dict[str, Channel]:
@@ -503,6 +515,7 @@ class BaseDevice(ABC):
                 device=self,
                 invalid=n_qubits,
                 min=min_qubits,
+                min_traps=self.min_layout_traps,
             )
 
         max_qubits = int(
@@ -636,6 +649,9 @@ class BaseDevice(ABC):
             dmm_list.append(dmm_obj._to_abstract_repr(dmm_name))
         if dmm_list:
             params["dmm_objects"] = dmm_list
+        # Use default_noise_model in JSON for schema compatibility
+        if "noise_model" in params:
+            params["default_noise_model"] = params.pop("noise_model")
         return params
 
     def to_abstract_repr(self) -> str:
@@ -722,7 +738,7 @@ class BaseDevice(ABC):
             self._param_check_none(self.max_runs)(
                 " - Maximum number of runs: {}"
             ),
-            self._param_check_none(self.default_noise_model)(
+            self._param_check_none(self.noise_model)(
                 " - Default noise model: {}",
             ),
         ]
@@ -795,6 +811,37 @@ class BaseDevice(ABC):
         )
 
 
+def _wrap_init_for_default_noise_model(
+    original_init: Callable[..., Any],
+) -> Callable[..., Any]:
+    """Wrap __init__ to accept deprecated default_noise_model parameter."""
+
+    @functools.wraps(original_init)
+    def wrapped_init(
+        self: Any, *args: Any, default_noise_model: Any = None, **kwargs: Any
+    ) -> None:
+        if default_noise_model is not None:
+            if kwargs.get("noise_model") is not None:
+                raise ValueError(
+                    "Cannot specify both 'noise_model' and "
+                    "'default_noise_model'"
+                )
+            warnings.warn(
+                "'default_noise_model' is deprecated since pulser 1.8.0, "
+                "use 'noise_model' instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            kwargs["noise_model"] = default_noise_model
+        kwargs.pop("default_noise_model", None)
+        original_init(self, *args, **kwargs)
+
+    return wrapped_init
+
+
+BaseDevice.__init__ = _wrap_init_for_default_noise_model(BaseDevice.__init__)  # type: ignore[method-assign]  # noqa: E501
+
+
 @dataclass(frozen=True, repr=False)
 class Device(BaseDevice):
     r"""Specifications of a neutral-atom device.
@@ -853,7 +900,7 @@ class Device(BaseDevice):
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
-        default_noise_model: An optional noise model characterizing the default
+        noise_model: An optional noise model characterizing the default
             noise of the device. Can be used by emulator backends that support
             noise.
     """
@@ -1038,7 +1085,7 @@ class VirtualDevice(BaseDevice):
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
-        default_noise_model: An optional noise model characterizing the default
+        noise_model: An optional noise model characterizing the default
             noise of the device. Can be used by emulator backends that support
             noise.
     """
@@ -1102,3 +1149,9 @@ class VirtualDevice(BaseDevice):
         if isinstance(device, Device):
             return device.to_virtual()
         return device
+
+
+# Patch Device and VirtualDevice __init__ to accept deprecated
+# default_noise_model
+Device.__init__ = _wrap_init_for_default_noise_model(Device.__init__)  # type: ignore[method-assign]  # noqa: E501
+VirtualDevice.__init__ = _wrap_init_for_default_noise_model(VirtualDevice.__init__)  # type: ignore[method-assign]  # noqa: E501
