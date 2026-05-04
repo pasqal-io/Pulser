@@ -45,7 +45,10 @@ setup(
     name=distribution_name,
     version=__version__,
     install_requires=requirements,
-    extras_require={"torch": ["torch ~= 2.6"]},
+    extras_require={
+        "torch": ["torch ~= 2.6"],
+        "fast-validation": ["fastjsonschema ~= 2.21"],
+    },
     packages=find_packages(),
     package_data={package_name: ["py.typed"]},
     include_package_data=True,
