@@ -98,6 +98,10 @@ jobs:
       - name: Run the unit tests without torch installed
         if: ${{ matrix.with-torch != 'with-torch'}}
         run: pytest --cov
+      - name: Test validation with fast-validation extra
+        run: |
+          pip install -e ./pulser-core[fast-validation]
+          pytest tests/test_abstract_repr.py
       - name: Test validation with legacy jsonschema
         if: ${{ matrix.python-version != '3.14'}}
         run: |

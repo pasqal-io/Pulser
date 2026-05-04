@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 import warnings
 from dataclasses import MISSING, Field
-from typing import TYPE_CHECKING, Any, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence
 
 import numpy as np
 
@@ -116,3 +116,18 @@ def stringify_qubit_ids(qubit_ids: Sequence[QubitId]) -> list[str]:
                 f"strings for IDs: {[(id, str(id)) for id in collisions]}"
             )
     return names
+
+
+ObjectType = Literal[
+    "sequence",
+    "device",
+    "layout",
+    "register",
+    "noise",
+    "results",
+    "config",
+]
+
+
+def get_filename(object_type: ObjectType) -> str:
+    return f"{object_type}-schema.json"
