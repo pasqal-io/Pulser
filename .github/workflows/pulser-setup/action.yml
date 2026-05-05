@@ -17,6 +17,10 @@ inputs:
     description: Which version of numpy to install
     required: false
     default: "numpy-v2"
+  with-fast-validation:
+    description: Whether to include fastjsonschema
+    required: false
+    default: "no-fast-validation"
 runs:
   using: "composite"
   steps:
@@ -47,6 +51,11 @@ runs:
       shell: bash
       run: |
         pip install numpy>=2
+    - name: Install fast-validation extra
+      if: ${{ inputs.with-fast-validation == 'with-fast-validation' }}
+      shell: bash
+      run: |
+        make dev-install-fast-validation
     - name: Install extra packages from the dev requirements
       if: "${{ inputs.extra-packages != '' }}"
       shell: bash
