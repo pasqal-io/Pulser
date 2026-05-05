@@ -84,6 +84,9 @@ jobs:
             numpy: "numpy-v1"
           - numpy: "numpy-v1"
             with-torch: "no-torch"
+          # Only test fast-validation on no-torch jobs to limit matrix size
+          - with-torch: "with-torch"
+            fast-validation: "with-fast-validation"
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v4
