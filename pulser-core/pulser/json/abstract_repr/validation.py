@@ -37,13 +37,15 @@ LEGACY_JSONSCHEMA = (
 )
 
 
+# Maps schema filenames to their contents, used as a handler for
+# fastjsonschema's local $ref resolution (the "" URI scheme).
 _SCHEMAS_BY_FILENAME = {
     get_filename(name): schema for name, schema in SCHEMAS.items()
 }
 
 _FAST_VALIDATORS: dict[str, Callable[[Any], Any]] = (
     {
-        name: fastjsonschema.compile(  # type: ignore[misc]
+        name: fastjsonschema.compile(
             schema, handlers={"": _SCHEMAS_BY_FILENAME.__getitem__}
         )
         for name, schema in SCHEMAS.items()
@@ -52,15 +54,11 @@ _FAST_VALIDATORS: dict[str, Callable[[Any], Any]] = (
     else {}
 )
 
+_REGISTRY_NAMES: list[ObjectType] = ["device", "layout", "register", "noise"]
 REGISTRY: Registry = Registry(
     [
         (get_filename(name), Resource.from_contents(SCHEMAS[name]))
-        for name in (
-            "device",
-            "layout",
-            "register",
-            "noise",
-        )
+        for name in _REGISTRY_NAMES
     ]
 )
 
@@ -105,8 +103,8 @@ def validate_abstract_repr(
                 # validation with fast library
                 _FAST_VALIDATORS[name](obj)
             except fastjsonschema.JsonSchemaException:
-                # in case of validation failure, we run validation with jsonschema
-                # to have descriptive error reasons
+                # fastjsonschema errors lack detail
+                # fall back to jsonschema for better diagnostics
                 _validate_with_jsonschema(obj, name)
         else:
             _validate_with_jsonschema(obj, name)
