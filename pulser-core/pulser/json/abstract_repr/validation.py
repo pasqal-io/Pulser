@@ -27,7 +27,7 @@ from pulser.json.abstract_repr import SCHEMAS, SCHEMAS_PATH
 from pulser.json.utils import ObjectType, get_filename
 
 try:
-    import fastjsonschema  # type: ignore[import-untyped]
+    import fastjsonschema
 except ImportError:  # pragma: no cover
     fastjsonschema = None
 
