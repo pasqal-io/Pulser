@@ -72,16 +72,21 @@ jobs:
         python-version: ["3.10", "3.14"]
         with-torch: ["with-torch", "no-torch"]
         numpy: ["numpy-v1", "numpy-v2"]
+        fast-validation: ["with-fast-validation", "no-fast-validation"]
         include:
           - python-version: "3.12"
             with-torch: "with-torch"
             numpy: "numpy-v1"
+            fast-validation: "no-fast-validation"
         exclude:
           # Numpy v1 does not support Python 3.14
           - python-version: "3.14"
             numpy: "numpy-v1"
           - numpy: "numpy-v1"
             with-torch: "no-torch"
+          # Only test fast-validation on no-torch jobs to limit matrix size
+          - with-torch: "with-torch"
+            fast-validation: "with-fast-validation"
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v4
@@ -92,6 +97,7 @@ jobs:
           extra-packages: pytest
           with-torch: ${{ matrix.with-torch }}
           numpy: ${{ matrix.numpy }}
+          with-fast-validation: ${{ matrix.fast-validation }}
       - name: Run the unit tests & generate coverage report
         if: ${{ matrix.with-torch == 'with-torch'}}
         run: pytest --cov --cov-fail-under=100

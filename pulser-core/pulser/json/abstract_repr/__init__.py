@@ -14,19 +14,14 @@
 """Serialization and deserialization tools for the abstract representation."""
 import json
 from pathlib import Path
+from typing import Any, get_args
+
+from pulser.json.utils import ObjectType, get_filename
 
 SCHEMAS_PATH = Path(__file__).parent / "schemas"
-SCHEMAS = {}
-for obj_type in (
-    "device",
-    "sequence",
-    "register",
-    "layout",
-    "noise",
-    "results",
-    "config",
-):
+SCHEMAS: dict[ObjectType, Any] = {}
+for obj_type in get_args(ObjectType):
     with open(
-        SCHEMAS_PATH / f"{obj_type}-schema.json", "r", encoding="utf-8"
+        SCHEMAS_PATH / get_filename(obj_type), "r", encoding="utf-8"
     ) as f:
         SCHEMAS[obj_type] = json.load(f)

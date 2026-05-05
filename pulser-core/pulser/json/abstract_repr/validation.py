@@ -14,31 +14,60 @@
 """Function for validation of JSON serialization to abstract representation."""
 import json
 from importlib.metadata import version
-from typing import Literal
+from typing import Any, Callable
 
 import jsonschema
+import jsonschema.validators
 from packaging.version import InvalidVersion, Version
 from referencing import Registry, Resource
 
 import pulser
 from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr import SCHEMAS, SCHEMAS_PATH
+from pulser.json.utils import ObjectType, get_filename
+
+try:
+    import fastjsonschema
+except ImportError:  # pragma: no cover
+    fastjsonschema = None
+
 
 LEGACY_JSONSCHEMA = (
     Version("4.18") > Version(version("jsonschema")) >= Version("4.17.3")
 )
 
+
+# Maps schema filenames to their contents, used as a handler for
+# fastjsonschema's local $ref resolution (the "" URI scheme).
+_SCHEMAS_BY_FILENAME = {
+    get_filename(name): schema for name, schema in SCHEMAS.items()
+}
+
+_FAST_VALIDATORS: dict[str, Callable[[Any], Any]] = (
+    {
+        name: fastjsonschema.compile(
+            schema, handlers={"": _SCHEMAS_BY_FILENAME.__getitem__}
+        )
+        for name, schema in SCHEMAS.items()
+    }
+    if fastjsonschema is not None
+    else {}
+)
+
+_REGISTRY_NAMES: list[ObjectType] = [
+    "device",
+    "layout",
+    "register",
+    "noise",
+    "sequence",
+]
 REGISTRY: Registry = Registry(
     [
-        ("device-schema.json", Resource.from_contents(SCHEMAS["device"])),
-        ("layout-schema.json", Resource.from_contents(SCHEMAS["layout"])),
-        ("register-schema.json", Resource.from_contents(SCHEMAS["register"])),
-        ("noise-schema.json", Resource.from_contents(SCHEMAS["noise"])),
+        (get_filename(name), Resource.from_contents(SCHEMAS[name]))
+        for name in _REGISTRY_NAMES
     ]
 )
 
-# Build one validator per schema at import time so that meta-schema
-# checking and $ref resolution are paid once, not on every call.
 _VALIDATORS: dict[str, jsonschema.Draft7Validator] = (
     {}
     if LEGACY_JSONSCHEMA
@@ -49,37 +78,39 @@ _VALIDATORS: dict[str, jsonschema.Draft7Validator] = (
 )
 
 
+def _validate_with_jsonschema(obj: Any, object_type: ObjectType) -> None:
+    if LEGACY_JSONSCHEMA:  # pragma: no cover
+        jsonschema.validate(
+            instance=obj,
+            schema=SCHEMAS[object_type],
+            resolver=jsonschema.validators.RefResolver(
+                base_uri=f"{SCHEMAS_PATH.resolve().as_uri()}/",
+                referrer=SCHEMAS[object_type],
+            ),
+        )
+    else:
+        _VALIDATORS[object_type].validate(obj)
+
+
 def validate_abstract_repr(
     obj_str: str,
-    name: Literal[
-        "sequence",
-        "device",
-        "layout",
-        "register",
-        "noise",
-        "results",
-        "config",
-    ],
+    name: ObjectType,
 ) -> None:
     """Validate the abstract representation of an object.
 
     Args:
         obj_str: A JSON-formatted string encoding the object.
-        name: The type of object to validate (can be "sequence" or "device").
+        name: The type of object to validate.
     """
     obj = json.loads(obj_str)
     try:
-        if LEGACY_JSONSCHEMA:  # pragma: no cover
-            jsonschema.validate(
-                instance=obj,
-                schema=SCHEMAS[name],
-                resolver=jsonschema.validators.RefResolver(
-                    base_uri=f"{SCHEMAS_PATH.resolve().as_uri()}/",
-                    referrer=SCHEMAS[name],
-                ),
-            )
+        if fastjsonschema is not None:  # pragma: no cover
+            try:
+                _FAST_VALIDATORS[name](obj)
+            except fastjsonschema.JsonSchemaException:
+                _validate_with_jsonschema(obj, name)
         else:
-            _VALIDATORS[name].validate(obj)
+            _validate_with_jsonschema(obj, name)
     except Exception as exc:
         try:
             ser_pulser_version = Version(obj.get("pulser_version", "0.0.0"))

@@ -12,6 +12,10 @@ dev-install-core:
 dev-install-core-no-torch:
 	pip install -e ./pulser-core
 
+.PHONY: dev-install-fast-validation
+dev-install-fast-validation:
+	pip install -e ./pulser-core[fast-validation]
+
 .PHONY: dev-install-simulation
 dev-install-simulation:
 	pip install -e ./pulser-simulation
