@@ -130,4 +130,5 @@ ObjectType = Literal[
 
 
 def get_filename(object_type: ObjectType) -> str:
+    """Return the schema filename for a given object type."""
     return f"{object_type}-schema.json"

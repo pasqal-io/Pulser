@@ -54,7 +54,13 @@ _FAST_VALIDATORS: dict[str, Callable[[Any], Any]] = (
     else {}
 )
 
-_REGISTRY_NAMES: list[ObjectType] = ["device", "layout", "register", "noise"]
+_REGISTRY_NAMES: list[ObjectType] = [
+    "device",
+    "layout",
+    "register",
+    "noise",
+    "sequence",
+]
 REGISTRY: Registry = Registry(
     [
         (get_filename(name), Resource.from_contents(SCHEMAS[name]))
@@ -98,13 +104,10 @@ def validate_abstract_repr(
     """
     obj = json.loads(obj_str)
     try:
-        if fastjsonschema is not None:
+        if fastjsonschema is not None:  # pragma: no cover
             try:
-                # validation with fast library
                 _FAST_VALIDATORS[name](obj)
             except fastjsonschema.JsonSchemaException:
-                # fastjsonschema errors lack detail
-                # fall back to jsonschema for better diagnostics
                 _validate_with_jsonschema(obj, name)
         else:
             _validate_with_jsonschema(obj, name)
