@@ -571,12 +571,18 @@ def test_emulation_config():
 
     with pytest.raises(
         TypeError,
-        match="All entries in 'observables' must be instances of Observable",
+        match=(
+            "All entries in 'observables' must be instances of Observable"
+            ".*at index 0.*fidelity"
+        ),
     ):
         EmulationConfig(observables=["fidelity"])
     with pytest.raises(
         TypeError,
-        match="All entries in 'callbacks' must not be instances of Observable",
+        match=(
+            "All entries in 'callbacks' must not be instances of Observable"
+            ".*at index 0"
+        ),
     ):
         EmulationConfig(
             callbacks=(BitStrings(),),
@@ -584,7 +590,10 @@ def test_emulation_config():
         )
     with pytest.raises(
         TypeError,
-        match="All entries in 'callbacks' must be instances of Callback",
+        match=(
+            "All entries in 'callbacks' must be instances of Callback"
+            ".*at index 0.*Hello"
+        ),
     ):
         EmulationConfig(
             callbacks=("Hello",),
