@@ -624,7 +624,8 @@ def test_emulation_config():
     with pytest.raises(
         ValueError,
         match=re.escape(
-            "'interaction_matrix' must be a square matrix. Instead, an array"
+            "'interaction_matrix' must be of shape "
+            "(N,N) or (1,N,N), or (2,N,N) for XY. Instead, an array"
             " of shape (4, 3) was given"
         ),
     ):

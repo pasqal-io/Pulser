@@ -184,7 +184,9 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             interaction terms in the Hamiltonian. For an N-qudit system,
             must be an NxN symmetric matrix where entry (i, j) dictates
             the interaction coefficient between qudits i and j, ie it replaces
-            the C_n/r_{ij}^n term.
+            the C_n/r_{ij}^n term. For XY, since there are two interactions
+            the input should be a tensor of shape (2,N,N), respresenting the
+            interaction matrix for the XY and the Rydberg term in that order.
         prefer_device_noise_model: If True, uses the noise model of the
             sequence's device (if the sequence's device has one), regardless
             of the noise model given with this configuration.
@@ -305,9 +307,12 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         if interaction_matrix is not None:
             interaction_matrix = pm.AbstractArray(interaction_matrix)
             _shape = interaction_matrix.shape
-            if len(_shape) != 2 or _shape[0] != _shape[1]:
+            if not (len(_shape) == 2 and _shape[0] == _shape[1]) and not (
+                len(_shape) == 3 and _shape[0] <= 2 and _shape[1] == _shape[2]
+            ):
                 raise ValueError(
-                    "'interaction_matrix' must be a square matrix. Instead, "
+                    "'interaction_matrix' must be of shape "
+                    "(N,N) or (1,N,N), or (2,N,N) for XY. Instead, "
                     f"an array of shape {_shape} was given."
                 )
             if (

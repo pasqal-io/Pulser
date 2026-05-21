@@ -322,5 +322,15 @@ class AbstractArray:
                 " losing the computational graph information."
             ) from e
 
+    def reshape(self, shape: tuple[int, ...]) -> AbstractArray:
+        """Return a new Abstractarray with the new shape.
+
+        See the reshape functions in torch and numpy respectively.
+
+        Args:
+            shape: The desired new shape. Must be compatible with the old.
+        """
+        return AbstractArray(self._array.reshape(shape))
+
 
 AbstractArrayLike = Union[AbstractArray, ArrayLike]

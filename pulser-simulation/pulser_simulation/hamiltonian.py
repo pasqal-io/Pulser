@@ -269,7 +269,7 @@ class Hamiltonian:
                 0.5
                 * self.noise_trajectory.interaction_matrix.as_array(
                     detach=True
-                )[self._qid_index[q1], self._qid_index[q2]]
+                )[0, self._qid_index[q1], self._qid_index[q2]]
             )
             return U * self.build_operator([("sigma_rr", [q1, q2])])
 
@@ -282,7 +282,7 @@ class Hamiltonian:
             includes a 1/hbar factor.
             """
             U = self.noise_trajectory.interaction_matrix.as_array(detach=True)[
-                self._qid_index[q1], self._qid_index[q2]
+                0, self._qid_index[q1], self._qid_index[q2]
             ]
             return U * self.build_operator(
                 [("sigma_ud", [q1]), ("sigma_du", [q2])]
