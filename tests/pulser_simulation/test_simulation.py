@@ -596,10 +596,16 @@ def test_single_atom_simulation():
         Pulse.ConstantDetuning(ConstantWaveform(16, 1.0), 1.0, 0), "ch0"
     )
     one_sim = QutipEmulator.from_sequence(one_seq)
-    one_res = one_sim.run()
-    assert one_res._size == one_sim._current_hamiltonian.n_qudits
-    one_sim = QutipEmulator.from_sequence(one_seq, evaluation_times="Minimal")
-    one_resb = one_sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        one_res = one_sim.run()
+        assert one_res._size == one_sim._current_hamiltonian.n_qudits
+        one_sim = QutipEmulator.from_sequence(
+            one_seq, evaluation_times="Minimal"
+        )
+        one_resb = one_sim.run()
     assert one_resb._size == one_sim._current_hamiltonian.n_qudits
 
 
@@ -614,8 +620,12 @@ def test_add_max_step_and_delays():
         Pulse.ConstantDetuning(BlackmanWaveform(600, np.pi / 2), 0, 0), "ch"
     )
     sim = QutipEmulator.from_sequence(seq)
-    res_large_max_step = sim.run(max_step=1)
-    res_auto_max_step = sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        res_large_max_step = sim.run(max_step=1)
+        res_auto_max_step = sim.run()
     r = qutip.basis(2, 0)
     occ_large = res_large_max_step.expect([r.proj()])[0]
     occ_auto = res_auto_max_step.expect([r.proj()])[0]
@@ -656,26 +666,38 @@ def test_run(seq, patch_plt_show):
         sim.set_initial_state(qutip.Qobj(bad_initial))
 
     sim.set_initial_state(good_initial_array)
-    sim.run()
-    sim.set_initial_state(good_initial_qobj)
-    sim.run()
-    sim.set_initial_state(good_initial_qobj_no_dims)
-    sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        sim.run()
+        sim.set_initial_state(good_initial_qobj)
+        sim.run()
+        sim.set_initial_state(good_initial_qobj_no_dims)
+        sim.run()
     seq.measure("ground-rydberg")
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
     sim.set_initial_state(good_initial_qobj_no_dims)
 
-    sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        sim.run()
     assert sim.samples_obj._measurement == "ground-rydberg"
 
-    sim.run(progress_bar=True)
-    sim.run(progress_bar=False)
-    sim.run(progress_bar=None)
-    with pytest.raises(
-        ValueError,
-        match="`progress_bar` must be a bool.",
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
     ):
-        sim.run(progress_bar=1)
+        sim.run(progress_bar=True)
+        sim.run(progress_bar=False)
+        sim.run(progress_bar=None)
+        with pytest.raises(
+            ValueError,
+            match="`progress_bar` must be a bool.",
+        ):
+            sim.run(progress_bar=1)
 
     sim = QutipEmulator.from_sequence(
         seq,
@@ -689,7 +711,11 @@ def test_run(seq, patch_plt_show):
         match="Can't combine state preparation errors with an initial state "
         "different from the ground.",
     ):
-        sim.run()
+        with pytest.warns(
+            DeprecationWarning,
+            match="QutipEmulator is deprecated as of pulser 1.9",
+        ):
+            sim.run()
 
 
 def test_eval_times(seq):
@@ -881,9 +907,15 @@ def test_noise(capfd, seq, matrices):
             "'SampledResult.get_samples()' resamples a sampling distribution"
         ),
     ):
-        assert sim2.run(print_progress=True).sample_final_state() == Counter(
-            {"000": 824, "100": 41, "101": 57, "001": 63, "010": 15}
-        )
+        with pytest.warns(
+            DeprecationWarning,
+            match="QutipEmulator is deprecated as of pulser 1.9",
+        ):
+            assert sim2.run(
+                print_progress=True
+            ).sample_final_state() == Counter(
+                {"000": 824, "100": 41, "101": 57, "001": 63, "010": 15}
+            )
     out, _ = capfd.readouterr()
     assert out.rstrip("\n").split("\n") == [
         "Emulating Trajectories [1 - 13]/15",
@@ -934,7 +966,13 @@ def test_noise_with_zero_epsilons(seq, matrices):
     )
     assert sim2.config.noise == ()
 
-    assert sim.run().sample_final_state() == sim2.run().sample_final_state()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        assert (
+            sim.run().sample_final_state() == sim2.run().sample_final_state()
+        )
 
 
 @pytest.mark.parametrize(
@@ -992,7 +1030,11 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
         op.type == qutip.core.data.CSR
         for op in sim._current_hamiltonian._collapse_ops
     ]
-    res = sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        res = sim.run()
     res_samples = res.sample_final_state()
     assert res_samples == Counter(result)
     assert len(sim._current_hamiltonian._collapse_ops) == n_collapse_ops
@@ -1017,7 +1059,11 @@ def test_relaxation_noise(capfd):
         op.type == qutip.core.data.CSR
         for op in sim._current_hamiltonian._collapse_ops
     ]
-    res = sim.run(print_progress=True)
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        res = sim.run(print_progress=True)
     out, _ = capfd.readouterr()
     assert out.rstrip("\n").split("\n") == ["Emulating Trajectory 1/1"]
     start_samples = res.sample_state(1)
@@ -1112,7 +1158,11 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
             noise_model=NoiseModel(relaxation_rate=0.01),
         )
 
-    res = sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        res = sim.run()
     res_samples = res.sample_final_state()
     assert res_samples == Counter(result)
     assert len(sim._current_hamiltonian._collapse_ops) == n_collapse_ops * len(
@@ -1237,7 +1287,11 @@ def test_noises_all(matrices, noise, result, n_collapse_ops, seq):
         seq.register.qubits
     )
     np.random.seed(123)
-    res = sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        res = sim.run()
     res_samples = res.sample_final_state()
     assert res_samples == Counter(result)
     trace_2 = np.trace((res.states[-1] ** 2).full())
@@ -1446,14 +1500,22 @@ def test_run_xy():
     )
     sim.set_initial_state(good_initial_array)
     assert sim.initial_state == good_initial_qobj
-    sim.run()
-    sim.set_initial_state(good_initial_qobj)
-    sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        sim.run()
+        sim.set_initial_state(good_initial_qobj)
+        sim.run()
 
     assert not sim.samples_obj._measurement
     simple_seq.measure(basis="XY")
     sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.01)
-    sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        sim.run()
     assert sim.samples_obj._measurement == "XY"
 
 
@@ -1601,7 +1663,11 @@ def test_noisy_xy(
         len(sim._current_hamiltonian._collapse_ops) // len(simple_reg.qubits)
         == n_collapse_ops
     )
-    r = sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        r = sim.run()
     with pytest.warns(
         UserWarning,
         match=re.escape(
@@ -2087,7 +2153,11 @@ def test_initial_state_sim():
     emulator = QutipEmulator.from_sequence(seq)
     emulator.set_initial_state(initial_state)
     np.random.seed(123)
-    res = emulator.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        res = emulator.run()
     final_state = res.get_final_state()
     assert np.all(
         np.isclose(
@@ -2376,12 +2446,16 @@ def test_noisy_runs(noise):
     sim = QutipEmulator.from_sequence(
         seq, noise_model=noise_mod, n_trajectories=nruns
     )
-    with patch.object(
-        QutipEmulator, "_run_solver", wraps=sim._run_solver
-    ) as mock_run_solver:
-        result = sim.run()
-        assert mock_run_solver.call_count == nruns
-        assert isinstance(result, NoisyResults)
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        with patch.object(
+            QutipEmulator, "_run_solver", wraps=sim._run_solver
+        ) as mock_run_solver:
+            result = sim.run()
+            assert mock_run_solver.call_count == nruns
+            assert isinstance(result, NoisyResults)
 
 
 @pytest.mark.parametrize(
@@ -2498,7 +2572,11 @@ def test_qutip_invalid_solver_error(seq):
             solver="fakesolver",
             n_trajectories=1,
         )
-        sim.run()
+        with pytest.warns(
+            DeprecationWarning,
+            match="QutipEmulator is deprecated as of pulser 1.9",
+        ):
+            sim.run()
 
 
 @pytest.mark.parametrize("min_detuning_on", [False, True])
@@ -2543,7 +2621,11 @@ def test_eom_limit_det(mod_device, reg, min_detuning_on):
     # Check that simulation runs
     np.random.seed(123)
     sim = QutipEmulator.from_sequence(seq)
-    res = sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        res = sim.run()
     final_state = res.sample_final_state()
     if min_detuning_on:
         assert final_state == {
@@ -2559,4 +2641,8 @@ def test_eom_limit_det(mod_device, reg, min_detuning_on):
     sim = QutipEmulator.from_sequence(
         seq, noise_model=NoiseModel(detuning_sigma=0.1), n_trajectories=1
     )
-    sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        sim.run()

@@ -79,12 +79,20 @@ def results_noisy(seq_no_meas):
             ),
             n_trajectories=15,
         )
-    return sim.run()
+        with pytest.warns(
+            DeprecationWarning,
+            match="QutipEmulator is deprecated as of pulser 1.9",
+        ):
+            return sim.run()
 
 
 @pytest.fixture
 def results(sim):
-    return sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        return sim.run()
 
 
 @pytest.mark.parametrize(
@@ -162,7 +170,11 @@ def test_get_final_state(
             device=seq_no_meas.device,
             noise_model=NoiseModel(dephasing_rate=0.01),
         )
-    _results = sim.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        _results = sim.run()
     assert isinstance(_results, CoherentResults)
     final_state = _results.get_final_state()
     assert final_state.isoper if noisychannel else final_state.isket
@@ -198,7 +210,11 @@ def test_get_final_state(
     seq_.add(pi_pulse, "ryd")
 
     sim_ = QutipEmulator.from_sequence(seq_)
-    results_ = sim_.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        results_ = sim_.run()
     results_ = cast(CoherentResults, results_)
 
     with pytest.raises(ValueError, match="'reduce_to_basis' must be"):
@@ -243,7 +259,11 @@ def test_get_final_state_noisy(reg, pi_pulse):
         ),
         n_trajectories=15,
     )
-    res3 = sim_noisy.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        res3 = sim_noisy.run()
     res3._meas_basis = "digital"
     final_state = res3.get_final_state()
     assert isdiagonal(final_state)
@@ -278,7 +298,11 @@ def test_expect(results, pi_pulse, reg):
     seq_single.declare_channel("ryd", "rydberg_global")
     seq_single.add(pi_pulse, "ryd")
     sim_single = QutipEmulator.from_sequence(seq_single)
-    results_single = sim_single.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        results_single = sim_single.run()
     op = [qutip.basis(2, 0).proj()]
     exp = results_single.expect(op)[0]
     assert np.isclose(exp[-1], 1)
@@ -293,7 +317,11 @@ def test_expect(results, pi_pulse, reg):
         seq_single, noise_model=noise_model
     )
     sim_single.set_evaluation_times("Minimal")
-    results_single = sim_single.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        results_single = sim_single.run()
     exp = results_single.expect(op)[0]
     assert len(exp) == 2
     assert isinstance(results_single, CoherentResults)
@@ -325,7 +353,11 @@ def test_expect(results, pi_pulse, reg):
         sampling_rate=0.1,
     )
     sim_single.set_evaluation_times(0.5)
-    res = sim_single.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        res = sim_single.run()
     assert isinstance(res, CoherentResults)
     # define an observable for the state
     assert np.isclose(
@@ -338,9 +370,13 @@ def test_expect(results, pi_pulse, reg):
     seq3dim.add(pi_pulse, "ram")
     seq3dim.add(pi_pulse, "ryd")
     sim3dim = QutipEmulator.from_sequence(seq3dim)
-    exp3dim = sim3dim.run().expect(
-        [qutip.tensor(qutip.basis(3, 0).proj(), qutip.qeye(3))]
-    )
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        exp3dim = sim3dim.run().expect(
+            [qutip.tensor(qutip.basis(3, 0).proj(), qutip.qeye(3))]
+        )
     assert np.isclose(exp3dim[0][-1], 1.89690200e-14)
 
 
@@ -364,7 +400,11 @@ def test_plot(results_noisy, results):
 def test_sim_without_measurement(seq_no_meas):
     assert not seq_no_meas.is_measured()
     sim_no_meas = QutipEmulator.from_sequence(seq_no_meas)
-    results_no_meas = sim_no_meas.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        results_no_meas = sim_no_meas.run()
     np.random.seed(123)
     assert results_no_meas.sample_final_state(1) == Counter({"11": 1})
 
@@ -382,13 +422,21 @@ def test_sample_final_state(results):
 def test_sample_final_state_three_level(seq_no_meas, pi_pulse):
     seq_no_meas.declare_channel("raman", "raman_local", "B")
     seq_no_meas.add(pi_pulse, "raman")
-    res_3level = QutipEmulator.from_sequence(seq_no_meas).run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        res_3level = QutipEmulator.from_sequence(seq_no_meas).run()
     # Raman pi pulse on one atom will not affect other,
     # even with global pi on rydberg
     assert len(res_3level.sample_final_state()) == 2
 
     seq_no_meas.measure("ground-rydberg")
-    res_3level_gb = QutipEmulator.from_sequence(seq_no_meas).run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        res_3level_gb = QutipEmulator.from_sequence(seq_no_meas).run()
     sampling_three_levelB = res_3level_gb.sample_final_state()
     # Rydberg will affect both:
     assert len(sampling_three_levelB) == 4
@@ -417,7 +465,11 @@ def test_sample_final_state_noisy(seq_no_meas, results_noisy):
         ),
         n_trajectories=10,
     )
-    final_state = res_3level.run().states[-1]
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        final_state = res_3level.run().states[-1]
     assert np.isclose(
         final_state.full(),
         np.array(
@@ -440,7 +492,11 @@ def test_results_xy(reg, pi_pulse):
     seq_.measure("XY")
 
     sim_ = QutipEmulator.from_sequence(seq_)
-    results_ = sim_.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        results_ = sim_.run()
 
     assert results_._dim == 2
     assert results_._size == 2
@@ -490,4 +546,8 @@ def test_false_positive():
         channel="ryd_glob",
     )
     sim = QutipEmulator.from_sequence(seq)
-    assert sim.run().get_final_state() != sim.initial_state
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        assert sim.run().get_final_state() != sim.initial_state

@@ -804,7 +804,8 @@ class QutipEmulator:
         """Simulates the sequence using QuTiP's solvers.
 
         Will return NoisyResults if the noise in the SimConfig requires it.
-        Otherwise will return CoherentResults.
+        Otherwise will return CoherentResults. *Deprecated as of pulser 1.9
+        Please use QutipBackendV2 instead.*
 
         Args:
             progress_bar: If True, the progress bar of QuTiP's
@@ -820,6 +821,14 @@ class QutipEmulator:
 
                 .. _docs: https://bit.ly/3il9A2u
         """
+        warnings.warn(
+            (
+                "QutipEmulator is deprecated as of pulser 1.9. "
+                "Please use QutipBackendV2 instead."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._validate_options(options)
 
         if not _has_stochastic_noise(self.noise_model):

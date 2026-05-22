@@ -108,7 +108,11 @@ class QutipBackend(Backend):
             noise model in EmulatorConfig requires it.
             Otherwise, returns CoherentResults.
         """
-        return self._sim_obj.run(progress_bar=progress_bar, **qutip_options)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            return self._sim_obj.run(
+                progress_bar=progress_bar, **qutip_options
+            )
 
 
 class QutipBackendV2(EmulatorBackend):
@@ -174,7 +178,9 @@ class QutipBackendV2(EmulatorBackend):
 
         if not _has_stochastic_noise(self._sim_obj.noise_model):
             # A single run is needed, regardless of self.config.runs
-            single_res = self._sim_obj.run(**self._qutip_options)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                single_res = self._sim_obj.run(**self._qutip_options)
             assert isinstance(single_res, CoherentResults)
             res = Results(
                 atom_order=tuple(self._sequence.qubit_info),

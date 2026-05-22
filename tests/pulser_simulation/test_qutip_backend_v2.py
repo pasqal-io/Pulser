@@ -232,7 +232,11 @@ def test_qutip_backend_v2_stochastic_noise():
             noise_model=get_noise_model(samples_per_run=100),
             n_trajectories=30,
         )
-    results_old_api = qutip_emulator.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        results_old_api = qutip_emulator.run()
 
     times = results.get_result_times("occupation")
     occupation = np.array([x[0] for x in results.occupation])
