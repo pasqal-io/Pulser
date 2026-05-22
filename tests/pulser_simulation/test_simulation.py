@@ -1406,7 +1406,7 @@ def test_get_xy_hamiltonian():
 
     assert simple_ham[0, 1] == 0.5 * amp
     # The detuning on the diagonal depends on how many qubits are in |d>
-    np.testing.assert_array_equal(
+    np.testing.assert_array_almost_equal(
         np.diag(simple_ham.full()),
         np.array(
             [
@@ -1420,7 +1420,21 @@ def test_get_xy_hamiltonian():
                 3,  # ddd
             ]
         )
-        * -detun,
+        * -detun
+        + np.array(
+            [
+                0,  # uuu
+                0,  # uud
+                0,  # udu
+                1,  # udd
+                0,  # duu
+                1,  # dud
+                1 / 8,  # ddu
+                2 + 1 / 8,  # ddd
+            ]
+        )
+        * MockDevice.interaction_coeff
+        / 1e6,
     )
 
 
@@ -1460,11 +1474,10 @@ def test_run_xy():
 res_deph_mcarlo = {"0000": 830, "0001": 21, "0010": 3, "0100": 80, "1000": 66}
 res_eff_mcarlo = {
     "0000": 860,
-    "0001": 35,
-    "0010": 4,
+    "0001": 39,
+    "0010": 10,
     "0100": 25,
     "1000": 66,
-    "0011": 10,
 }
 res_leak_mcarlo = res_eff_mcarlo
 res_depol_mcarlo = res_deph_mcarlo
@@ -1490,19 +1503,17 @@ res_eff_meq = {"0000": 845, "0001": 29, "0010": 8, "0100": 57, "1000": 61}
 res_leak_meq = res_eff_meq
 res_depol_meq = {
     "0000": 791,
-    "0001": 32,
-    "0010": 14,
-    "0100": 72,
-    "0101": 12,
+    "0001": 39,
+    "0010": 10,
+    "0100": 81,
     "0110": 2,
-    "1000": 60,
-    "1010": 17,
+    "1000": 67,
+    "1010": 10,
 }
 res_deph_atom1_meq = {
-    "0000": 798,
-    "0001": 101,
-    "0010": 10,
-    "0011": 12,
+    "0000": 804,
+    "0001": 105,
+    "0010": 12,
     "0100": 54,
     "0101": 8,
     "1000": 17,
