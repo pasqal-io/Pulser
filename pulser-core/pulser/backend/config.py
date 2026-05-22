@@ -262,22 +262,25 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
                 " empty.",
                 stacklevel=2,
             )
-        for cb in callbacks:
+        for i, cb in enumerate(callbacks):
             if isinstance(cb, Observable):
                 raise TypeError(
                     "All entries in 'callbacks' must not be instances of "
-                    "Observable, since those go in 'observables'."
+                    "Observable, since those go in 'observables'. "
+                    f"Instead, got {cb!r} at index {i}."
                 )
             if not isinstance(cb, Callback):
                 raise TypeError(
                     "All entries in 'callbacks' must be instances of "
-                    f"Callback. Instead, got instance of type {type(cb)}."
+                    "Callback. Instead, got instance of type "
+                    f"{type(cb)} at index {i}: {cb!r}."
                 )
-        for obs in observables:
+        for i, obs in enumerate(observables):
             if not isinstance(obs, Observable):
                 raise TypeError(
                     "All entries in 'observables' must be instances of "
-                    f"Observable. Instead, got instance of type {type(obs)}."
+                    "Observable. Instead, got instance of type "
+                    f"{type(obs)} at index {i}: {obs!r}."
                 )
             obs_tags.append(obs.tag)
         repeated_tags = [k for k, v in Counter(obs_tags).items() if v > 1]
