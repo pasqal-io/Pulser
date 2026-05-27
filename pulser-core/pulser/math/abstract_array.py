@@ -323,7 +323,7 @@ class AbstractArray:
             ) from e
 
     def reshape(self, shape: tuple[int, ...]) -> AbstractArray:
-        """Return a new Abstractarray with the new shape.
+        """Returns a new AbstractArray with the new shape.
 
         See the reshape functions in torch and numpy respectively.
 
