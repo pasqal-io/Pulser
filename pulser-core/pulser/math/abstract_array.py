@@ -328,7 +328,8 @@ class AbstractArray:
         See the reshape method of torch.Tensor and numpy.array respectively.
 
         Args:
-            shape: The desired new shape. Must be compatible with the current shape.
+            shape: The desired new shape.
+                Must be compatible with the current shape.
         """
         return AbstractArray(self._array.reshape(shape))
 
