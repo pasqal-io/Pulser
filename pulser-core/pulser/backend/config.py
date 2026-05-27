@@ -320,19 +320,23 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
                 )
             if (
                 initial_state is not None
-                and _shape[0] != initial_state.n_qudits
+                and _shape[-1] != initial_state.n_qudits
             ):
                 raise ValueError(
                     f"The received interaction matrix of shape {_shape} is "
                     "incompatible with the received initial state of "
                     f"{initial_state.n_qudits} qudits."
                 )
+            if len(_shape) == 2:
+                interaction_matrix = interaction_matrix.reshape((-1,) + _shape)
             matrix_arr = interaction_matrix.as_array(detach=True)
-            if not np.allclose(matrix_arr, matrix_arr.transpose()):
+            if not np.allclose(
+                matrix_arr, np.transpose(matrix_arr, (0, 2, 1))
+            ):
                 raise ValueError(
                     "The received interaction matrix is not symmetric."
                 )
-            if np.any(np.diag(matrix_arr) != 0):
+            if np.any(np.stack([np.diag(x) for x in matrix_arr]) != 0):
                 warnings.warn(
                     "The received interaction matrix has non-zero values in "
                     "its diagonal; keep in mind that these values are "

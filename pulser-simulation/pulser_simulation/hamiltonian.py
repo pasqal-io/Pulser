@@ -290,7 +290,7 @@ class Hamiltonian:
             return U_xy * self.build_operator(
                 [("sigma_ud", [q1]), ("sigma_du", [q2])]
             ) + 0.5 * U_ryd * self.build_operator(
-                [("sigma_dd", [q1]), ("sigma_dd", [q2])]
+                [("sigma_uu", [q1]), ("sigma_uu", [q2])]
             )
 
         def make_interaction_term(masked: bool = False) -> qutip.Qobj:
