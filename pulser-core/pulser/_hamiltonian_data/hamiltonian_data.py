@@ -568,7 +568,12 @@ class HamiltonianData:
 
         Returns:
             The pairwise interaction coefficients, taking into account
-            Device specs and the Sequence type.
+            Device specs and the Sequence type. In XY mode,
+            it has shape (2, N, N), with N the number of qubits.
+            The first array of shape (N, N) is the C3 interaction,
+            the second the C6 interaction.
+            In Rydberg interaction, it has shape (1, N, N)
+            and corresponds to the C6 interaction only.
         """
         # SLM mask is not included, because it's time-dependent
         is_xy = self.basis_data.interaction_type == "XY"
@@ -624,6 +629,7 @@ class HamiltonianData:
         Returns:
             The pairwise interaction coefficients, taking into account
             Device specs, the Sequence type and missing atoms.
+            See the docstring for HamiltonianData._interaction_matrix.
         """
         mask = [False for _ in range(self.n_qudits)]
         for ind, value in enumerate(bad_atoms.values()):

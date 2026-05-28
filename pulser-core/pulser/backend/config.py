@@ -182,11 +182,13 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             input or the expected output.
         interaction_matrix: An optional interaction matrix to replace the
             interaction terms in the Hamiltonian. For an N-qudit system,
-            must be an NxN symmetric matrix where entry (i, j) dictates
-            the interaction coefficient between qudits i and j, ie it replaces
-            the C_n/r_{ij}^n term. For XY, since there are two interactions
-            the input should be a tensor of shape (2,N,N), respresenting the
+            an interaction matrix is an NxN symmetric matrix,
+            where entry (i, j) dictates the interaction coefficient between
+            qudits i and j, ie it replaces the C_n/r_{ij}^n term.
+            In XY, there are the two interactions C3 and C6 so
+            the input should be a tensor of shape (2,N,N), representing the
             interaction matrix for the XY and the Rydberg term in that order.
+            Otherwise the input should be a tensor of shape (N, N) or (1,N,N).
         prefer_device_noise_model: If True, uses the noise model of the
             sequence's device (if the sequence's device has one), regardless
             of the noise model given with this configuration.
