@@ -167,7 +167,7 @@ class RemoteConnection(ABC):
         self,
         sequence: Sequence,
         wait: bool = False,
-        open: bool = True,
+        open: bool = False,
         batch_id: str | None = None,
         **kwargs: Any,
     ) -> RemoteResults:
