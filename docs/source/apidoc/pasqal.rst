@@ -1,7 +1,7 @@
-﻿``pulser_pasqal``
+﻿``pasqal_cloud``
 =======================
 
-.. automodule:: pulser_pasqal
+.. automodule:: pasqal_cloud
 
 Connections
 ------------
@@ -9,7 +9,7 @@ Connections
 .. autosummary::
    :toctree: _autosummary
 
-   PasqalCloud
+   PasqalCloudConnection
    OVHConnection
 
 Backends
@@ -18,15 +18,6 @@ Backends
 .. autosummary::
    :toctree: _autosummary
 
-   ~pulser_pasqal.backends.EmuFreeBackendV2
+   ~pasqal_cloud.backends.EmuFreeBackend
    EmuMPSBackend
    EmuSVBackend
-
-Deprecated Backends
---------------------
-
-.. autosummary::
-   :toctree: _autosummary
-
-   EmuFreeBackend
-   EmuTNBackend
