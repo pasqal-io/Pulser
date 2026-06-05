@@ -1,23 +1,6 @@
-﻿``pasqal_cloud``
+﻿``pulser_pasqal``
 =======================
 
-.. automodule:: pasqal_cloud
+.. warning::
 
-Connections
-------------
-
-.. autosummary::
-   :toctree: _autosummary
-
-   PasqalCloudConnection
-   OVHConnection
-
-Backends
------------------
-
-.. autosummary::
-   :toctree: _autosummary
-
-   ~pasqal_cloud.backends.EmuFreeBackend
-   EmuMPSBackend
-   EmuSVBackend
+    This package is deprecated and replaced by `pasqal-cloud <https://pypi.org/project/pasqal-cloud/>`_, see the `migration path <https://pasqal-io.github.io/pasqal-cloud/migrating-from-pulser-pasqal/>`_.

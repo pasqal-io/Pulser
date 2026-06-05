@@ -26,9 +26,9 @@ Attributes:
     QPUBackend: See :py:class:`pulser.backend.QPUBackend`.
     QutipBackend: See :py:class:`pulser_simulation.QutipBackend`.
     QutipBackendV2: See :py:class:`pulser_simulation.QutipBackendV2`.
-    EmuFreeBackend: See :py:class:`pasqal_cloud.EmuFreeBackend`.
-    EmuMPSBackend: See :py:class:`pasqal_cloud.EmuMPSBackend`.
-    EmuSVBackend: See :py:class:`pasqal_cloud.EmuSVBackend`.
+    RemoteFreeBackend: See :py:class:`pasqal_cloud.RemoteFreeBackend`.
+    RemoteMPSBackend: See :py:class:`pasqal_cloud.RemoteMPSBackend`.
+    RemoteSVBackend: See :py:class:`pasqal_cloud.RemoteSVBackend`.
     MPSBackend: See `emu_mps.MPSBackend <https://pypi.org/project/emu-mps/>`_.
     SVBackend: See `emu_sv.SVBackend <https://pypi.org/project/emu-sv/>`_.
 
@@ -37,6 +37,7 @@ Attributes:
 from __future__ import annotations
 
 import importlib
+import warnings
 from typing import TYPE_CHECKING, Type
 
 if TYPE_CHECKING:
@@ -49,11 +50,18 @@ _BACKENDS = {
     "QPUBackend": "pulser.backend",
     "QutipBackend": "pulser_simulation",
     "QutipBackendV2": "pulser_simulation",
-    "EmuFreeBackend": "pasqal_cloud",
-    "EmuMPSBackend": "pasqal_cloud",
-    "EmuSVBackend": "pasqal_cloud",
+    "RemoteFreeBackend": "pasqal_cloud",
+    "RemoteMPSBackend": "pasqal_cloud",
+    "RemoteSVBackend": "pasqal_cloud",
     "MPSBackend": "emu_mps",
     "SVBackend": "emu_sv",
+}
+
+_DEPRECATED_REMOVED_BACKENDS = ["EmuFreeBackend", "EmuTNBackend"]
+_RENAMED_BACKENDS = {
+    "EmuFreeBackendV2": "RemoteFreeBackend",
+    "EmuMPSBackend": "RemoteMPSBackend",
+    "EmuSVBackend": "RemoteSVBackend",
 }
 
 
@@ -62,9 +70,27 @@ __all__: list[str] = []
 
 
 def __getattr__(name: str) -> Type[Backend]:
-    if name not in _BACKENDS:
+    if name in _DEPRECATED_REMOVED_BACKENDS:
+        raise AttributeError(
+            f"{name!r} was deprecated and is now removed "
+            f"from module {__name__!r}"
+        )
+
+    if name not in _BACKENDS and name not in _RENAMED_BACKENDS:
         raise AttributeError(f"Module {__name__!r} has no attribute {name!r}.")
     try:
+        if name in _RENAMED_BACKENDS:
+            new_name = _RENAMED_BACKENDS[name]
+
+            warnings.warn(
+                f"{name!r} was renamed to {new_name!r}. "
+                f"Please use {new_name!r} from now on.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+            name = new_name
+
         return getattr(  # type: ignore
             importlib.import_module(_BACKENDS[name]),
             name,

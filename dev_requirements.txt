@@ -14,6 +14,6 @@ pre-commit
 # tutorials
 nbmake ~= 1.5
 notebook
-pasqal-cloud >= 0.23.0
+pasqal-cloud @ git+https://github.com/pasqal-io/pasqal-cloud@ap/1822-rename-classes#egg=pasqal-cloud&subdirectory=pasqal-cloud
 python-igraph
 scikit-optimize
