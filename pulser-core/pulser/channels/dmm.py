@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Defines the detuning map modulator."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
@@ -191,15 +192,15 @@ class DMM(Channel):
                 "To respect this constraint, keep the detuning above "
                 f"{self.total_bottom_detuning/sum_weight} rad/µs."
             )
-        avg_abs_detuning = np.average(np.abs(round_detuning))
 
         weights_arr = np.array(detuning_map.weights)
         non_zero_weight_inds = np.nonzero(weights_arr)
-        # Can't be empty because the WeightMap enforces having at least one
-        # non-zero weight
-        assert (
-            len(non_zero_weight_inds) == 1 and len(non_zero_weight_inds[0]) > 0
-        )
+        assert len(non_zero_weight_inds) == 1, "Weights array is not 1D"
+        if len(non_zero_weight_inds[0]) == 0:
+            # All weights are zero, skip min_avg_abs_detuning validation
+            return
+
+        avg_abs_detuning = np.average(np.abs(round_detuning))
         min_non_zero_weight = np.min(weights_arr[non_zero_weight_inds])
         if (
             0

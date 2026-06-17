@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import typing
+import warnings
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Mapping, Optional, TypeVar, cast
 
@@ -67,8 +68,9 @@ class WeightMap(Traps, RegDrawer):
         ):
             raise ValueError("All weights must be between 0 and 1.")
         if np.count_nonzero(weights) == 0:
-            raise ValueError(
-                "A WeightMap must have at least one non-zero weight."
+            warnings.warn(
+                "A WeightMap should have at least one non-zero weight.",
+                stacklevel=3,
             )
         object.__setattr__(self, "weights", tuple(weights))
 
