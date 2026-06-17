@@ -213,7 +213,7 @@ class NoiseModel:
       :math:`\sigma^z = \frac{\pi}{\lambda}\sqrt{2} w \sigma^{xy}`, where
       :math:`\lambda` is the trap wavelength with a constant value of 0.85 µm.
 
-      Note: when combined with a DMM laser channel, register noise also
+      Note: when combined with a DMM channel, register noise also
       requires ``detuning_map_spot_waist`` to be set.
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
