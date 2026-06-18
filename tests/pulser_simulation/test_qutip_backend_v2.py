@@ -620,7 +620,12 @@ def test_run_from_sequence_samples(modulation):
     seq.declare_channel("rydberg_global", "rydberg_global")
     seq.add(pulser.Pulse.ConstantPulse(1000, 1, 0, 0), "rydberg_global")
 
-    backend = QutipBackendV2(seq)
+    config: QutipConfig | None = None
+    if modulation:
+        config = QutipConfig(
+            with_modulation=modulation, observables=[StateResult()]
+        )
+    backend = QutipBackendV2(seq, config=config)
 
     results1 = backend.run()
     results2 = backend.run_from_sequence_samples(
@@ -631,8 +636,10 @@ def test_run_from_sequence_samples(modulation):
         ),
         seq.register,
         seq.device,
+        config=config,
     )
 
-    assert np.allclose(
-        results1.final_state._state.full(), results2.final_state._state.full()
-    )
+    s1 = results1.final_state._state.full()
+    s2 = results2.final_state._state.full()
+
+    assert np.allclose(s1, s2)
