@@ -200,13 +200,13 @@ class QutipBackendV2(EmulatorBackend):
         *,
         config: EmulationConfig | None = None,
     ) -> Results:
-        """
-        Executes the sampled sequence on the backend
+        """Executes the sampled sequence on the backend.
 
         Args:
-            sequence_samples: the sampled sequence
-            register: the qubit register
-            device: the device to emulate
+            sequence_samples: The sampled sequence to emulate.
+            register: The qubit register.
+            device: The device to emulate.
+            config: The configuration for the Qutip emulation.
         """
         config = config or QutipBackendV2.default_config
         sim_obj = QutipEmulator(
