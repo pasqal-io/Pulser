@@ -22,7 +22,10 @@ from pulser.backend.abc import Backend, EmulatorBackend
 from pulser.backend.config import EmulationConfig, EmulatorConfig
 from pulser.backend.default_observables import BitStrings, StateResult
 from pulser.backend.results import Results
+from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
+from pulser.register.base_register import BaseRegister
+from pulser.sampler import SequenceSamples
 from pulser_simulation.aggregators import density_matrix_aggregator
 from pulser_simulation.qutip_config import QutipConfig
 from pulser_simulation.qutip_op import QutipOperator
@@ -173,18 +176,59 @@ class QutipBackendV2(EmulatorBackend):
         self._sim_obj._validate_options(self._qutip_options)
 
     def run(self) -> Results:
-        """Executes the sequence on the backend."""
-        eigenstates = self._sim_obj._current_hamiltonian.basis_data.eigenbasis
+        return QutipBackendV2._run_raw(
+            self._sim_obj,
+            self._sim_obj._register,
+            self._config,
+            self._qutip_options,
+        )
 
-        if not _has_stochastic_noise(self._sim_obj.noise_model):
+    @staticmethod
+    def run_from_sequence_samples(
+        sequence_samples: SequenceSamples,
+        register: BaseRegister,
+        device: BaseDevice,
+        *,
+        config: EmulationConfig | None = None,
+    ) -> Results:
+        config = config or QutipBackendV2.default_config
+        sim_obj = QutipEmulator(
+            sequence_samples,
+            register,
+            device,
+            sampling_rate=config.sampling_rate,
+            config=None,
+            noise_model=config.noise_model,
+            solver=config.solver,
+            n_trajectories=config.n_trajectories,
+        )
+        qutip_options = {
+            "print_progress": config.print_progress,
+            "progress_bar": config.progress_bar,
+        }
+        return QutipBackendV2._run_raw(
+            sim_obj, register, config, qutip_options
+        )
+
+    @staticmethod
+    def _run_raw(
+        sim_obj: QutipEmulator,
+        register: BaseRegister,
+        config: EmulationConfig,
+        qutip_options: dict[str, Any],
+    ) -> Results:
+        """Executes the sequence on the backend."""
+        eigenstates = sim_obj._current_hamiltonian.basis_data.eigenbasis
+
+        if not _has_stochastic_noise(sim_obj.noise_model):
             # A single run is needed, regardless of self.config.runs
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", DeprecationWarning)
-                single_res = self._sim_obj.run(**self._qutip_options)
+                single_res = sim_obj.run(**qutip_options)
             assert isinstance(single_res, CoherentResults)
             res = Results(
-                atom_order=tuple(self._sequence.qubit_info),
-                total_duration=self._sim_obj.total_duration_ns,
+                atom_order=tuple(register.qubit_ids),
+                total_duration=sim_obj.total_duration_ns,
             )
 
             for qutip_res in single_res:
@@ -193,22 +237,22 @@ class QutipBackendV2(EmulatorBackend):
                     qutip_res.state.unit(), eigenstates=eigenstates
                 )
                 ham: QutipOperator = QutipOperator(
-                    self._sim_obj._get_noiseless_hamiltonian(
-                        self._config.noise_model.with_leakage
+                    sim_obj._get_noiseless_hamiltonian(
+                        config.noise_model.with_leakage
                     )._hamiltonian(t * res.total_duration / 1000),
                     eigenstates=eigenstates,
                 )
-                for callback in self._config.callbacks:
+                for callback in config.callbacks:
                     callback(
-                        config=self._config,
+                        config=config,
                         t=float(t),
                         state=state,
                         hamiltonian=ham,
                         result=res,
                     )
-                for obs in self._config.observables:
+                for obs in config.observables:
                     obs(
-                        config=self._config,
+                        config=config,
                         t=float(t),
                         state=state,
                         hamiltonian=ham,
@@ -217,13 +261,13 @@ class QutipBackendV2(EmulatorBackend):
             return res
         else:
             results: list[Results] = []
-            for cleanres_noisyseq, reps in self._sim_obj._noisy_runs(
-                **self._qutip_options
+            for cleanres_noisyseq, reps in sim_obj._noisy_runs(
+                **qutip_options
             ):
                 for _ in range(reps):
                     res = Results(
-                        atom_order=tuple(self._sequence.qubit_info),
-                        total_duration=self._sim_obj.total_duration_ns,
+                        atom_order=tuple(register.qubit_ids),
+                        total_duration=sim_obj.total_duration_ns,
                     )
                     for qutip_res in cleanres_noisyseq:
                         t = qutip_res.evaluation_time
@@ -232,23 +276,23 @@ class QutipBackendV2(EmulatorBackend):
                             qutip_res.state.unit(), eigenstates=eigenstates
                         )
                         ham = QutipOperator(
-                            self._sim_obj._get_noiseless_hamiltonian(
-                                self._config.noise_model.with_leakage
+                            sim_obj._get_noiseless_hamiltonian(
+                                config.noise_model.with_leakage
                             )._hamiltonian(t * res.total_duration / 1000),
                             eigenstates=eigenstates,
                         )
 
-                        for callback in self._config.callbacks:
+                        for callback in config.callbacks:
                             callback(
-                                config=self._config,
+                                config=config,
                                 t=float(t),
                                 state=state,
                                 hamiltonian=ham,
                                 result=res,
                             )
-                        for obs in self._config.observables:
+                        for obs in config.observables:
                             obs(
-                                config=self._config,
+                                config=config,
                                 t=float(t),
                                 state=state,
                                 hamiltonian=ham,
