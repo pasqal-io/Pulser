@@ -147,18 +147,16 @@ class QutipBackendV2(EmulatorBackend):
     ) -> None:
         """Initializes the backend."""
         super().__init__(sequence, config=config, mimic_qpu=mimic_qpu)
-        noise_model: None | NoiseModel = None
-        if self._config.prefer_device_noise_model:
-            noise_model = sequence.device.noise_model
-        noise_model = noise_model or self._config.noise_model
+
         self._sim_obj = QutipEmulator.from_sequence(
             sequence,
             sampling_rate=self._config.sampling_rate,
-            noise_model=noise_model,
+            noise_model=self._get_noise_model(self._config, sequence.device),
             with_modulation=self._config.with_modulation,
             solver=self._config.solver,
             n_trajectories=self._config.n_trajectories,
         )
+
         self._sim_obj.set_evaluation_times(
             self._config._get_legacy_evaluation_times(
                 self._sim_obj.total_duration_ns
@@ -173,9 +171,20 @@ class QutipBackendV2(EmulatorBackend):
             "print_progress": self._config.print_progress,
             "progress_bar": self._config.progress_bar,
         }
+
         self._sim_obj._validate_options(self._qutip_options)
 
+    @staticmethod
+    def _get_noise_model(
+        config: EmulationConfig, device: BaseDevice
+    ) -> NoiseModel:
+        noise_model: None | NoiseModel = None
+        if config.prefer_device_noise_model:
+            noise_model = device.noise_model
+        return noise_model or config.noise_model
+
     def run(self) -> Results:
+        """Executes the sequence on the backend."""
         return QutipBackendV2._run_raw(
             self._sim_obj,
             self._sim_obj._register,
@@ -191,6 +200,14 @@ class QutipBackendV2(EmulatorBackend):
         *,
         config: EmulationConfig | None = None,
     ) -> Results:
+        """
+        Executes the sampled sequence on the backend
+
+        Args:
+            sequence_samples: the sampled sequence
+            register: the qubit register
+            device: the device to emulate
+        """
         config = config or QutipBackendV2.default_config
         sim_obj = QutipEmulator(
             sequence_samples,
@@ -198,14 +215,21 @@ class QutipBackendV2(EmulatorBackend):
             device,
             sampling_rate=config.sampling_rate,
             config=None,
-            noise_model=config.noise_model,
+            noise_model=QutipBackendV2._get_noise_model(config, device),
             solver=config.solver,
             n_trajectories=config.n_trajectories,
         )
+
+        sim_obj.set_evaluation_times(
+            config._get_legacy_evaluation_times(sim_obj.total_duration_ns),
+        )
+        if config.initial_state:
+            sim_obj.set_initial_state(config.initial_state.to_qobj())
         qutip_options = {
             "print_progress": config.print_progress,
             "progress_bar": config.progress_bar,
         }
+
         return QutipBackendV2._run_raw(
             sim_obj, register, config, qutip_options
         )

@@ -642,4 +642,4 @@ def test_run_from_sequence_samples(modulation):
     s1 = results1.final_state._state.full()
     s2 = results2.final_state._state.full()
 
-    assert np.allclose(s1, s2)
+    assert np.allclose(s1, s2, atol=0, rtol=1e-16)  # really the same
