@@ -622,8 +622,13 @@ def test_run_from_sequence_samples(modulation):
 
     config: QutipConfig | None = None
     if modulation:
+        initial_state = QutipState.from_state_amplitudes(
+            eigenstates=("r", "g"), amplitudes={"g": 1.0}
+        )
         config = QutipConfig(
-            with_modulation=modulation, observables=[StateResult()]
+            with_modulation=modulation,
+            observables=[StateResult()],
+            initial_state=initial_state,
         )
     backend = QutipBackendV2(seq, config=config)
 
