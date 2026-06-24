@@ -187,7 +187,6 @@ class QutipBackendV2(EmulatorBackend):
         """Executes the sequence on the backend."""
         return QutipBackendV2._run_raw(
             self._sim_obj,
-            self._sim_obj._register,
             self._config,
             self._qutip_options,
         )
@@ -230,14 +229,11 @@ class QutipBackendV2(EmulatorBackend):
             "progress_bar": config.progress_bar,
         }
 
-        return QutipBackendV2._run_raw(
-            sim_obj, register, config, qutip_options
-        )
+        return QutipBackendV2._run_raw(sim_obj, config, qutip_options)
 
     @staticmethod
     def _run_raw(
         sim_obj: QutipEmulator,
-        register: BaseRegister,
         config: EmulationConfig,
         qutip_options: dict[str, Any],
     ) -> Results:
@@ -251,7 +247,7 @@ class QutipBackendV2(EmulatorBackend):
                 single_res = sim_obj.run(**qutip_options)
             assert isinstance(single_res, CoherentResults)
             res = Results(
-                atom_order=tuple(register.qubit_ids),
+                atom_order=tuple(sim_obj._register.qubit_ids),
                 total_duration=sim_obj.total_duration_ns,
             )
 
@@ -290,7 +286,7 @@ class QutipBackendV2(EmulatorBackend):
             ):
                 for _ in range(reps):
                     res = Results(
-                        atom_order=tuple(register.qubit_ids),
+                        atom_order=tuple(sim_obj._register.qubit_ids),
                         total_duration=sim_obj.total_duration_ns,
                     )
                     for qutip_res in cleanres_noisyseq:
