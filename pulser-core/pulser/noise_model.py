@@ -213,6 +213,9 @@ class NoiseModel:
       (2) Off plane standard deviation fluctuation given by:
       :math:`\sigma^z = \frac{\pi}{\lambda}\sqrt{2} w \sigma^{xy}`, where
       :math:`\lambda` is the trap wavelength with a constant value of 0.85 µm.
+
+      Note: when combined with a DMM channel, register noise also
+      requires ``detuning_map_spot_waist`` to be set.
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
@@ -315,7 +318,11 @@ class NoiseModel:
             registers (though each register has its own randomly sampled
             value in each run). This noise is multiplicative. Defaults to 0.
         detuning_map_spot_waist: Defines the waist of each spot
-            in the DetuningMap (in µm).
+            in the DetuningMap (in µm). Required when 'register' noise
+            is active (i.e. ``temperature``, ``trap_waist`` and
+            ``trap_depth`` are all set) and the sequence uses a DMM channel;
+            otherwise thermal motion can displace an atom off its detuning
+            spot entirely. Defaults to None.
     """
 
     noise_types: tuple[NoiseTypes, ...] = field(init=False)
