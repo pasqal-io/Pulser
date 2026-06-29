@@ -633,7 +633,8 @@ def test_emulation_config():
     with pytest.raises(
         ValueError,
         match=re.escape(
-            "'interaction_matrix' must be a square matrix. Instead, an array"
+            "'interaction_matrix' must be of shape "
+            "(N,N) or (1,N,N), or (2,N,N) for XY. Instead, an array"
             " of shape (4, 3) was given"
         ),
     ):
@@ -665,11 +666,30 @@ def test_emulation_config():
             observables=(BitStrings(),),
             interaction_matrix=matrix_,
         )
+    with pytest.raises(
+        ValueError,
+        match="interaction matrix is not symmetric",
+    ):
+        matrix_ = np.ones((2, 4, 4))
+        matrix_[0, 0, 3] += 1e-4
+        EmulationConfig(
+            observables=(BitStrings(),),
+            interaction_matrix=matrix_,
+        )
     with pytest.warns(UserWarning, match="non-zero values in its diagonal"):
         EmulationConfig(
             observables=(BitStrings(),),
             interaction_matrix=np.ones((4, 4)),
         )
+    with pytest.warns(UserWarning, match="non-zero values in its diagonal"):
+        EmulationConfig(
+            observables=(BitStrings(),),
+            interaction_matrix=np.ones((2, 4, 4)),
+        )
+    EmulationConfig(
+        observables=(BitStrings(),),
+        interaction_matrix=np.array([[[0, 1], [1, 0]], [[0, 2], [2, 0]]]),
+    )
     with pytest.raises(TypeError, match="must be a NoiseModel"):
         EmulationConfig(
             observables=(BitStrings(),), noise_model={"p_false_pos": 0.1}
