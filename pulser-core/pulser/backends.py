@@ -26,7 +26,7 @@ Attributes:
     QPUBackend: See :py:class:`pulser.backend.QPUBackend`.
     QutipBackend: See :py:class:`pulser_simulation.QutipBackend`.
     QutipBackendV2: See :py:class:`pulser_simulation.QutipBackendV2`.
-    RemoteQutipBackend: See :py:class:`pasqal_cloud.RemoteQutipBackend`.
+    RemoteFreeBackend: See :py:class:`pasqal_cloud.RemoteFreeBackend`.
     RemoteMPSBackend: See :py:class:`pasqal_cloud.RemoteMPSBackend`.
     RemoteSVBackend: See :py:class:`pasqal_cloud.RemoteSVBackend`.
     MPSBackend: See `emu_mps.MPSBackend <https://pypi.org/project/emu-mps/>`_.
@@ -50,7 +50,7 @@ _BACKENDS = {
     "QPUBackend": "pulser.backend",
     "QutipBackend": "pulser_simulation",
     "QutipBackendV2": "pulser_simulation",
-    "RemoteQutipBackend": "pasqal_cloud",
+    "RemoteFreeBackend": "pasqal_cloud",
     "RemoteMPSBackend": "pasqal_cloud",
     "RemoteSVBackend": "pasqal_cloud",
     "MPSBackend": "emu_mps",
@@ -59,7 +59,7 @@ _BACKENDS = {
 
 _DEPRECATED_REMOVED_BACKENDS = ["EmuFreeBackend", "EmuTNBackend"]
 _RENAMED_BACKENDS = {
-    "EmuFreeBackendV2": "RemoteQutipBackend",
+    "EmuFreeBackendV2": "RemoteFreeBackend",
     "EmuMPSBackend": "RemoteMPSBackend",
     "EmuSVBackend": "RemoteSVBackend",
 }
@@ -72,7 +72,8 @@ __all__: list[str] = []
 def __getattr__(name: str) -> Type[Backend]:
     if name in _DEPRECATED_REMOVED_BACKENDS:
         raise AttributeError(
-            f"{name!r} was deprecated and is now removed from module {__name__!r}"
+            f"{name!r} was deprecated and is now removed "
+            f"from module {__name__!r}"
         )
 
     if name not in _BACKENDS and name not in _RENAMED_BACKENDS:
