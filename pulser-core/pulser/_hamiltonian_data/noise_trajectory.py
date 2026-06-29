@@ -25,7 +25,29 @@ ChannelName = str
 
 @dataclass(frozen=True)
 class NoiseTrajectory:
-    """Defines a noise trajectory."""
+    """Defines a noise trajectory.
+
+    Args:
+        bad_atoms: Whether each atom is present or bad.
+            False means it's present, True means it's bad.
+        doppler_detune: The time-independent doppler detuning error per qubit.
+        amp_fluctuations:
+            The time-independent amplitude fluctuation per channel.
+        det_fluctuations:
+            The time-independent detuning fluctuation per non-DMM channel.
+        det_phases:
+            The random phase for each frequency component in the
+            time-dependent detuning noise. The amplitude for each component
+            is taken from the noise model and is non-random.
+        register: The qubit register positions including noise.
+        interaction_matrix:
+            Packed interaction matrix for the two body term in the
+            Hamiltonian. Should be of shape (2,N,N) for XY,
+            encoding the C3 and C6 term in that order.
+            Should be of shape (1,N,N) otherwise.
+        dmm_det_fluctuation:
+            The time-independent detuning fluctuations per DMM channel.
+    """
 
     bad_atoms: dict[QubitId, bool]
     doppler_detune: dict[QubitId, float]
