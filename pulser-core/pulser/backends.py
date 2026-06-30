@@ -26,7 +26,7 @@ Attributes:
     QPUBackend: See :py:class:`pulser.backend.QPUBackend`.
     QutipBackend: See :py:class:`pulser_simulation.QutipBackend`.
     QutipBackendV2: See :py:class:`pulser_simulation.QutipBackendV2`.
-    RemoteFreeBackend: See :py:class:`pasqal_cloud.RemoteFreeBackend`.
+    RemoteEmuFreeBackend: See :py:class:`pasqal_cloud.RemoteEmuFreeBackend`.
     RemoteMPSBackend: See :py:class:`pasqal_cloud.RemoteMPSBackend`.
     RemoteSVBackend: See :py:class:`pasqal_cloud.RemoteSVBackend`.
     MPSBackend: See `emu_mps.MPSBackend <https://pypi.org/project/emu-mps/>`_.
@@ -50,7 +50,7 @@ _BACKENDS = {
     "QPUBackend": "pulser.backend",
     "QutipBackend": "pulser_simulation",
     "QutipBackendV2": "pulser_simulation",
-    "RemoteFreeBackend": "pasqal_cloud",
+    "RemoteEmuFreeBackend": "pasqal_cloud",
     "RemoteMPSBackend": "pasqal_cloud",
     "RemoteSVBackend": "pasqal_cloud",
     "MPSBackend": "emu_mps",
@@ -59,7 +59,7 @@ _BACKENDS = {
 
 _DEPRECATED_REMOVED_BACKENDS = ["EmuFreeBackend", "EmuTNBackend"]
 _RENAMED_BACKENDS = {
-    "EmuFreeBackendV2": "RemoteFreeBackend",
+    "EmuFreeBackendV2": "RemoteEmuFreeBackend",
     "EmuMPSBackend": "RemoteMPSBackend",
     "EmuSVBackend": "RemoteSVBackend",
 }
