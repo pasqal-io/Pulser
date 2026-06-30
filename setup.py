@@ -27,7 +27,7 @@ if "dev" in __version__:
 
 # Pulser packages not pinned to __version__
 requirements = [
-    "pasqal-cloud @ git+https://github.com/pasqal-io/pasqal-cloud@af6b4f8ba11ed502f0d7b27d681370c8a9feb3f3#egg=pasqal-cloud&subdirectory=pasqal-cloud",
+    "pasqal-cloud >= 0.23.0",
 ]
 # Adding packages pinned to __version__
 with open("packages.txt", "r", encoding="utf-8") as f:
