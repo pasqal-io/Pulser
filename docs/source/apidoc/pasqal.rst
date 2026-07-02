@@ -3,4 +3,4 @@
 
 .. warning::
 
-    This package is deprecated and replaced by `pasqal-cloud <https://pypi.org/project/pasqal-cloud/>`_, see the `migration path <https://pasqal-io.github.io/pasqal-cloud/migrating-from-pulser-pasqal/>`_.
+    This package is deprecated and replaced by `pasqal-cloud <https://docs.pasqal.com/cloud/pasqal-cloud/>`_, see the `migration path <https://docs.pasqal.com/cloud/pasqal-cloud/migrating-from-pulser-pasqal/>`_.
