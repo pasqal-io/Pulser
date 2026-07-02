@@ -71,20 +71,13 @@ __all__: list[str] = []
 
 def __getattr__(name: str) -> Type[Backend]:
     if name in _DEPRECATED_REMOVED_BACKENDS:
-        raise ImportError(
+        raise AttributeError(
             f"{name!r} was deprecated and is now removed "
             f"from module {__name__!r}"
         )
 
     if name not in _BACKENDS and name not in _RENAMED_BACKENDS:
-        if name == "__path__":
-            raise AttributeError(
-                f"Module {__name__!r} has no attribute {name!r}."
-            )
-        else:
-            raise ImportError(
-                f"Module {__name__!r} has no attribute {name!r}."
-            )
+        raise AttributeError(f"Module {__name__!r} has no attribute {name!r}.")
     try:
         if name in _RENAMED_BACKENDS:
             new_name = _RENAMED_BACKENDS[name]
@@ -103,7 +96,7 @@ def __getattr__(name: str) -> Type[Backend]:
             name,
         )
     except ModuleNotFoundError:
-        raise ImportError(
+        raise AttributeError(
             f"{name!r} requires the {_BACKENDS[name]!r} package. To install "
             f"it, run `pip install {_BACKENDS[name]}`."
         )

@@ -25,7 +25,7 @@ from pulser.backends import _BACKENDS
 def test_missing_package(monkeypatch, backend, missing_package):
     monkeypatch.setitem(sys.modules, missing_package, None)
     with pytest.raises(
-        ImportError,
+        AttributeError,
         match=f"{backend!r} requires the {missing_package!r} package. "
         f"To install it, run `pip install {missing_package}`",
     ):
@@ -34,7 +34,7 @@ def test_missing_package(monkeypatch, backend, missing_package):
 
 def test_missing_backend():
     with pytest.raises(
-        ImportError,
+        AttributeError,
         match="Module 'pulser.backends' has no attribute 'SpecialBackend'",
     ):
         pulser.backends.SpecialBackend
@@ -51,7 +51,7 @@ def test_succesful_imports(backend_name):
 @pytest.mark.parametrize("backend_name", ["EmuFreeBackend", "EmuTNBackend"])
 def test_removed_deprecated_backends(backend_name):
     with pytest.raises(
-        ImportError,
+        AttributeError,
         match=f"{backend_name!r} was deprecated and is now removed",
     ):
         getattr(pulser.backends, backend_name)
@@ -63,7 +63,7 @@ def test_removed_deprecated_backends(backend_name):
 def test_renamed_backends(backend_name):
     with (
         pytest.raises(
-            ImportError,
+            AttributeError,
             match="To install it, run `pip install",
         ),
         pytest.warns(
