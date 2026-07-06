@@ -1,32 +1,6 @@
 ﻿``pulser_pasqal``
 =======================
 
-.. automodule:: pulser_pasqal
+.. warning::
 
-Connections
-------------
-
-.. autosummary::
-   :toctree: _autosummary
-
-   PasqalCloud
-   OVHConnection
-
-Backends
------------------
-
-.. autosummary::
-   :toctree: _autosummary
-
-   ~pulser_pasqal.backends.EmuFreeBackendV2
-   EmuMPSBackend
-   EmuSVBackend
-
-Deprecated Backends
---------------------
-
-.. autosummary::
-   :toctree: _autosummary
-
-   EmuFreeBackend
-   EmuTNBackend
+    This package is deprecated and replaced by `pasqal-cloud <https://docs.pasqal.com/cloud/pasqal-cloud/>`_, see the `migration path <https://docs.pasqal.com/cloud/pasqal-cloud/migrating-from-pulser-pasqal/>`_.
