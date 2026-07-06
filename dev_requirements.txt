@@ -14,6 +14,6 @@ pre-commit
 # tutorials
 nbmake ~= 1.5
 notebook
-pulser-pasqal >= 0.20.8
+pasqal-cloud >= 0.23.0
 python-igraph
 scikit-optimize
