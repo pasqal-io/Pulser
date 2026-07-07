@@ -412,12 +412,18 @@ def test_interaction_matrix(channel_type):
             np.array([[0.0, interaction_size], [interaction_size, 0.0]]),
         )
     elif channel_type == "mw_global":
-        interaction_size = ham._device.interaction_coeff_xy / 8**3
+        interaction_size_xy = ham._device.interaction_coeff_xy / 8**3
+        interaction_size_ryd = ham._device.interaction_coeff / 8**6
         assert np.allclose(
             ham._interaction_matrix(
                 ham.noise_trajectories[0].trajectory.register
             ),
-            np.array([[0.0, interaction_size], [interaction_size, 0.0]]),
+            np.array(
+                [
+                    [[0.0, interaction_size_xy], [interaction_size_xy, 0.0]],
+                    [[0.0, interaction_size_ryd], [interaction_size_ryd, 0.0]],
+                ]
+            ),
         )
     else:
         assert False
@@ -460,7 +466,7 @@ def test_interaction_matrix_torch(channel_type):
         gr = torch.autograd.grad(
             ham._interaction_matrix(
                 ham.noise_trajectories[0].trajectory.register
-            )[0, 1],
+            )[0, 0, 1],
             q_dict["superman"],
         )
         assert torch.allclose(
@@ -471,20 +477,24 @@ def test_interaction_matrix_torch(channel_type):
             ),
         )
     elif channel_type == "mw_global":
-        interaction_size = ham._device.interaction_coeff_xy / 8**3
+        interaction_size_xy = ham._device.interaction_coeff_xy / 8**3
+        interaction_size_ryd = ham._device.interaction_coeff / 8**6
         assert torch.allclose(
             ham._interaction_matrix(
                 ham.noise_trajectories[0].trajectory.register
             ),
             torch.tensor(
-                [[0.0, interaction_size], [interaction_size, 0.0]],
+                [
+                    [[0.0, interaction_size_xy], [interaction_size_xy, 0.0]],
+                    [[0.0, interaction_size_ryd], [interaction_size_ryd, 0.0]],
+                ],
                 dtype=torch.float64,
             ),
         )
         gr = torch.autograd.grad(
             ham._interaction_matrix(
                 ham.noise_trajectories[0].trajectory.register
-            )[0, 1],
+            )[0, 0, 1],
             q_dict["superman"],
         )
         assert torch.allclose(
@@ -540,13 +550,13 @@ def test_noisy_interaction_matrix():
                 [0.0000, 26.4198, 0.0000, 0.0000],
                 [0.0000, 0.0000, 0.0000, 0.0000],
             ]
-        ),
+        ).reshape(1, 4, 4),
     )
     assert (
-        actual[1, 2]
+        actual[0, 1, 2]
         == ham._interaction_matrix(
             ham.noise_trajectories[0].trajectory.register
-        )[1, 2]
+        )[0, 1, 2]
     )
 
 
@@ -592,14 +602,14 @@ def test_noisy_interaction_matrix_torch():
                 [0.0000, 0.0000, 0.0000, 0.0000],
             ],
             dtype=torch.float64,
-        ),
+        ).reshape(1, 4, 4),
     )
 
     assert (
-        actual[1, 2]
+        actual[0, 1, 2]
         == ham._interaction_matrix(
             ham.noise_trajectories[0].trajectory.register
-        )[1, 2]
+        )[0, 1, 2]
     )
 
 

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Function for validation of JSON serialization to abstract representation."""
+
 import json
 from importlib.metadata import version
 from typing import Any, Callable
@@ -109,7 +110,7 @@ def validate_abstract_repr(
                 _FAST_VALIDATORS[name](obj)
             except fastjsonschema.JsonSchemaException:
                 _validate_with_jsonschema(obj, name)
-        else:
+        else:  # pragma: no cover
             _validate_with_jsonschema(obj, name)
     except Exception as exc:
         try:

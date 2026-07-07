@@ -135,13 +135,13 @@ Together with the driving Hamiltonian, this interaction encodes the _Ising Hamil
 If the information is stored in the Rydberg states $\left|0\right>$ and $\left|1\right>$ (the so-called `XY` basis), then
 
 $$
-\hat{U}_{ij}(R_{ij}) =\frac{C_3}{R_{ij}^3} (|1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j)
+\hat{U}_{ij}(R_{ij}) =\frac{C_3}{R_{ij}^3} (|1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j) + \frac{C_6}{R_{ij}^6} |0\rangle\langle 0|_i |0\rangle\langle 0|_j
 $$
 <details>
 
   <summary>Interaction strength in the XY Hamiltonian</summary>
 
-- The interaction strength is $\frac{C_3}{R_{ij}^3}$, with $C_3$ a coefficient that depends on the energy levels used to encode $\left|0\right>$ and $\left|1\right>$. 
+- There are two parts to the interaction. For the first part, the interaction strength is $\frac{C_3}{R_{ij}^3}$, with $C_3$ a coefficient that depends on the energy levels used to encode $\left|0\right>$ and $\left|1\right>$. The second part is as in the Ising Hamiltonian, except that the interaction is between the $|0\rangle$ states, rather than the $|r\rangle$ states.
 
 
 </details>
@@ -198,7 +198,7 @@ $$H^\text{int}_{ij} =\frac{C_6}{R_{ij}^6}|r\rangle\langle r|_i |r\rangle\langle 
 
 - If the selected Channel is the `Microwave` channel, the system is initialized in $\left|00...0\right>$ and the interaction Hamiltonian is the [XY Hamiltonian](programming.md#xy-hamiltonian)
 
-$$H^\text{int}_{ij} =\frac{C_3}{R_{ij}^3}|1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j$$
+$$H^\text{int}_{ij} =\frac{C_3}{R_{ij}^3}|1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j + \frac{C_6}{R_{ij}^6} |0\rangle\langle 0|_i |0\rangle\langle 0|_j$$
 
 :::{important}
 At this stage, the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) is fully determined.

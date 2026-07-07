@@ -219,8 +219,8 @@ class TestDetuningMap:
                 ValueError, match="All weights must be between 0 and 1."
             ):
                 reg.define_detuning_map(bad_weights)  # type: ignore
-            with pytest.raises(
-                ValueError, match="must have at least one non-zero weight"
+            with pytest.warns(
+                UserWarning, match="should have at least one non-zero weight"
             ):
                 reg.define_detuning_map(zero_weights)  # type: ignore
 
@@ -297,7 +297,7 @@ class TestDetuningMap:
         og_coords = det_map.trap_coordinates
         expected_coords = og_coords + np.array(offset)
         new_det_map = det_map.with_pos_offset(*offset)
-        # Original det map is unchaged
+        # Original det map is unchanged
         np.testing.assert_equal(det_map.trap_coordinates, og_coords)
         assert det_map != new_det_map
         assert new_det_map == DetuningMap(
@@ -454,3 +454,12 @@ class TestDMM:
             ),
         ):
             physical_dmm.validate_pulse(too_low_pulse, det_map)
+
+        # If all weights are zero, validation doesn't fail
+        with pytest.warns(
+            UserWarning, match="should have at least one non-zero weight"
+        ):
+            det_map = TriangularLatticeLayout(100, 10).define_detuning_map(
+                {0: 0.0}
+            )
+        physical_dmm.validate_pulse(too_low_pulse, det_map)

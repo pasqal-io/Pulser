@@ -256,7 +256,7 @@ H^\text{int}_{ij} = \frac{C_6}{R_{ij}^6} \hat{n}_i \hat{n}_j
 $$
 
 where $\hat{n}_i = |r\rangle\langle r|_i$ (the projector of
-atom $i$ onto the Rydberg state), $R_{ij}^6$ is the distance
+atom $i$ onto the Rydberg state), $R_{ij}$ is the distance
 between atoms $i$ and $j$ and $C_6$ is a coefficient
 depending on the specific Rydberg level of $|r\rangle$.
 
@@ -264,7 +264,7 @@ On the other hand, with the two Rydberg states of the `XY`
 basis, the interaction Hamiltonian takes the form
 
 $$
-H^\text{int}_{ij} =  \frac{C_3}{R_{ij}^3} (|1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j)
+H^\text{int}_{ij} =  \frac{C_3}{R_{ij}^3} (|1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j) + \frac{C_6}{R_{ij}^6} |0\rangle\langle 0|_i |0\rangle\langle 0|_j
 $$
 
 where $C_3$ is a coefficient that depends on the chosen Ryberg states.

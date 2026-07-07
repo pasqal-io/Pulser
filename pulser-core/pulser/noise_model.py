@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Defines a noise model class for emulator backends."""
+
 from __future__ import annotations
 
 import json
@@ -178,9 +179,9 @@ class NoiseModel:
 
     - **leakage**: Adds an error state 'x' to the computational
       basis, that can interact with the other states via an
-      effective noise channel. Must be defined with an effective
-      noise channel, but is incompatible with dephasing and
-      depolarizing noise channels.
+      effective noise channel. Must be defined along with at least
+      one effective noise channel defining the mechanisms of
+      population transfer to the error state.
     - **relaxation**: Noise due to a decay from the Rydberg to
       the ground state (parametrized by ``relaxation_rate``),
       commonly characterized experimentally by the T1 time.
@@ -515,7 +516,6 @@ class NoiseModel:
 
     @staticmethod
     def _check_leakage_noise(noise_types: Collection[NoiseTypes]) -> None:
-        # Can't define "dephasing", "depolarizing" with "leakage"
         if "leakage" not in noise_types:
             return
         if "eff_noise" not in noise_types:
