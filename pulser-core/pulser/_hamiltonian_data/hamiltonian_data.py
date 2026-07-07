@@ -148,10 +148,10 @@ def _generate_detuning_fluctuations(
     -----
     High frequency term uses Gaussian stochastic noise with power
         spectral density `psd`:
-        δ_hf(t) = Σ_k sqrt(2 * Δf_k * psd_k) * cos(2π(f_k * t + φ_k))
-        where φ_k ~ U[0, 1) (uniform random phase),
-        Δf_k = freqs[k+1] - freqs[k].
-        The last (freqs[-1], psd[-1]) is unused.
+        δ_hf(t) = 2 * Σ_k sqrt(Δf_k * psd_k) * cos(f_k * t + φ_k)
+        where φ_k ~ U[0, 2π) (uniform random phase),
+        Δf_k = omegas[k+1] - omegas[k].
+        The last (omegas[-1], psd[-1]) is unused.
     """
     det_hf = np.zeros_like(times)
 
@@ -160,7 +160,7 @@ def _generate_detuning_fluctuations(
         freqs = np.asarray(noise_model.detuning_hf_omegas)[1:]
         psd = np.asarray(noise_model.detuning_hf_psd)[1:]
         df = np.diff(noise_model.detuning_hf_omegas)
-        amp = np.sqrt(2.0 * df * psd)
+        amp = 2.0 * np.sqrt(df * psd)
         arg = freqs[:, None] * t[None, :] + phases[:, None]
         det_hf = (amp[:, None] * np.cos(arg)).sum(axis=0)
     return det_cst_term + det_hf

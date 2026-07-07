@@ -617,8 +617,10 @@ def test_noise_hf_detuning_generation():
         times *= 1e-3  # ns -> µs
         for i, s in enumerate(psd[1:]):
             df = freqs[i + 1] - freqs[i]
-            hf_detun += np.sqrt(2 * df * s) * np.cos(
-                freqs[i + 1] * times + phases[i]
+            hf_detun += (
+                2.0
+                * np.sqrt(df * s)
+                * np.cos(freqs[i + 1] * times + phases[i])
             )
         return hf_detun
 
