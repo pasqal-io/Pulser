@@ -33,6 +33,7 @@ from pulser.backend.default_observables import (
 from pulser.backend.observable import Callback
 from pulser.channels.dmm import DMM
 from pulser.devices import AnalogDevice
+from pulser.sampler import sample
 from pulser_simulation.qutip_backend import QutipBackendV2
 from pulser_simulation.qutip_config import QutipConfig, Solver
 from pulser_simulation.qutip_op import QutipOperator
@@ -232,7 +233,11 @@ def test_qutip_backend_v2_stochastic_noise():
             noise_model=get_noise_model(samples_per_run=100),
             n_trajectories=30,
         )
-    results_old_api = qutip_emulator.run()
+    with pytest.warns(
+        DeprecationWarning,
+        match="QutipEmulator is deprecated as of pulser 1.9",
+    ):
+        results_old_api = qutip_emulator.run()
 
     times = results.get_result_times("occupation")
     occupation = np.array([x[0] for x in results.occupation])
@@ -605,3 +610,41 @@ def test_dmm_temperature_without_spot_waist():
         match="Combining register noise with a DMM requires",
     ):
         QutipBackendV2(seq, config=config)
+
+
+@pytest.mark.parametrize("modulation", [True, False])
+def test_run_from_sequence_samples(modulation):
+    seq = pulser.Sequence(
+        pulser.Register.square(1, prefix="q"), pulser.AnalogDevice
+    )
+    seq.declare_channel("rydberg_global", "rydberg_global")
+    seq.add(pulser.Pulse.ConstantPulse(1000, 1, 0, 0), "rydberg_global")
+
+    config: QutipConfig | None = None
+    if modulation:
+        initial_state = QutipState.from_state_amplitudes(
+            eigenstates=("r", "g"), amplitudes={"g": 1.0}
+        )
+        config = QutipConfig(
+            with_modulation=modulation,
+            observables=[StateResult()],
+            initial_state=initial_state,
+        )
+    backend = QutipBackendV2(seq, config=config)
+
+    results1 = backend.run()
+    results2 = backend.run_from_sequence_samples(
+        sample(
+            seq,
+            modulation=modulation,
+            extended_duration=seq.get_duration(include_fall_time=modulation),
+        ),
+        seq.register,
+        seq.device,
+        config=config,
+    )
+
+    s1 = results1.final_state._state.full()
+    s2 = results2.final_state._state.full()
+
+    assert np.allclose(s1, s2, atol=0, rtol=1e-16)  # really the same
