@@ -152,6 +152,7 @@ def _generate_detuning_fluctuations(
         where φ_k ~ U[0, 2π) (uniform random phase),
         Δf_k = omegas[k+1] - omegas[k].
         The last (omegas[-1], psd[-1]) is unused.
+        See Eq. 3.55 of https://theses.hal.science/tel-00010730
     """
     det_hf = np.zeros_like(times)
 
