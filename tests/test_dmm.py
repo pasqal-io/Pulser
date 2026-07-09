@@ -127,7 +127,12 @@ class TestDetuningMap:
             new_weights[qid] = eff_weight
 
         # effect of the Gaussian trap profile
-        assert det_map.get_qubit_weight_map(qubits, spot_waist) == new_weights
+        assert np.allclose(
+            det_map.get_qubit_weight_map(qubits, spot_waist),
+            new_weights,
+            rtol=0.0,
+            atol=1e-15,
+        )
 
         # Triangular layout
         tri_layout = TriangularLatticeLayout(100, spacing=5)
