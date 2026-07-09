@@ -510,10 +510,11 @@ def test_phase_sampling(mod_device, custom_phase_jump_time):
     seq.add(Pulse.ConstantPulse(dt, 1, 0, phase=1), "ch0")
     # With 'no-delay', the jump should in between the two pulses
     seq.add(Pulse.ConstantPulse(dt, 1, 0, phase=2), "ch0", protocol="no-delay")
+    pulse2_end_with_fall = seq.get_duration(include_fall_time=True)
     # With the standard protocol, there shoud be a delay added and then
     # phase jump time is accounted for
     seq.add(Pulse.ConstantPulse(dt, 1, 0, phase=3), "ch0")
-    pulse3_start = seq.get_duration() - dt
+    pulse3_end_with_fall = seq.get_duration(include_fall_time=True)
     # Detuned delay (its phase should be ignored)
     seq.add(
         Pulse.ConstantPulse(1000, 0, 1, phase=0), "ch0", protocol="no-delay"
@@ -532,11 +533,11 @@ def test_phase_sampling(mod_device, custom_phase_jump_time):
         assert ph_jump_time > 0
     expected_phase = np.zeros(full_duration)
     expected_phase[:dt] = 1.0
-    transition2_3 = pulse3_start - ph_jump_time
+    transition2_3 = pulse2_end_with_fall
     assert transition2_3 >= 2 * dt  # = End of pulse2
     expected_phase[dt:transition2_3] = 2.0
     # The detuned delay is ignored
-    transition3_4 = full_duration - dt - ph_jump_time
+    transition3_4 = pulse3_end_with_fall
     expected_phase[transition2_3:transition3_4] = 3.0
     expected_phase[transition3_4:] = 4.0
 

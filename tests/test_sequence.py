@@ -3083,6 +3083,9 @@ def test_modify_eom_setpoint(
     seq.enable_eom_mode("ryd", amp, det_on)
     assert seq.is_in_eom_mode("ryd")
     seq.add_eom_pulse("ryd", dt, 0.0)
+    end_of_first_pulse = seq.build(params=[1, 0]).get_duration(
+        include_fall_time=True
+    )
     seq.delay(dt, "ryd")
 
     new_amp, new_det_on = amp + amp_diff, det_on + det_diff
@@ -3137,8 +3140,11 @@ def test_modify_eom_setpoint(
         assert final_phase == 0.0
     else:
         assert final_phase != 0.0
-    np.testing.assert_array_equal(ch_samples.phase[: 2 * dt], 0.0)
-    np.testing.assert_array_equal(ch_samples.phase[-2 * dt :], final_phase)
+    np.testing.assert_array_equal(ch_samples.phase[:end_of_first_pulse], 0.0)
+    start_of_second_pulse = -2 * dt
+    np.testing.assert_array_equal(
+        ch_samples.phase[start_of_second_pulse:], final_phase
+    )
 
 
 def test_max_duration(reg, mod_device):
