@@ -354,7 +354,7 @@ class Occupation(Observable):
 
     Args:
         evaluation_times: The relative times at which to compute the
-            correlation matrix. If left as ``None``, uses the
+            occupation. If left as ``None``, uses the
             ``default_evaluation_times`` of the backend's ``EmulationConfig``.
         one_state: The eigenstate to measure the population of. Can be left
             undefined if the state's eigenstates form a known eigenbasis with
