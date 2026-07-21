@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from pulser.backend.results import Results
 
 
-def fuzzy_unique_sorted(sorted: np.ndarray, tolerance: float) -> bool:
+def _fuzzy_unique_sorted(sorted: np.ndarray, tolerance: float) -> bool:
     return not np.any(np.abs(sorted[:-1] - sorted[1:]) < tolerance)
 
 
@@ -214,7 +214,9 @@ class Observable(Callback):
             )
         # larger than machine precision, but effectively 0
         time_tolerance = 1e-12
-        unique_eval_times = fuzzy_unique_sorted(eval_times_arr, time_tolerance)
+        unique_eval_times = _fuzzy_unique_sorted(
+            eval_times_arr, time_tolerance
+        )
         if not unique_eval_times:
             raise ValueError(
                 f"Evaluation times must be unique up to {time_tolerance} but "
