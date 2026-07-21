@@ -1,9 +1,15 @@
 from collections import Counter
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 
-from pulser.backend.aggregators import _bag_union_aggregator, _mean_aggregator
+from pulser.backend.aggregators import (
+    _bag_union_aggregator,
+    _mean_aggregator,
+    _mean_std_aggregator,
+    _std_aggregator,
+)
 
 
 def test_bag_union():
@@ -80,3 +86,83 @@ def test__mean_aggregator_errors():
         ValueError, match="Cannot average list of matrices with empty columns."
     ):
         _mean_aggregator([[[]], [[]]])
+
+
+@pytest.mark.parametrize(
+    "test_torch",
+    [True, False],
+)
+def test__std_aggregator(test_torch: bool):
+    input = [1.0, 2.0, 3.0, 4.0]
+    assert np.isclose(_std_aggregator(input), 1.2909944487358056)
+
+    input2 = [1.0j, 2.0j, 3.0j, 4.0j]
+    assert np.isclose(_std_aggregator(input2), 1.2909944487358056)
+
+    input3 = [
+        np.array([1.0, 2.0, 3.0]),
+        np.array([2.0, 3.0, 4.0]),
+        np.array([3.0, 4.0, 5.0]),
+    ]
+    assert np.all(_std_aggregator(input3) == np.array([1.0, 1.0, 1.0]))
+
+    input4 = [[1.0, 2.0, 3.0], [2.0, 3.0, 4.0], [3.0, 4.0, 5.0]]
+    assert _std_aggregator(input4) == [1.0, 1.0, 1.0]
+
+    input5 = [[[1.0, 2.0, 3.0]], [[2.0, 3.0, 4.0]], [[3.0, 4.0, 5.0]]]
+    assert _std_aggregator(input5) == [[1.0, 1.0, 1.0]]
+    if test_torch:
+        torch = pytest.importorskip("torch")
+        input6 = [
+            torch.tensor([1.0, 2.0, 3.0]),
+            torch.tensor([2.0, 3.0, 4.0]),
+            torch.tensor([3.0, 4.0, 5.0]),
+        ]
+        assert torch.allclose(
+            _std_aggregator(input6), torch.tensor([1.0, 1.0, 1.0])
+        )
+
+
+def test__std_aggregator_errors():
+    with pytest.raises(ValueError, match="Cannot process 0 samples."):
+        _std_aggregator([])
+
+    with pytest.raises(
+        ValueError, match="Cannot process list of empty lists."
+    ):
+        _std_aggregator([[], []])
+
+    with pytest.raises(
+        ValueError, match="Need to supply a list of values to process."
+    ):
+        _std_aggregator("abcd")
+
+    with pytest.raises(ValueError, match="Cannot process this type of data."):
+        _std_aggregator([{}, {}])
+
+    with pytest.raises(
+        ValueError, match=f"Cannot process list of lists of {type({})}."
+    ):
+        _std_aggregator([[{}], [{}]])
+
+    with pytest.raises(
+        ValueError, match=f"Cannot process list of matrices of {type('a')}."
+    ):
+        _std_aggregator([[["abcd"]], [["efgh"]]])
+
+    with pytest.raises(
+        ValueError, match="Cannot process list of matrices with empty columns."
+    ):
+        _std_aggregator([[[]], [[]]])
+
+
+def test__mean_std_aggregator():
+    with patch("pulser.backend.aggregators._mean_aggregator") as mock_mean:
+        with patch("pulser.backend.aggregators._std_aggregator") as mock_std:
+            mock_mean.return_value = 5.5
+            mock_std.return_value = 6.5
+            input = [1000.0, 2000.0]
+            result = _mean_std_aggregator(input)
+            mock_mean.assert_called_once_with(input)
+            mock_std.assert_called_once_with(input)
+            assert result == (5.5, 6.5)
