@@ -60,7 +60,6 @@ def _validate_sequence_elements(elt: Sequence) -> None:
     Raises:
         ValueError: If the nested structure contains bad types.
     """
-
     if elt == []:
         raise ValueError("Cannot process list of empty lists.")
 
