@@ -56,34 +56,34 @@ def test__mean_aggregator(test_torch: bool):
 
 
 def test__mean_aggregator_errors():
-    with pytest.raises(ValueError, match="Cannot average 0 samples."):
+    with pytest.raises(ValueError, match="Cannot process 0 samples."):
         _mean_aggregator([])
 
     with pytest.raises(
-        ValueError, match="Cannot average list of empty lists."
+        ValueError, match="Cannot process list of empty lists."
     ):
         _mean_aggregator([[], []])
 
     with pytest.raises(
-        ValueError, match="Need to supply a list of values to average."
+        ValueError, match="Need to supply a list of values to process."
     ):
         _mean_aggregator("abcd")
 
-    with pytest.raises(ValueError, match="Cannot average this type of data."):
+    with pytest.raises(ValueError, match="Cannot process this type of data."):
         _mean_aggregator([{}, {}])
 
     with pytest.raises(
-        ValueError, match=f"Cannot average list of lists of {type({})}."
+        ValueError, match=f"Cannot process list of lists of {type({})}."
     ):
         _mean_aggregator([[{}], [{}]])
 
     with pytest.raises(
-        ValueError, match=f"Cannot average list of matrices of {type('a')}."
+        ValueError, match=f"Cannot process list of matrices of {type('a')}."
     ):
         _mean_aggregator([[["abcd"]], [["efgh"]]])
 
     with pytest.raises(
-        ValueError, match="Cannot average list of matrices with empty columns."
+        ValueError, match="Cannot process list of matrices with empty columns."
     ):
         _mean_aggregator([[[]], [[]]])
 

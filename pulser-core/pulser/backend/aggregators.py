@@ -35,6 +35,49 @@ T = TypeVar(
 )
 
 
+def _validate_values(values: list[T]) -> None:
+    """Validate that ``values`` is a non-empty list.
+
+    Args:
+        values: The list of values to validate.
+        action: A verb describing the operation (used in error messages).
+
+    Raises:
+        ValueError: If ``values`` is not a list or is empty.
+    """
+    if not isinstance(values, list):
+        raise ValueError("Need to supply a list of values to process.")
+    if values == []:
+        raise ValueError("Cannot process 0 samples.")
+
+
+def _validate_sequence_elements(elt: Sequence) -> None:
+    """Validate the nested structure of a sequence element.
+
+    Args:
+        elt: The first element of the values list (must be a ``Sequence``).
+
+    Raises:
+        ValueError: If the nested structure contains bad types.
+    """
+
+    if elt == []:
+        raise ValueError("Cannot process list of empty lists.")
+
+    if not isinstance(elt[0], (float, complex, list)):
+        raise ValueError(f"Cannot process list of lists of {type(elt[0])}.")
+
+    if isinstance(elt[0], list):
+        if len(elt[0]) == 0:
+            raise ValueError(
+                "Cannot process list of matrices with empty columns."
+            )
+        if not isinstance(elt[0][0], (float, complex)):
+            raise ValueError(
+                f"Cannot process list of matrices of {type(elt[0][0])}."
+            )
+
+
 def _std_aggregator(
     values: list[T],
 ) -> T:
@@ -48,10 +91,7 @@ def _std_aggregator(
     Returns:
         The standard deviation over the first dimension of the given values.
     """
-    if not isinstance(values, list):
-        raise ValueError("Need to supply a list of values to process.")
-    if values == []:
-        raise ValueError("Cannot process 0 samples.")
+    _validate_values(values)
 
     elt = values[0]
 
@@ -65,6 +105,7 @@ def _std_aggregator(
         return cast(
             float, np.std(values, ddof=1)
         )  # this would have type np.floating
+
     if isinstance(elt, complex):
         return cast(
             complex, np.std(values, ddof=1)
@@ -73,22 +114,8 @@ def _std_aggregator(
     if not isinstance(elt, Sequence):
         raise ValueError("Cannot process this type of data.")
 
-    if values[0] == []:
-        raise ValueError("Cannot process list of empty lists.")
+    _validate_sequence_elements(elt)
 
-    if isinstance(elt[0], (float, complex)):
-        return list(np.std(values, axis=0, ddof=1).tolist())
-
-    if not isinstance(elt[0], list):
-        raise ValueError(f"Cannot process list of lists of {type(elt[0])}.")
-
-    if len(elt[0]) == 0:
-        raise ValueError("Cannot process list of matrices with empty columns.")
-
-    if not isinstance(elt[0][0], (float, complex)):
-        raise ValueError(
-            f"Cannot process list of matrices of {type(elt[0][0])}."
-        )
     return list(np.std(values, axis=0, ddof=1).tolist())
 
 
@@ -105,10 +132,7 @@ def _mean_aggregator(
     Returns:
         The average over the first dimension of the provided results.
     """
-    if not isinstance(values, list):
-        raise ValueError("Need to supply a list of values to average.")
-    if values == []:
-        raise ValueError("Cannot average 0 samples.")
+    _validate_values(values)
 
     elt = values[0]
 
@@ -120,30 +144,17 @@ def _mean_aggregator(
 
     if isinstance(elt, float):
         return cast(float, np.mean(values))  # this would have type np.floating
+
     if isinstance(elt, complex):
         return cast(
             complex, np.mean(values)
         )  # this would have type np.complexfloating
 
     if not isinstance(elt, Sequence):
-        raise ValueError("Cannot average this type of data.")
+        raise ValueError("Cannot process this type of data.")
 
-    if values[0] == []:
-        raise ValueError("Cannot average list of empty lists.")
+    _validate_sequence_elements(elt)
 
-    if isinstance(elt[0], (float, complex)):
-        return list(np.mean(values, axis=0).tolist())
-
-    if not isinstance(elt[0], list):
-        raise ValueError(f"Cannot average list of lists of {type(elt[0])}.")
-
-    if len(elt[0]) == 0:
-        raise ValueError("Cannot average list of matrices with empty columns.")
-
-    if not isinstance(elt[0][0], (float, complex)):
-        raise ValueError(
-            f"Cannot average list of matrices of {type(elt[0][0])}."
-        )
     return list(np.mean(values, axis=0).tolist())
 
 
