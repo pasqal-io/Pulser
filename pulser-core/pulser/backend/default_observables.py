@@ -472,11 +472,11 @@ class EnergyVariance(Observable):
 class EnergySecondMoment(Observable):
     """Stores the expectation value of ``H(t)^2`` at the evaluation times.
 
-    Useful for computing the variance when averaging over many executions of
-    the program.
+    Together with the mean, this can be used to compute the variance
+    when averaging over many executions of the program.
 
     Args:
-        evaluation_times: The relative times at which to compute the variance.
+        evaluation_times: The relative times at which to compute the moment.
             If left as `None`, uses the ``default_evaluation_times`` of the
             backend's ``EmulationConfig``.
         tag_suffix: An optional suffix to append to the tag. Needed if
