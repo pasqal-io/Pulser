@@ -854,6 +854,7 @@ def test_results_aggregation(matching_uuids):
         agg = Results.aggregate([results1, results2])
         mock_aggregator.__getitem__.assert_called_once_with(agg_type)
     agg2 = Results.aggregate([results1, results2], dummy_result=aggregator)
+
     assert (
         i == 4
     )  # twice in agg, twice in agg2, once each for the 2 results added above.
@@ -867,6 +868,11 @@ def test_results_aggregation(matching_uuids):
         assert ag.dummy_result == [2.0, 3.0]
 
     assert Results.aggregate([results1]) is results1
+
+    agg3 = Results.aggregate(
+        [results1, results2], dummy_result=AggregationMethod.MEANSTD
+    )
+    assert all(map(lambda x: isinstance(x, tuple), agg3.dummy_result))
 
 
 def test_results_aggregation_errors(caplog):
