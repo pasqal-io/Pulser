@@ -1110,6 +1110,39 @@ def test_results_final_bistrings():
     assert res.final_bitstrings == res.get_result(obs, 1.0)
 
 
+def test_results_from_final_bitstrings():
+    final_bitstrings = {"000": 60, "111": 40}
+    res = Results.from_final_bitstrings(
+        atom_order=("q0", "q1", "q2"),
+        total_duration=1000,
+        final_bitstrings=final_bitstrings,
+    )
+    assert isinstance(res, Results)
+    assert res.atom_order == ("q0", "q1", "q2")
+    assert res.total_duration == 1000
+    assert res.final_bitstrings == Counter(final_bitstrings)
+    assert res.get_result_times("bitstrings") == [1.0]
+
+    # Accepts a Counter directly too
+    counter_bitstrings = Counter({"01": 5, "10": 5})
+    res2 = Results.from_final_bitstrings(
+        atom_order=("q0", "q1"),
+        total_duration=100,
+        final_bitstrings=counter_bitstrings,
+    )
+    assert res2.final_bitstrings == counter_bitstrings
+
+    with pytest.raises(
+        TypeError,
+        match="'final_bitstrings' is not a valid bitstrings counter",
+    ):
+        Results.from_final_bitstrings(
+            atom_order=("q0",),
+            total_duration=100,
+            final_bitstrings=42,
+        )
+
+
 def test_results_final_state():
     res = Results(atom_order=(), total_duration=0)
     with pytest.raises(RuntimeError, match="final state is not available"):

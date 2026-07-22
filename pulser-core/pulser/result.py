@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Classes to store measurement results."""
+
 from __future__ import annotations
 
+import collections.abc
 import uuid
 import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Type
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -141,6 +143,18 @@ class Result(ABC, backend_results.Results):
 
     def __str__(self) -> str:
         return self.__repr__()
+
+    @classmethod
+    def from_final_bitstrings(
+        cls: Type[Result],
+        atom_order: collections.abc.Sequence[str],
+        total_duration: int,
+        final_bitstrings: collections.abc.Mapping[str, int],
+    ) -> Result:
+        """[Not Implemented]Creates a Result instance from final bitstrings."""
+        raise NotImplementedError(
+            f"'{cls.__name__}.from_final_bitstrings()' is not implemented."
+        )
 
 
 @dataclass

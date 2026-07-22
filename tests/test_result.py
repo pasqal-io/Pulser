@@ -107,6 +107,14 @@ def test_sampled_result(patch_plt_show):
     ):
         result.get_state()
 
+    with pytest.raises(
+        NotImplementedError,
+        match=re.escape(
+            "'SampledResult.from_final_bitstrings()' is not implemented"
+        ),
+    ):
+        SampledResult.from_final_bitstrings(("a", "b"), 100, {"0": 100})
+
     result.plot_histogram()
 
 
