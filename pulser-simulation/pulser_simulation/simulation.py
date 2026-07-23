@@ -734,8 +734,8 @@ class QutipEmulator:
             options=options,
         )
 
-        with warnings.catch_warnings(category=DeprecationWarning):
-            warnings.simplefilter("ignore")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=DeprecationWarning)
             results = [
                 QutipResult(
                     tuple(self._hamiltonian_data.register.qubits),
@@ -863,8 +863,8 @@ class QutipEmulator:
         n_measures = (
             cast(int, self.n_trajectories) * self.noise_model.samples_per_run
         )
-        with warnings.catch_warnings(category=DeprecationWarning):
-            warnings.simplefilter("ignore")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=DeprecationWarning)
             results = [
                 SampledResult(
                     tuple(self._hamiltonian_data.register.qubits),
