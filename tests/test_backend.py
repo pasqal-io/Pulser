@@ -139,11 +139,12 @@ class _MockConnection(RemoteConnection):
         self._got_closed = ""
         self._progress_calls = 0
         self._last_submit_kwargs = {}
-        self.result = SampledResult(
-            ("q0", "q1"),
-            meas_basis="ground-rydberg",
-            bitstring_counts={"00": 100},
-        )
+        with pytest.deprecated_call():
+            self.result = SampledResult(
+                ("q0", "q1"),
+                meas_basis="ground-rydberg",
+                bitstring_counts={"00": 100},
+            )
 
     def submit(
         self,

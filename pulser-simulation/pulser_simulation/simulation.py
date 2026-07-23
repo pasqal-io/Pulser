@@ -734,16 +734,18 @@ class QutipEmulator:
             options=options,
         )
 
-        results = [
-            QutipResult(
-                tuple(self._hamiltonian_data.register.qubits),
-                self._meas_basis,
-                state,
-                self._meas_basis in self.basis_name,
-                evaluation_time=t / (self._tot_duration * 1e-3),
-            )
-            for state, t in zip(result.states, self._eval_times_array)
-        ]
+        with warnings.catch_warnings(category=DeprecationWarning):
+            warnings.simplefilter("ignore")
+            results = [
+                QutipResult(
+                    tuple(self._hamiltonian_data.register.qubits),
+                    self._meas_basis,
+                    state,
+                    self._meas_basis in self.basis_name,
+                    evaluation_time=t / (self._tot_duration * 1e-3),
+                )
+                for state, t in zip(result.states, self._eval_times_array)
+            ]
 
         meas_errors = (
             {
@@ -861,15 +863,17 @@ class QutipEmulator:
         n_measures = (
             cast(int, self.n_trajectories) * self.noise_model.samples_per_run
         )
-        results = [
-            SampledResult(
-                tuple(self._hamiltonian_data.register.qubits),
-                self._meas_basis,
-                total_count[ind],
-                evaluation_time=t / self._tot_duration * 1e3,
-            )
-            for ind, t in enumerate(self._eval_times_array)
-        ]
+        with warnings.catch_warnings(category=DeprecationWarning):
+            warnings.simplefilter("ignore")
+            results = [
+                SampledResult(
+                    tuple(self._hamiltonian_data.register.qubits),
+                    self._meas_basis,
+                    total_count[ind],
+                    evaluation_time=t / self._tot_duration * 1e3,
+                )
+                for ind, t in enumerate(self._eval_times_array)
+            ]
         return NoisyResults(
             results,
             self._hamiltonian_data.n_qudits,

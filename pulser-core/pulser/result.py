@@ -38,7 +38,7 @@ def __getattr__(name: str) -> Any:
     warnings.warn(
         f"The 'pulser.result.{name}' class has been renamed to "
         f"'{name_map[name]}' and moved to 'pulser.backend.results'. "
-        "Importing it as '{name}' from 'pulser.results' is deprecated.",
+        f"Importing it as '{name}' from 'pulser.results' is deprecated.",
         DeprecationWarning,
         stacklevel=3,
     )
@@ -54,6 +54,17 @@ class Result(ABC, backend_results.Results):
 
     meas_basis: str
     total_duration: int = field(default=0, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        warnings.warn(
+            f"The '{type(self).__name__}' class has been deprecated and "
+            "will be removed in Pulser v2.0. Please prefer storing a "
+            "result in a 'Results' instance via the appropriate observable "
+            " or via 'Results.from_final_bitstrings()' when adequate.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        super().__post_init__()
 
     @property
     def sampling_dist(self) -> dict[str, float]:

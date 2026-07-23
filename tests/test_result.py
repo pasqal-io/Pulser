@@ -55,18 +55,20 @@ def test_get_samples():
 
 def test_sampled_result(patch_plt_show):
     samples_dict = {"000": 50, "111": 50}
-    result_from_dict = SampledResult(
-        atom_order=("a", "b", "c"),
-        meas_basis="ground-rydberg",
-        bitstring_counts=samples_dict,
-    )
+    with pytest.deprecated_call():
+        result_from_dict = SampledResult(
+            atom_order=("a", "b", "c"),
+            meas_basis="ground-rydberg",
+            bitstring_counts=samples_dict,
+        )
 
     samples = Counter(samples_dict)
-    result = SampledResult(
-        atom_order=("a", "b", "c"),
-        meas_basis="ground-rydberg",
-        bitstring_counts=samples,
-    )
+    with pytest.deprecated_call():
+        result = SampledResult(
+            atom_order=("a", "b", "c"),
+            meas_basis="ground-rydberg",
+            bitstring_counts=samples,
+        )
 
     assert (
         repr(result)
@@ -118,6 +120,9 @@ def test_sampled_result(patch_plt_show):
     result.plot_histogram()
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*The 'QutipResult' class has been deprecated:DeprecationWarning"
+)
 def test_qutip_result_state():
     qutrit_state = qutip.tensor(qutip.basis(3, 0), qutip.basis(3, 1))
 
@@ -247,6 +252,9 @@ def test_qutip_result_state():
         qudit_result.sampling_dist
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*The 'QutipResult' class has been deprecated:DeprecationWarning"
+)
 def test_qutip_result_density_matrices():
     qudit_density_matrix = qutip.Qobj(np.eye(16) / 16)
     result = QutipResult(
