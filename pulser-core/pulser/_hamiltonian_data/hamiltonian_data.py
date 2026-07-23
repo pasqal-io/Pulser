@@ -148,9 +148,9 @@ def _generate_detuning_fluctuations(
     -----
     High frequency term uses Gaussian stochastic noise with power
         spectral density `psd`:
-        δ_hf(t) = Σ_k sqrt(2 * Δf_k * psd_k) * cos(f_k * t + φ_k)
+        δ_hf(t) = Σ_k sqrt(2 * Δω_k * psd_k) * cos(ω_k * t + φ_k)
         where φ_k ~ U[0, 2π) (uniform random phase),
-        Δf_k = omegas[k+1] - omegas[k].
+        Δω_k = omegas[k+1] - omegas[k].
         The last (omegas[-1], psd[-1]) is unused.
         See Eq. 3.55 of https://theses.hal.science/tel-00010730,
         except that we use the 1-sided PSD, so factor of 2
