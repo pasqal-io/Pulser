@@ -30,6 +30,12 @@ if TYPE_CHECKING:
     from pulser.backend.config import EmulationConfig
     from pulser.backend.results import Results
 
+TIME_TOLERANCE = 1e-12
+
+
+def _fuzzy_unique_sorted(sorted: np.ndarray, tolerance: float) -> bool:
+    return not np.any(np.abs(sorted[:-1] - sorted[1:]) < tolerance)
+
 
 class Callback(ABC):
     """A general Callback that is called during the emulation."""
@@ -210,10 +216,13 @@ class Observable(Callback):
                 "All evaluation times must be between 0. and 1. "
                 f"Instead, got {evaluation_times!r}."
             )
-        unique_eval_times = np.unique(eval_times_arr)
-        if unique_eval_times.size < eval_times_arr.size:
+        # larger than machine precision, but effectively 0
+        unique_eval_times = _fuzzy_unique_sorted(
+            eval_times_arr, TIME_TOLERANCE
+        )
+        if not unique_eval_times:
             raise ValueError(
-                "Evaluation times must be unique but "
+                f"Evaluation times must be unique up to {TIME_TOLERANCE} but "
                 f"{evaluation_times!r} has repeated values."
             )
         if not np.all(eval_times_arr[:-1] < eval_times_arr[1:]):
