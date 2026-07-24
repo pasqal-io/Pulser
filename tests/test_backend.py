@@ -614,10 +614,12 @@ def test_emulation_config():
             observables=(BitStrings(),),
             default_evaluation_times=[-1e15, 0.0, 0.5, 1.0],
         )
-    with pytest.raises(ValueError, match="Evaluation times must be unique"):
+    with pytest.raises(
+        ValueError, match="Evaluation times must be unique up to"
+    ):
         EmulationConfig(
             observables=(BitStrings(),),
-            default_evaluation_times=[0.0, 0.5, 0.5, 1.0],
+            default_evaluation_times=[0.0, 0.5, 0.5 + 1e-14, 1.0],
         )
     with pytest.raises(
         ValueError, match="Evaluation times must be in ascending order"

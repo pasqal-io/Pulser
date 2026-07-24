@@ -866,7 +866,7 @@ class QutipEmulator:
                 tuple(self._hamiltonian_data.register.qubits),
                 self._meas_basis,
                 total_count[ind],
-                evaluation_time=t / self._tot_duration * 1e3,
+                evaluation_time=t / (self._tot_duration * 1e-3),
             )
             for ind, t in enumerate(self._eval_times_array)
         ]
