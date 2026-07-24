@@ -239,6 +239,10 @@
                     "null"
                 ]
             },
+            "aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -248,7 +252,8 @@
             "observable",
             "evaluation_times",
             "operator",
-            "tag_suffix"
+            "tag_suffix",
+            "aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -284,6 +289,10 @@
                     "null"
                 ]
             },
+            "aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -294,7 +303,8 @@
             "evaluation_times",
             "num_shots",
             "one_state",
-            "tag_suffix"
+            "tag_suffix",
+            "aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -319,6 +329,10 @@
                     "null"
                 ]
             },
+            "aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -328,7 +342,8 @@
             "observable",
             "evaluation_times",
             "state",
-            "tag_suffix"
+            "tag_suffix",
+            "aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -357,6 +372,10 @@
                     "null"
                 ]
             },
+            "aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -366,7 +385,8 @@
             "observable",
             "evaluation_times",
             "one_state",
-            "tag_suffix"
+            "tag_suffix",
+            "aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -395,6 +415,10 @@
                     "null"
                 ]
             },
+            "aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -404,7 +428,8 @@
             "observable",
             "evaluation_times",
             "one_state",
-            "tag_suffix"
+            "tag_suffix",
+            "aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -426,6 +451,10 @@
                     "null"
                 ]
             },
+            "aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -434,7 +463,8 @@
         "required": [
             "observable",
             "evaluation_times",
-            "tag_suffix"
+            "tag_suffix",
+            "aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -456,6 +486,10 @@
                     "null"
                 ]
             },
+            "aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -464,7 +498,8 @@
         "required": [
             "observable",
             "evaluation_times",
-            "tag_suffix"
+            "tag_suffix",
+            "aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -486,6 +521,10 @@
                     "null"
                 ]
             },
+            "aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -494,7 +533,8 @@
         "required": [
             "observable",
             "evaluation_times",
-            "tag_suffix"
+            "tag_suffix",
+            "aggregation_method"
         ],
         "additionalProperties": false
     },

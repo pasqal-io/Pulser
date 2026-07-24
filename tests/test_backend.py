@@ -871,6 +871,29 @@ def test_results_aggregation(matching_uuids):
     assert Results.aggregate([results1]) is results1
 
 
+@pytest.mark.parametrize(
+    "obs_cls, default_method",
+    [
+        (StateResult, AggregationMethod.SKIP_WARN),
+        (BitStrings, AggregationMethod.BAG_UNION),
+        (CorrelationMatrix, AggregationMethod.MEAN),
+        (Occupation, AggregationMethod.MEAN),
+        (Energy, AggregationMethod.MEAN),
+        (EnergyVariance, AggregationMethod.SKIP_WARN),
+        (EnergySecondMoment, AggregationMethod.MEAN),
+    ],
+)
+def test_observable_aggregation_method(obs_cls, default_method):
+    # The default matches the historical per-class value
+    assert obs_cls().aggregation_method == default_method
+    # The value is exposed as a read-only property
+    with pytest.raises(AttributeError):
+        obs_cls().aggregation_method = AggregationMethod.SKIP
+    # It can be overridden per-instance through the constructor
+    overridden = obs_cls(aggregation_method=AggregationMethod.SKIP)
+    assert overridden.aggregation_method == AggregationMethod.SKIP
+
+
 def test_results_aggregation_errors(caplog):
     uid = uuid.uuid4()
     agg_type = AggregationMethod.MEAN

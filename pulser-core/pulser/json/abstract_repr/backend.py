@@ -15,6 +15,7 @@ from pulser.backend.default_observables import (
     Fidelity,
     Occupation,
 )
+from pulser.backend.observable import AggregationMethod
 from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr.deserializer import (
     _deserialize_noise_model,
@@ -80,6 +81,10 @@ def _deserialize_observable(
     obs_params = ser_obs.copy()
     obs_name = obs_params.pop("observable")
     obs_uuid = obs_params.pop("uuid", None)
+    if "aggregation_method" in obs_params:
+        obs_params["aggregation_method"] = AggregationMethod(
+            obs_params["aggregation_method"]
+        )
     obs: Observable
     match obs_name:
         case "bitstrings":
