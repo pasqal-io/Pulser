@@ -69,7 +69,9 @@ def test__mean_aggregator_errors():
     ):
         _mean_aggregator("abcd")
 
-    with pytest.raises(ValueError, match="Cannot process this type of data."):
+    with pytest.raises(
+        ValueError, match="Mean aggregator cannot process data"
+    ):
         _mean_aggregator([{}, {}])
 
     with pytest.raises(
@@ -137,7 +139,7 @@ def test__std_aggregator_errors():
     ):
         _std_aggregator("abcd")
 
-    with pytest.raises(ValueError, match="Cannot process this type of data."):
+    with pytest.raises(ValueError, match="Std aggregator cannot process data"):
         _std_aggregator([{}, {}])
 
     with pytest.raises(

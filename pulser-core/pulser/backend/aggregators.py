@@ -35,7 +35,7 @@ T = TypeVar(
 )
 
 
-def _validate_values(values: list[T]) -> None:
+def _assert_values_not_empty(values: list[T]) -> None:
     """Validate that ``values`` is a non-empty list.
 
     Args:
@@ -90,7 +90,7 @@ def _std_aggregator(
     Returns:
         The standard deviation over the first dimension of the given values.
     """
-    _validate_values(values)
+    _assert_values_not_empty(values)
 
     elt = values[0]
 
@@ -101,17 +101,15 @@ def _std_aggregator(
         return cast(np.ndarray, np.stack(values).std(axis=0, ddof=1))
 
     if isinstance(elt, float):
-        return cast(
-            float, np.std(values, ddof=1)
-        )  # this would have type np.floating
+        return float(np.std(values, ddof=1))  # instead of np.floating
 
     if isinstance(elt, complex):
-        return cast(
-            complex, np.std(values, ddof=1)
-        )  # this would have type np.complexfloating
+        return complex(np.std(values, ddof=1))  # np.complexfloating
 
     if not isinstance(elt, Sequence):
-        raise ValueError("Cannot process this type of data.")
+        raise ValueError(
+            f"Std aggregator cannot process data of type {type(elt)}."
+        )
 
     _validate_sequence_elements(elt)
 
@@ -131,7 +129,7 @@ def _mean_aggregator(
     Returns:
         The average over the first dimension of the provided results.
     """
-    _validate_values(values)
+    _assert_values_not_empty(values)
 
     elt = values[0]
 
@@ -142,15 +140,15 @@ def _mean_aggregator(
         return cast(np.ndarray, np.stack(values).mean(axis=0))
 
     if isinstance(elt, float):
-        return cast(float, np.mean(values))  # this would have type np.floating
+        return float(np.mean(values))  # this would have type np.floating
 
     if isinstance(elt, complex):
-        return cast(
-            complex, np.mean(values)
-        )  # this would have type np.complexfloating
+        return complex(np.mean(values))  # np.complexfloating
 
     if not isinstance(elt, Sequence):
-        raise ValueError("Cannot process this type of data.")
+        raise ValueError(
+            f"Mean aggregator cannot process data of type {type(elt)}."
+        )
 
     _validate_sequence_elements(elt)
 
@@ -186,6 +184,5 @@ def _bag_union_aggregator(
 AGGREGATOR_MAPPING: dict[AggregationMethod, Callable] = {
     AggregationMethod.MEAN: _mean_aggregator,
     AggregationMethod.BAG_UNION: _bag_union_aggregator,
-    AggregationMethod.STD: _std_aggregator,
     AggregationMethod.MEANSTD: _mean_std_aggregator,
 }
