@@ -226,8 +226,8 @@ class NoiseModel:
       ``detuning_sigma``
 
       (2) time-dependent high-frequency fluctuations, defined by the
-      power spectral density (PSD) ``detuning_hf_psd`` over the relevant
-      ``detuning_hf_omegas`` angular frequency support.
+      **1-sided** power spectral density (PSD) ``detuning_hf_psd``
+      over the relevant ``detuning_hf_omegas`` angular frequency support.
       :math:`\delta_{hf}(t) = \sum_k \sqrt{2*\Delta \omega_k*\mathrm{PSD}_k}
       * \cos(\omega_k * t + \phi_k)`
       where :math:`\phi_k \backsim U[0, 2\pi)` (uniform random phase),
@@ -286,7 +286,9 @@ class NoiseModel:
             provided together with `detuning_hf_omegas` define high frequency
             noise contribution of time dependent detuning (in rad/µs).
             Must either be empty or a tuple with at least two values,
-            matching the length of `detuning_hf_omegas`. Default is ().
+            matching the length of `detuning_hf_omegas`.
+            Note that this is the 1-sided PSD, which differs from the
+            2-sided PSD by a factor of 2! Default is ().
         detuning_hf_omegas: 1D tuple (in rad/µs) of relevant angular frequency
             support for the PSD. Along with the PSD, it is required to define
             high frequency noise contribution of time dependent detuning
