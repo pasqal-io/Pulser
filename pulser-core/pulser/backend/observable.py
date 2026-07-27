@@ -83,6 +83,7 @@ class AggregationMethod(IntEnum):
     SKIP_WARN = 1
     MEAN = 2
     BAG_UNION = 3
+    MEANSTD = 4
 
 
 class Observable(Callback):
