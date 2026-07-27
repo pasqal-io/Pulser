@@ -98,13 +98,6 @@ def test_params():
             "All channels must be of type 'Channel', not 'str'",
         ),
         (
-            "channel_objects",
-            (Microwave.Global(None, None),),
-            "When the device has a 'Microwave' channel, "
-            "'interaction_coeff_xy' must be a 'float',"
-            " not '<class 'NoneType'>'.",
-        ),
-        (
             "dmm_objects",
             ("DMM(bottom_detuning=-1)",),
             "All DMM channels must be of type 'DMM', not 'str'",
@@ -237,8 +230,6 @@ def test_optional_parameters(test_params, none_param):
 
 
 def test_default_channel_ids(test_params):
-    # Needed because of the Microwave global channel
-    test_params["interaction_coeff_xy"] = 10000.0
     test_params["channel_objects"] = (
         Rydberg.Local(None, None),
         Raman.Local(None, None),
@@ -274,7 +265,6 @@ def test_default_channel_ids(test_params):
     ],
 )
 def test_eigenstates(test_params, channels, states):
-    test_params["interaction_coeff_xy"] = 10000.0
     test_params["channel_objects"] = channels
     dev = VirtualDevice(**test_params)
     assert dev.supported_states == states
@@ -740,12 +730,13 @@ def test_convert_to_virtual():
 def test_device_params():
     all_params = DigitalAnalogDevice._params()
     init_params = DigitalAnalogDevice._params(init_only=True)
-    assert set(all_params) - set(init_params) == {"reusable_channels"}
+    assert set(all_params) - set(init_params) == {
+        "reusable_channels",
+        "_custom_interaction_coeff_xy",
+    }
 
     virtual_DigitalAnalogDevice = DigitalAnalogDevice.to_virtual()
     all_virtual_params = virtual_DigitalAnalogDevice._params()
-    init_virtual_params = virtual_DigitalAnalogDevice._params(init_only=True)
-    assert all_virtual_params == init_virtual_params
     assert set(all_params) - set(all_virtual_params) == {
         "pre_calibrated_layouts",
         "accepts_new_layouts",

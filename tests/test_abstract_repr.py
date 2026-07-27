@@ -572,31 +572,6 @@ class TestDevice:
             )
             assert isinstance(prev_err.__cause__, ValueError)
 
-        # AbstractReprError from TypeError in device init
-        if "XY" in good_device.supported_bases:
-            bad_xy_coeff_dev = abstract_device.copy()
-            bad_xy_coeff_dev["interaction_coeff_xy"] = None
-            prev_err = check_error_raised(
-                json.dumps(bad_xy_coeff_dev),
-                AbstractReprError,
-                "Device deserialization failed.",
-                Device.from_abstract_repr,
-            )
-            assert isinstance(prev_err.__cause__, TypeError)
-            prev_err = check_error_raised(
-                json.dumps(bad_xy_coeff_dev),
-                AbstractReprError,
-                "Device deserialization failed.",
-                VirtualDevice.from_abstract_repr,
-            )
-            assert isinstance(prev_err.__cause__, TypeError)
-            prev_err = check_error_raised(
-                json.dumps(bad_xy_coeff_dev),
-                AbstractReprError,
-                "Device deserialization failed.",
-            )
-            assert isinstance(prev_err.__cause__, TypeError)
-
         # AbstractReprError from ValueError in device init
         bad_dev = abstract_device.copy()
         bad_dev["min_atom_distance"] = -1
