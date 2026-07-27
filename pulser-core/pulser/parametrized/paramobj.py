@@ -269,7 +269,10 @@ class ParamObj(Parametrized, OpSupport):
                 "supported."
             )
         elif (
-            hasattr(args[0], self.cls.__name__)
+            # A method call will have at least one arg i.e. self/cls
+            # (calls to staticmethod are not serializable)
+            len(args) > 0
+            and hasattr(args[0], self.cls.__name__)
             and inspect.isfunction(self.cls)
             and self.cls.__module__ != "pulser.math"
         ):
