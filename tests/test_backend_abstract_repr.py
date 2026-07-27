@@ -98,7 +98,7 @@ class TestObservableRepr:
             (
                 Expectation,
                 (example_operator,),
-                {"aggregation_method": AggregationMethod.SKIP},
+                {"default_aggregation_method": AggregationMethod.SKIP},
             ),
         ],
     )
@@ -151,8 +151,11 @@ class TestObservableRepr:
             assert repr.get("num_shots", None) == expected_kwargs.get(
                 "num_shots", None
             )
-            # The aggregation_method survives the round-trip
-            assert repr["aggregation_method"] == obs.aggregation_method
+            # The default_aggregation_method survives the round-trip
+            assert (
+                repr["default_aggregation_method"]
+                == obs.default_aggregation_method
+            )
 
         # Check observable against the schema via config serialization
         ser_config = json.loads(

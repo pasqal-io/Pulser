@@ -96,7 +96,7 @@ class Results:
             tag=observable.tag,
             time=time,
             value=value,
-            aggregation_method=observable.aggregation_method,
+            aggregation_method=observable.default_aggregation_method,
         )
 
     def __getattr__(self, name: str) -> list[Any]:

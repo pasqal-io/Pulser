@@ -81,9 +81,9 @@ def _deserialize_observable(
     obs_params = ser_obs.copy()
     obs_name = obs_params.pop("observable")
     obs_uuid = obs_params.pop("uuid", None)
-    if "aggregation_method" in obs_params:
-        obs_params["aggregation_method"] = AggregationMethod(
-            obs_params["aggregation_method"]
+    if "default_aggregation_method" in obs_params:
+        obs_params["default_aggregation_method"] = AggregationMethod(
+            obs_params["default_aggregation_method"]
         )
     obs: Observable
     match obs_name:

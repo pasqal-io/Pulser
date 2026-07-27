@@ -239,7 +239,7 @@
                     "null"
                 ]
             },
-            "aggregation_method": {
+            "default_aggregation_method": {
                 "description": "how values from multiple results are combined",
                 "type": "integer"
             },
@@ -253,7 +253,7 @@
             "evaluation_times",
             "operator",
             "tag_suffix",
-            "aggregation_method"
+            "default_aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -289,7 +289,7 @@
                     "null"
                 ]
             },
-            "aggregation_method": {
+            "default_aggregation_method": {
                 "description": "how values from multiple results are combined",
                 "type": "integer"
             },
@@ -304,7 +304,7 @@
             "num_shots",
             "one_state",
             "tag_suffix",
-            "aggregation_method"
+            "default_aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -329,7 +329,7 @@
                     "null"
                 ]
             },
-            "aggregation_method": {
+            "default_aggregation_method": {
                 "description": "how values from multiple results are combined",
                 "type": "integer"
             },
@@ -343,7 +343,7 @@
             "evaluation_times",
             "state",
             "tag_suffix",
-            "aggregation_method"
+            "default_aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -372,7 +372,7 @@
                     "null"
                 ]
             },
-            "aggregation_method": {
+            "default_aggregation_method": {
                 "description": "how values from multiple results are combined",
                 "type": "integer"
             },
@@ -386,7 +386,7 @@
             "evaluation_times",
             "one_state",
             "tag_suffix",
-            "aggregation_method"
+            "default_aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -415,7 +415,7 @@
                     "null"
                 ]
             },
-            "aggregation_method": {
+            "default_aggregation_method": {
                 "description": "how values from multiple results are combined",
                 "type": "integer"
             },
@@ -429,7 +429,7 @@
             "evaluation_times",
             "one_state",
             "tag_suffix",
-            "aggregation_method"
+            "default_aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -451,7 +451,7 @@
                     "null"
                 ]
             },
-            "aggregation_method": {
+            "default_aggregation_method": {
                 "description": "how values from multiple results are combined",
                 "type": "integer"
             },
@@ -464,7 +464,7 @@
             "observable",
             "evaluation_times",
             "tag_suffix",
-            "aggregation_method"
+            "default_aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -486,7 +486,7 @@
                     "null"
                 ]
             },
-            "aggregation_method": {
+            "default_aggregation_method": {
                 "description": "how values from multiple results are combined",
                 "type": "integer"
             },
@@ -499,7 +499,7 @@
             "observable",
             "evaluation_times",
             "tag_suffix",
-            "aggregation_method"
+            "default_aggregation_method"
         ],
         "additionalProperties": false
     },
@@ -521,7 +521,7 @@
                     "null"
                 ]
             },
-            "aggregation_method": {
+            "default_aggregation_method": {
                 "description": "how values from multiple results are combined",
                 "type": "integer"
             },
@@ -534,7 +534,7 @@
             "observable",
             "evaluation_times",
             "tag_suffix",
-            "aggregation_method"
+            "default_aggregation_method"
         ],
         "additionalProperties": false
     },

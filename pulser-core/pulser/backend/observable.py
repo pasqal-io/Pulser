@@ -95,8 +95,8 @@ class Observable(Callback):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
-        aggregation_method: How to combine the values of this observable
-            from multiple results.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     evaluation_times: NDArray[np.floating[Any]] | None
@@ -104,7 +104,7 @@ class Observable(Callback):
     def __init__(
         self,
         *,
-        aggregation_method: AggregationMethod,
+        default_aggregation_method: AggregationMethod,
         evaluation_times: Sequence[float] | None = None,
         tag_suffix: str | None = None,
     ):
@@ -116,12 +116,12 @@ class Observable(Callback):
             else None
         )
         self._tag_suffix = tag_suffix
-        self._aggregation_method = aggregation_method
+        self._default_aggregation_method = default_aggregation_method
 
     @property
-    def aggregation_method(self) -> AggregationMethod:
+    def default_aggregation_method(self) -> AggregationMethod:
         """How the values from multiple results are combined."""
-        return self._aggregation_method
+        return self._default_aggregation_method
 
     @property
     @abstractmethod
@@ -133,7 +133,7 @@ class Observable(Callback):
             "observable": self._base_tag,
             "evaluation_times": self.evaluation_times,
             "tag_suffix": self._tag_suffix,
-            "aggregation_method": self._aggregation_method,
+            "default_aggregation_method": self._default_aggregation_method,
             "uuid": str(self._uuid),
         }
 

@@ -40,8 +40,8 @@ class StateResult(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
-        aggregation_method: How to combine the values of this observable
-            from multiple results.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     def __init__(
@@ -49,13 +49,14 @@ class StateResult(Observable):
         *,
         evaluation_times: Sequence[float] | None = None,
         tag_suffix: str | None = None,
-        aggregation_method: AggregationMethod = AggregationMethod.SKIP_WARN,
+        default_aggregation_method: AggregationMethod
+            = AggregationMethod.SKIP_WARN,  # fmt: skip
     ):
         """Initializes the observable."""
         super().__init__(
             evaluation_times=evaluation_times,
             tag_suffix=tag_suffix,
-            aggregation_method=aggregation_method,
+            default_aggregation_method=default_aggregation_method,
         )
 
     @property
@@ -95,8 +96,8 @@ class BitStrings(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
-        aggregation_method: How to combine the values of this observable
-            from multiple results.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     def __init__(
@@ -106,13 +107,14 @@ class BitStrings(Observable):
         num_shots: int | None = None,
         one_state: Eigenstate | None = None,
         tag_suffix: str | None = None,
-        aggregation_method: AggregationMethod = AggregationMethod.BAG_UNION,
+        default_aggregation_method: AggregationMethod
+            = AggregationMethod.BAG_UNION,  # fmt: skip
     ):
         """Initializes the observable."""
         super().__init__(
             evaluation_times=evaluation_times,
             tag_suffix=tag_suffix,
-            aggregation_method=aggregation_method,
+            default_aggregation_method=default_aggregation_method,
         )
         # Relies on the validation in the setter
         self.num_shots = num_shots
@@ -197,8 +199,8 @@ class Fidelity(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
-        aggregation_method: How to combine the values of this observable
-            from multiple results.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     def __init__(
@@ -207,13 +209,13 @@ class Fidelity(Observable):
         *,
         evaluation_times: Sequence[float] | None = None,
         tag_suffix: str | None = None,
-        aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
     ):
         """Initializes the observable."""
         super().__init__(
             evaluation_times=evaluation_times,
             tag_suffix=tag_suffix,
-            aggregation_method=aggregation_method,
+            default_aggregation_method=default_aggregation_method,
         )
         if not isinstance(state, State):
             raise TypeError(
@@ -247,8 +249,8 @@ class Expectation(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
-        aggregation_method: How to combine the values of this observable
-            from multiple results.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     def __init__(
@@ -257,13 +259,13 @@ class Expectation(Observable):
         *,
         evaluation_times: Sequence[float] | None = None,
         tag_suffix: str | None = None,
-        aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
     ):
         """Initializes the observable."""
         super().__init__(
             evaluation_times=evaluation_times,
             tag_suffix=tag_suffix,
-            aggregation_method=aggregation_method,
+            default_aggregation_method=default_aggregation_method,
         )
         if not isinstance(operator, Operator):
             raise TypeError(
@@ -303,8 +305,8 @@ class CorrelationMatrix(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
-        aggregation_method: How to combine the values of this observable
-            from multiple results.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     def __init__(
@@ -313,13 +315,13 @@ class CorrelationMatrix(Observable):
         evaluation_times: Sequence[float] | None = None,
         one_state: Eigenstate | None = None,
         tag_suffix: str | None = None,
-        aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
     ):
         """Initializes the observable."""
         super().__init__(
             evaluation_times=evaluation_times,
             tag_suffix=tag_suffix,
-            aggregation_method=aggregation_method,
+            default_aggregation_method=default_aggregation_method,
         )
         self.one_state = one_state
 
@@ -388,8 +390,8 @@ class Occupation(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
-        aggregation_method: How to combine the values of this observable
-            from multiple results.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     def __init__(
@@ -398,13 +400,13 @@ class Occupation(Observable):
         evaluation_times: Sequence[float] | None = None,
         one_state: Eigenstate | None = None,
         tag_suffix: str | None = None,
-        aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
     ):
         """Initializes the observable."""
         super().__init__(
             evaluation_times=evaluation_times,
             tag_suffix=tag_suffix,
-            aggregation_method=aggregation_method,
+            default_aggregation_method=default_aggregation_method,
         )
         self.one_state = one_state
 
@@ -446,8 +448,8 @@ class Energy(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
-        aggregation_method: How to combine the values of this observable
-            from multiple results.
+        default_aggregation_method: How to combine the values of this
+         observable from multiple results.
     """
 
     def __init__(
@@ -455,13 +457,13 @@ class Energy(Observable):
         *,
         evaluation_times: Sequence[float] | None = None,
         tag_suffix: str | None = None,
-        aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
     ):
         """Initializes the observable."""
         super().__init__(
             evaluation_times=evaluation_times,
             tag_suffix=tag_suffix,
-            aggregation_method=aggregation_method,
+            default_aggregation_method=default_aggregation_method,
         )
 
     @property
@@ -489,8 +491,8 @@ class EnergyVariance(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
-        aggregation_method: How to combine the values of this observable
-            from multiple results.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     def __init__(
@@ -498,13 +500,14 @@ class EnergyVariance(Observable):
         *,
         evaluation_times: Sequence[float] | None = None,
         tag_suffix: str | None = None,
-        aggregation_method: AggregationMethod = AggregationMethod.SKIP_WARN,
+        default_aggregation_method: AggregationMethod
+            = AggregationMethod.SKIP_WARN,  # fmt: skip
     ):
         """Initializes the observable."""
         super().__init__(
             evaluation_times=evaluation_times,
             tag_suffix=tag_suffix,
-            aggregation_method=aggregation_method,
+            default_aggregation_method=default_aggregation_method,
         )
 
     @property
@@ -539,8 +542,8 @@ class EnergySecondMoment(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
-        aggregation_method: How to combine the values of this observable
-            from multiple results.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     def __init__(
@@ -548,13 +551,13 @@ class EnergySecondMoment(Observable):
         *,
         evaluation_times: Sequence[float] | None = None,
         tag_suffix: str | None = None,
-        aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
     ):
         """Initializes the observable."""
         super().__init__(
             evaluation_times=evaluation_times,
             tag_suffix=tag_suffix,
-            aggregation_method=aggregation_method,
+            default_aggregation_method=default_aggregation_method,
         )
 
     @property
