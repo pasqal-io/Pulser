@@ -32,7 +32,7 @@ import pulser.json.abstract_repr as pulser_abstract_repr
 import pulser.math as pm
 from pulser.channels.base_channel import Channel, States, get_states_from_bases
 from pulser.channels.dmm import DMM
-from pulser.devices.interaction_coefficients import c6_dict
+from pulser.devices.interaction_coefficients import c3_dict, c6_dict
 from pulser.exceptions.base import PulserValueError
 from pulser.exceptions.sequence import (
     AtomsNumberError,
@@ -81,6 +81,7 @@ OPTIONAL_IN_ABSTR_REPR = tuple(
 PARAMS_WITH_ABSTR_REPR = ("channel_objects", "channel_ids", "dmm_objects")
 
 
+# TODO: [v2] Make KW_ONLY
 @dataclass(frozen=True, repr=False)
 class BaseDevice(ABC):
     r"""Base class of a neutral-atom device.
@@ -107,11 +108,6 @@ class BaseDevice(ABC):
         rydberg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
-        interaction_coeff_xy: :math:`C_3/\hbar`
-            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
-            which sets the van der Waals interaction strength between atoms in
-            different Rydberg states. Needed only if there is a Microwave
-            channel in the device. If unsure, 3700.0 is a good default value.
         channel_objects: The Channel subclass instances specifying each
             channel in the device.
         channel_ids: Custom IDs for each channel object. When defined,
@@ -136,7 +132,6 @@ class BaseDevice(ABC):
     min_atom_distance: float
     max_atom_num: int | None
     max_radial_distance: int | None
-    interaction_coeff_xy: float | None = None
     supports_slm_mask: bool = False
     min_layout_filling: float = 0.0
     max_layout_filling: float = 0.5
@@ -152,6 +147,9 @@ class BaseDevice(ABC):
     dmm_objects: tuple[DMM, ...] = field(default_factory=tuple)
     noise_model: NoiseModel | None = None
     short_description: str = field(default="", repr=False, compare=False)
+    _custom_interaction_coeff_xy: None | float = field(
+        default=None, repr=False, init=False
+    )
 
     def __post_init__(self) -> None:
         def type_check(
@@ -325,15 +323,6 @@ class BaseDevice(ABC):
                 ids.append(id)
             object.__setattr__(self, "channel_ids", tuple(ids))
 
-        if any(
-            ch.basis == "XY" for ch in self.channel_objects
-        ) and not isinstance(self.interaction_coeff_xy, float):
-            raise TypeError(
-                "When the device has a 'Microwave' channel, "
-                "'interaction_coeff_xy' must be a 'float',"
-                f" not '{type(self.interaction_coeff_xy)}'."
-            )
-
         if self.noise_model is not None:
             type_check("noise_model", NoiseModel)
 
@@ -391,13 +380,25 @@ class BaseDevice(ABC):
 
     @property
     def interaction_coeff(self) -> float:
-        r"""The interaction coefficient for the chosen Rydberg level.
+        r"""The Ising interaction coefficient for the chosen Rydberg level.
 
         Corresponds to :math:`C_6/\hbar` (in units of
         :math:`rad \cdot \mu s^{-1} \cdot \mu m^6`)
         for the interaction term of the Ising hamiltonian.
         """
         return float(c6_dict[self.rydberg_level])
+
+    @property
+    def interaction_coeff_xy(self) -> float:
+        r"""The XY interaction coefficient for the chosen Rydberg level.
+
+        Corresponds to :math:`C_3/\hbar` (in units of
+        :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`)
+        for the interaction term of the XY hamiltonian.
+        """
+        if self._custom_interaction_coeff_xy is not None:
+            return self._custom_interaction_coeff_xy
+        return float(c3_dict[self.rydberg_level])
 
     def __repr__(self) -> str:
         return self.name
@@ -592,11 +593,14 @@ class BaseDevice(ABC):
         # This is used instead of dataclasses.asdict() because asdict()
         # is recursive and we have Channel dataclasses in the args that
         # we don't want to convert to dict
-        return {
+        params = {
             f.name: getattr(self, f.name)
             for f in fields(self)
             if (not init_only or f.init) and f.name != "short_description"
         }
+        if self._custom_interaction_coeff_xy is not None:
+            params["interaction_coeff_xy"] = self.interaction_coeff_xy
+        return params
 
     def _validate_coords(
         self,
@@ -626,6 +630,7 @@ class BaseDevice(ABC):
     @abstractmethod
     def _to_abstract_repr(self) -> dict[str, Any]:
         defaults = get_dataclass_defaults(fields(self))
+        # Not init_only=True because of 'reusable_channels'
         params = self._params()
         for p in OPTIONAL_IN_ABSTR_REPR:
             if p in params and params[p] == defaults[p]:
@@ -652,6 +657,10 @@ class BaseDevice(ABC):
         # Use default_noise_model in JSON for schema compatibility
         if "noise_model" in params:
             params["default_noise_model"] = params.pop("noise_model")
+        # Remove _custom_interaction_coeff_xy
+        params.pop("_custom_interaction_coeff_xy", None)
+        # Keep setting 'interaction_coeff_xy' for JSON schema compatibility
+        params["interaction_coeff_xy"] = self.interaction_coeff_xy
         return params
 
     def to_abstract_repr(self) -> str:
@@ -811,14 +820,24 @@ class BaseDevice(ABC):
         )
 
 
-def _wrap_init_for_default_noise_model(
+def _wrap_init_for_deprecated_args(
     original_init: Callable[..., Any],
 ) -> Callable[..., Any]:
-    """Wrap __init__ to accept deprecated default_noise_model parameter."""
+    """Wrap __init__ to accept deprecated arguments.
+
+    Supported deprecated parameters:
+    - default_noise_model
+    - interaction_coeff_xy
+
+    """
 
     @functools.wraps(original_init)
     def wrapped_init(
-        self: Any, *args: Any, default_noise_model: Any = None, **kwargs: Any
+        self: Any,
+        *args: Any,
+        default_noise_model: Any = None,
+        interaction_coeff_xy: float | None = None,
+        **kwargs: Any,
     ) -> None:
         if default_noise_model is not None:
             if kwargs.get("noise_model") is not None:
@@ -835,11 +854,31 @@ def _wrap_init_for_default_noise_model(
             kwargs["noise_model"] = default_noise_model
         kwargs.pop("default_noise_model", None)
         original_init(self, *args, **kwargs)
+        if interaction_coeff_xy is not None:
+            warnings.warn(
+                "The ability to set a custom 'interaction_coeff_xy' is "
+                "deprecated since pulser 1.9.0 and will be removed in the "
+                "future. It is advised to stop providing this value so that "
+                "it can be automatically inferred from the device's "
+                "'rydberg_level'.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            if not isinstance(interaction_coeff_xy, float):
+                raise TypeError(
+                    "When explicitly defined, "
+                    "'interaction_coeff_xy' must be a 'float',"
+                    f" not '{type(interaction_coeff_xy)}'."
+                )
+
+            object.__setattr__(
+                self, "_custom_interaction_coeff_xy", interaction_coeff_xy
+            )
 
     return wrapped_init
 
 
-BaseDevice.__init__ = _wrap_init_for_default_noise_model(BaseDevice.__init__)  # type: ignore[method-assign]  # noqa: E501
+BaseDevice.__init__ = _wrap_init_for_deprecated_args(BaseDevice.__init__)  # type: ignore[method-assign]  # noqa: E501
 
 
 @dataclass(frozen=True, repr=False)
@@ -882,11 +921,6 @@ class Device(BaseDevice):
         rydberg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
-        interaction_coeff_xy: :math:`C_3/\hbar`
-            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
-            which sets the van der Waals interaction strength between atoms in
-            different Rydberg states. Needed only if there is a Microwave
-            channel in the device. If unsure, 3700.0 is a good default value.
         channel_objects: The Channel subclass instances specifying each
             channel in the device.
         channel_ids: Custom IDs for each channel object. When defined,
@@ -981,7 +1015,10 @@ class Device(BaseDevice):
         """Converts the Device into a VirtualDevice."""
         params = self._params()
         all_params_names = set(params)
-        target_params_names = {f.name for f in fields(VirtualDevice)}
+        target_params_names = {f.name for f in fields(VirtualDevice) if f.init}
+        # interaction_coeff_xy is no longer a field but should not be
+        # ommited because it might be custom
+        target_params_names.add("interaction_coeff_xy")
         for param in all_params_names - target_params_names:
             del params[param]
         return VirtualDevice(**params)
@@ -1065,11 +1102,6 @@ class VirtualDevice(BaseDevice):
         rydberg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
-        interaction_coeff_xy: :math:`C_3/\hbar`
-            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
-            which sets the van der Waals interaction strength between atoms in
-            different Rydberg states. Needed only if there is a Microwave
-            channel in the device. If unsure, 3700.0 is a good default value.
         reusable_channels: Whether each channel can be declared multiple times
             on the same pulse sequence.
         channel_objects: The Channel subclass instances specifying each
@@ -1108,9 +1140,10 @@ class VirtualDevice(BaseDevice):
     def change_rydberg_level(self, ryd_lvl: int) -> None:
         r"""Changes the Rydberg level used in the Device.
 
-        Find the :math:`C_6/\hbar` coefficient matching the Rydberg level on
+        Find the :math:`C_6/\hbar` and :math:`C_3/\hbar` coefficients matching
+        the Rydberg level on
         `this page <https://github.com/pasqal-io/Pulser/blob/develop/
-        pulser-core/pulser/devices/interaction_coefficients/C6_coeffs.json>`_
+        pulser-core/pulser/devices/interaction_coefficients/>`_
 
         Args:
             ryd_lvl: the Rydberg level to use (between 50 and 100).
@@ -1119,7 +1152,9 @@ class VirtualDevice(BaseDevice):
         object.__setattr__(self, "rydberg_level", ryd_lvl)
 
     def _to_dict(self) -> dict[str, Any]:
-        return obj_to_dict(self, _module="pulser.devices", **self._params())
+        return obj_to_dict(
+            self, _module="pulser.devices", **self._params(init_only=True)
+        )
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         d = super()._to_abstract_repr()
@@ -1153,5 +1188,5 @@ class VirtualDevice(BaseDevice):
 
 # Patch Device and VirtualDevice __init__ to accept deprecated
 # default_noise_model
-Device.__init__ = _wrap_init_for_default_noise_model(Device.__init__)  # type: ignore[method-assign]  # noqa: E501
-VirtualDevice.__init__ = _wrap_init_for_default_noise_model(VirtualDevice.__init__)  # type: ignore[method-assign]  # noqa: E501
+Device.__init__ = _wrap_init_for_deprecated_args(Device.__init__)  # type: ignore[method-assign]  # noqa: E501
+VirtualDevice.__init__ = _wrap_init_for_deprecated_args(VirtualDevice.__init__)  # type: ignore[method-assign]  # noqa: E501

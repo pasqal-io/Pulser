@@ -541,6 +541,17 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
             params["noise_model"] = _deserialize_noise_model(
                 obj["default_noise_model"]
             )
+        elif param.name == "interaction_coeff_xy":
+            rydberg_level = params.get("rydberg_level")
+            if (  # Defensive, rydberg_level should always exist
+                rydberg_level is not None
+            ) and (
+                obj["interaction_coeff_xy"]
+                == devices.interaction_coefficients.c3_dict[rydberg_level]
+            ):
+                # Skip specifying the interaction_coeff_xy explicitly
+                # when it matches the one determined by the rydberg level
+                continue
         else:
             params[param.name] = obj[param.name]
     try:
