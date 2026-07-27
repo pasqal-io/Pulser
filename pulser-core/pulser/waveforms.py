@@ -858,8 +858,15 @@ class InterpolatedWaveform(Waveform):
             duration of the waveform.
         interpolator: The SciPy interpolation class
             to use. Supports "PchipInterpolator" and "interp1d".
+
+            *Passing "interp1d" is deprecated since pulser v1.9 and will be
+            removed in a future version; only "PchipInterpolator" (the
+            default) will remain supported.*
         **interpolator_kwargs: Extra parameters to give to the chosen
             interpolator class.
+
+            *Deprecated since pulser v1.9; extra keyword arguments for the
+            interpolator will no longer be accepted in a future version.*
     """
 
     def __new__(cls, *args, **kwargs):  # type: ignore
@@ -897,6 +904,23 @@ class InterpolatedWaveform(Waveform):
             raise ValueError(
                 f"Invalid interpolator '{interpolator}', only "
                 "accepts: " + ", ".join(valid_interpolators)
+            )
+        if interpolator == "interp1d":
+            warnings.warn(
+                "Setting 'interpolator' to \"interp1d\" has been deprecated "
+                "since pulser v1.9 and will be removed in a future version. "
+                "Only 'PchipInterpolator' (the default) will remain "
+                "supported.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        if interpolator_kwargs:
+            warnings.warn(
+                "Passing extra keyword arguments to configure the SciPy "
+                "interpolator has been deprecated since pulser v1.9 and will "
+                "be removed in a future version.",
+                DeprecationWarning,
+                stacklevel=2,
             )
         interp_cls = getattr(interpolate, interpolator)
         self._data_pts = np.array(
