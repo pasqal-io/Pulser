@@ -100,3 +100,49 @@ AnalogDevice = Device(
     pre_calibrated_layouts=(TriangularLatticeLayout(61, 5),),
     short_description="A realistic device for analog sequence execution.",
 )
+
+
+WeightedAnalogDevice = Device(
+    name="WeightedAnalogDevice",
+    dimensions=2,
+    rydberg_level=60,
+    max_atom_num=100,
+    max_radial_distance=46,
+    min_atom_distance=5,
+    max_sequence_duration=6000,
+    max_runs=2000,
+    requires_layout=True,
+    accepts_new_layouts=True,
+    optimal_layout_filling=0.45,
+    channel_objects=(
+        Rydberg.Global(
+            max_abs_detuning=2 * np.pi * 20,
+            max_amp=2 * np.pi * 2,
+            clock_period=4,
+            min_duration=16,
+            mod_bandwidth=5,
+            eom_config=RydbergEOM(
+                limiting_beam=RydbergBeam.RED,
+                max_limiting_amp=34 * 2 * np.pi,
+                intermediate_detuning=450 * 2 * np.pi,
+                mod_bandwidth=26,
+                controlled_beams=(RydbergBeam.BLUE,),
+                custom_buffer_time=240,
+                red_shift_coeff=2,
+            ),
+        ),
+    ),
+    dmm_objects=(
+        DMM(
+            clock_period=4,
+            min_duration=16,
+            mod_bandwidth=15.5,
+            bottom_detuning=-2 * np.pi * 20,
+            total_bottom_detuning=-2 * np.pi * 1000,
+        ),
+    ),
+    pre_calibrated_layouts=(TriangularLatticeLayout(61, 5),),
+    short_description=(
+        "A realistic device for weighted-analog sequence execution."
+    ),
+)

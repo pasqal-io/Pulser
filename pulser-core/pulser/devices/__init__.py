@@ -30,6 +30,7 @@ from pulser.devices._device_datacls import Device, VirtualDevice
 from pulser.devices._devices import (
     AnalogDevice,
     DigitalAnalogDevice,
+    WeightedAnalogDevice,
 )
 from pulser.devices._mock_device import MockDevice
 
@@ -38,6 +39,7 @@ _mock_devices: tuple[VirtualDevice, ...] = (MockDevice,)
 _valid_devices: tuple[Device, ...] = (
     AnalogDevice,
     DigitalAnalogDevice,
+    WeightedAnalogDevice,
 )
 
 __all__ = [
@@ -46,4 +48,5 @@ __all__ = [
     "AnalogDevice",
     "DigitalAnalogDevice",
     "MockDevice",
+    "WeightedAnalogDevice",
 ]
