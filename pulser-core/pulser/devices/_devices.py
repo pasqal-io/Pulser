@@ -118,6 +118,7 @@ WeightedAnalogDevice = Device(
     optimal_layout_filling=0.45,
     min_layout_traps=60,
     max_layout_traps=200,
+    supports_slm_mask=True,
     channel_objects=(
         Rydberg.Global(
             max_abs_detuning=2 * np.pi * 20,
