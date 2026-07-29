@@ -27,7 +27,12 @@ from pulser.waveforms import (
 from pulser.pulse import Pulse
 from pulser.register import Register, Register3D
 from pulser.noise_model import NoiseModel
-from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
+from pulser.devices import (
+    AnalogDevice,
+    DigitalAnalogDevice,
+    MockDevice,
+    WeightedAnalogDevice,
+)
 from pulser.sequence import Sequence
 from pulser.backend import (
     EmulatorConfig,
@@ -68,6 +73,7 @@ __all__ = [
     "AnalogDevice",
     "DigitalAnalogDevice",
     "MockDevice",
+    "WeightedAnalogDevice",
     # pulser.sequence
     "Sequence",
     # pulser.backends
