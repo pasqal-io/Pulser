@@ -35,6 +35,18 @@ from pulser.json.utils import stringify_qubit_ids
 
 ResultsType = TypeVar("ResultsType", bound="Results")
 
+# Special attributes of the deprecated SampledResult
+_SAMPLED_RESULT_ATTRS = (
+    "sampling_dist",
+    "sampling_errors",
+    "get_samples",
+    "get_state",
+    "plot_histogram",
+    "n_samples",
+    "evaluation_time",
+    "meas_basis",
+)
+
 
 @dataclass(repr=False)
 class Results:
@@ -141,9 +153,24 @@ class Results:
             aggregation_method=observable.default_aggregation_method,
         )
 
-    def __getattr__(self, name: str) -> list[Any]:
+    def __getattr__(self, name: str) -> Any:
         if name in self._tagmap:
             return list(self._results[self._tagmap[name]])
+        if name == "bitstring_counts":
+            warnings.warn(
+                "'bitstring_counts' is an attribute of the deprecated "
+                "`SampledResult` class. Please favor acessing the "
+                "bitstrings via 'final_bitstrings' instead.",
+                category=FutureWarning,
+                stacklevel=3,
+            )
+            return self.final_bitstrings
+
+        if name in _SAMPLED_RESULT_ATTRS:
+            raise AttributeError(
+                f"{name} is available only in 'SampledResult', which has been"
+                " deprecated and is being phased out."
+            )
         raise AttributeError(f"{name!r} is not in the results.")
 
     @property

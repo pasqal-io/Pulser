@@ -54,7 +54,11 @@ from pulser.backend.remote import (
     RemoteResultsError,
     _OpenBatchContextManager,
 )
-from pulser.backend.results import AggregationMethod, Results
+from pulser.backend.results import (
+    _SAMPLED_RESULT_ATTRS,
+    AggregationMethod,
+    Results,
+)
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
@@ -1173,6 +1177,53 @@ def test_results_from_final_bitstrings():
             total_duration=100,
             final_bitstrings=42,
         )
+
+
+def test_results_bitstring_counts():
+    res = Results.from_final_bitstrings(
+        atom_order=("q0", "q1"),
+        total_duration=100,
+        final_bitstrings={"00": 30, "11": 70},
+    )
+    with pytest.warns(
+        FutureWarning,
+        match="'bitstring_counts' is an attribute of the deprecated",
+    ):
+        assert res.bitstring_counts == res.final_bitstrings
+
+    # Without stored bitstrings, it warns and then fails like final_bitstrings
+    empty_res = Results(atom_order=("q0",), total_duration=100)
+    with pytest.warns(FutureWarning, match="'bitstring_counts'"):
+        with pytest.raises(
+            RuntimeError, match="final bitstrings are not available"
+        ):
+            empty_res.bitstring_counts
+
+
+def test_results_sampled_result_attrs():
+    res = Results(atom_order=("q0",), total_duration=100)
+    for attr in _SAMPLED_RESULT_ATTRS:
+        with pytest.raises(
+            AttributeError,
+            match=f"{attr} is available only in 'SampledResult'",
+        ):
+            getattr(res, attr)
+
+    # Unknown attributes keep the generic error message
+    with pytest.raises(
+        AttributeError, match="'not_an_attr' is not in the results"
+    ):
+        res.not_an_attr
+
+    # Make sure the hardcoded attributes do exist in SampledResult
+    with pytest.deprecated_call():
+        sampled_res = SampledResult(
+            atom_order=("q0",),
+            meas_basis="ground-rydberg",
+            bitstring_counts={"0": 100},
+        )
+    for attr in _SAMPLED_RESULT_ATTRS:
+        assert hasattr(sampled_res, attr)
 
 
 def test_results_final_state():
