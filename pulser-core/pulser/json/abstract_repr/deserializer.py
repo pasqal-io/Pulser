@@ -541,19 +541,21 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
             params["noise_model"] = _deserialize_noise_model(
                 obj["default_noise_model"]
             )
-        elif param.name == "interaction_coeff_xy":
-            rydberg_level = params.get("rydberg_level")
-            if (  # Defensive, rydberg_level should always exist
-                rydberg_level is not None
-            ) and (
-                obj["interaction_coeff_xy"]
-                == devices.interaction_coefficients.c3_dict[rydberg_level]
-            ):
-                # Skip specifying the interaction_coeff_xy explicitly
-                # when it matches the one determined by the rydberg level
-                continue
         else:
             params[param.name] = obj[param.name]
+    # 'interaction_coeff_xy' is not a device field (it is inferred from the
+    # 'rydberg_level') but the abstract repr always includes it. Only pass it
+    # along explicitly (via the deprecated argument) when it does not match the
+    # value determined by the Rydberg level, i.e. when it was customized.
+    if "interaction_coeff_xy" in obj:
+        rydberg_level = params.get("rydberg_level")
+        if (  # Defensive, rydberg_level should always exist
+            rydberg_level is None
+        ) or (
+            obj["interaction_coeff_xy"]
+            != devices.interaction_coefficients.c3_dict[rydberg_level]
+        ):
+            params["interaction_coeff_xy"] = obj["interaction_coeff_xy"]
     try:
         return device_cls(**params)
     except (ValueError, TypeError) as e:
