@@ -630,8 +630,9 @@ class BaseDevice(ABC):
     @abstractmethod
     def _to_abstract_repr(self) -> dict[str, Any]:
         defaults = get_dataclass_defaults(fields(self))
-        # Not init_only=True because of 'reusable_channels'
-        params = self._params()
+        # Not init_only=True because 'reusable_channels' is not in the
+        # init of BaseDevice but is required by the abstract repr
+        params = self._params(init_only=False)
         for p in OPTIONAL_IN_ABSTR_REPR:
             if p in params and params[p] == defaults[p]:
                 params.pop(p, None)
