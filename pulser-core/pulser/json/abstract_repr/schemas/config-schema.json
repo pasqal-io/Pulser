@@ -82,10 +82,17 @@
                         "items": {
                             "type": "array",
                             "items": {
-                                "type": "array",
-                                "items": {
-                                    "type": "number"
-                                }
+                                "oneOf": [
+                                    {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "number"
+                                        }
+                                    },
+                                    {
+                                        "type": "number"
+                                    }
+                                ]
                             }
                         }
                     }
@@ -252,8 +259,7 @@
             "observable",
             "evaluation_times",
             "operator",
-            "tag_suffix",
-            "default_aggregation_method"
+            "tag_suffix"
         ],
         "additionalProperties": false
     },
@@ -303,8 +309,7 @@
             "evaluation_times",
             "num_shots",
             "one_state",
-            "tag_suffix",
-            "default_aggregation_method"
+            "tag_suffix"
         ],
         "additionalProperties": false
     },
@@ -342,8 +347,7 @@
             "observable",
             "evaluation_times",
             "state",
-            "tag_suffix",
-            "default_aggregation_method"
+            "tag_suffix"
         ],
         "additionalProperties": false
     },
@@ -385,8 +389,7 @@
             "observable",
             "evaluation_times",
             "one_state",
-            "tag_suffix",
-            "default_aggregation_method"
+            "tag_suffix"
         ],
         "additionalProperties": false
     },
@@ -428,8 +431,7 @@
             "observable",
             "evaluation_times",
             "one_state",
-            "tag_suffix",
-            "default_aggregation_method"
+            "tag_suffix"
         ],
         "additionalProperties": false
     },
@@ -463,8 +465,7 @@
         "required": [
             "observable",
             "evaluation_times",
-            "tag_suffix",
-            "default_aggregation_method"
+            "tag_suffix"
         ],
         "additionalProperties": false
     },
@@ -498,8 +499,7 @@
         "required": [
             "observable",
             "evaluation_times",
-            "tag_suffix",
-            "default_aggregation_method"
+            "tag_suffix"
         ],
         "additionalProperties": false
     },
@@ -533,8 +533,7 @@
         "required": [
             "observable",
             "evaluation_times",
-            "tag_suffix",
-            "default_aggregation_method"
+            "tag_suffix"
         ],
         "additionalProperties": false
     },
