@@ -110,7 +110,6 @@ WeightedAnalogDevice = Device(
     max_radial_distance=80,
     min_atom_distance=5,
     max_sequence_duration=6000,
-    max_runs=2000,
     requires_layout=True,
     accepts_new_layouts=True,
     min_layout_filling=0.35,
