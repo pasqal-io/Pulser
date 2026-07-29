@@ -133,7 +133,7 @@ WeightedAnalogDevice = Device(
         DMM(
             clock_period=4,
             min_duration=16,
-            mod_bandwidth=15.5,
+            mod_bandwidth=22,
             bottom_detuning=-2 * np.pi * 10,
             total_bottom_detuning=-2 * np.pi * 1000,
             min_avg_abs_detuning=2 * np.pi * 0.1,
