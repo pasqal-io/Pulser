@@ -997,7 +997,9 @@ class TestSerialization:
         ):
             Register({"0": (0, 0), 0: (20, 20)})._to_abstract_repr()
 
-        with pytest.raises(
+        with pytest.deprecated_call(
+            match="Setting 'interpolator' to \"interp1d\"",
+        ), pytest.raises(
             AbstractReprError,
             match="Export of an InterpolatedWaveform is only supported for the"
             " 'PchipInterpolator'",
@@ -1006,7 +1008,9 @@ class TestSerialization:
                 1000, [0, 1, 0], interpolator="interp1d"
             )._to_abstract_repr()
 
-        with pytest.raises(
+        with pytest.deprecated_call(
+            match="Passing extra keyword arguments to configure the SciPy",
+        ), pytest.raises(
             AbstractReprError, match="without any 'interpolator_kwargs'"
         ):
             InterpolatedWaveform(
