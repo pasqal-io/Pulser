@@ -79,13 +79,22 @@ class Pulse:
     phase: pm.AbstractArray = field(init=False)
     post_phase_shift: float = field(default=0.0, init=False)
 
-    def __new__(cls, *args, **kwargs):  # type: ignore
-        """Creates a Pulse instance or a ParamObj depending on the input."""
+    def __new__(cls, *args: Any, **kwargs: Any) -> Pulse:
+        """Creates a Pulse instance or a ParamObj depending on the input.
+
+        Note:
+            The signature mirrors ``__init__`` so that type checkers and
+            IDEs expose the constructor arguments. The ``-> Pulse`` return
+            annotation is what makes them prefer ``__init__``'s signature
+            over these ``*args``/``**kwargs`` (a ``ParamObj`` may actually
+            be returned when any argument is parametrized).
+        """
         for x in itertools.chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
-                return ParamObj(cls, *args, **kwargs)
-        else:
-            return object.__new__(cls)
+                return ParamObj(  # type: ignore[return-value]
+                    cls, *args, **kwargs
+                )
+        return object.__new__(cls)
 
     def __init__(
         self,

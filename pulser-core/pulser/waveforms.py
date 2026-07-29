@@ -53,6 +53,8 @@ __all__ = [
 ]
 
 T = TypeVar("T", int, float)
+_WaveformT = TypeVar("_WaveformT", bound="Waveform")
+_InterpWaveformT = TypeVar("_InterpWaveformT", bound="InterpolatedWaveform")
 
 
 def _cast_check(type_: type[T], value: Any, name: str) -> T:
@@ -70,13 +72,23 @@ def _cast_check(type_: type[T], value: Any, name: str) -> T:
 class Waveform(ABC):
     """The abstract class for a pulse's waveform."""
 
-    def __new__(cls, *args, **kwargs):  # type: ignore
-        """Creates a Waveform instance or a ParamObj depending on the input."""
+    def __new__(
+        cls: type[_WaveformT], *args: Any, **kwargs: Any
+    ) -> _WaveformT:
+        """Creates a Waveform instance or a ParamObj depending on the input.
+
+        Note:
+            Typing ``cls``/return with a ``Waveform``-bound ``TypeVar`` lets
+            type checkers and IDEs expose each subclass's ``__init__``
+            signature (a ``ParamObj`` may actually be returned when any
+            argument is parametrized).
+        """
         for x in itertools.chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
-                return ParamObj(cls, *args, **kwargs)
-        else:
-            return object.__new__(cls)
+                return ParamObj(  # type: ignore[return-value]
+                    cls, *args, **kwargs
+                )
+        return object.__new__(cls)
 
     def __init__(self, duration: Union[int, Parametrized]):
         """Initializes a waveform with a given duration.
@@ -869,7 +881,9 @@ class InterpolatedWaveform(Waveform):
             interpolator will no longer be accepted in a future version.*
     """
 
-    def __new__(cls, *args, **kwargs):  # type: ignore
+    def __new__(
+        cls: type[_InterpWaveformT], *args: Any, **kwargs: Any
+    ) -> _InterpWaveformT:
         """Creates InterpolatedWaveform or ParamObj depending on the input."""
         cls._check_values_times(
             args[1] if len(args) >= 2 else kwargs["values"],
@@ -877,9 +891,10 @@ class InterpolatedWaveform(Waveform):
         )
         for x in itertools.chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
-                return ParamObj(cls, *args, **kwargs)
-        else:
-            return object.__new__(cls)
+                return ParamObj(  # type: ignore[return-value]
+                    cls, *args, **kwargs
+                )
+        return object.__new__(cls)
 
     def __init__(
         self,
