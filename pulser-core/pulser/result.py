@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Classes to store measurement results."""
+
 from __future__ import annotations
 
+import collections.abc
 import uuid
 import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Type
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,7 +38,7 @@ def __getattr__(name: str) -> Any:
     warnings.warn(
         f"The 'pulser.result.{name}' class has been renamed to "
         f"'{name_map[name]}' and moved to 'pulser.backend.results'. "
-        "Importing it as '{name}' from 'pulser.results' is deprecated.",
+        f"Importing it as '{name}' from 'pulser.results' is deprecated.",
         DeprecationWarning,
         stacklevel=3,
     )
@@ -52,6 +54,17 @@ class Result(ABC, backend_results.Results):
 
     meas_basis: str
     total_duration: int = field(default=0, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        warnings.warn(
+            f"The '{type(self).__name__}' class has been deprecated and "
+            "will be removed in Pulser v2.0. Please prefer storing a "
+            "result in a 'Results' instance via the appropriate observable "
+            " or via 'Results.from_final_bitstrings()' when adequate.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        super().__post_init__()
 
     @property
     def sampling_dist(self) -> dict[str, float]:
@@ -141,6 +154,18 @@ class Result(ABC, backend_results.Results):
 
     def __str__(self) -> str:
         return self.__repr__()
+
+    @classmethod
+    def from_final_bitstrings(
+        cls: Type[Result],
+        atom_order: collections.abc.Sequence[str],
+        total_duration: int,
+        final_bitstrings: collections.abc.Mapping[str, int],
+    ) -> Result:
+        """[Not Implemented]Creates a Result instance from final bitstrings."""
+        raise NotImplementedError(
+            f"'{cls.__name__}.from_final_bitstrings()' is not implemented."
+        )
 
 
 @dataclass

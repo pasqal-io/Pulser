@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
+import importlib.util
 import sys
 
 import pytest
@@ -61,11 +63,14 @@ def test_removed_deprecated_backends(backend_name):
     "backend_name", ["EmuFreeBackendV2", "EmuMPSBackend", "EmuSVBackend"]
 )
 def test_renamed_backends(backend_name):
+    has_pasqal_cloud = importlib.util.find_spec("pasqal_cloud") is not None
+    not_installed_error = (
+        pytest.raises(AttributeError, match="To install it, run `pip install")
+        if not has_pasqal_cloud
+        else contextlib.nullcontext()
+    )
     with (
-        pytest.raises(
-            AttributeError,
-            match="To install it, run `pip install",
-        ),
+        not_installed_error,
         pytest.warns(
             DeprecationWarning, match=f"{backend_name!r} was renamed to "
         ),
