@@ -263,7 +263,7 @@ class Results:
     def aggregate(
         cls,
         results_to_aggregate: typing.Sequence[Results],
-        **aggregation_functions: Callable[[Any], Any],
+        **aggregation_functions: Callable[[Any], Any] | AggregationMethod,
     ) -> Results:
         """Aggregate a Sequence of Results objects into a single Results.
 
@@ -284,9 +284,10 @@ class Results:
             results_to_aggregate: The list of Results to aggregate
 
         Keyword Args:
-            observable_tag: Overrides the default aggregator.
+            aggregation_functions: Overrides the default aggregator.
                 The argument name should be the tag of the Observable.
-                The value is a Callable taking a list of the type to aggregate.
+                The value is a Callable taking a list of the type to aggregate,
+                or an AggregationMethod enum.
                 Note that this does not override the default aggregation
                 behaviour of the aggregated results.
 

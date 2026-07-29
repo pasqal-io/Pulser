@@ -326,3 +326,13 @@ def test_make_json_compatible():
     assert make_json_compatible("abc") == "abc"
     with pytest.raises(TypeError, match="not JSON serializable"):
         make_json_compatible(1j)
+
+
+def test_kwargs_only_paramobj():
+    reg = Register.square(4, prefix="q")
+    seq = Sequence(reg, DigitalAnalogDevice)
+    dt = seq.declare_variable("dt")
+
+    # Encode-decode should succeed on both cases
+    encode_decode(BlackmanWaveform(dt, 2))
+    encode_decode(BlackmanWaveform(duration=dt, area=2))
