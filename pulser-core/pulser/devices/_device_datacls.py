@@ -865,10 +865,12 @@ def _wrap_init_for_deprecated_args(
                 category=DeprecationWarning,
                 stacklevel=2,
             )
-            if not isinstance(interaction_coeff_xy, float):
+            try:
+                interaction_coeff_xy = float(interaction_coeff_xy)
+            except (TypeError, ValueError):
                 raise TypeError(
                     "When explicitly defined, "
-                    "'interaction_coeff_xy' must be a 'float',"
+                    "'interaction_coeff_xy' must be castable to a 'float',"
                     f" not '{type(interaction_coeff_xy)}'."
                 )
 
