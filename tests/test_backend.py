@@ -54,7 +54,11 @@ from pulser.backend.remote import (
     RemoteResultsError,
     _OpenBatchContextManager,
 )
-from pulser.backend.results import AggregationMethod, Results
+from pulser.backend.results import (
+    _SAMPLED_RESULT_ATTRS,
+    AggregationMethod,
+    Results,
+)
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
@@ -139,11 +143,12 @@ class _MockConnection(RemoteConnection):
         self._got_closed = ""
         self._progress_calls = 0
         self._last_submit_kwargs = {}
-        self.result = SampledResult(
-            ("q0", "q1"),
-            meas_basis="ground-rydberg",
-            bitstring_counts={"00": 100},
-        )
+        with pytest.deprecated_call():
+            self.result = SampledResult(
+                ("q0", "q1"),
+                meas_basis="ground-rydberg",
+                bitstring_counts={"00": 100},
+            )
 
     def submit(
         self,
@@ -1139,6 +1144,86 @@ def test_results_final_bistrings():
         result=res,
     )
     assert res.final_bitstrings == res.get_result(obs, 1.0)
+
+
+def test_results_from_final_bitstrings():
+    final_bitstrings = {"000": 60, "111": 40}
+    res = Results.from_final_bitstrings(
+        atom_order=("q0", "q1", "q2"),
+        total_duration=1000,
+        final_bitstrings=final_bitstrings,
+    )
+    assert isinstance(res, Results)
+    assert res.atom_order == ("q0", "q1", "q2")
+    assert res.total_duration == 1000
+    assert res.final_bitstrings == Counter(final_bitstrings)
+    assert res.get_result_times("bitstrings") == [1.0]
+
+    # Accepts a Counter directly too
+    counter_bitstrings = Counter({"01": 5, "10": 5})
+    res2 = Results.from_final_bitstrings(
+        atom_order=("q0", "q1"),
+        total_duration=100,
+        final_bitstrings=counter_bitstrings,
+    )
+    assert res2.final_bitstrings == counter_bitstrings
+
+    with pytest.raises(
+        TypeError,
+        match="'final_bitstrings' is not a valid bitstrings counter",
+    ):
+        Results.from_final_bitstrings(
+            atom_order=("q0",),
+            total_duration=100,
+            final_bitstrings=42,
+        )
+
+
+def test_results_bitstring_counts():
+    res = Results.from_final_bitstrings(
+        atom_order=("q0", "q1"),
+        total_duration=100,
+        final_bitstrings={"00": 30, "11": 70},
+    )
+    with pytest.warns(
+        FutureWarning,
+        match="'bitstring_counts' is an attribute of the deprecated",
+    ):
+        assert res.bitstring_counts == res.final_bitstrings
+
+    # Without stored bitstrings, it warns and then fails like final_bitstrings
+    empty_res = Results(atom_order=("q0",), total_duration=100)
+    with pytest.warns(FutureWarning, match="'bitstring_counts'"):
+        with pytest.raises(
+            RuntimeError, match="final bitstrings are not available"
+        ):
+            empty_res.bitstring_counts
+
+
+def test_results_sampled_result_attrs():
+    res = Results(atom_order=("q0",), total_duration=100)
+    for attr in _SAMPLED_RESULT_ATTRS:
+        with pytest.raises(
+            AttributeError,
+            match=f"{attr} is available only in 'SampledResult'",
+        ):
+            getattr(res, attr)
+
+    # Unknown attributes keep the generic error message
+    with pytest.raises(
+        AttributeError, match="'not_an_attr' is not in the results"
+    ):
+        res.not_an_attr
+
+    # Make sure the hardcoded attributes do exist in SampledResult
+    with pytest.deprecated_call():
+        sampled_res = SampledResult(
+            atom_order=("q0",),
+            meas_basis="ground-rydberg",
+            bitstring_counts={"0": 100},
+        )
+    for attr in _SAMPLED_RESULT_ATTRS:
+        assert hasattr(sampled_res, attr)
 
 
 def test_results_final_state():
