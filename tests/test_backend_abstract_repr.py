@@ -95,6 +95,11 @@ class TestObservableRepr:
                 (example_operator,),
                 {"tag_suffix": "my_op"},
             ),
+            (
+                Expectation,
+                (example_operator,),
+                {"default_aggregation_method": AggregationMethod.SKIP},
+            ),
         ],
     )
     def test_observable_repr(
@@ -145,6 +150,11 @@ class TestObservableRepr:
             )
             assert repr.get("num_shots", None) == expected_kwargs.get(
                 "num_shots", None
+            )
+            # The default_aggregation_method survives the round-trip
+            assert (
+                repr["default_aggregation_method"]
+                == obs.default_aggregation_method
             )
 
         # Check observable against the schema via config serialization

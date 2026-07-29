@@ -284,7 +284,7 @@ class Results:
             results_to_aggregate: The list of Results to aggregate
 
         Keyword Args:
-            observable_tag: Overrides the default aggregator.
+            aggregation_functions: Overrides the default aggregator.
                 The argument name should be the tag of the Observable.
                 The value is a Callable taking a list of the type to aggregate,
                 or an AggregationMethod enum.
