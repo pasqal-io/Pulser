@@ -126,7 +126,7 @@ WeightedAnalogDevice = Device(
             clock_period=4,
             min_duration=16,
             mod_bandwidth=50,
-            min_avg_amp=2 * np.pi * 0.3
+            min_avg_amp=2 * np.pi * 0.3,
         ),
     ),
     dmm_objects=(
