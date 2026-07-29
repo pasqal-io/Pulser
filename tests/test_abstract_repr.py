@@ -38,6 +38,7 @@ from pulser.devices import (
     DigitalAnalogDevice,
     MockDevice,
     VirtualDevice,
+    WeightedAnalogDevice,
 )
 from pulser.exceptions.serialization import (
     AbstractReprError,
@@ -366,7 +367,13 @@ def test_legacy_noise_model(noise_model_factory):
 
 class TestDevice:
     @pytest.fixture(
-        params=[DigitalAnalogDevice, phys_Chadoq2, MockDevice, AnalogDevice]
+        params=[
+            DigitalAnalogDevice,
+            phys_Chadoq2,
+            MockDevice,
+            AnalogDevice,
+            WeightedAnalogDevice,
+        ]
     )
     def abstract_device(self, request):
         device = request.param

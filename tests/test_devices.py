@@ -29,6 +29,7 @@ from pulser.devices import (
     DigitalAnalogDevice,
     MockDevice,
     VirtualDevice,
+    WeightedAnalogDevice,
 )
 from pulser.devices.interaction_coefficients import c3_dict, c6_dict
 from pulser.exceptions.base import PulserValueError
@@ -280,7 +281,8 @@ def test_tuple_conversion(test_params):
 
 
 @pytest.mark.parametrize(
-    "device", [MockDevice, AnalogDevice, DigitalAnalogDevice]
+    "device",
+    [MockDevice, AnalogDevice, DigitalAnalogDevice, WeightedAnalogDevice],
 )
 def test_device_specs(device):
     def yes_no_fn(dev, attr, text):
