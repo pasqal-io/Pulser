@@ -44,6 +44,7 @@ from pulser.exceptions.serialization import (
     AbstractReprError,
     DeserializeDeviceError,
 )
+from pulser.json.abstract_repr import SCHEMAS, SCHEMAS_PATH
 from pulser.json.abstract_repr.deserializer import (
     VARIABLE_TYPE_MAP,
     deserialize_abstract_register,
@@ -52,7 +53,11 @@ from pulser.json.abstract_repr.serializer import (
     AbstractReprEncoder,
     abstract_repr,
 )
-from pulser.json.abstract_repr.validation import validate_abstract_repr
+from pulser.json.abstract_repr.validation import (
+    _validate_with_jsonschema,
+    validate_abstract_repr,
+)
+from pulser.json.utils import get_filename
 from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
@@ -96,6 +101,21 @@ phys_Chadoq2 = replace(
         dephasing_rate=0.2,
     ),
 )
+
+
+@pytest.mark.parametrize("schema_name", list(SCHEMAS))
+def test_schemas_untouched_by_validator_compilation(schema_name):
+    # fastjsonschema rewrites the '$ref's of the schemas it compiles in place
+    with open(SCHEMAS_PATH / get_filename(schema_name), encoding="utf-8") as f:
+        assert SCHEMAS[schema_name] == json.load(f)
+
+
+@pytest.mark.parametrize("schema_name", list(SCHEMAS))
+def test_jsonschema_resolves_all_schemas(schema_name):
+    # Checks the '$ref's of every schema can be resolved by the jsonschema
+    # validators, which is only the case if they are all in the REGISTRY
+    with pytest.raises(jsonschema.exceptions.ValidationError):
+        _validate_with_jsonschema({"deliberately": "invalid"}, schema_name)
 
 
 def test_abstract_repr_encoder_non_torch():

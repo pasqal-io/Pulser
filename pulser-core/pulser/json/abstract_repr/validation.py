@@ -13,6 +13,7 @@
 # limitations under the License.
 """Function for validation of JSON serialization to abstract representation."""
 
+import copy
 import json
 from importlib.metadata import version
 from typing import Any, Callable
@@ -44,10 +45,18 @@ _SCHEMAS_BY_FILENAME = {
     get_filename(name): schema for name, schema in SCHEMAS.items()
 }
 
+
+def _schema_copy_by_filename(filename: str) -> Any:
+    # fastjsonschema qualifies the '$ref's of the schemas it compiles with
+    # their '$id' *in place*, so it must only ever be given copies to keep
+    # the contents of SCHEMAS identical to the schema files
+    return copy.deepcopy(_SCHEMAS_BY_FILENAME[filename])  # pragma: no cover
+
+
 _FAST_VALIDATORS: dict[str, Callable[[Any], Any]] = (
     {
         name: fastjsonschema.compile(
-            schema, handlers={"": _SCHEMAS_BY_FILENAME.__getitem__}
+            copy.deepcopy(schema), handlers={"": _schema_copy_by_filename}
         )
         for name, schema in SCHEMAS.items()
     }
@@ -55,17 +64,10 @@ _FAST_VALIDATORS: dict[str, Callable[[Any], Any]] = (
     else {}
 )
 
-_REGISTRY_NAMES: list[ObjectType] = [
-    "device",
-    "layout",
-    "register",
-    "noise",
-    "sequence",
-]
 REGISTRY: Registry = Registry(
     [
-        (get_filename(name), Resource.from_contents(SCHEMAS[name]))
-        for name in _REGISTRY_NAMES
+        (get_filename(name), Resource.from_contents(schema))
+        for name, schema in SCHEMAS.items()
     ]
 )
 
