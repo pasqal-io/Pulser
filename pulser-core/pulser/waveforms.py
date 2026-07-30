@@ -863,11 +863,11 @@ class InterpolatedWaveform(Waveform):
         duration: The waveform duration (in ns).
         values: Values of the interpolation points. Must be a list of castable
             to float or a parametrized object.
-        times: Fractions of the total duration (between 0
-            and 1), indicating where to place each value on the time axis. Must
-            be a list of castable to float or a parametrized object. If
-            not given, the values are spread evenly throughout the full
-            duration of the waveform.
+        times: Fractions of the total duration (between 0 and 1, 1
+            corresponding to the time `duration-1`), indicating where
+            to place each value on the time axis. Must be a list of castable
+            to float or a parametrized object. If not given, the values are
+            spread evenly throughout the full duration of the waveform.
         interpolator: The SciPy interpolation class
             to use. Supports "PchipInterpolator" and "interp1d".
 
@@ -940,7 +940,7 @@ class InterpolatedWaveform(Waveform):
         interp_cls = getattr(interpolate, interpolator)
         self._data_pts = np.array(
             [
-                (round(t), v)
+                (t, v)
                 for t, v in zip(
                     self._times * (self._duration - 1), self._values
                 )

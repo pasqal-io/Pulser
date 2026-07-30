@@ -296,6 +296,16 @@ def test_interpolated():
     assert np.all(interpolated_wf.samples.as_array() <= max_amp)
     assert np.all(interpolated_wf.samples.as_array() >= 0)
 
+    # Defining an InterpolatedWaveform with times defined below ns
+    points_nb = 1001
+    duration = 100  # ns
+    values = np.linspace(0, 10, points_nb)
+    times = np.linspace(0, duration, points_nb)
+    interpolated_wf = InterpolatedWaveform(
+        duration + 1, values, times / duration
+    )
+    assert all(np.isclose(interpolated_wf.samples, values[::10]))
+
 
 def test_deprecated_interp1d_interpolator():
     dt = 1000
