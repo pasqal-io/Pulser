@@ -50,7 +50,7 @@ def _schema_copy_by_filename(filename: str) -> Any:
     # fastjsonschema qualifies the '$ref's of the schemas it compiles with
     # their '$id' *in place*, so it must only ever be given copies to keep
     # the contents of SCHEMAS identical to the schema files
-    return copy.deepcopy(_SCHEMAS_BY_FILENAME[filename])
+    return copy.deepcopy(_SCHEMAS_BY_FILENAME[filename])  # pragma: no cover
 
 
 _FAST_VALIDATORS: dict[str, Callable[[Any], Any]] = (
