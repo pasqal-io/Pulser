@@ -412,36 +412,6 @@ class TestDevice:
 
         _roundtrip(abstract_device)
 
-    def test_interaction_coeff_xy_serialization(self, abstract_device):
-        # The abstract repr always carries 'interaction_coeff_xy' (schema
-        # compat) and, when not customized, it matches the value inferred
-        # from the Rydberg level.
-        c3_dict = devices.interaction_coefficients.c3_dict
-        ryd_lvl = abstract_device["rydberg_level"]
-        assert abstract_device["interaction_coeff_xy"] == c3_dict[ryd_lvl]
-        # An inferred coefficient does not become a custom one on round-trip
-        device = deserialize_device(json.dumps(abstract_device))
-        assert device._custom_interaction_coeff_xy is None
-
-    def test_custom_interaction_coeff_xy_roundtrip(self):
-        with pytest.warns(
-            DeprecationWarning, match="custom 'interaction_coeff_xy'"
-        ):
-            dev = replace(MockDevice, interaction_coeff_xy=4321.0)
-        assert (
-            dev.interaction_coeff_xy
-            != devices.interaction_coefficients.c3_dict[dev.rydberg_level]
-        )
-        abstract_repr = dev.to_abstract_repr()
-        assert json.loads(abstract_repr)["interaction_coeff_xy"] == 4321.0
-        # Deserializing a customized coefficient preserves it (and warns)
-        with pytest.warns(
-            DeprecationWarning, match="custom 'interaction_coeff_xy'"
-        ):
-            re_dev = deserialize_device(abstract_repr)
-        assert re_dev == dev
-        assert re_dev.interaction_coeff_xy == 4321.0
-
     def test_exceptions(self, abstract_device):
         def check_error_raised(
             obj_str: str,
@@ -628,6 +598,31 @@ class TestDevice:
                 "Register layout deserialization failed.",
             )
             assert isinstance(prev_err.__cause__, ValueError)
+
+        # AbstractReprError from TypeError in device init
+        if "XY" in good_device.supported_bases:
+            bad_xy_coeff_dev = abstract_device.copy()
+            bad_xy_coeff_dev["interaction_coeff_xy"] = None
+            prev_err = check_error_raised(
+                json.dumps(bad_xy_coeff_dev),
+                AbstractReprError,
+                "Device deserialization failed.",
+                Device.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, TypeError)
+            prev_err = check_error_raised(
+                json.dumps(bad_xy_coeff_dev),
+                AbstractReprError,
+                "Device deserialization failed.",
+                VirtualDevice.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, TypeError)
+            prev_err = check_error_raised(
+                json.dumps(bad_xy_coeff_dev),
+                AbstractReprError,
+                "Device deserialization failed.",
+            )
+            assert isinstance(prev_err.__cause__, TypeError)
 
         # AbstractReprError from ValueError in device init
         bad_dev = abstract_device.copy()

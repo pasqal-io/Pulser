@@ -31,7 +31,6 @@ from pulser.devices import (
     VirtualDevice,
     WeightedAnalogDevice,
 )
-from pulser.devices.interaction_coefficients import c3_dict, c6_dict
 from pulser.exceptions.base import PulserValueError
 from pulser.exceptions.sequence import (
     AtomsNumberError,
@@ -98,6 +97,13 @@ def test_params():
             "channel_objects",
             ("Rydberg.Global(None, None)",),
             "All channels must be of type 'Channel', not 'str'",
+        ),
+        (
+            "channel_objects",
+            (Microwave.Global(None, None),),
+            "When the device has a 'Microwave' channel, "
+            "'interaction_coeff_xy' must be a 'float',"
+            " not '<class 'NoneType'>'.",
         ),
         (
             "dmm_objects",
@@ -232,6 +238,8 @@ def test_optional_parameters(test_params, none_param):
 
 
 def test_default_channel_ids(test_params):
+    # Needed because of the Microwave global channel
+    test_params["interaction_coeff_xy"] = 10000.0
     test_params["channel_objects"] = (
         Rydberg.Local(None, None),
         Raman.Local(None, None),
@@ -267,6 +275,7 @@ def test_default_channel_ids(test_params):
     ],
 )
 def test_eigenstates(test_params, channels, states):
+    test_params["interaction_coeff_xy"] = 10000.0
     test_params["channel_objects"] = channels
     dev = VirtualDevice(**test_params)
     assert dev.supported_states == states
@@ -393,9 +402,6 @@ def test_change_rydberg_level(helpers):
     dev.change_rydberg_level(60)
     assert dev.rydberg_level == 60
     assert np.isclose(dev.interaction_coeff, 865723.02)
-    # Both interaction coefficients follow the new Rydberg level
-    assert dev.interaction_coeff == c6_dict[60]
-    assert dev.interaction_coeff_xy == c3_dict[60]
     with pytest.raises(TypeError, match="Rydberg level has to be an int."):
         dev.change_rydberg_level(70.5)
     with helpers.raises_all(
@@ -409,65 +415,6 @@ def test_change_rydberg_level(helpers):
     ):
         dev.change_rydberg_level(110)
     dev.change_rydberg_level(70)
-
-
-def test_c3_coeffs_cover_valid_rydberg_levels():
-    # Every allowed Rydberg level (50-100) must have a tabulated C_3 value so
-    # that 'interaction_coeff_xy' can always be inferred from 'rydberg_level'.
-    assert set(range(50, 101)) <= set(c3_dict)
-    assert all(coeff > 0 for coeff in c3_dict.values())
-
-
-def test_interaction_coeff_xy_inferred_from_rydberg_level():
-    # 'interaction_coeff_xy' is inferred from the Rydberg level (matching the
-    # tabulated C_3/hbar value) with no custom value stored, even for devices
-    # without a Microwave channel.
-    for dev in pulser.devices._valid_devices:
-        assert dev._custom_interaction_coeff_xy is None
-        assert dev.interaction_coeff_xy == c3_dict[dev.rydberg_level]
-
-    for lvl in range(50, 101):
-        dev = replace(MockDevice, rydberg_level=lvl)
-        assert dev._custom_interaction_coeff_xy is None
-        assert dev.interaction_coeff_xy == c3_dict[lvl]
-
-
-def test_interaction_coeff_xy_follows_rydberg_level_change():
-    dev = replace(MockDevice, rydberg_level=60)
-    assert dev.interaction_coeff_xy == c3_dict[60]
-    dev.change_rydberg_level(80)
-    assert dev.interaction_coeff_xy == c3_dict[80]
-
-
-@pytest.mark.parametrize("device", [MockDevice, AnalogDevice])
-def test_custom_interaction_coeff_xy_deprecated(device):
-    custom_coeff = 12345.0
-    # The default (inferred) value differs from the custom one we set
-    assert device.interaction_coeff_xy != custom_coeff
-    with pytest.warns(
-        DeprecationWarning, match="custom 'interaction_coeff_xy'"
-    ):
-        dev = replace(device, interaction_coeff_xy=custom_coeff)
-    # The custom value overrides the one inferred from the Rydberg level
-    assert dev._custom_interaction_coeff_xy == custom_coeff
-    assert dev.interaction_coeff_xy == custom_coeff
-    assert dev.interaction_coeff_xy != c3_dict[dev.rydberg_level]
-    # ...and is not affected by a change in the Rydberg level
-    if isinstance(dev, VirtualDevice):
-        new_level = dev.rydberg_level + 1
-        dev.change_rydberg_level(new_level)
-        assert dev.interaction_coeff_xy == custom_coeff
-
-
-def test_custom_interaction_coeff_xy_type():
-    with pytest.warns(
-        DeprecationWarning, match="custom 'interaction_coeff_xy'"
-    ):
-        with pytest.raises(
-            TypeError,
-            match="'interaction_coeff_xy' must be castable to a 'float'",
-        ):
-            replace(MockDevice, interaction_coeff_xy="yikes")
 
 
 def test_rydberg_blockade():
@@ -792,53 +739,19 @@ def test_convert_to_virtual():
     )
 
 
-def test_convert_to_virtual_keeps_custom_interaction_coeff_xy():
-    with pytest.warns(
-        DeprecationWarning, match="custom 'interaction_coeff_xy'"
-    ):
-        dev = replace(AnalogDevice, interaction_coeff_xy=9999.0)
-    with pytest.warns(
-        DeprecationWarning, match="custom 'interaction_coeff_xy'"
-    ):
-        virtual_dev = dev.to_virtual()
-    assert virtual_dev._custom_interaction_coeff_xy == 9999.0
-    assert virtual_dev.interaction_coeff_xy == 9999.0
-
-    # A device with an inferred coefficient stays inferred once virtualized
-    virtual_analog = AnalogDevice.to_virtual()
-    assert virtual_analog._custom_interaction_coeff_xy is None
-    assert (
-        virtual_analog.interaction_coeff_xy
-        == AnalogDevice.interaction_coeff_xy
-    )
-
-
 def test_device_params():
     all_params = DigitalAnalogDevice._params()
     init_params = DigitalAnalogDevice._params(init_only=True)
-    assert set(all_params) - set(init_params) == {
-        "reusable_channels",
-        "_custom_interaction_coeff_xy",
-    }
+    assert set(all_params) - set(init_params) == {"reusable_channels"}
 
     virtual_DigitalAnalogDevice = DigitalAnalogDevice.to_virtual()
     all_virtual_params = virtual_DigitalAnalogDevice._params()
+    init_virtual_params = virtual_DigitalAnalogDevice._params(init_only=True)
+    assert all_virtual_params == init_virtual_params
     assert set(all_params) - set(all_virtual_params) == {
         "pre_calibrated_layouts",
         "accepts_new_layouts",
     }
-
-    # Without a custom value, 'interaction_coeff_xy' is not among the params
-    assert "interaction_coeff_xy" not in all_params
-
-    # With a custom value, it is exposed under 'interaction_coeff_xy' (the
-    # deprecated init argument) rather than '_custom_interaction_coeff_xy'
-    with pytest.warns(
-        DeprecationWarning, match="custom 'interaction_coeff_xy'"
-    ):
-        custom_dev = replace(DigitalAnalogDevice, interaction_coeff_xy=1.5e4)
-    custom_params = custom_dev._params()
-    assert custom_params["interaction_coeff_xy"] == 1.5e4
 
 
 def test_dmm_channels():

@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import dataclasses
 import json
 import re
 
@@ -74,20 +73,6 @@ def test_virtual_device(mod_device):
     assert encode_decode(MockDevice) == MockDevice
     virtual_mod = mod_device.to_virtual()
     assert encode_decode(virtual_mod) == virtual_mod
-
-
-def test_device_custom_interaction_coeff_xy():
-    # A custom 'interaction_coeff_xy' survives a standard JSON round-trip
-    with pytest.warns(
-        DeprecationWarning, match="custom 'interaction_coeff_xy'"
-    ):
-        dev = dataclasses.replace(MockDevice, interaction_coeff_xy=4321.0)
-    with pytest.warns(
-        DeprecationWarning, match="custom 'interaction_coeff_xy'"
-    ):
-        re_dev = encode_decode(dev)
-    assert re_dev == dev
-    assert re_dev._custom_interaction_coeff_xy == 4321.0
 
 
 def test_register_2d():

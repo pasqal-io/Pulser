@@ -907,7 +907,9 @@ def test_switch_device_down(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    mod_mock = dataclasses.replace(MockDevice, rydberg_level=50)
+    mod_mock = dataclasses.replace(
+        MockDevice, rydberg_level=50, interaction_coeff_xy=100.0
+    )
     for seq, msg in [
         (seq_ising, "Rydberg level"),
         (seq_xy, "XY interaction coefficient"),
