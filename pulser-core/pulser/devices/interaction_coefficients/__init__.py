@@ -11,7 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""C_6/hbar (in  rad/µs x µm^6), for Rydberg levels between 50 and 100.
+"""Interaction coefficients for Rydberg levels between 50 and 100.
+
+Stored values and units:
+- C_6/hbar: rad/µs x µm^6
+- C_3/hbar: rad/µs x µm^3
 
 The values were calculated using ARC_ and double checked with
 PairInteraction_.
@@ -28,3 +32,9 @@ with open(
 ) as f:
     _json_dict = json.load(f)
 c6_dict = {int(key): value for key, value in _json_dict.items()}
+
+with open(
+    PurePath(__file__).parent / "C3_coeffs.json", "r", encoding="utf-8"
+) as f:
+    _json_dict = json.load(f)
+c3_dict = {int(key): value for key, value in _json_dict.items()}

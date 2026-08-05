@@ -19,6 +19,12 @@ jobs:
         numpy: ["numpy-v1", "numpy-v2"]
         with-torch: ["with-torch", "no-torch"]
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        include:
+          - os: ubuntu-latest
+            python-version: "3.12"
+            numpy: "numpy-v2"
+            with-torch: "no-torch"
+            fast-validation: "with-fast-validation"
         exclude:
           # Numpy v1 does not support Python 3.13
           - python-version: "3.13"
@@ -40,5 +46,6 @@ jobs:
           extra-packages: pytest
           numpy: ${{ matrix.numpy }}
           with-torch: ${{ matrix.with-torch }}
+          with-fast-validation: ${{ matrix.fast-validation }}
       - name: Run the unit tests & generate coverage report
         run: pytest --cov

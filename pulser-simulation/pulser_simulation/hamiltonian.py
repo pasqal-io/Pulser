@@ -269,7 +269,7 @@ class Hamiltonian:
                 0.5
                 * self.noise_trajectory.interaction_matrix.as_array(
                     detach=True
-                )[self._qid_index[q1], self._qid_index[q2]]
+                )[-1, self._qid_index[q1], self._qid_index[q2]]
             )
             return U * self.build_operator([("sigma_rr", [q1, q2])])
 
@@ -281,11 +281,16 @@ class Hamiltonian:
             The units are given so that the coefficient
             includes a 1/hbar factor.
             """
-            U = self.noise_trajectory.interaction_matrix.as_array(detach=True)[
-                self._qid_index[q1], self._qid_index[q2]
-            ]
-            return U * self.build_operator(
+            U_xy = self.noise_trajectory.interaction_matrix.as_array(
+                detach=True
+            )[0, self._qid_index[q1], self._qid_index[q2]]
+            U_ryd = self.noise_trajectory.interaction_matrix.as_array(
+                detach=True
+            )[1, self._qid_index[q1], self._qid_index[q2]]
+            return U_xy * self.build_operator(
                 [("sigma_ud", [q1]), ("sigma_du", [q2])]
+            ) + 0.5 * U_ryd * self.build_operator(
+                [("sigma_uu", [q1]), ("sigma_uu", [q2])]
             )
 
         def make_interaction_term(masked: bool = False) -> qutip.Qobj:

@@ -1,7 +1,7 @@
 {
     "$ref": "#/definitions/Results",
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "/results-schema.json",
+    "$id": "results-schema.json",
     "type": "object",
     "definitions":{
         "uuid": {

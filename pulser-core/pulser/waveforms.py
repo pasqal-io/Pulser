@@ -53,6 +53,8 @@ __all__ = [
 ]
 
 T = TypeVar("T", int, float)
+_WaveformT = TypeVar("_WaveformT", bound="Waveform")
+_InterpWaveformT = TypeVar("_InterpWaveformT", bound="InterpolatedWaveform")
 
 
 def _cast_check(type_: type[T], value: Any, name: str) -> T:
@@ -70,13 +72,23 @@ def _cast_check(type_: type[T], value: Any, name: str) -> T:
 class Waveform(ABC):
     """The abstract class for a pulse's waveform."""
 
-    def __new__(cls, *args, **kwargs):  # type: ignore
-        """Creates a Waveform instance or a ParamObj depending on the input."""
+    def __new__(
+        cls: type[_WaveformT], *args: Any, **kwargs: Any
+    ) -> _WaveformT:
+        """Creates a Waveform instance or a ParamObj depending on the input.
+
+        Note:
+            Typing ``cls``/return with a ``Waveform``-bound ``TypeVar`` lets
+            type checkers and IDEs expose each subclass's ``__init__``
+            signature (a ``ParamObj`` may actually be returned when any
+            argument is parametrized).
+        """
         for x in itertools.chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
-                return ParamObj(cls, *args, **kwargs)
-        else:
-            return object.__new__(cls)
+                return ParamObj(  # type: ignore[return-value]
+                    cls, *args, **kwargs
+                )
+        return object.__new__(cls)
 
     def __init__(self, duration: Union[int, Parametrized]):
         """Initializes a waveform with a given duration.
@@ -851,18 +863,27 @@ class InterpolatedWaveform(Waveform):
         duration: The waveform duration (in ns).
         values: Values of the interpolation points. Must be a list of castable
             to float or a parametrized object.
-        times: Fractions of the total duration (between 0
-            and 1), indicating where to place each value on the time axis. Must
-            be a list of castable to float or a parametrized object. If
-            not given, the values are spread evenly throughout the full
-            duration of the waveform.
+        times: Fractions of the total duration (between 0 and 1, 1
+            corresponding to the time `duration-1`), indicating where
+            to place each value on the time axis. Must be a list of castable
+            to float or a parametrized object. If not given, the values are
+            spread evenly throughout the full duration of the waveform.
         interpolator: The SciPy interpolation class
             to use. Supports "PchipInterpolator" and "interp1d".
+
+            *Passing "interp1d" is deprecated since pulser v1.9 and will be
+            removed in a future version; only "PchipInterpolator" (the
+            default) will remain supported.*
         **interpolator_kwargs: Extra parameters to give to the chosen
             interpolator class.
+
+            *Deprecated since pulser v1.9; extra keyword arguments for the
+            interpolator will no longer be accepted in a future version.*
     """
 
-    def __new__(cls, *args, **kwargs):  # type: ignore
+    def __new__(
+        cls: type[_InterpWaveformT], *args: Any, **kwargs: Any
+    ) -> _InterpWaveformT:
         """Creates InterpolatedWaveform or ParamObj depending on the input."""
         cls._check_values_times(
             args[1] if len(args) >= 2 else kwargs["values"],
@@ -870,9 +891,10 @@ class InterpolatedWaveform(Waveform):
         )
         for x in itertools.chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
-                return ParamObj(cls, *args, **kwargs)
-        else:
-            return object.__new__(cls)
+                return ParamObj(  # type: ignore[return-value]
+                    cls, *args, **kwargs
+                )
+        return object.__new__(cls)
 
     def __init__(
         self,
@@ -898,10 +920,27 @@ class InterpolatedWaveform(Waveform):
                 f"Invalid interpolator '{interpolator}', only "
                 "accepts: " + ", ".join(valid_interpolators)
             )
+        if interpolator == "interp1d":
+            warnings.warn(
+                "Setting 'interpolator' to \"interp1d\" has been deprecated "
+                "since pulser v1.9 and will be removed in a future version. "
+                "Only 'PchipInterpolator' (the default) will remain "
+                "supported.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        if interpolator_kwargs:
+            warnings.warn(
+                "Passing extra keyword arguments to configure the SciPy "
+                "interpolator has been deprecated since pulser v1.9 and will "
+                "be removed in a future version.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         interp_cls = getattr(interpolate, interpolator)
         self._data_pts = np.array(
             [
-                (round(t), v)
+                (t, v)
                 for t, v in zip(
                     self._times * (self._duration - 1), self._values
                 )

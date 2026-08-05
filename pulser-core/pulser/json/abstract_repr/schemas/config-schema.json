@@ -82,7 +82,17 @@
                         "items": {
                             "type": "array",
                             "items": {
-                                "type": "number"
+                                "oneOf": [
+                                    {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "number"
+                                        }
+                                    },
+                                    {
+                                        "type": "number"
+                                    }
+                                ]
                             }
                         }
                     }
@@ -236,6 +246,10 @@
                     "null"
                 ]
             },
+            "default_aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -281,6 +295,10 @@
                     "null"
                 ]
             },
+            "default_aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -315,6 +333,10 @@
                     "string",
                     "null"
                 ]
+            },
+            "default_aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
             },
             "uuid": {
                 "description": "The observable's internal UUID",
@@ -354,6 +376,10 @@
                     "null"
                 ]
             },
+            "default_aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -392,6 +418,10 @@
                     "null"
                 ]
             },
+            "default_aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -423,6 +453,10 @@
                     "null"
                 ]
             },
+            "default_aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -453,6 +487,10 @@
                     "null"
                 ]
             },
+            "default_aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
             "uuid": {
                 "description": "The observable's internal UUID",
                 "type": "string"
@@ -482,6 +520,10 @@
                     "string",
                     "null"
                 ]
+            },
+            "default_aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
             },
             "uuid": {
                 "description": "The observable's internal UUID",

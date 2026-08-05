@@ -734,16 +734,18 @@ class QutipEmulator:
             options=options,
         )
 
-        results = [
-            QutipResult(
-                tuple(self._hamiltonian_data.register.qubits),
-                self._meas_basis,
-                state,
-                self._meas_basis in self.basis_name,
-                evaluation_time=t / (self._tot_duration * 1e-3),
-            )
-            for state, t in zip(result.states, self._eval_times_array)
-        ]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=DeprecationWarning)
+            results = [
+                QutipResult(
+                    tuple(self._hamiltonian_data.register.qubits),
+                    self._meas_basis,
+                    state,
+                    self._meas_basis in self.basis_name,
+                    evaluation_time=t / (self._tot_duration * 1e-3),
+                )
+                for state, t in zip(result.states, self._eval_times_array)
+            ]
 
         meas_errors = (
             {
@@ -804,7 +806,8 @@ class QutipEmulator:
         """Simulates the sequence using QuTiP's solvers.
 
         Will return NoisyResults if the noise in the SimConfig requires it.
-        Otherwise will return CoherentResults.
+        Otherwise will return CoherentResults. *Deprecated as of pulser 1.9
+        Please use QutipBackendV2 instead.*
 
         Args:
             progress_bar: If True, the progress bar of QuTiP's
@@ -820,6 +823,14 @@ class QutipEmulator:
 
                 .. _docs: https://bit.ly/3il9A2u
         """
+        warnings.warn(
+            (
+                "QutipEmulator is deprecated as of pulser 1.9. "
+                "Please use QutipBackendV2 instead."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._validate_options(options)
 
         if not _has_stochastic_noise(self.noise_model):
@@ -852,15 +863,17 @@ class QutipEmulator:
         n_measures = (
             cast(int, self.n_trajectories) * self.noise_model.samples_per_run
         )
-        results = [
-            SampledResult(
-                tuple(self._hamiltonian_data.register.qubits),
-                self._meas_basis,
-                total_count[ind],
-                evaluation_time=t / self._tot_duration * 1e3,
-            )
-            for ind, t in enumerate(self._eval_times_array)
-        ]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=DeprecationWarning)
+            results = [
+                SampledResult(
+                    tuple(self._hamiltonian_data.register.qubits),
+                    self._meas_basis,
+                    total_count[ind],
+                    evaluation_time=t / (self._tot_duration * 1e-3),
+                )
+                for ind, t in enumerate(self._eval_times_array)
+            ]
         return NoisyResults(
             results,
             self._hamiltonian_data.n_qudits,

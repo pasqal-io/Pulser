@@ -46,6 +46,7 @@ imported directly from ``pulser``.
    :toctree: _autosummary
 
    AnalogDevice
+   WeightedAnalogDevice
    DigitalAnalogDevice
    MockDevice
 

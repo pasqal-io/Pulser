@@ -40,7 +40,24 @@ class StateResult(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
+
+    def __init__(
+        self,
+        *,
+        evaluation_times: Sequence[float] | None = None,
+        tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod
+            = AggregationMethod.SKIP_WARN,  # fmt: skip
+    ):
+        """Initializes the observable."""
+        super().__init__(
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+            default_aggregation_method=default_aggregation_method,
+        )
 
     @property
     def _base_tag(self) -> str:
@@ -57,8 +74,6 @@ class StateResult(Observable):
     def apply(self, *, state: StateType, **kwargs: Any) -> StateType:
         """Calculates the observable to store in the Results."""
         return copy.deepcopy(state)
-
-    default_aggregation_method = AggregationMethod.SKIP_WARN
 
 
 class BitStrings(Observable):
@@ -81,6 +96,8 @@ class BitStrings(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     def __init__(
@@ -90,10 +107,14 @@ class BitStrings(Observable):
         num_shots: int | None = None,
         one_state: Eigenstate | None = None,
         tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod
+            = AggregationMethod.BAG_UNION,  # fmt: skip
     ):
         """Initializes the observable."""
         super().__init__(
-            evaluation_times=evaluation_times, tag_suffix=tag_suffix
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+            default_aggregation_method=default_aggregation_method,
         )
         # Relies on the validation in the setter
         self.num_shots = num_shots
@@ -160,8 +181,6 @@ class BitStrings(Observable):
             p_false_neg=config.noise_model.p_false_neg,
         )
 
-    default_aggregation_method = AggregationMethod.BAG_UNION
-
 
 class Fidelity(Observable):
     """Stores the fidelity with a pure state at the evaluation times.
@@ -180,6 +199,8 @@ class Fidelity(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     def __init__(
@@ -188,10 +209,13 @@ class Fidelity(Observable):
         *,
         evaluation_times: Sequence[float] | None = None,
         tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
     ):
         """Initializes the observable."""
         super().__init__(
-            evaluation_times=evaluation_times, tag_suffix=tag_suffix
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+            default_aggregation_method=default_aggregation_method,
         )
         if not isinstance(state, State):
             raise TypeError(
@@ -212,8 +236,6 @@ class Fidelity(Observable):
         """Calculates the observable to store in the Results."""
         return self.state.overlap(state)
 
-    default_aggregation_method = AggregationMethod.MEAN
-
 
 class Expectation(Observable):
     """Stores the expectation of the given operator on the current state.
@@ -227,6 +249,8 @@ class Expectation(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     def __init__(
@@ -235,10 +259,13 @@ class Expectation(Observable):
         *,
         evaluation_times: Sequence[float] | None = None,
         tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
     ):
         """Initializes the observable."""
         super().__init__(
-            evaluation_times=evaluation_times, tag_suffix=tag_suffix
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+            default_aggregation_method=default_aggregation_method,
         )
         if not isinstance(operator, Operator):
             raise TypeError(
@@ -260,8 +287,6 @@ class Expectation(Observable):
         """Calculates the observable to store in the Results."""
         return self.operator.expect(state)
 
-    default_aggregation_method = AggregationMethod.MEAN
-
 
 class CorrelationMatrix(Observable):
     """Stores the correlation matrix for the current state.
@@ -280,6 +305,8 @@ class CorrelationMatrix(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     def __init__(
@@ -288,10 +315,13 @@ class CorrelationMatrix(Observable):
         evaluation_times: Sequence[float] | None = None,
         one_state: Eigenstate | None = None,
         tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
     ):
         """Initializes the observable."""
         super().__init__(
-            evaluation_times=evaluation_times, tag_suffix=tag_suffix
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+            default_aggregation_method=default_aggregation_method,
         )
         self.one_state = one_state
 
@@ -343,8 +373,6 @@ class CorrelationMatrix(Observable):
             for i in range(state.n_qudits)
         ]
 
-    default_aggregation_method = AggregationMethod.MEAN
-
 
 class Occupation(Observable):
     """Stores the occupation number of an eigenstate on each qudit.
@@ -354,7 +382,7 @@ class Occupation(Observable):
 
     Args:
         evaluation_times: The relative times at which to compute the
-            correlation matrix. If left as ``None``, uses the
+            occupation. If left as ``None``, uses the
             ``default_evaluation_times`` of the backend's ``EmulationConfig``.
         one_state: The eigenstate to measure the population of. Can be left
             undefined if the state's eigenstates form a known eigenbasis with
@@ -362,6 +390,8 @@ class Occupation(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
 
     def __init__(
@@ -370,10 +400,13 @@ class Occupation(Observable):
         evaluation_times: Sequence[float] | None = None,
         one_state: Eigenstate | None = None,
         tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
     ):
         """Initializes the observable."""
         super().__init__(
-            evaluation_times=evaluation_times, tag_suffix=tag_suffix
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+            default_aggregation_method=default_aggregation_method,
         )
         self.one_state = one_state
 
@@ -401,8 +434,6 @@ class Occupation(Observable):
             for i in range(state.n_qudits)
         ]
 
-    default_aggregation_method = AggregationMethod.MEAN
-
 
 class Energy(Observable):
     """Stores the energy of the system at the evaluation times.
@@ -417,7 +448,23 @@ class Energy(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
+        default_aggregation_method: How to combine the values of this
+         observable from multiple results.
     """
+
+    def __init__(
+        self,
+        *,
+        evaluation_times: Sequence[float] | None = None,
+        tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+    ):
+        """Initializes the observable."""
+        super().__init__(
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+            default_aggregation_method=default_aggregation_method,
+        )
 
     @property
     def _base_tag(self) -> str:
@@ -428,8 +475,6 @@ class Energy(Observable):
     ) -> Any:
         """Calculates the observable to store in the Results."""
         return hamiltonian.expect(state)
-
-    default_aggregation_method = AggregationMethod.MEAN
 
 
 class EnergyVariance(Observable):
@@ -446,7 +491,24 @@ class EnergyVariance(Observable):
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
+
+    def __init__(
+        self,
+        *,
+        evaluation_times: Sequence[float] | None = None,
+        tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod
+            = AggregationMethod.SKIP_WARN,  # fmt: skip
+    ):
+        """Initializes the observable."""
+        super().__init__(
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+            default_aggregation_method=default_aggregation_method,
+        )
 
     @property
     def _base_tag(self) -> str:
@@ -466,23 +528,37 @@ class EnergyVariance(Observable):
         )
         return identity.expect(h_state) - hamiltonian.expect(state) ** 2
 
-    default_aggregation_method = AggregationMethod.SKIP_WARN
-
 
 class EnergySecondMoment(Observable):
     """Stores the expectation value of ``H(t)^2`` at the evaluation times.
 
-    Useful for computing the variance when averaging over many executions of
-    the program.
+    Together with the mean, this can be used to compute the variance
+    when averaging over many executions of the program.
 
     Args:
-        evaluation_times: The relative times at which to compute the variance.
+        evaluation_times: The relative times at which to compute the moment.
             If left as `None`, uses the ``default_evaluation_times`` of the
             backend's ``EmulationConfig``.
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
     """
+
+    def __init__(
+        self,
+        *,
+        evaluation_times: Sequence[float] | None = None,
+        tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+    ):
+        """Initializes the observable."""
+        super().__init__(
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+            default_aggregation_method=default_aggregation_method,
+        )
 
     @property
     def _base_tag(self) -> str:
@@ -501,5 +577,3 @@ class EnergySecondMoment(Observable):
             operations=[(1.0, [])],
         )
         return identity.expect(h_state)
-
-    default_aggregation_method = AggregationMethod.MEAN

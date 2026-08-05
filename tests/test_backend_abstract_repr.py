@@ -95,6 +95,11 @@ class TestObservableRepr:
                 (example_operator,),
                 {"tag_suffix": "my_op"},
             ),
+            (
+                Expectation,
+                (example_operator,),
+                {"default_aggregation_method": AggregationMethod.SKIP},
+            ),
         ],
     )
     def test_observable_repr(
@@ -145,6 +150,11 @@ class TestObservableRepr:
             )
             assert repr.get("num_shots", None) == expected_kwargs.get(
                 "num_shots", None
+            )
+            # The default_aggregation_method survives the round-trip
+            assert (
+                repr["default_aggregation_method"]
+                == obs.default_aggregation_method
             )
 
         # Check observable against the schema via config serialization
@@ -282,6 +292,38 @@ class TestConfigRepr:
             match="The serialized EmulationConfig must be given as a string. ",
         ):
             EmulationConfig.from_abstract_repr(1.0)
+
+    def test_legacy_interaction_matrix(self):
+        # pulser <= 1.8 serialized the interaction matrix as a 2D array
+        matrix = [[0.0, 0.5], [0.5, 0.0]]
+        config = EmulationConfig(
+            observables=[Energy()], interaction_matrix=matrix
+        )
+        ser_config = json.loads(config.to_abstract_repr())
+        assert np.array(ser_config["interaction_matrix"]).shape == (1, 2, 2)
+
+        ser_config["interaction_matrix"] = matrix
+        deserialized_config = EmulationConfig.from_abstract_repr(
+            json.dumps(ser_config)
+        )
+        assert np.allclose(
+            deserialized_config.interaction_matrix, config.interaction_matrix
+        )
+
+    def test_legacy_observable_without_aggregation_method(self):
+        # pulser <= 1.8 did not serialize 'default_aggregation_method'
+        obs = Energy()
+        ser_config = json.loads(
+            EmulationConfig(observables=[obs]).to_abstract_repr()
+        )
+        ser_config["observables"][0].pop("default_aggregation_method")
+        deserialized_config = EmulationConfig.from_abstract_repr(
+            json.dumps(ser_config)
+        )
+        assert (
+            deserialized_config.observables[0].default_aggregation_method
+            == obs.default_aggregation_method
+        )
 
     @mark.parametrize(
         "observables",

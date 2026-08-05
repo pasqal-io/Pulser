@@ -235,34 +235,6 @@ def test_interpolated():
             1000, interp_values, times=times, interpolator="fake"
         )
 
-    dt = 1000
-    interp_wf = InterpolatedWaveform(
-        dt, [0, 1], interpolator="interp1d", kind="linear"
-    )
-    assert isinstance(interp_wf.interp_function, interp1d)
-    np.testing.assert_allclose(
-        interp_wf.samples.as_array(), np.linspace(0, 1.0, num=dt)
-    )
-
-    interp_wf *= 2
-    np.testing.assert_allclose(
-        interp_wf.samples.as_array(), np.linspace(0, 2.0, num=dt)
-    )
-
-    wf_str = "InterpolatedWaveform(Points: (0, 0), (999, 2)"
-    assert str(interp_wf) == wf_str + ")"
-    assert repr(interp_wf) == wf_str + ", Interpolator=interp1d)"
-
-    vals = np.linspace(0, 1, num=5) ** 2
-    interp_wf2 = InterpolatedWaveform(
-        dt, vals, interpolator="interp1d", kind="quadratic"
-    )
-    np.testing.assert_allclose(
-        interp_wf2.samples.as_array(),
-        np.linspace(0, 1, num=dt) ** 2,
-        atol=1e-3,
-    )
-
     # Test rounding when range of values is large
     wf = InterpolatedWaveform(
         1000, times=[0.0, 0.5, 1.0], values=[0, 2.6e7, 0]
@@ -323,6 +295,64 @@ def test_interpolated():
     interpolated_wf = InterpolatedWaveform(60.0, [0.0, 0.5, max_amp, 0.5, 0.0])
     assert np.all(interpolated_wf.samples.as_array() <= max_amp)
     assert np.all(interpolated_wf.samples.as_array() >= 0)
+
+    # Defining an InterpolatedWaveform with times defined below ns
+    points_nb = 1001
+    duration = 100  # ns
+    values = np.linspace(0, 10, points_nb)
+    times = np.linspace(0, duration, points_nb)
+    interpolated_wf = InterpolatedWaveform(
+        duration + 1, values, times / duration
+    )
+    assert all(np.isclose(interpolated_wf.samples, values[::10]))
+
+
+def test_deprecated_interp1d_interpolator():
+    dt = 1000
+    with pytest.deprecated_call(
+        match="Setting 'interpolator' to \"interp1d\""
+    ):
+        interp_wf = InterpolatedWaveform(dt, [0, 1], interpolator="interp1d")
+    assert isinstance(interp_wf.interp_function, interp1d)
+    np.testing.assert_allclose(
+        interp_wf.samples.as_array(), np.linspace(0, 1.0, num=dt)
+    )
+
+    # __mul__ reconstructs the waveform, so it re-emits the warning
+    with pytest.deprecated_call(
+        match="Setting 'interpolator' to \"interp1d\""
+    ):
+        interp_wf *= 2
+    np.testing.assert_allclose(
+        interp_wf.samples.as_array(), np.linspace(0, 2.0, num=dt)
+    )
+
+    wf_str = "InterpolatedWaveform(Points: (0, 0), (999, 2)"
+    assert str(interp_wf) == wf_str + ")"
+    assert repr(interp_wf) == wf_str + ", Interpolator=interp1d)"
+
+
+def test_deprecated_interpolator_kwargs():
+    with pytest.deprecated_call(
+        match="Passing extra keyword arguments to configure the SciPy"
+    ):
+        InterpolatedWaveform(1000, [0, 1, 0], extrapolate=False)
+
+    # Passing "interp1d" together with extra kwargs emits both warnings
+    dt = 1000
+    vals = np.linspace(0, 1, num=5) ** 2
+    with pytest.warns(DeprecationWarning) as record:
+        interp_wf = InterpolatedWaveform(
+            dt, vals, interpolator="interp1d", kind="quadratic"
+        )
+    messages = [str(w.message) for w in record]
+    assert any('"interp1d"' in m for m in messages)
+    assert any("extra keyword arguments" in m for m in messages)
+    np.testing.assert_allclose(
+        interp_wf.samples.as_array(),
+        np.linspace(0, 1, num=dt) ** 2,
+        atol=1e-3,
+    )
 
 
 def test_kaiser():

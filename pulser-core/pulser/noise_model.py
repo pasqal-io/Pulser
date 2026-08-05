@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Defines a noise model class for emulator backends."""
+
 from __future__ import annotations
 
 import json
@@ -178,9 +179,9 @@ class NoiseModel:
 
     - **leakage**: Adds an error state 'x' to the computational
       basis, that can interact with the other states via an
-      effective noise channel. Must be defined with an effective
-      noise channel, but is incompatible with dephasing and
-      depolarizing noise channels.
+      effective noise channel. Must be defined along with at least
+      one effective noise channel defining the mechanisms of
+      population transfer to the error state.
     - **relaxation**: Noise due to a decay from the Rydberg to
       the ground state (parametrized by ``relaxation_rate``),
       commonly characterized experimentally by the T1 time.
@@ -212,6 +213,9 @@ class NoiseModel:
       (2) Off plane standard deviation fluctuation given by:
       :math:`\sigma^z = \frac{\pi}{\lambda}\sqrt{2} w \sigma^{xy}`, where
       :math:`\lambda` is the trap wavelength with a constant value of 0.85 µm.
+
+      Note: when combined with a DMM channel, register noise also
+      requires ``detuning_map_spot_waist`` to be set.
     - **amplitude**: Gaussian damping due to finite laser waist and
       laser amplitude fluctuations. Parametrized by ``laser_waist``
       and ``amp_sigma``.
@@ -222,8 +226,8 @@ class NoiseModel:
       ``detuning_sigma``
 
       (2) time-dependent high-frequency fluctuations, defined by the
-      power spectral density (PSD) ``detuning_hf_psd`` over the relevant
-      ``detuning_hf_omegas`` angular frequency support.
+      **1-sided** power spectral density (PSD) ``detuning_hf_psd``
+      over the relevant ``detuning_hf_omegas`` angular frequency support.
       :math:`\delta_{hf}(t) = \sum_k \sqrt{2*\Delta \omega_k*\mathrm{PSD}_k}
       * \cos(\omega_k * t + \phi_k)`
       where :math:`\phi_k \backsim U[0, 2\pi)` (uniform random phase),
@@ -282,7 +286,9 @@ class NoiseModel:
             provided together with `detuning_hf_omegas` define high frequency
             noise contribution of time dependent detuning (in rad/µs).
             Must either be empty or a tuple with at least two values,
-            matching the length of `detuning_hf_omegas`. Default is ().
+            matching the length of `detuning_hf_omegas`.
+            Note that this is the 1-sided PSD, which differs from the
+            2-sided PSD by a factor of 2! Default is ().
         detuning_hf_omegas: 1D tuple (in rad/µs) of relevant angular frequency
             support for the PSD. Along with the PSD, it is required to define
             high frequency noise contribution of time dependent detuning
@@ -314,7 +320,11 @@ class NoiseModel:
             registers (though each register has its own randomly sampled
             value in each run). This noise is multiplicative. Defaults to 0.
         detuning_map_spot_waist: Defines the waist of each spot
-            in the DetuningMap (in µm).
+            in the DetuningMap (in µm). Required when 'register' noise
+            is active (i.e. ``temperature``, ``trap_waist`` and
+            ``trap_depth`` are all set) and the sequence uses a DMM channel;
+            otherwise thermal motion can displace an atom off its detuning
+            spot entirely. Defaults to None.
     """
 
     noise_types: tuple[NoiseTypes, ...] = field(init=False)
@@ -508,7 +518,6 @@ class NoiseModel:
 
     @staticmethod
     def _check_leakage_noise(noise_types: Collection[NoiseTypes]) -> None:
-        # Can't define "dephasing", "depolarizing" with "leakage"
         if "leakage" not in noise_types:
             return
         if "eff_noise" not in noise_types:

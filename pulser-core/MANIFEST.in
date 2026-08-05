@@ -1,5 +1,6 @@
 include README.md
 include LICENSE
+include pulser/devices/interaction_coefficients/C3_coeffs.json
 include pulser/devices/interaction_coefficients/C6_coeffs.json
 include pulser/json/abstract_repr/schemas/device-schema.json
 include pulser/json/abstract_repr/schemas/sequence-schema.json

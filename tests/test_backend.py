@@ -54,7 +54,11 @@ from pulser.backend.remote import (
     RemoteResultsError,
     _OpenBatchContextManager,
 )
-from pulser.backend.results import AggregationMethod, Results
+from pulser.backend.results import (
+    _SAMPLED_RESULT_ATTRS,
+    AggregationMethod,
+    Results,
+)
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
@@ -139,11 +143,12 @@ class _MockConnection(RemoteConnection):
         self._got_closed = ""
         self._progress_calls = 0
         self._last_submit_kwargs = {}
-        self.result = SampledResult(
-            ("q0", "q1"),
-            meas_basis="ground-rydberg",
-            bitstring_counts={"00": 100},
-        )
+        with pytest.deprecated_call():
+            self.result = SampledResult(
+                ("q0", "q1"),
+                meas_basis="ground-rydberg",
+                bitstring_counts={"00": 100},
+            )
 
     def submit(
         self,
@@ -571,12 +576,18 @@ def test_emulation_config():
 
     with pytest.raises(
         TypeError,
-        match="All entries in 'observables' must be instances of Observable",
+        match=(
+            "All entries in 'observables' must be instances of Observable"
+            ".*at index 0.*fidelity"
+        ),
     ):
         EmulationConfig(observables=["fidelity"])
     with pytest.raises(
         TypeError,
-        match="All entries in 'callbacks' must not be instances of Observable",
+        match=(
+            "All entries in 'callbacks' must not be instances of Observable"
+            ".*at index 0"
+        ),
     ):
         EmulationConfig(
             callbacks=(BitStrings(),),
@@ -584,7 +595,10 @@ def test_emulation_config():
         )
     with pytest.raises(
         TypeError,
-        match="All entries in 'callbacks' must be instances of Callback",
+        match=(
+            "All entries in 'callbacks' must be instances of Callback"
+            ".*at index 0.*Hello"
+        ),
     ):
         EmulationConfig(
             callbacks=("Hello",),
@@ -605,10 +619,12 @@ def test_emulation_config():
             observables=(BitStrings(),),
             default_evaluation_times=[-1e15, 0.0, 0.5, 1.0],
         )
-    with pytest.raises(ValueError, match="Evaluation times must be unique"):
+    with pytest.raises(
+        ValueError, match="Evaluation times must be unique up to"
+    ):
         EmulationConfig(
             observables=(BitStrings(),),
-            default_evaluation_times=[0.0, 0.5, 0.5, 1.0],
+            default_evaluation_times=[0.0, 0.5, 0.5 + 1e-14, 1.0],
         )
     with pytest.raises(
         ValueError, match="Evaluation times must be in ascending order"
@@ -624,7 +640,8 @@ def test_emulation_config():
     with pytest.raises(
         ValueError,
         match=re.escape(
-            "'interaction_matrix' must be a square matrix. Instead, an array"
+            "'interaction_matrix' must be of shape "
+            "(N,N) or (1,N,N), or (2,N,N) for XY. Instead, an array"
             " of shape (4, 3) was given"
         ),
     ):
@@ -656,11 +673,30 @@ def test_emulation_config():
             observables=(BitStrings(),),
             interaction_matrix=matrix_,
         )
+    with pytest.raises(
+        ValueError,
+        match="interaction matrix is not symmetric",
+    ):
+        matrix_ = np.ones((2, 4, 4))
+        matrix_[0, 0, 3] += 1e-4
+        EmulationConfig(
+            observables=(BitStrings(),),
+            interaction_matrix=matrix_,
+        )
     with pytest.warns(UserWarning, match="non-zero values in its diagonal"):
         EmulationConfig(
             observables=(BitStrings(),),
             interaction_matrix=np.ones((4, 4)),
         )
+    with pytest.warns(UserWarning, match="non-zero values in its diagonal"):
+        EmulationConfig(
+            observables=(BitStrings(),),
+            interaction_matrix=np.ones((2, 4, 4)),
+        )
+    EmulationConfig(
+        observables=(BitStrings(),),
+        interaction_matrix=np.array([[[0, 1], [1, 0]], [[0, 2], [2, 0]]]),
+    )
     with pytest.raises(TypeError, match="must be a NoiseModel"):
         EmulationConfig(
             observables=(BitStrings(),), noise_model={"p_false_pos": 0.1}
@@ -825,6 +861,7 @@ def test_results_aggregation(matching_uuids):
         agg = Results.aggregate([results1, results2])
         mock_aggregator.__getitem__.assert_called_once_with(agg_type)
     agg2 = Results.aggregate([results1, results2], dummy_result=aggregator)
+
     assert (
         i == 4
     )  # twice in agg, twice in agg2, once each for the 2 results added above.
@@ -838,6 +875,34 @@ def test_results_aggregation(matching_uuids):
         assert ag.dummy_result == [2.0, 3.0]
 
     assert Results.aggregate([results1]) is results1
+
+    agg3 = Results.aggregate(
+        [results1, results2], dummy_result=AggregationMethod.MEANSTD
+    )
+    assert all(map(lambda x: isinstance(x, tuple), agg3.dummy_result))
+
+
+@pytest.mark.parametrize(
+    "obs_cls, default_method",
+    [
+        (StateResult, AggregationMethod.SKIP_WARN),
+        (BitStrings, AggregationMethod.BAG_UNION),
+        (CorrelationMatrix, AggregationMethod.MEAN),
+        (Occupation, AggregationMethod.MEAN),
+        (Energy, AggregationMethod.MEAN),
+        (EnergyVariance, AggregationMethod.SKIP_WARN),
+        (EnergySecondMoment, AggregationMethod.MEAN),
+    ],
+)
+def test_observable_aggregation_method(obs_cls, default_method):
+    # The default matches the historical per-class value
+    assert obs_cls().default_aggregation_method == default_method
+    # The value is exposed as a read-only property
+    with pytest.raises(AttributeError):
+        obs_cls().default_aggregation_method = AggregationMethod.SKIP
+    # It can be overridden per-instance through the constructor
+    overridden = obs_cls(default_aggregation_method=AggregationMethod.SKIP)
+    assert overridden.default_aggregation_method == AggregationMethod.SKIP
 
 
 def test_results_aggregation_errors(caplog):
@@ -1079,6 +1144,86 @@ def test_results_final_bistrings():
         result=res,
     )
     assert res.final_bitstrings == res.get_result(obs, 1.0)
+
+
+def test_results_from_final_bitstrings():
+    final_bitstrings = {"000": 60, "111": 40}
+    res = Results.from_final_bitstrings(
+        atom_order=("q0", "q1", "q2"),
+        total_duration=1000,
+        final_bitstrings=final_bitstrings,
+    )
+    assert isinstance(res, Results)
+    assert res.atom_order == ("q0", "q1", "q2")
+    assert res.total_duration == 1000
+    assert res.final_bitstrings == Counter(final_bitstrings)
+    assert res.get_result_times("bitstrings") == [1.0]
+
+    # Accepts a Counter directly too
+    counter_bitstrings = Counter({"01": 5, "10": 5})
+    res2 = Results.from_final_bitstrings(
+        atom_order=("q0", "q1"),
+        total_duration=100,
+        final_bitstrings=counter_bitstrings,
+    )
+    assert res2.final_bitstrings == counter_bitstrings
+
+    with pytest.raises(
+        TypeError,
+        match="'final_bitstrings' is not a valid bitstrings counter",
+    ):
+        Results.from_final_bitstrings(
+            atom_order=("q0",),
+            total_duration=100,
+            final_bitstrings=42,
+        )
+
+
+def test_results_bitstring_counts():
+    res = Results.from_final_bitstrings(
+        atom_order=("q0", "q1"),
+        total_duration=100,
+        final_bitstrings={"00": 30, "11": 70},
+    )
+    with pytest.warns(
+        FutureWarning,
+        match="'bitstring_counts' is an attribute of the deprecated",
+    ):
+        assert res.bitstring_counts == res.final_bitstrings
+
+    # Without stored bitstrings, it warns and then fails like final_bitstrings
+    empty_res = Results(atom_order=("q0",), total_duration=100)
+    with pytest.warns(FutureWarning, match="'bitstring_counts'"):
+        with pytest.raises(
+            RuntimeError, match="final bitstrings are not available"
+        ):
+            empty_res.bitstring_counts
+
+
+def test_results_sampled_result_attrs():
+    res = Results(atom_order=("q0",), total_duration=100)
+    for attr in _SAMPLED_RESULT_ATTRS:
+        with pytest.raises(
+            AttributeError,
+            match=f"{attr} is available only in 'SampledResult'",
+        ):
+            getattr(res, attr)
+
+    # Unknown attributes keep the generic error message
+    with pytest.raises(
+        AttributeError, match="'not_an_attr' is not in the results"
+    ):
+        res.not_an_attr
+
+    # Make sure the hardcoded attributes do exist in SampledResult
+    with pytest.deprecated_call():
+        sampled_res = SampledResult(
+            atom_order=("q0",),
+            meas_basis="ground-rydberg",
+            bitstring_counts={"0": 100},
+        )
+    for attr in _SAMPLED_RESULT_ATTRS:
+        assert hasattr(sampled_res, attr)
 
 
 def test_results_final_state():

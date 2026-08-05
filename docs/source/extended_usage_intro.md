@@ -56,7 +56,7 @@ Here, the _weights_ $\{\epsilon_k\}_{1\lt k\lt N}$ are defined by a `DetuningMap
 
 One can also perform Analog Quantum Computing with the [XY Hamiltonian](./programming.md#xy-hamiltonian). The `Channel` associated with this is the `Microwave.Global` Channel:
 
-$$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle\langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - \delta(t) |r\rangle\langle r|_k(t) + \sum_{j<k}\frac{C_3}{\hbar R_{kj}^3} (|1\rangle\langle 0|_k |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_k) \right)
+$$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle\langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - \delta(t) |r\rangle\langle r|_k(t) + \sum_{j<k}\left[\frac{C_3}{\hbar R_{kj}^3} (|1\rangle\langle 0|_k |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_k) + \frac{C_6}{R_{kj}^6} |0\rangle\langle 0|_k |0\rangle\langle 0|_j\right] \right)
 $$
 
 - An in-depth presentation of Analog quantum computing with XY Hamiltonian can be found [in this notebook](tutorials/xy_spin_chain.nblink).

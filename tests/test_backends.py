@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
+import importlib.util
 import sys
 
 import pytest
@@ -46,3 +48,31 @@ def test_missing_backend():
 def test_succesful_imports(backend_name):
     backend = getattr(pulser.backends, backend_name)
     assert issubclass(backend, Backend)
+
+
+@pytest.mark.parametrize("backend_name", ["EmuFreeBackend", "EmuTNBackend"])
+def test_removed_deprecated_backends(backend_name):
+    with pytest.raises(
+        AttributeError,
+        match=f"{backend_name!r} was deprecated and is now removed",
+    ):
+        getattr(pulser.backends, backend_name)
+
+
+@pytest.mark.parametrize(
+    "backend_name", ["EmuFreeBackendV2", "EmuMPSBackend", "EmuSVBackend"]
+)
+def test_renamed_backends(backend_name):
+    has_pasqal_cloud = importlib.util.find_spec("pasqal_cloud") is not None
+    not_installed_error = (
+        pytest.raises(AttributeError, match="To install it, run `pip install")
+        if not has_pasqal_cloud
+        else contextlib.nullcontext()
+    )
+    with (
+        not_installed_error,
+        pytest.warns(
+            DeprecationWarning, match=f"{backend_name!r} was renamed to "
+        ),
+    ):
+        getattr(pulser.backends, backend_name)

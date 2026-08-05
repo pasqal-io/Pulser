@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Defines the base class for storing backend results."""
+
 from __future__ import annotations
 
 import collections.abc
@@ -19,16 +20,32 @@ import json
 import typing
 import uuid
 import warnings
+from collections import Counter
 from dataclasses import dataclass, field
-from typing import Any, Callable, TypeVar, cast, overload
+from typing import Any, Callable, Type, TypeVar, cast, overload
 
 from pulser.backend.aggregators import AGGREGATOR_MAPPING
+from pulser.backend.default_observables import BitStrings
 from pulser.backend.observable import AggregationMethod, Observable
 from pulser.backend.state import State
 from pulser.json.abstract_repr.deserializer import deserialize_complex
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import stringify_qubit_ids
+
+ResultsType = TypeVar("ResultsType", bound="Results")
+
+# Special attributes of the deprecated SampledResult
+_SAMPLED_RESULT_ATTRS = (
+    "sampling_dist",
+    "sampling_errors",
+    "get_samples",
+    "get_state",
+    "plot_histogram",
+    "n_samples",
+    "evaluation_time",
+    "meas_basis",
+)
 
 
 @dataclass(repr=False)
@@ -56,6 +73,43 @@ class Results:
         self._times = {}
         self._tagmap = {}
         self._aggregation_methods = {}
+
+    @classmethod
+    def from_final_bitstrings(
+        cls: Type[ResultsType],
+        atom_order: collections.abc.Sequence[str],
+        total_duration: int,
+        final_bitstrings: collections.abc.Mapping[str, int],
+    ) -> ResultsType:
+        """Creates a Results instance with bitstrings at evaluation time t=1.0.
+
+        The bitstrings are stored under a fabricated BitStrings observable
+        instance. Use `Results.final_bitstrings` or
+        `Results.get_result("bitstrings", 1.0)` to retrieve them.
+
+        Args:
+            atom_order: The order of the atoms/qudits in the results.
+            total_duration: The total duration of the sequence, in ns.
+            final_bitstrings: The bitstring counter to store in the Results.
+        """
+        try:
+            bitstrings = Counter(final_bitstrings)
+        except TypeError:
+            raise TypeError(
+                "'final_bitstrings' is not a valid bitstrings counter; "
+                f"got {final_bitstrings}"
+            )
+
+        n_samples = sum(bitstrings.values())
+        bitstrings_obs = BitStrings(num_shots=n_samples)
+        # Override UUID so two instances with the same counts are equal
+        bitstrings_obs._uuid = uuid.UUID(
+            "00000000-0000-0000-0000-000000000000"
+        )
+
+        res = cls(atom_order=tuple(atom_order), total_duration=total_duration)
+        res._store(observable=bitstrings_obs, time=1.0, value=bitstrings)
+        return res
 
     def _store_raw(
         self,
@@ -99,9 +153,24 @@ class Results:
             aggregation_method=observable.default_aggregation_method,
         )
 
-    def __getattr__(self, name: str) -> list[Any]:
+    def __getattr__(self, name: str) -> Any:
         if name in self._tagmap:
             return list(self._results[self._tagmap[name]])
+        if name == "bitstring_counts":
+            warnings.warn(
+                "'bitstring_counts' is an attribute of the deprecated "
+                "`SampledResult` class. Please favor acessing the "
+                "bitstrings via 'final_bitstrings' instead.",
+                category=FutureWarning,
+                stacklevel=3,
+            )
+            return self.final_bitstrings
+
+        if name in _SAMPLED_RESULT_ATTRS:
+            raise AttributeError(
+                f"{name} is available only in 'SampledResult', which has been"
+                " deprecated and is being phased out."
+            )
         raise AttributeError(f"{name!r} is not in the results.")
 
     @property
@@ -263,7 +332,7 @@ class Results:
     def aggregate(
         cls,
         results_to_aggregate: typing.Sequence[Results],
-        **aggregation_functions: Callable[[Any], Any],
+        **aggregation_functions: Callable[[Any], Any] | AggregationMethod,
     ) -> Results:
         """Aggregate a Sequence of Results objects into a single Results.
 
@@ -284,9 +353,10 @@ class Results:
             results_to_aggregate: The list of Results to aggregate
 
         Keyword Args:
-            observable_tag: Overrides the default aggregator.
+            aggregation_functions: Overrides the default aggregator.
                 The argument name should be the tag of the Observable.
-                The value is a Callable taking a list of the type to aggregate.
+                The value is a Callable taking a list of the type to aggregate,
+                or an AggregationMethod enum.
                 Note that this does not override the default aggregation
                 behaviour of the aggregated results.
 
@@ -432,9 +502,6 @@ class Results:
             f"Total sequence duration: {self.total_duration} ns",
         ]
         return "\n".join(lines)
-
-
-ResultsType = TypeVar("ResultsType", bound=Results)
 
 
 class ResultsSequence(typing.Sequence[ResultsType]):

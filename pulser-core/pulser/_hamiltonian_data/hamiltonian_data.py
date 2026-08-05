@@ -148,10 +148,13 @@ def _generate_detuning_fluctuations(
     -----
     High frequency term uses Gaussian stochastic noise with power
         spectral density `psd`:
-        δ_hf(t) = Σ_k sqrt(2 * Δf_k * psd_k) * cos(2π(f_k * t + φ_k))
-        where φ_k ~ U[0, 1) (uniform random phase),
-        Δf_k = freqs[k+1] - freqs[k].
-        The last (freqs[-1], psd[-1]) is unused.
+        δ_hf(t) = Σ_k sqrt(2 * Δω_k * psd_k) * cos(ω_k * t + φ_k)
+        where φ_k ~ U[0, 2π) (uniform random phase),
+        Δω_k = omegas[k+1] - omegas[k].
+        The last (omegas[-1], psd[-1]) is unused.
+        See Eq. 3.55 of https://theses.hal.science/tel-00010730,
+        except that we use the 1-sided PSD, so factor of 2
+        is inside the square root.
     """
     det_hf = np.zeros_like(times)
 
@@ -568,12 +571,19 @@ class HamiltonianData:
 
         Returns:
             The pairwise interaction coefficients, taking into account
-            Device specs and the Sequence type.
+            Device specs and the Sequence type. In XY mode,
+            it has shape (2, N, N), with N the number of qubits.
+            The first array of shape (N, N) is the C3 interaction,
+            the second the C6 interaction.
+            In Rydberg interaction, it has shape (1, N, N)
+            and corresponds to the C6 interaction only.
         """
         # SLM mask is not included, because it's time-dependent
+        is_xy = self.basis_data.interaction_type == "XY"
         d = _distances(register)
-        interactions = pm.zeros_like(d)._array
-        if self.basis_data.interaction_type == "XY":
+        interactions = pm.zeros_like(d.reshape((1,) + d.shape))._array
+        if is_xy:
+            interactions = pm.vstack([interactions, interactions])._array
             positions = list(register.qubits.values())
             assert self.samples._magnetic_field is not None
             assert self._device.interaction_coeff_xy is not None
@@ -588,17 +598,18 @@ class HamiltonianData:
                             [diff, pm.AbstractArray(np.array(0.0))]
                         )
                     cosine = pm.dot(diff, mag_arr) / (pm.norm(diff) * mag_norm)
-                    interactions[[i, j], [j, i]] = (
+                    interactions[[0, 0], [i, j], [j, i]] = (
                         self._device.interaction_coeff_xy  # type: ignore
                         * (1 - 3 * cosine._array**2)
                         / d._array[i, j] ** 3
                     )
-        else:
-            for i in range(self.n_qudits):
-                for j in range(i + 1, self.n_qudits):
-                    interactions[[i, j], [j, i]] = (
-                        self._device.interaction_coeff / d._array[i, j] ** 6
-                    )
+
+        for i in range(self.n_qudits):
+            for j in range(i + 1, self.n_qudits):
+                interactions[[-1, -1], [i, j], [j, i]] = (
+                    self._device.interaction_coeff / d._array[i, j] ** 6
+                )
+
         return interactions
 
     @property
@@ -621,6 +632,7 @@ class HamiltonianData:
         Returns:
             The pairwise interaction coefficients, taking into account
             Device specs, the Sequence type and missing atoms.
+            See the docstring for HamiltonianData._interaction_matrix.
         """
         mask = [False for _ in range(self.n_qudits)]
         for ind, value in enumerate(bad_atoms.values()):
@@ -630,13 +642,13 @@ class HamiltonianData:
             arr = np.array(mask)
             mask2 = arr.reshape(1, -1) | arr.reshape(-1, 1)
             mat = imat.copy()
-            mat[mask2] = 0.0
+            mat[:, mask2] = 0.0
             return pm.AbstractArray(mat)
         else:
             ten = pm.torch.tensor(mask, dtype=pm.torch.bool)
             mask3 = ten.reshape(1, -1) | ten.reshape(-1, 1)
             mat2 = imat.clone()
-            mat2[mask3] = 0.0
+            mat2[:, mask3] = 0.0
             return pm.AbstractArray(mat2)
 
     def _build_local_collapse_operators(
