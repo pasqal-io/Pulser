@@ -115,9 +115,9 @@ class Pulse:
             )
         if np.any(amplitude.samples.as_array(detach=True) < 0):
             raise ValueError(
-                f"All samples of an amplitude waveform must be >= 0; "
-                f"found invalid values in amplitude waveform: {amplitude}."
-    )
+                "All samples of an amplitude waveform must be >= 0; "
+                f"found negative values in amplitude waveform: {amplitude}."
+            )
         object.__setattr__(self, "amplitude", amplitude)
         object.__setattr__(self, "detuning", detuning)
         assert not isinstance(phase, Parametrized)
