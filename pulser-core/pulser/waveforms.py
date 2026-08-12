@@ -335,7 +335,10 @@ class Waveform(ABC):
 
     def _check_slice(self, s: slice) -> slice:
         if s.step is not None and s.step != 1:
-            raise IndexError("The step of the slice must be None or 1.")
+            raise IndexError(
+                "The step of the slice must be None or 1; "
+                f"got {s} with step {s.step}."
+            )
 
         # Transform start and stop indexes into positive or null values
         # since they can be omitted (None) or negative (end-indexing)
@@ -447,7 +450,8 @@ class CompositeWaveform(Waveform):
         """Initializes a waveform from multiple waveforms."""
         if len(waveforms) < 2:
             raise ValueError(
-                "Needs at least two waveforms to form a " "CompositeWaveform."
+                "Needs at least two waveforms to form a CompositeWaveform; "
+                f"got {len(waveforms)}: {waveforms}."
             )
         waveforms = cast(Tuple[Waveform, ...], waveforms)
         for wf in waveforms:
@@ -773,7 +777,9 @@ class BlackmanWaveform(Waveform):
         area_sign = np.sign(area_float)
         if np.sign(max_val) != area_sign:
             raise ValueError(
-                "The maximum value and the area must have matching signs."
+                "The maximum value and the area must have matching signs; "
+                f"got max_val={max_val} and area={area_float} in "
+                f"{cls.__name__}.from_max_val()."
             )
 
         # Deal only with positive areas
@@ -983,16 +989,23 @@ class InterpolatedWaveform(Waveform):
             raise TypeError(_err_message("times")) from e
         if np.any(times_ < 0):
             raise ValueError(
-                "All values in `times` must be greater than or equal to 0."
+                "All values in `times` must be greater than or equal to 0; "
+                f"found negative values {times_[times_ < 0].tolist()} "
+                f"in times {times}."
             )
         if np.any(times_ > 1):
             raise ValueError(
-                "All values in `times` must be less than or equal to 1."
+                "All values in `times` must be less than or equal to 1; "
+                f"found values above 1 {times_[times_ > 1].tolist()} "
+                f"in times {times}."
             )
         unique_times = np.unique(times)  # Sorted array of unique values
         if len(times_) != len(unique_times):
+            uniques, counts = np.unique(times_, return_counts=True)
             raise ValueError(
-                "`times` must be an array of non-repeating values."
+                "`times` must be an array of non-repeating values; found "
+                f"repeated values: {uniques[counts > 1].tolist()} in "
+                f"times {times}."
             )
         if (
             not isinstance(values, Parametrized)
@@ -1190,7 +1203,9 @@ class KaiserWaveform(Waveform):
 
         if np.sign(max_val) != np.sign(area_float):
             raise ValueError(
-                "The maximum value and the area must have matching signs."
+                "The maximum value and the area must have matching signs; "
+                f"got max_val={max_val} and area={area_float} in "
+                f"{cls.__name__}.from_max_val()."
             )
 
         # All computations will be done on a positive area
