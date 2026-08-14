@@ -68,7 +68,8 @@ class BaseRegister(ABC, CoordsCollection):
         if not isinstance(qubits, dict):
             raise TypeError(
                 "The qubits have to be stored in a dictionary "
-                "matching qubit ids to position coordinates."
+                "matching qubit ids to position coordinates; "
+                f"got {type(qubits)}."
             )
         if not qubits:
             raise ValueError(
@@ -98,7 +99,7 @@ class BaseRegister(ABC, CoordsCollection):
             if kwargs.keys() != {"layout", "trap_ids"}:
                 raise ValueError(
                     "If specifying 'kwargs', they must only be 'layout' and "
-                    "'trap_ids'."
+                    f"'trap_ids'; got {sorted(kwargs)}."
                 )
             layout: RegisterLayout = kwargs["layout"]
             trap_ids: tuple[int, ...] = tuple(kwargs["trap_ids"])
@@ -149,7 +150,9 @@ class BaseRegister(ABC, CoordsCollection):
         if not set(id_list) <= set(self.qubit_ids):
             raise ValueError(
                 "The IDs list must be selected among the IDs of the register's"
-                " qubits."
+                " qubits; "
+                f"{sorted(set(id_list) - set(self.qubit_ids))} not in "
+                f"{list(self.qubit_ids)}."
             )
         return [self.qubit_ids.index(id_) for id_ in id_list]
 
@@ -190,14 +193,15 @@ class BaseRegister(ABC, CoordsCollection):
             if labels is not None:
                 raise NotImplementedError(
                     "It is impossible to specify a prefix and "
-                    "a set of labels at the same time"
+                    "a set of labels at the same time; "
+                    f"got prefix={prefix!r} and labels={list(labels)}."
                 )
 
         elif labels is not None:
             if len(coords_) != len(labels):
                 raise ValueError(
-                    f"Label length ({len(labels)}) does not"
-                    f"match number of coordinates ({len(coords_)})"
+                    f"Label length ({len(labels)}) does not "
+                    f"match number of coordinates ({len(coords_)})."
                 )
             qubits = dict(zip(cast(Iterable, labels), coords_))
         else:
@@ -212,15 +216,21 @@ class BaseRegister(ABC, CoordsCollection):
         if register_layout.dimensionality != self.dimensionality:
             raise ValueError(
                 "The RegisterLayout dimensionality is not the same as this "
-                "register's."
+                f"register's; layout is {register_layout.dimensionality}D "
+                f"and register is {self.dimensionality}D."
             )
         if len(set(trap_ids)) != len(trap_ids):
-            raise ValueError("Every 'trap_id' must be a unique integer.")
+            repeated = sorted({t for t in trap_ids if trap_ids.count(t) > 1})
+            raise ValueError(
+                "Every 'trap_id' must be a unique integer; "
+                f"found repeated ids {repeated} in {list(trap_ids)}."
+            )
 
         if len(trap_ids) != len(self._ids):
             raise ValueError(
                 "The amount of 'trap_ids' must be equal to the number of atoms"
-                " in the register."
+                f" in the register; got {len(trap_ids)} trap_ids "
+                f"for {len(self._ids)} atoms."
             )
 
         for reg_coord, trap_id in zip(
@@ -229,7 +239,9 @@ class BaseRegister(ABC, CoordsCollection):
             if np.any(reg_coord != trap_coords[trap_id]):
                 raise ValueError(
                     "The chosen traps from the RegisterLayout don't match this"
-                    " register's coordinates."
+                    f" register's coordinates; trap {trap_id} is at "
+                    f"{trap_coords[trap_id].tolist()} but the register "
+                    f"has {reg_coord.tolist()}."
                 )
 
     def define_detuning_map(
@@ -251,7 +263,9 @@ class BaseRegister(ABC, CoordsCollection):
         if not set(detuning_weights.keys()) <= set(self.qubit_ids):
             raise ValueError(
                 "The qubit ids linked to detuning weights have to be defined"
-                " in the register."
+                " in the register. Got "
+                f"{sorted(set(detuning_weights) - set(self.qubit_ids))}, "
+                f"which are not in {list(self.qubit_ids)}."
             )
         return DetuningMap(
             pm.vstack(
