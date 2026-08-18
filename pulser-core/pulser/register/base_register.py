@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import warnings
 from abc import ABC, abstractmethod
+from collections import Counter
 from collections.abc import Iterable, Mapping
 from collections.abc import Sequence as abcSequence
 from typing import (
@@ -99,7 +100,7 @@ class BaseRegister(ABC, CoordsCollection):
             if kwargs.keys() != {"layout", "trap_ids"}:
                 raise ValueError(
                     "If specifying 'kwargs', they must only be 'layout' and "
-                    f"'trap_ids'; got {sorted(kwargs)}."
+                    f"'trap_ids'; got {list(kwargs)}."
                 )
             layout: RegisterLayout = kwargs["layout"]
             trap_ids: tuple[int, ...] = tuple(kwargs["trap_ids"])
@@ -151,7 +152,7 @@ class BaseRegister(ABC, CoordsCollection):
             raise ValueError(
                 "The IDs list must be selected among the IDs of the register's"
                 " qubits; "
-                f"{sorted(set(id_list) - set(self.qubit_ids))} not in "
+                f"{list(set(id_list) - set(self.qubit_ids))} not in "
                 f"{list(self.qubit_ids)}."
             )
         return [self.qubit_ids.index(id_) for id_ in id_list]
@@ -201,7 +202,8 @@ class BaseRegister(ABC, CoordsCollection):
             if len(coords_) != len(labels):
                 raise ValueError(
                     f"Label length ({len(labels)}) does not "
-                    f"match number of coordinates ({len(coords_)})."
+                    f"match number of coordinates ({len(coords_)}); "
+                    f"got coords {coords!r} and labels {labels!r}."
                 )
             qubits = dict(zip(cast(Iterable, labels), coords_))
         else:
@@ -215,12 +217,13 @@ class BaseRegister(ABC, CoordsCollection):
         trap_coords = register_layout.coords
         if register_layout.dimensionality != self.dimensionality:
             raise ValueError(
-                "The RegisterLayout dimensionality is not the same as this "
-                f"register's; layout is {register_layout.dimensionality}D "
-                f"and register is {self.dimensionality}D."
+                "The RegisterLayout dimensionality "
+                f"({register_layout.dimensionality}D) is not the same as this "
+                f"register's ({self.dimensionality}D); got layout "
+                f"{register_layout} on register {self}."
             )
         if len(set(trap_ids)) != len(trap_ids):
-            repeated = sorted({t for t in trap_ids if trap_ids.count(t) > 1})
+            repeated = [t for t, freq in Counter(trap_ids).items() if freq > 1]
             raise ValueError(
                 "Every 'trap_id' must be a unique integer; "
                 f"found repeated ids {repeated} in {list(trap_ids)}."
@@ -228,11 +231,15 @@ class BaseRegister(ABC, CoordsCollection):
 
         if len(trap_ids) != len(self._ids):
             raise ValueError(
-                "The amount of 'trap_ids' must be equal to the number of atoms"
-                f" in the register; got {len(trap_ids)} trap_ids "
-                f"for {len(self._ids)} atoms."
+                f"The amount of 'trap_ids' {len(trap_ids)} is not equal to "
+                f"the number of atoms {len(self._ids)}. Got trap ids "
+                f"{trap_ids} for atoms {self._ids}."
             )
-
+        if not set(trap_ids).issubset(register_layout.traps_dict):
+            raise ValueError(
+                "All 'trap_ids' must correspond to the ID of a trap; "
+                f"got {trap_ids}."
+            )
         for reg_coord, trap_id in zip(
             self._coords_arr.as_array(detach=True), trap_ids
         ):
@@ -264,7 +271,7 @@ class BaseRegister(ABC, CoordsCollection):
             raise ValueError(
                 "The qubit ids linked to detuning weights have to be defined"
                 " in the register. Got "
-                f"{sorted(set(detuning_weights) - set(self.qubit_ids))}, "
+                f"{list(set(detuning_weights) - set(self.qubit_ids))}, "
                 f"which are not in {list(self.qubit_ids)}."
             )
         return DetuningMap(
