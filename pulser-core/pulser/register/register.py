@@ -60,8 +60,12 @@ class Register(BaseRegister, RegDrawer):
             any(c.shape != (self.dimensionality,) for c in self._coords_arr)
             or self.dimensionality != 2
         ):
+            shapes = list(
+                dict.fromkeys(tuple(c.shape) for c in self._coords_arr)
+            )
             raise ValueError(
-                "All coordinates must be specified as vectors of size 2."
+                "All coordinates must be specified as vectors of size 2; got "
+                f"{self.dimensionality}D coordinates with shapes {shapes}."
             )
 
     @classmethod
@@ -158,7 +162,11 @@ class Register(BaseRegister, RegDrawer):
 
         # Check spacing
         if row_spacing_ <= 0.0 or col_spacing_ <= 0.0:
-            raise ValueError("Spacing between atoms must be greater than 0.")
+            raise ValueError(
+                f"Spacing between atoms (`row_spacing` = {row_spacing},"
+                f" `col_spacing` = {col_spacing})"
+                " must be greater than 0."
+            )
 
         coords = pm.AbstractArray(patterns.square_rect(rows, columns))
         coords[:, 0] = coords[:, 0] * col_spacing_
@@ -288,7 +296,9 @@ class Register(BaseRegister, RegDrawer):
         """
         # Check device
         if not isinstance(device, pulser.devices._device_datacls.BaseDevice):
-            raise TypeError("'device' must be of type 'BaseDevice'.")
+            raise TypeError(
+                f"'device' must be of type 'BaseDevice', not {type(device)}."
+            )
 
         # Check number of qubits (1 or above)
         if n_qubits < 1:
@@ -313,7 +323,7 @@ class Register(BaseRegister, RegDrawer):
             spacing_ := pm.AbstractArray(spacing)
         ) < device.min_atom_distance:
             raise ValueError(
-                f"Spacing between atoms (`spacing = `{spacing})"
+                f"Spacing between atoms (`spacing` = {spacing})"
                 " must be greater than or equal to the minimal"
                 " distance supported by this device"
                 f" ({device.min_atom_distance})."
