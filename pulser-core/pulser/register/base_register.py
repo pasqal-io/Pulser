@@ -219,8 +219,9 @@ class BaseRegister(ABC, CoordsCollection):
             raise ValueError(
                 "The RegisterLayout dimensionality "
                 f"({register_layout.dimensionality}D) is not the same as this "
-                f"register's ({self.dimensionality}D); got layout "
-                f"{register_layout} on register {self}."
+                f"register's ({self.dimensionality}D); Layout's coordinates "
+                f"are {register_layout.coords} and register's "
+                f"{self.sorted_coords}."
             )
         if len(set(trap_ids)) != len(trap_ids):
             repeated = [t for t, freq in Counter(trap_ids).items() if freq > 1]
@@ -232,13 +233,14 @@ class BaseRegister(ABC, CoordsCollection):
         if len(trap_ids) != len(self._ids):
             raise ValueError(
                 f"The amount of 'trap_ids' {len(trap_ids)} is not equal to "
-                f"the number of atoms {len(self._ids)}. Got trap ids "
-                f"{trap_ids} for atoms {self._ids}."
+                f"the number of atoms {len(self._ids)} in the register. Got "
+                f"trap ids {trap_ids} for atoms {self._ids}."
             )
         if not set(trap_ids).issubset(register_layout.traps_dict):
             raise ValueError(
-                "All 'trap_ids' must correspond to the ID of a trap; "
-                f"got {trap_ids}."
+                "All 'trap_ids' must correspond to the ID of a trap in the "
+                f"layout; got {trap_ids}, must be among "
+                f"{list(register_layout.traps_dict)}."
             )
         for reg_coord, trap_id in zip(
             self._coords_arr.as_array(detach=True), trap_ids
