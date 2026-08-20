@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import re
 from typing import TYPE_CHECKING, Any, Literal, Type, Union, cast, overload
 
 import jsonschema
@@ -47,6 +48,11 @@ from pulser.parametrized import ParamObj, Variable
 from pulser.pulse import Pulse
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
+from pulser.register.special_layouts import (
+    RectangularLatticeLayout,
+    SquareLatticeLayout,
+    TriangularLatticeLayout,
+)
 from pulser.register.weight_maps import DetuningMap
 from pulser.waveforms import (
     BlackmanWaveform,
@@ -66,6 +72,18 @@ if TYPE_CHECKING:
 
 
 VARIABLE_TYPE_MAP = {"int": int, "float": float}
+
+_FLOAT_PATTERN = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
+_RECTANGULAR_LAYOUT_PATTERN = re.compile(
+    rf"RectangularLatticeLayout\((\d+)x(\d+), "
+    rf"({_FLOAT_PATTERN})x({_FLOAT_PATTERN})µm\)"
+)
+_SQUARE_LAYOUT_PATTERN = re.compile(
+    rf"SquareLatticeLayout\((\d+)x(\d+), ({_FLOAT_PATTERN})µm\)"
+)
+_TRIANGULAR_LAYOUT_PATTERN = re.compile(
+    rf"TriangularLatticeLayout\((\d+), ({_FLOAT_PATTERN})µm\)"
+)
 
 ExpReturnType = Union[int, float, list, ParamObj]
 
@@ -389,13 +407,47 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
 
 def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
     try:
-        return RegisterLayout(
+        layout = RegisterLayout(
             layout_obj["coordinates"], slug=layout_obj.get("slug")
         )
     except ValueError as e:
         raise AbstractReprError(
             "Register layout deserialization failed."
         ) from e
+
+    if layout.slug is None:
+        return layout
+
+    special_layout: RegisterLayout
+    try:
+        match = _RECTANGULAR_LAYOUT_PATTERN.fullmatch(layout.slug)
+        if match:
+            rows, columns = map(int, match.group(1, 2))
+            if rows * columns == layout.number_of_traps:
+                special_layout = RectangularLatticeLayout(
+                    rows, columns, float(match[3]), float(match[4])
+                )
+                return special_layout if special_layout == layout else layout
+
+        match = _SQUARE_LAYOUT_PATTERN.fullmatch(layout.slug)
+        if match:
+            rows, columns = map(int, match.group(1, 2))
+            if rows * columns == layout.number_of_traps:
+                special_layout = SquareLatticeLayout(
+                    rows, columns, float(match[3])
+                )
+                return special_layout if special_layout == layout else layout
+
+        match = _TRIANGULAR_LAYOUT_PATTERN.fullmatch(layout.slug)
+        if match and int(match[1]) == layout.number_of_traps:
+            special_layout = TriangularLatticeLayout(
+                int(match[1]), float(match[2])
+            )
+            return special_layout if special_layout == layout else layout
+    except ValueError:
+        pass
+
+    return layout
 
 
 def _deserialize_register(
