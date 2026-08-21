@@ -70,7 +70,7 @@ class BaseRegister(ABC, CoordsCollection):
             raise TypeError(
                 "The qubits have to be stored in a dictionary "
                 "matching qubit ids to position coordinates; "
-                f"got {type(qubits)} ({qubits})."
+                f"got {type(qubits)}: {qubits}."
             )
         if not qubits:
             raise ValueError(

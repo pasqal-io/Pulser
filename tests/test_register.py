@@ -33,8 +33,21 @@ def test_creation():
     coords = [(0, 0), (1, 0)]
     ids = ("q0", "q1")
     qubits = dict(zip(ids, coords))
-    with pytest.raises(TypeError):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "The qubits have to be stored in a dictionary matching qubit ids "
+            "to position coordinates; got <class 'list'>: [(0, 0), (1, 0)]."
+        ),
+    ):
         Register(coords)
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "The qubits have to be stored in a dictionary matching qubit ids "
+            "to position coordinates; got <class 'tuple'>: ('q0', 'q1')."
+        ),
+    ):
         Register(ids)
 
     with pytest.raises(ValueError, match="vectors of size 2"):
