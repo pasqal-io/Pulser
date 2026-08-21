@@ -222,6 +222,34 @@ class TestDetuningMap:
         ):
             DetuningMap([(0, 0), (1, 0), (2, 0)], [0.5, float("nan"), -0.2])
 
+        # array-like weights are reported as plain numbers, not as the
+        # repr of each scalar (eg "np.float64(0.5)")
+        for array_weights in (
+            np.array([0.5, 1.5]),
+            np.array([0.5, 1.5], dtype=np.float32),
+        ):
+            with pytest.raises(
+                ValueError,
+                match=re.escape(
+                    "All weights must be between 0 and 1; found out-of-range "
+                    "weights [1.5] in [0.5, 1.5]."
+                ),
+            ):
+                DetuningMap(
+                    [(0, 0), (1, 0)], array_weights  # type: ignore[arg-type]
+                )
+            with pytest.raises(
+                ValueError,
+                match=re.escape(
+                    "Number of traps and weights don't match; got 3 traps "
+                    "and weights [0.5, 1.5]."
+                ),
+            ):
+                DetuningMap(
+                    [(0, 0), (1, 0), (2, 0)],
+                    array_weights,  # type: ignore[arg-type]
+                )
+
         for reg in (layout, map_reg, register):
             bad_weights: dict[int | str, float]
             zero_weights: dict[int | str, float]
