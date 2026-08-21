@@ -266,7 +266,13 @@ def test_max_connectivity():
     crest_y = np.sqrt(3) / 2.0
 
     # Check device type
-    with pytest.raises(TypeError):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "'device' must be of type 'BaseDevice', not "
+            "<class 'NoneType'> (None)."
+        ),
+    ):
         reg = Register.max_connectivity(2, None)
 
     # Check min number of atoms

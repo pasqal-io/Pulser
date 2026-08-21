@@ -51,7 +51,7 @@ class Traps(ABC, CoordsCollection):
         except ValueError as e:
             raise ValueError(
                 "'trap_coordinates' must be an array or list of coordinates;"
-                f" got {type(trap_coordinates)}."
+                f" got {type(trap_coordinates)} ({trap_coordinates!r})."
             ) from e
 
         shape = np.shape(coords_arr)

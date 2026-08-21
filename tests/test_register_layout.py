@@ -40,7 +40,11 @@ def layout3d():
 
 def test_creation(layout, layout3d):
     with pytest.raises(
-        ValueError, match="must be an array or list of coordinates"
+        ValueError,
+        match=re.escape(
+            "must be an array or list of coordinates; got <class 'list'> "
+            "([[0, 0, 0], [1, 1], [1, 0], [0, 1]])."
+        ),
     ):
         RegisterLayout([[0, 0, 0], [1, 1], [1, 0], [0, 1]])
 
