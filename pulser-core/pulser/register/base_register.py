@@ -203,7 +203,7 @@ class BaseRegister(ABC, CoordsCollection):
                 raise ValueError(
                     f"Label length ({len(labels)}) does not "
                     f"match number of coordinates ({len(coords_)}); "
-                    f"got coords {coords!r} and labels {labels!r}."
+                    f"got coords {coords!r} and labels {list(labels)}."
                 )
             qubits = dict(zip(cast(Iterable, labels), coords_))
         else:

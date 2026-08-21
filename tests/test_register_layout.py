@@ -115,6 +115,10 @@ def test_register_definition(layout, layout3d):
     ):
         reg2d._validate_layout(layout, (0, 99))
     with pytest.raises(
+        ValueError, match="All 'trap_ids' must correspond to the ID of a trap"
+    ):
+        reg2d._validate_layout(layout, (0, -1))
+    with pytest.raises(
         ValueError, match="don't match this register's coordinates"
     ):
         reg2d._validate_layout(layout, (0, 1))

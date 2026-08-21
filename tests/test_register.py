@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import dataclasses
+import re
 from unittest.mock import patch
 
 import numpy as np
@@ -466,8 +467,10 @@ def test_find_indices():
 
     with pytest.raises(
         ValueError,
-        match="IDs list must be selected among the IDs of the register's "
-        "qubits",
+        match=re.escape(
+            "IDs list must be selected among the IDs of the register's "
+            "qubits; ['e', 'd'] not in ['a', 'c', 'b']."
+        ),
     ):
         reg.find_indices(["c", "e", "d"])
 
