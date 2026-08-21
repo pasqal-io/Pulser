@@ -98,18 +98,44 @@ def test_register_definition(layout, layout3d):
 
     reg2d = layout.define_register(0, 2)
     assert reg2d._layout_info == (layout, (0, 2))
-    with pytest.raises(ValueError, match="dimensionality is not the same"):
+    with pytest.raises(
+        ValueError, match=re.escape("dimensionality (3D) is not the same")
+    ):
         reg2d._validate_layout(layout3d, (0, 2))
     with pytest.raises(
-        ValueError, match="Every 'trap_id' must be a unique integer"
+        ValueError,
+        match=re.escape(
+            "Every 'trap_id' must be a unique integer; found repeated ids "
+            "[2] in [0, 2, 2]."
+        ),
     ):
         reg2d._validate_layout(layout, (0, 2, 2))
     with pytest.raises(
-        ValueError, match="must be equal to the number of atoms"
+        ValueError, match="is not equal to the number of atoms"
     ):
         reg2d._validate_layout(layout, (0,))
     with pytest.raises(
-        ValueError, match="don't match this register's coordinates"
+        ValueError,
+        match=re.escape(
+            "All 'trap_ids' must correspond to the ID of a trap in the "
+            "layout; got (0, 99), must be among [0, 1, 2, 3]."
+        ),
+    ):
+        reg2d._validate_layout(layout, (0, 99))
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "All 'trap_ids' must correspond to the ID of a trap in the "
+            "layout; got (0, -1), must be among [0, 1, 2, 3]."
+        ),
+    ):
+        reg2d._validate_layout(layout, (0, -1))
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "don't match this register's coordinates; trap 1 is at "
+            "[0.0, 1.0] but the register has [1.0, 0.0]."
+        ),
     ):
         reg2d._validate_layout(layout, (0, 1))
 

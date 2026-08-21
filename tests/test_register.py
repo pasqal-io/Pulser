@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import dataclasses
+import re
 from unittest.mock import patch
 
 import numpy as np
@@ -32,15 +33,32 @@ def test_creation():
     coords = [(0, 0), (1, 0)]
     ids = ("q0", "q1")
     qubits = dict(zip(ids, coords))
-    with pytest.raises(TypeError):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "The qubits have to be stored in a dictionary matching qubit ids "
+            "to position coordinates; got <class 'list'>: [(0, 0), (1, 0)]."
+        ),
+    ):
         Register(coords)
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "The qubits have to be stored in a dictionary matching qubit ids "
+            "to position coordinates; got <class 'tuple'>: ('q0', 'q1')."
+        ),
+    ):
         Register(ids)
 
     with pytest.raises(ValueError, match="vectors of size 2"):
         Register.from_coordinates([(0, 1, 0, 1)], prefix="q")
 
     with pytest.raises(
-        NotImplementedError, match="a prefix and a set of labels"
+        NotImplementedError,
+        match=re.escape(
+            "a prefix and a set of labels at the same time; got prefix='a' "
+            "and labels=['a', 'b']."
+        ),
     ):
         Register.from_coordinates(coords, prefix="a", labels=["a", "b"])
 
@@ -56,7 +74,13 @@ def test_creation():
     reg2b = Register.from_coordinates(coords, center=False, labels=["a", "b"])
     assert reg2b._ids == ("a", "b")
 
-    with pytest.raises(ValueError, match="Label length"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Label length (3) does not match number of coordinates (2); "
+            "got coords [(0, 0), (1, 0)] and labels ['a', 'b', 'c']."
+        ),
+    ):
         Register.from_coordinates(coords, center=False, labels=["a", "b", "c"])
 
     reg3 = Register.from_coordinates(
@@ -466,8 +490,10 @@ def test_find_indices():
 
     with pytest.raises(
         ValueError,
-        match="IDs list must be selected among the IDs of the register's "
-        "qubits",
+        match=re.escape(
+            "IDs list must be selected among the IDs of the register's "
+            "qubits; ['e', 'd'] not in ['a', 'c', 'b']."
+        ),
     ):
         reg.find_indices(["c", "e", "d"])
 
