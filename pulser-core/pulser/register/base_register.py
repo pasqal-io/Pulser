@@ -148,12 +148,12 @@ class BaseRegister(ABC, CoordsCollection):
             Indices of the qubits to denote, only valid for the
             given mapping.
         """
-        if not set(id_list) <= set(self.qubit_ids):
+        valid_ids = set(self.qubit_ids)
+        if not set(id_list) <= valid_ids:
+            invalid = [id_ for id_ in id_list if id_ not in valid_ids]
             raise ValueError(
                 "The IDs list must be selected among the IDs of the register's"
-                " qubits; "
-                f"{list(set(id_list) - set(self.qubit_ids))} not in "
-                f"{list(self.qubit_ids)}."
+                f" qubits; {invalid} not in {list(self.qubit_ids)}."
             )
         return [self.qubit_ids.index(id_) for id_ in id_list]
 
@@ -269,12 +269,13 @@ class BaseRegister(ABC, CoordsCollection):
             A DetuningMap associating detuning weights to the trap coordinates
             of the targeted qubits.
         """
-        if not set(detuning_weights.keys()) <= set(self.qubit_ids):
+        valid_ids = set(self.qubit_ids)
+        if not set(detuning_weights.keys()) <= valid_ids:
+            invalid = [id_ for id_ in detuning_weights if id_ not in valid_ids]
             raise ValueError(
                 "The qubit ids linked to detuning weights have to be defined"
-                " in the register. Got "
-                f"{list(set(detuning_weights) - set(self.qubit_ids))}, "
-                f"which are not in {list(self.qubit_ids)}."
+                f" in the register. Got {invalid}, which are not in "
+                f"{list(self.qubit_ids)}."
             )
         return DetuningMap(
             pm.vstack(
