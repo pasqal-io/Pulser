@@ -109,7 +109,7 @@ class RegisterLayout(Traps, RegDrawer):
                 raise ValueError(
                     "'qubit_ids' must have the same size as the number of "
                     f"provided 'trap_ids' ({len(trap_ids)}); got "
-                    f"{len(qubit_ids)} qubit ids {list(qubit_ids)}."
+                    f"qubit ids {list(qubit_ids)}."
                 )
 
         ids = (

@@ -45,7 +45,11 @@ def test_creation(layout, layout3d):
         RegisterLayout([[0, 0, 0], [1, 1], [1, 0], [0, 1]])
 
     with pytest.raises(
-        ValueError, match="must be an array or list of coordinates"
+        ValueError,
+        match=re.escape(
+            "must be an array or list of coordinates; got an array of "
+            "shape (3,)."
+        ),
     ):
         RegisterLayout([0, 1, 2])
 
@@ -54,7 +58,10 @@ def test_creation(layout, layout3d):
 
     with pytest.raises(
         ValueError,
-        match="All trap coordinates of a register layout must be unique.",
+        match=re.escape(
+            "All trap coordinates of a register layout must be unique; "
+            "found repeated coordinates [[0.0, 1.0]]."
+        ),
     ):
         RegisterLayout([[0, 1], [0.0, 1.0]])
 
@@ -76,16 +83,39 @@ def test_slug(layout, layout3d):
 
 
 def test_register_definition(layout, layout3d):
-    with pytest.raises(ValueError, match="must be a unique integer"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "must be a unique integer; found repeated ids [1] in [0, 1, 1]."
+        ),
+    ):
         layout.define_register(0, 1, 1)
 
-    with pytest.raises(ValueError, match="correspond to the ID of a trap"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "correspond to the ID of a trap; got invalid ids [4] in "
+            "[0, 4, 3], must be integers in [0, 3]."
+        ),
+    ):
         layout.define_register(0, 4, 3)
 
-    with pytest.raises(ValueError, match="must be a sequence of unique IDs"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "must be a sequence of unique IDs; found repeated ids ['b'] in "
+            "['a', 'b', 'b']."
+        ),
+    ):
         layout.define_register(0, 1, qubit_ids=["a", "b", "b"])
 
-    with pytest.raises(ValueError, match="must have the same size"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "must have the same size as the number of provided 'trap_ids' "
+            "(2); got qubit ids ['a', 'b', 'c']."
+        ),
+    ):
         layout.define_register(0, 1, qubit_ids=["a", "b", "c"])
 
     assert layout.define_register(0, 1) == Register.from_coordinates(
@@ -275,12 +305,16 @@ def test_mappable_register_creation():
     assert mapp_reg.find_indices(["q4", "q2", "q1", "q2"]) == [4, 2, 1, 2]
 
     with pytest.raises(
-        ValueError, match="must be selected among pre-declared qubit IDs"
+        ValueError,
+        match=re.escape(
+            "must be selected among pre-declared qubit IDs; ['q5'] not in "
+        ),
     ):
         mapp_reg.find_indices(["q4", "q2", "q1", "q5"])
 
     with pytest.raises(
-        ValueError, match="labeled with pre-declared qubit IDs"
+        ValueError,
+        match=re.escape("labeled with pre-declared qubit IDs; ['q5'] not in "),
     ):
         mapp_reg.build_register({"q0": 0, "q5": 2})
     with pytest.raises(ValueError, match="To declare 2 qubits"):

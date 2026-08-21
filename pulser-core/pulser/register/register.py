@@ -60,12 +60,9 @@ class Register(BaseRegister, RegDrawer):
             any(c.shape != (self.dimensionality,) for c in self._coords_arr)
             or self.dimensionality != 2
         ):
-            shapes = list(
-                dict.fromkeys(tuple(c.shape) for c in self._coords_arr)
-            )
             raise ValueError(
-                "All coordinates must be specified as vectors of size 2; got "
-                f"{self.dimensionality}D coordinates with shapes {shapes}."
+                "All coordinates must be specified as vectors of size 2; "
+                f"got {self.dimensionality}D coordinates."
             )
 
     @classmethod
@@ -163,9 +160,8 @@ class Register(BaseRegister, RegDrawer):
         # Check spacing
         if row_spacing_ <= 0.0 or col_spacing_ <= 0.0:
             raise ValueError(
-                f"Spacing between atoms (`row_spacing` = {row_spacing},"
-                f" `col_spacing` = {col_spacing})"
-                " must be greater than 0."
+                "Spacing between atoms must be greater than 0; got row "
+                f"spacing {row_spacing} and column spacing {col_spacing}."
             )
 
         coords = pm.AbstractArray(patterns.square_rect(rows, columns))

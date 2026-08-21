@@ -82,7 +82,7 @@ class TestDetuningMap:
                 ValueError,
                 match=re.escape(
                     "The trap ids of detuning weights have to be integers"
-                    " in [0, 3]."
+                    " in [0, 3]. Got invalid ids "
                 ),
             ):
                 reg.define_detuning_map(bad_key)
@@ -204,9 +204,23 @@ class TestDetuningMap:
         map_reg: MappableRegister,
     ):
         with pytest.raises(
-            ValueError, match="Number of traps and weights don't match."
+            ValueError,
+            match=re.escape(
+                "Number of traps and weights don't match; got 2 traps and "
+                "weights [0]."
+            ),
         ):
             DetuningMap([(0, 0), (1, 0)], [0])
+
+        # NaN is out of range but is caught by neither `< 0` nor `> 1`
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "All weights must be between 0 and 1; found out-of-range "
+                "weights [nan, -0.2] in [0.5, nan, -0.2]."
+            ),
+        ):
+            DetuningMap([(0, 0), (1, 0), (2, 0)], [0.5, float("nan"), -0.2])
 
         for reg in (layout, map_reg, register):
             bad_weights: dict[int | str, float]
@@ -218,7 +232,11 @@ class TestDetuningMap:
                 bad_weights = {0: -1.0, 1: 1.0, 2: 1.0}
                 zero_weights = {0: 0.0}
             with pytest.raises(
-                ValueError, match="All weights must be between 0 and 1."
+                ValueError,
+                match=re.escape(
+                    "All weights must be between 0 and 1; found out-of-range "
+                    "weights [-1.0] in [-1.0, 1.0, 1.0]."
+                ),
             ):
                 reg.define_detuning_map(bad_weights)  # type: ignore
             with pytest.warns(

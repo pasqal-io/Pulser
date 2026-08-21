@@ -65,12 +65,12 @@ class WeightMap(Traps, RegDrawer):
             raise ValueError(
                 "Number of traps and weights don't match; got "
                 f"{len(cast(list, trap_coordinates))} traps and "
-                f"{len(weights)} weights {list(weights)}."
+                f"weights {list(weights)}."
             )
         weights_arr = np.array(weights)
         if not (np.all(weights_arr >= 0) and np.all(weights_arr <= 1)):
             out_of_range = weights_arr[
-                (weights_arr < 0) | (weights_arr > 1)
+                ~((weights_arr >= 0) & (weights_arr <= 1))
             ].tolist()
             raise ValueError(
                 "All weights must be between 0 and 1; found out-of-range "

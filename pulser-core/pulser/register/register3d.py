@@ -52,12 +52,9 @@ class Register3D(BaseRegister, RegDrawer):
             any(c.shape != (self.dimensionality,) for c in self._coords_arr)
             or self.dimensionality != 3
         ):
-            shapes = list(
-                dict.fromkeys(tuple(c.shape) for c in self._coords_arr)
-            )
             raise ValueError(
-                "All coordinates must be specified as vectors of size 3; got "
-                f"{self.dimensionality}D coordinates with shapes {shapes}."
+                "All coordinates must be specified as vectors of size 3; "
+                f"got {self.dimensionality}D coordinates."
             )
 
     @classmethod
