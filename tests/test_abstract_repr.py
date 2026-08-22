@@ -159,6 +159,10 @@ def test_abstract_repr_encoder_torch():
         RectangularLatticeLayout(3, 4, 2.5, 5),
         RegisterLayout([[10, 0], [1, 10]], slug="foo"),
         RegisterLayout(
+            SquareLatticeLayout(2, 2, 1).coords,
+            slug="SquareLatticeLayout(2x2, 1.0)",
+        ),
+        RegisterLayout(
             [[0, 0], [1, 1]],
             slug="TriangularLatticeLayout(2, 1.0µm)",
         ),
@@ -427,14 +431,19 @@ class TestDevice:
 
         _roundtrip(abstract_device)
 
-    def test_special_layout_roundtrip(self):
-        device = Device.from_abstract_repr(AnalogDevice.to_abstract_repr())
-        layout = next(iter(device.pre_calibrated_layouts))
-        assert type(layout) is TriangularLatticeLayout
-        register = layout.rectangular_register(
-            rows=1, atoms_per_row=3, prefix="q"
-        )
-        assert register.qubit_ids == ("q0", "q1", "q2")
+    @pytest.mark.parametrize(
+        "layout",
+        [
+            TriangularLatticeLayout(61, 5),
+            SquareLatticeLayout(3, 4, 5),
+            RectangularLatticeLayout(3, 4, 5, 6),
+        ],
+    )
+    def test_special_layout_roundtrip(self, layout):
+        device = replace(AnalogDevice, pre_calibrated_layouts=(layout,))
+        device = Device.from_abstract_repr(device.to_abstract_repr())
+        deserialized_layout = next(iter(device.pre_calibrated_layouts))
+        assert type(deserialized_layout) is type(layout)
 
     def test_interaction_coeff_xy_serialization(self, abstract_device):
         # The abstract repr always carries 'interaction_coeff_xy' (schema
