@@ -270,7 +270,7 @@ def test_max_connectivity():
         TypeError,
         match=re.escape(
             "'device' must be of type 'BaseDevice', not "
-            "<class 'NoneType'> (None)."
+            "<class 'NoneType'>: None."
         ),
     ):
         reg = Register.max_connectivity(2, None)

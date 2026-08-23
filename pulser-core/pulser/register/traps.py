@@ -51,14 +51,14 @@ class Traps(ABC, CoordsCollection):
         except ValueError as e:
             raise ValueError(
                 "'trap_coordinates' must be an array or list of coordinates;"
-                f" got {type(trap_coordinates)} ({trap_coordinates!r})."
+                f" got {type(trap_coordinates)}: {trap_coordinates!r}."
             ) from e
 
         shape = np.shape(coords_arr)
         if len(shape) != 2:
             raise ValueError(
                 "'trap_coordinates' must be an array or list of coordinates;"
-                f" got an array of shape {shape}."
+                f" got an array of shape {shape}: {trap_coordinates!r}."
             )
 
         if shape[1] not in (2, 3):

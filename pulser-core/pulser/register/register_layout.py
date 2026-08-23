@@ -108,8 +108,8 @@ class RegisterLayout(Traps, RegDrawer):
             if len(qubit_ids) != len(trap_ids):
                 raise ValueError(
                     "'qubit_ids' must have the same size as the number of "
-                    f"provided 'trap_ids' ({len(trap_ids)}); got "
-                    f"qubit ids {list(qubit_ids)}."
+                    f"provided 'trap_ids' ({len(trap_ids)}); got qubit ids "
+                    f"({len(qubit_ids)}): {list(qubit_ids)}."
                 )
 
         ids = (
@@ -144,8 +144,8 @@ class RegisterLayout(Traps, RegDrawer):
             invalid = [t for t in detuning_weights if t not in self.traps_dict]
             raise ValueError(
                 "The trap ids of detuning weights have to be integers"
-                f" in [0, {self.number_of_traps-1}]."
-                f" Got invalid ids {invalid}."
+                f" in [0, {self.number_of_traps-1}]; "
+                f"got invalid ids {invalid} in {list(detuning_weights)}."
             )
         return DetuningMap(
             [self.traps_dict[trap_id] for trap_id in detuning_weights],

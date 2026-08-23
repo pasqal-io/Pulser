@@ -82,7 +82,7 @@ class TestDetuningMap:
                 ValueError,
                 match=re.escape(
                     "The trap ids of detuning weights have to be integers"
-                    " in [0, 3]. Got invalid ids "
+                    " in [0, 3]; got invalid ids "
                 ),
             ):
                 reg.define_detuning_map(bad_key)
@@ -206,7 +206,7 @@ class TestDetuningMap:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "Number of traps and weights don't match; got 2 traps and "
+                "Number of traps (2) and weights (1) don't match; got "
                 "weights [0]."
             ),
         ):
@@ -241,8 +241,8 @@ class TestDetuningMap:
             with pytest.raises(
                 ValueError,
                 match=re.escape(
-                    "Number of traps and weights don't match; got 3 traps "
-                    "and weights [0.5, 1.5]."
+                    "Number of traps (3) and weights (2) don't match; got "
+                    "weights [0.5, 1.5]."
                 ),
             ):
                 DetuningMap(

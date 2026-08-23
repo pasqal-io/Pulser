@@ -294,7 +294,7 @@ class Register(BaseRegister, RegDrawer):
         if not isinstance(device, pulser.devices._device_datacls.BaseDevice):
             raise TypeError(
                 "'device' must be of type 'BaseDevice', not "
-                f"{type(device)} ({device})."
+                f"{type(device)}: {device}."
             )
 
         # Check number of qubits (1 or above)

@@ -63,8 +63,8 @@ class WeightMap(Traps, RegDrawer):
         super().__init__(trap_coordinates, slug)
         if len(cast(list, trap_coordinates)) != len(weights):
             raise ValueError(
-                "Number of traps and weights don't match; got "
-                f"{len(cast(list, trap_coordinates))} traps and weights "
+                f"Number of traps ({len(cast(list, trap_coordinates))}) and "
+                f"weights ({len(weights)}) don't match; got weights "
                 f"{pm.AbstractArray(weights).as_array(detach=True).tolist()}."
             )
         weights_arr = np.array(weights)

@@ -42,8 +42,8 @@ def test_creation(layout, layout3d):
     with pytest.raises(
         ValueError,
         match=re.escape(
-            "must be an array or list of coordinates; got <class 'list'> "
-            "([[0, 0, 0], [1, 1], [1, 0], [0, 1]])."
+            "must be an array or list of coordinates; got <class 'list'>: "
+            "[[0, 0, 0], [1, 1], [1, 0], [0, 1]]."
         ),
     ):
         RegisterLayout([[0, 0, 0], [1, 1], [1, 0], [0, 1]])
@@ -52,7 +52,7 @@ def test_creation(layout, layout3d):
         ValueError,
         match=re.escape(
             "must be an array or list of coordinates; got an array of "
-            "shape (3,)."
+            "shape (3,): [0, 1, 2]."
         ),
     ):
         RegisterLayout([0, 1, 2])
@@ -117,7 +117,7 @@ def test_register_definition(layout, layout3d):
         ValueError,
         match=re.escape(
             "must have the same size as the number of provided 'trap_ids' "
-            "(2); got qubit ids ['a', 'b', 'c']."
+            "(2); got qubit ids (3): ['a', 'b', 'c']."
         ),
     ):
         layout.define_register(0, 1, qubit_ids=["a", "b", "c"])
@@ -300,7 +300,13 @@ def test_triangular_lattice_layout():
 
 def test_mappable_register_creation():
     tri = TriangularLatticeLayout(50, 5)
-    with pytest.raises(ValueError, match="greater than the number of traps"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "greater than the number of traps in this layout (50); got "
+            "qubit ids (51): ['q0', 'q1',"
+        ),
+    ):
         tri.make_mappable_register(51)
 
     mapp_reg = tri.make_mappable_register(5)
@@ -312,16 +318,27 @@ def test_mappable_register_creation():
         ValueError,
         match=re.escape(
             "must be selected among pre-declared qubit IDs; ['q5'] not in "
+            "['q0', 'q1', 'q2', 'q3', 'q4']."
         ),
     ):
         mapp_reg.find_indices(["q4", "q2", "q1", "q5"])
 
     with pytest.raises(
         ValueError,
-        match=re.escape("labeled with pre-declared qubit IDs; ['q5'] not in "),
+        match=re.escape(
+            "labeled with pre-declared qubit IDs; ['q5'] not in "
+            "['q0', 'q1', 'q2', 'q3', 'q4']."
+        ),
     ):
         mapp_reg.build_register({"q0": 0, "q5": 2})
-    with pytest.raises(ValueError, match="To declare 2 qubits"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "To declare 2 qubits, 'qubits' should contain the first 2 "
+            "elements of the 'qubit_ids'; got ['q0', 'q2'], expected "
+            "['q0', 'q1']."
+        ),
+    ):
         mapp_reg.build_register({"q0": 0, "q2": 2})
 
     qubit_map = {"q0": 10, "q1": 49}
