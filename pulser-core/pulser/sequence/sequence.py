@@ -19,6 +19,7 @@ import copy
 import json
 import os
 import warnings
+from collections import Counter
 from collections.abc import Collection, Mapping
 from typing import (
     Any,
@@ -181,7 +182,9 @@ class Sequence(Generic[DeviceType]):
     @_in_ising.setter
     def _in_ising(self, value: bool) -> None:
         if not isinstance(value, bool):
-            raise TypeError("_in_ising must be a bool.")
+            raise TypeError(
+                f"_in_ising must be a bool; got {type(value)}: {value!r}."
+            )
         if self._in_ising == value:
             # If the value doesn't change, do nothing
             return
@@ -351,7 +354,8 @@ class Sequence(Generic[DeviceType]):
         if not self._in_xy:
             raise AttributeError(
                 "The magnetic field is only defined when the "
-                "sequence is in 'XY Mode'."
+                "sequence is in 'XY Mode'; this sequence uses "
+                f"{self.get_addressed_bases()}."
             )
         return np.array(self._mag_field)
 
@@ -475,12 +479,14 @@ class Sequence(Generic[DeviceType]):
         if qubit not in self._qids:
             raise ValueError(
                 "'qubit' must be the id of a qubit declared in "
-                "this sequence's register."
+                f"this sequence's register; got {qubit!r}, declared: "
+                f"{list(self._register.qubit_ids)}."
             )
 
         if basis not in self._basis_ref:
             raise ValueError(
-                f"No declared channel targets the given 'basis' ('{basis}')."
+                f"No declared channel targets the given 'basis' ('{basis}'); "
+                f"declared bases are {list(self._basis_ref)}."
             )
 
         return float(self._basis_ref[basis][qubit].phase.last_phase)
@@ -506,21 +512,32 @@ class Sequence(Generic[DeviceType]):
         """
         if not self._in_xy:
             if self._schedule:
+                declared_ids = {
+                    n: cs.channel_id for n, cs in self._schedule.items()
+                }
                 raise ValueError(
-                    "The magnetic field can only be set in 'XY Mode'."
+                    "The magnetic field can only be set in 'XY Mode'; "
+                    f"declared channels are {declared_ids}."
                 )
             # No channels declared yet
             self._in_xy = True
         elif not self._empty_sequence:
             # Not all channels are empty
+            with_contents = {
+                n: cs.channel_id
+                for n, cs in self._schedule.items()
+                if cs.slots
+            }
             raise ValueError(
-                "The magnetic field can only be set on an empty sequence."
+                "The magnetic field can only be set on an empty sequence; "
+                f"channels with contents are {with_contents}."
             )
 
         mag_vector = (bx, by, bz)
         if np.linalg.norm(mag_vector) == 0.0:
             raise ValueError(
-                "The magnetic field must have a magnitude greater than 0."
+                "The magnetic field must have a magnitude greater than 0; "
+                f"got {mag_vector}."
             )
         self._mag_field = mag_vector
 
@@ -596,17 +613,32 @@ class Sequence(Generic[DeviceType]):
         try:
             targets = set(qubits)
         except TypeError:
-            raise TypeError("The SLM targets must be castable to set.")
+            raise TypeError(
+                "The SLM targets must be castable to set; got "
+                f"{type(qubits)}: {qubits!r}."
+            )
 
         if not targets.issubset(self._qids):
-            raise ValueError("SLM mask targets must exist in the register.")
+            raise ValueError(
+                "SLM mask targets must exist in the register; "
+                f"{[q for q in qubits if q not in self._qids]} not in "
+                f"{list(self._register.qubit_ids)}."
+            )
 
         # If sequence is parametrized slm is configured at build
         if self.is_parametrized():
             return
 
         if self._slm_mask_targets:
-            raise ValueError("SLM mask can be configured only once.")
+            configured = [
+                q
+                for q in self._register.qubit_ids
+                if q in self._slm_mask_targets
+            ]
+            raise ValueError(
+                "SLM mask can be configured only once; already configured "
+                f"with targets {configured}."
+            )
 
         if self._in_xy or (not self._in_xy and not self._in_ising):
             if dmm_id not in self.device.dmm_channels:
@@ -865,28 +897,47 @@ class Sequence(Generic[DeviceType]):
         """
         if name.startswith("dmm_"):
             raise ValueError(
-                "Name starting by 'dmm_' are reserved for DMM channels."
+                "Name starting by 'dmm_' are reserved for DMM channels; "
+                f"got {name!r}."
             )
         if name in self._schedule:
-            raise ValueError("The given name is already in use.")
+            raise ValueError(
+                f"The given name is already in use; got {name!r}, already "
+                f"declared: {list(self._schedule)}."
+            )
 
         if channel_id not in self.device.channels:
-            raise ValueError(f"No channel {channel_id} in the device.")
+            raise ValueError(
+                f"No channel {channel_id!r} in the device; the device's "
+                f"channels are {list(self.device.channels)}."
+            )
 
         ch = self.device.channels[channel_id]
         if channel_id not in self.available_channels:
             if self._in_xy and ch.basis != "XY":
+                declared_ids = {
+                    n: cs.channel_id for n, cs in self._schedule.items()
+                }
                 raise ValueError(
-                    f"Channel '{ch}' cannot work simultaneously "
-                    "with the declared 'Microwave' channel."
+                    "Channel cannot work simultaneously with the declared "
+                    f"'Microwave' channel; got {name!r} ({channel_id!r}) "
+                    f"with the declared {declared_ids}."
                 )
             elif not self._in_xy and ch.basis == "XY":
+                declared_ids = {
+                    n: cs.channel_id for n, cs in self._schedule.items()
+                }
                 raise ValueError(
                     "Channel of type 'Microwave' cannot work "
-                    "simultaneously with the declared channels."
+                    "simultaneously with the declared channels; got "
+                    f"{name!r} ({channel_id!r}) with the declared "
+                    f"{declared_ids}."
                 )
             else:
-                raise ValueError(f"Channel {channel_id} is not available.")
+                raise ValueError(
+                    f"Channel {channel_id!r} is not available; still "
+                    f"available are {list(self.available_channels)}."
+                )
 
         if initial_target is not None:
             try:
@@ -897,7 +948,10 @@ class Sequence(Generic[DeviceType]):
             except TypeError:
                 cond = isinstance(initial_target, Parametrized)
             if cond:
-                raise TypeError("The initial_target cannot be parametrized")
+                raise TypeError(
+                    "The initial_target cannot be parametrized; got "
+                    f"{initial_target!r}."
+                )
 
         if ch.basis == "XY":
             if not self._in_xy:
@@ -984,14 +1038,19 @@ class Sequence(Generic[DeviceType]):
             To avoid confusion, it is recommended to store the returned
             Variable instance in a Python variable with the same name.
         """
-        if name in ("qubits", "seq_name", "json_dumps_options"):
+        protected_names = ("qubits", "seq_name", "json_dumps_options")
+        if name in protected_names:
             raise ValueError(
                 f"'{name}' is a protected name. Please choose a different name"
-                " for the variable."
+                " for the variable; protected names are "
+                f"{list(protected_names)}."
             )
 
         if name in self._variables:
-            raise ValueError("Name for variable is already being used.")
+            raise ValueError(
+                f"Name for variable is already being used; got {name!r}, "
+                f"already declared: {list(self._variables)}."
+            )
 
         if size is None:
             var = self.declare_variable(name, size=1, dtype=dtype)
@@ -1316,7 +1375,10 @@ class Sequence(Generic[DeviceType]):
                         raise TypeError
                     float(pm.AbstractArray(arg, dtype=float))
                 except TypeError:
-                    raise TypeError("Phase values must be a numeric value.")
+                    raise TypeError(
+                        "Phase values must be a numeric value; got "
+                        f"{type(arg)}: {arg!r}."
+                    )
             return
 
         eom_settings = self._schedule[channel].eom_blocks[-1]
@@ -1378,7 +1440,8 @@ class Sequence(Generic[DeviceType]):
         if isinstance(self.declared_channels[channel], DMM):
             raise ValueError(
                 "`Sequence.add()` can't be used on a DMM channel. "
-                "Use `Sequence.add_dmm_detuning()` instead."
+                "Use `Sequence.add_dmm_detuning()` instead; got channel "
+                f"{channel!r}."
             )
         self._add(pulse, channel, protocol)
 
@@ -1523,9 +1586,17 @@ class Sequence(Generic[DeviceType]):
         )
         self._validate_add_protocol(protocol)
         if self.is_parametrized() or isinstance(pulse, Parametrized):
+            parametrized = [
+                what
+                for what, cond in (
+                    ("sequence", self.is_parametrized()),
+                    ("pulse", isinstance(pulse, Parametrized)),
+                )
+                if cond
+            ]
             raise ValueError(
-                "Can't compute the delay to add before a pulse if sequence or"
-                "pulse is parametrized."
+                "Can't compute the delay to add before a pulse if sequence "
+                f"or pulse is parametrized; parametrized: {parametrized}."
             )
         if self.is_in_eom_mode(channel):
             eom_settings = self._schedule[channel].eom_blocks[-1]
@@ -1553,9 +1624,15 @@ class Sequence(Generic[DeviceType]):
         if isinstance(channel_obj, DMM):
             phase_ref = None
         elif len(ph_refs) != 1:
+            refs = {
+                q: float(self._basis_ref[basis][q].phase.last_phase)
+                for q in self._register.qubit_ids
+                if q in last.targets
+            }
             raise ValueError(
                 "Cannot do a multiple-target pulse on qubits with different "
-                "phase references for the same basis."
+                f"phase references for the same basis; got {refs} in basis "
+                f"{basis!r}."
             )
         else:
             phase_ref = ph_refs.pop()
@@ -1730,13 +1807,23 @@ class Sequence(Generic[DeviceType]):
         # channels have to be a subset of the declared channels
         if not ch_set <= set(self._schedule):
             raise ValueError(
-                "All channel names must correspond to declared channels."
+                "All channel names must correspond to declared channels; "
+                f"{[c for c in channels if c not in self._schedule]} not in "
+                f"{list(self._schedule)}."
             )
         if len(channels) != len(ch_set):
-            raise ValueError("The same channel was provided more than once.")
+            raise ValueError(
+                "The same channel was provided more than once; found "
+                "repeated names "
+                f"{[c for c, n in Counter(channels).items() if n > 1]} in "
+                f"{list(channels)}."
+            )
 
         if len(channels) < 2:
-            raise ValueError("Needs at least two channels for alignment.")
+            raise ValueError(
+                "Needs at least two channels for alignment; got "
+                f"{len(channels)}: {list(channels)}."
+            )
 
         if self.is_parametrized():
             return
@@ -1788,7 +1875,8 @@ class Sequence(Generic[DeviceType]):
             if qubits is None:
                 raise ValueError(
                     "'qubits' must be specified when the sequence is created "
-                    "with a MappableRegister."
+                    "with a MappableRegister; the register declares "
+                    f"{list(self._register.qubit_ids)}."
                 )
 
         elif qubits is not None:
@@ -2151,9 +2239,15 @@ class Sequence(Generic[DeviceType]):
         if isinstance(channel_obj, DMM):
             phase_ref = None
         elif len(ph_refs) != 1:
+            refs = {
+                q: float(self._basis_ref[basis][q].phase.last_phase)
+                for q in self._register.qubit_ids
+                if q in last.targets
+            }
             raise ValueError(
                 "Cannot do a multiple-target pulse on qubits with different "
-                "phase references for the same basis."
+                f"phase references for the same basis; got {refs} in basis "
+                f"{basis!r}."
             )
         else:
             phase_ref = ph_refs.pop()
@@ -2227,7 +2321,10 @@ class Sequence(Generic[DeviceType]):
             )
 
         if channel_obj.addressing != "Local":
-            raise ValueError("Can only choose target of 'Local' channels.")
+            raise ValueError(
+                "Can only choose target of 'Local' channels; channel "
+                f"{channel!r} has addressing {channel_obj.addressing!r}."
+            )
         elif (
             channel_obj.max_targets is not None
             and len(qubits_set) > channel_obj.max_targets
@@ -2245,9 +2342,15 @@ class Sequence(Generic[DeviceType]):
                 for q in qubit_ids_set
             }
             if len(phase_refs) != 1:
+                refs = {
+                    q: float(self._basis_ref[basis][q].phase.last_phase)
+                    for q in self._register.qubit_ids
+                    if q in qubit_ids_set
+                }
                 raise ValueError(
                     "Cannot target multiple qubits with different "
-                    "phase references for the same basis."
+                    f"phase references for the same basis; got {refs} in "
+                    f"basis {basis!r}."
                 )
             self._schedule.add_target(qubit_ids_set, channel)
 
@@ -2277,12 +2380,18 @@ class Sequence(Generic[DeviceType]):
                         for index in qubits
                     }
                 except IndexError:
-                    raise IndexError("Indices must exist for the register.")
+                    raise IndexError(
+                        "Indices must exist for the register; got "
+                        f"{list(qubits)} for a register of "
+                        f"{len(self._register.qubit_ids)} qubits."
+                    )
         ids = set(cast(Tuple[QubitId, ...], qubits))
         if not ids <= self._qids:
             raise ValueError(
                 "All given ids have to be qubit ids declared"
-                " in this sequence's register."
+                f" in this sequence's register; "
+                f"{[q for q in qubits if q not in self._qids]} not in "
+                f"{list(self._register.qubit_ids)}."
             )
         return ids
 
@@ -2311,7 +2420,8 @@ class Sequence(Generic[DeviceType]):
     ) -> None:
         if basis not in self._basis_ref:
             raise ValueError(
-                f"No declared channel targets the given 'basis' ('{basis}')."
+                f"No declared channel targets the given 'basis' ('{basis}'); "
+                f"declared bases are {list(self._basis_ref)}."
             )
 
         if not specific_targets:
@@ -2387,12 +2497,17 @@ class Sequence(Generic[DeviceType]):
         if isinstance(channel, Parametrized):
             raise NotImplementedError(
                 "Using parametrized objects or variables to refer to channels "
-                "is not supported."
+                f"is not supported; got {channel!r}."
             )
         if channel not in self.declared_channels:
-            raise ValueError("Use the name of a declared channel.")
+            raise ValueError(
+                f"Use the name of a declared channel; got {channel!r}, "
+                f"declared: {list(self.declared_channels)}."
+            )
         if block_eom_mode and self.is_in_eom_mode(channel):
-            raise RuntimeError("The chosen channel is in EOM mode.")
+            raise RuntimeError(
+                f"The chosen channel is in EOM mode; got {channel!r}."
+            )
         if (
             block_if_slm
             and channel == self._slm_mask_dmm
@@ -2400,9 +2515,16 @@ class Sequence(Generic[DeviceType]):
                 _DMMSchedule, self._schedule[self._slm_mask_dmm]
             )._waiting_for_first_pulse
         ):
+            global_channels = [
+                n
+                for n, ch_obj in self.declared_channels.items()
+                if ch_obj.addressing == "Global"
+                and not isinstance(ch_obj, DMM)
+            ]
             raise ValueError(
                 "You should add a Pulse to a Global Channel prior to"
-                " modulating the DMM used for the SLM Mask."
+                " modulating the DMM used for the SLM Mask; got channel"
+                f" {channel!r}, declared global channels: {global_channels}."
             )
 
     def _validate_and_adjust_pulse(
