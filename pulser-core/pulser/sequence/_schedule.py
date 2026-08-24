@@ -258,7 +258,10 @@ class _ChannelSchedule:
         self, key: Union[int, slice]
     ) -> Union[_TimeSlot, list[_TimeSlot]]:
         if key == -1 and not self.slots:
-            raise ValueError("The chosen channel has no target.")
+            raise ValueError(
+                "The chosen channel has no target; channel "
+                f"{self.channel_id!r} has no time slots yet."
+            )
         return self.slots[key]
 
     def __iter__(self) -> Iterator[_TimeSlot]:
@@ -290,7 +293,7 @@ class _DMMSchedule(_ChannelSchedule):
         if qubits is None:
             raise ValueError(
                 "'qubits' must be defined when extracting the samples of a"
-                " DMM channel."
+                f" DMM channel; got None for channel {self.channel_id!r}."
             )
         return DMMSamples(
             **init_fields, detuning_map=self.detuning_map, qubits=qubits
@@ -714,7 +717,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         if self.max_duration is not None and t > self.max_duration:
             msg = (
                 "The sequence's duration exceeded the maximum duration allowed"
-                f" by the device ({self.max_duration} ns)."
+                f" by the device ({self.max_duration} ns); got {t} ns."
             )
             if block_over_max_duration:
                 raise RuntimeError(msg)

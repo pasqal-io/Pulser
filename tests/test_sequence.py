@@ -89,7 +89,13 @@ def test_channel_declaration(reg, device):
     available_channels = set(seq.available_channels)
     assert seq.get_addressed_bases() == ()
     assert seq.get_addressed_states() == []
-    with pytest.raises(ValueError, match="Name starting by 'dmm_'"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Name starting by 'dmm_' are reserved for DMM channels; got "
+            "'dmm_1_2'."
+        ),
+    ):
         seq.declare_channel("dmm_1_2", "raman")
     seq.declare_channel("ch0", "rydberg_global")
     assert seq.get_addressed_bases() == ("ground-rydberg",)
@@ -97,11 +103,28 @@ def test_channel_declaration(reg, device):
     seq.declare_channel("ch1", "raman_local")
     assert seq.get_addressed_bases() == ("ground-rydberg", "digital")
     assert seq.get_addressed_states() == ["r", "g", "h"]
-    with pytest.raises(ValueError, match="No channel"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "No channel 'raman' in the device; the device's channels are "
+            "['rydberg_global', 'rydberg_local', 'raman_local']."
+        ),
+    ):
         seq.declare_channel("ch2", "raman")
-    with pytest.raises(ValueError, match="not available"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Channel 'rydberg_global' is not available; still available are "
+            "['rydberg_local', 'dmm_0', 'dmm_1']."
+        ),
+    ):
         seq.declare_channel("ch2", "rydberg_global")
-    with pytest.raises(ValueError, match="name is already in use"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "name is already in use; got 'ch0', already declared: "
+        ),
+    ):
         seq.declare_channel("ch0", "raman_local")
 
     chs = {"rydberg_global", "raman_local"}
@@ -124,7 +147,13 @@ def test_channel_declaration(reg, device):
         seq2._schedule[channel].channel_id
         for channel in seq2.declared_channels
     ) == set(channel_map.values())
-    with pytest.raises(ValueError, match="type 'Microwave' cannot work "):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "type 'Microwave' cannot work simultaneously with the declared "
+            "channels; got 'ch3' ('mw_global') with the declared "
+        ),
+    ):
         seq2.declare_channel("ch3", "mw_global")
 
     seq2 = Sequence(reg, MockDevice)
@@ -132,7 +161,11 @@ def test_channel_declaration(reg, device):
     assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
     with pytest.raises(
         ValueError,
-        match="cannot work simultaneously with the declared 'Microwave'",
+        match=re.escape(
+            "cannot work simultaneously with the declared 'Microwave' "
+            "channel; got 'ch3' ('rydberg_global') with the declared "
+            "{'ch0': 'mw_global'}."
+        ),
     ):
         seq2.declare_channel("ch3", "rydberg_global")
     assert seq2.get_addressed_bases() == ("XY",)
@@ -227,7 +260,11 @@ def test_slm_declaration(reg, device, det_map):
     seq.config_slm_mask(["q0", "q1", "q3", "q4"])
     assert seq.get_addressed_bases() == tuple()
     with pytest.raises(
-        ValueError, match="SLM mask can be configured only once."
+        ValueError,
+        match=re.escape(
+            "SLM mask can be configured only once; already configured with "
+            "targets "
+        ),
     ):
         seq.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_1")
     # no channel has been declared
@@ -293,7 +330,10 @@ def test_magnetic_field(reg):
     seq = Sequence(reg, MockDevice)
     with pytest.raises(
         AttributeError,
-        match="only defined when the sequence " "is in 'XY Mode'.",
+        match=re.escape(
+            "only defined when the sequence is in 'XY Mode'; this "
+            "sequence uses ()."
+        ),
     ):
         seq.magnetic_field
     seq.declare_channel("ch0", "mw_global")  # seq in XY mode
@@ -301,24 +341,45 @@ def test_magnetic_field(reg):
     assert np.all(seq.magnetic_field == np.array((0.0, 0.0, 30.0)))
     seq.set_magnetic_field(bx=1.0, by=-1.0, bz=0.5)
     assert np.all(seq.magnetic_field == np.array((1.0, -1.0, 0.5)))
-    with pytest.raises(ValueError, match="magnitude greater than 0"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("magnitude greater than 0; got (0.0, 0.0, 0.0)."),
+    ):
         seq.set_magnetic_field(bz=0.0)
     assert seq._empty_sequence
     seq.add(Pulse.ConstantPulse(100, 1, 1, 0), "ch0")
     assert not seq._empty_sequence
-    with pytest.raises(ValueError, match="can only be set on an empty seq"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "can only be set on an empty sequence; channels with contents "
+            "are {'ch0': 'mw_global'}."
+        ),
+    ):
         seq.set_magnetic_field(1.0, 0.0, 0.0)
 
     # Raises an error if a Global channel is declared (not in xy)
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "rydberg_global")
-    with pytest.raises(ValueError, match="can only be set in 'XY Mode'."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "can only be set in 'XY Mode'; declared channels are "
+            "{'ch0': 'rydberg_global'}."
+        ),
+    ):
         seq2.set_magnetic_field(1.0, 0.0, 0.0)
 
     # Same if a dmm channel was configured
     seq2 = Sequence(reg, MockDevice)
     seq2.config_detuning_map(det_map, "dmm_0")  # not in XY mode
-    with pytest.raises(ValueError, match="can only be set in 'XY Mode'."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "can only be set in 'XY Mode'; declared channels are "
+            "{'dmm_0': 'dmm_0'}."
+        ),
+    ):
         seq2.set_magnetic_field(1.0, 0.0, 0.0)
 
     # Works if a slm mask was configured
@@ -342,7 +403,13 @@ def test_magnetic_field(reg):
     # Sequence is marked as non-empty when parametrized too
     seq3.add(Pulse.ConstantPulse(100, var, 1, 0), "ch0")
     assert seq3.is_parametrized()
-    with pytest.raises(ValueError, match="can only be set on an empty seq"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "can only be set on an empty sequence; channels with contents "
+            "are {'ch0': 'mw_global'}."
+        ),
+    ):
         seq3.set_magnetic_field()
 
     seq3_str = seq3._serialize()
@@ -560,7 +627,10 @@ def test_ising_mode(
     assert not seq._in_ising and not seq._in_xy
     seq.declare_channel("ch0", "rydberg_global")
     assert seq._in_ising and not seq._in_xy
-    with pytest.raises(TypeError, match="_in_ising must be a bool."):
+    with pytest.raises(
+        TypeError,
+        match=re.escape("_in_ising must be a bool; got <class 'int'>: 1."),
+    ):
         seq._in_ising = 1
     with pytest.raises(ValueError, match="Cannot quit ising."):
         seq._in_ising = False
@@ -1571,13 +1641,24 @@ def test_target(reg, device):
     seq.declare_channel("ch0", "raman_local", initial_target="q1")
     seq.declare_channel("ch1", "rydberg_global")
 
-    with pytest.raises(ValueError, match="name of a declared channel"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "name of a declared channel; got 'ch2', declared: ['ch0', 'ch1']."
+        ),
+    ):
         seq.target("q0", "ch2")
     with pytest.raises(ValueError, match="ids have to be qubit ids"):
         seq.target(0, "ch0")
     with pytest.raises(ValueError, match="ids have to be qubit ids"):
         seq.target("0", "ch0")
-    with pytest.raises(ValueError, match="Can only choose target of 'Local'"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Can only choose target of 'Local' channels; channel 'ch1' has "
+            "addressing 'Global'."
+        ),
+    ):
         seq.target("q3", "ch1")
     with pytest.raises(ValueError, match="can target at most 1 qubits"):
         seq.target(["q1", "q5"], "ch0")
@@ -1629,9 +1710,21 @@ def test_target(reg, device):
 def test_delay(reg, device, at_rest):
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "raman_local")
-    with pytest.raises(ValueError, match="Use the name of a declared channel"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Use the name of a declared channel; got 'ch01', declared: "
+            "['ch0']."
+        ),
+    ):
         seq.delay(1e3, "ch01")
-    with pytest.raises(ValueError, match="channel has no target"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "channel has no target; channel 'raman_local' has no time slots "
+            "yet."
+        ),
+    ):
         seq.delay(100, "ch0")
     seq.target("q19", "ch0")
     seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch0")
@@ -1723,11 +1816,29 @@ def test_phase(reg, device, det_map, catch_phase_shift_warning):
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     seq.phase_shift(-1, "q0", "q1")
-    with pytest.raises(ValueError, match="id of a qubit declared"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "id of a qubit declared in this sequence's register; got 0, "
+            "declared: "
+        ),
+    ):
         seq.current_phase_ref(0, "digital")
-    with pytest.raises(ValueError, match="targets the given 'basis'"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "targets the given 'basis' ('ground-rydberg'); declared bases "
+            "are ['digital']."
+        ),
+    ):
         seq.current_phase_ref("q1", "ground-rydberg")
-    with pytest.raises(ValueError, match="No declared channel targets"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "No declared channel targets the given 'basis' ('hyperfine'); "
+            "declared bases are ['digital']."
+        ),
+    ):
         seq.phase_shift(1, "q3", basis="hyperfine")
     assert seq.current_phase_ref("q0", "digital") == 2 * np.pi - 1
 
@@ -1761,8 +1872,10 @@ def test_phase(reg, device, det_map, catch_phase_shift_warning):
     seq.phase_shift(1.0, "q0", basis="ground-rydberg")
     with pytest.raises(
         ValueError,
-        match="Cannot do a multiple-target pulse on qubits with different "
-        "phase references for the same basis.",
+        match=re.escape(
+            "Cannot do a multiple-target pulse on qubits with different "
+            "phase references for the same basis; got {'q0': 2.0, "
+        ),
     ):
         seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch1")
     # But it works on the DMM
@@ -1785,12 +1898,33 @@ def test_align(reg, device):
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     seq.declare_channel("ch1", "rydberg_global")
-    with pytest.raises(ValueError, match="names must correspond to declared"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "names must correspond to declared channels; ['ch2'] not in "
+            "['ch0', 'ch1']."
+        ),
+    ):
         seq.align("ch0", "ch1", "ch2")
-    with pytest.raises(ValueError, match="more than once"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "more than once; found repeated names ['ch0'] in "
+            "['ch0', 'ch1', 'ch0']."
+        ),
+    ):
         seq.align("ch0", "ch1", "ch0")
-    with pytest.raises(ValueError, match="at least two channels"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("at least two channels for alignment; got 0: []."),
+    ):
         seq.align()
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "at least two channels for alignment; got 1: ['ch1']."
+        ),
+    ):
         seq.align("ch1")
 
 
@@ -2090,14 +2224,21 @@ def test_estimate_added_delay(eom, custom_phase_jump_time):
     assert seq.estimate_added_delay(pulse_0, "ising") == delay - 100
     with pytest.warns(
         UserWarning,
-        match="The sequence's duration exceeded the maximum duration",
+        match=re.escape(
+            "The sequence's duration exceeded the maximum duration allowed by"
+            " the device (6000 ns); got "
+        ),
     ):
         seq.estimate_added_delay(
             pulser.Pulse.ConstantPulse(6000, 1, 0, np.pi), "ising"
         )
     var = seq.declare_variable("var", dtype=int)
     with pytest.raises(
-        ValueError, match="Can't compute the delay to add before a pulse"
+        ValueError,
+        match=re.escape(
+            "Can't compute the delay to add before a pulse if sequence or "
+            "pulse is parametrized; parametrized: ['pulse']."
+        ),
     ):
         seq.estimate_added_delay(Pulse.ConstantPulse(var, 1, 0, 0), "ising")
     # We shift the phase of just one qubit, which blocks addition
@@ -2105,7 +2246,10 @@ def test_estimate_added_delay(eom, custom_phase_jump_time):
     seq.phase_shift_index(1.0, 0, basis="ground-rydberg")
     with pytest.raises(
         ValueError,
-        match="Cannot do a multiple-target pulse on qubits with different",
+        match=re.escape(
+            "Cannot do a multiple-target pulse on qubits with different "
+            "phase references for the same basis; got {"
+        ),
     ):
         seq.estimate_added_delay(pulse_0, "ising")
 
@@ -2149,11 +2293,21 @@ def test_config_slm_mask(qubit_ids, device, det_map):
         seq_ = Sequence(reg, AnalogDevice)
         seq_.config_slm_mask(["q0" if is_str_qubit_id else 0])
 
-    with pytest.raises(TypeError, match="must be castable to set"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape("must be castable to set; got <class 'int'>: 0."),
+    ):
         seq.config_slm_mask(0)
-    with pytest.raises(TypeError, match="must be castable to set"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape("must be castable to set; got <class 'int'>: 0."),
+    ):
         seq.config_slm_mask((0))
-    with pytest.raises(ValueError, match="exist in the register"):
+    # a bare string is iterated character by character
+    with pytest.raises(
+        ValueError,
+        match=re.escape("exist in the register; ['q', '0'] not in "),
+    ):
         seq.config_slm_mask("q0")
     with pytest.raises(ValueError, match="exist in the register"):
         seq.config_slm_mask(["q3" if is_str_qubit_id else 3])
@@ -2182,7 +2336,12 @@ def test_config_slm_mask(qubit_ids, device, det_map):
     assert seq._schedule["dmm_0"].detuning_map.weights[0] == 1.0
     assert seq._schedule["dmm_0"].detuning_map.weights[2] == 1.0
 
-    with pytest.raises(ValueError, match="configured only once"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "configured only once; already configured with targets "
+        ),
+    ):
         seq.config_slm_mask(targets)
     mapp_reg = MappableRegister(
         RegisterLayout(trap_ids + [(0, 10), (0, 20), (0, -10)]), *qubit_ids
@@ -2200,6 +2359,16 @@ def test_slm_mask_in_xy(reg, patch_plt_show):
     targets = ["q0", "q2"]
     pulse1 = Pulse.ConstantPulse(100, 10, 0, 0)
     pulse2 = Pulse.ConstantPulse(200, 10, 0, 0)
+
+    # Targets must be qubits of the register
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "SLM mask targets must exist in the register; ['zz'] not in "
+            "['q0', 'q1', 'q2']."
+        ),
+    ):
+        Sequence(reg, MockDevice).config_slm_mask(["q0", "zz"])
 
     # Set mask when an XY pulse is already in the schedule
     seq_xy1 = Sequence(reg, MockDevice)
@@ -2360,7 +2529,10 @@ def test_draw_slm_mask_in_ising(
     if draw_qubit_det or draw_qubit_amp:
         with pytest.raises(
             NotImplementedError,
-            match="Can only draw qubit contents for channels in rydberg basis",
+            match=re.escape(
+                "Can only draw qubit contents for channels in rydberg "
+                "basis; got {'raman_glob': 'digital'}."
+            ),
         ):
             seq1.draw(
                 mode,
@@ -2392,6 +2564,17 @@ def test_slm_mask_in_ising(patch_plt_show, bottom_detunings):
         ),
     )
     seq2.config_slm_mask(targets)
+    # The SLM's DMM can't be modulated before a global pulse exists
+    seq2.declare_channel("ryd", "rydberg_global")
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "You should add a Pulse to a Global Channel prior to modulating"
+            " the DMM used for the SLM Mask; got channel 'dmm_0', declared"
+            " global channels: ['ryd']."
+        ),
+    ):
+        seq2.add_dmm_detuning(ConstantWaveform(100, -10), "dmm_0")
     seq2.declare_channel("ryd_glob", "rydberg_global")
     seq2.config_detuning_map(det_map, "dmm_0")  # configured as dmm_0_1
     with pytest.raises(
@@ -2648,7 +2831,14 @@ def test_mappable_register(det_map, patch_plt_show, with_dmm):
             seq.draw()
     else:
         seq.draw()
-    with pytest.raises(ValueError, match="'qubits' must be specified"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "'qubits' must be specified when the sequence is created with a "
+            "MappableRegister; the register declares ['q0', 'q1', 'q2', "
+            "'q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9']."
+        ),
+    ):
         seq.build()
 
     with pytest.raises(
@@ -2683,7 +2873,14 @@ def test_mappable_register(det_map, patch_plt_show, with_dmm):
         seq_.build(qubits={"q2": 20, "q0": 10, "q1": 0})
 
     # Also possible to build the default register
-    with pytest.raises(ValueError, match="'qubits' must be specified"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "'qubits' must be specified when the sequence is created with a "
+            "MappableRegister; the register declares ['q0', 'q1', 'q2', "
+            "'q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9']."
+        ),
+    ):
         seq.build()
 
 
@@ -2739,7 +2936,10 @@ def test_parametrized_index_functions(
     assert built_seq.current_phase_ref(expected_target, "digital") == phi
 
     with pytest.raises(
-        IndexError, match="Indices must exist for the register"
+        IndexError,
+        match=re.escape(
+            "Indices must exist for the register; got [20] for a register of "
+        ),
     ):
         seq.build(**build_params, index=20)
 
@@ -2779,11 +2979,17 @@ def test_non_parametrized_non_mappable_register_index_functions(
     seq.declare_channel("ch1", "raman_local")
     phi = np.pi / 4
     with pytest.raises(
-        IndexError, match="Indices must exist for the register"
+        IndexError,
+        match=re.escape(
+            "Indices must exist for the register; got [20] for a register of "
+        ),
     ):
         seq.target_index(20, channel="ch0")
     with pytest.raises(
-        IndexError, match="Indices must exist for the register"
+        IndexError,
+        match=re.escape(
+            "Indices must exist for the register; got [20] for a register of "
+        ),
     ):
         seq.phase_shift_index(phi, 20)
     seq.target_index(index, channel="ch0")
@@ -3144,12 +3350,21 @@ def test_max_duration(reg, mod_device):
     seq = Sequence(reg, dev_)
     seq.declare_channel("ch0", "rydberg_global")
     seq.delay(100, "ch0")
-    catch_statement = pytest.raises(
-        RuntimeError, match="duration exceeded the maximum duration allowed"
-    )
-    with catch_statement:
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape(
+            "duration exceeded the maximum duration allowed by the device "
+            "(100 ns); got 116 ns."
+        ),
+    ):
         seq.delay(16, "ch0")
-    with catch_statement:
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape(
+            "duration exceeded the maximum duration allowed by the device "
+            "(100 ns); got 200 ns."
+        ),
+    ):
         seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch0")
 
 
@@ -3157,7 +3372,13 @@ def test_add_to_dmm_fails(reg, device, det_map):
     seq = Sequence(reg, device)
     seq.config_detuning_map(det_map, "dmm_0")
     pulse = Pulse.ConstantPulse(100, 0, -1, 0)
-    with pytest.raises(ValueError, match="can't be used on a DMM"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "can't be used on a DMM channel. Use `Sequence.add_dmm_detuning()`"
+            " instead; got channel 'dmm_0'."
+        ),
+    ):
         seq.add(pulse, "dmm_0")
 
     seq.declare_channel("ryd", "rydberg_global")
