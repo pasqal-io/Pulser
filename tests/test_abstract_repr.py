@@ -444,6 +444,12 @@ class TestDevice:
         device = Device.from_abstract_repr(device.to_abstract_repr())
         deserialized_layout = next(iter(device.pre_calibrated_layouts))
         assert type(deserialized_layout) is type(layout)
+        assert deserialized_layout == layout
+
+        register = layout.define_register(0)
+        register = Register.from_abstract_repr(register.to_abstract_repr())
+        assert type(register.layout) is type(layout)
+        assert register.layout == layout
 
     def test_interaction_coeff_xy_serialization(self, abstract_device):
         # The abstract repr always carries 'interaction_coeff_xy' (schema
