@@ -47,6 +47,7 @@ from pulser.parametrized import ParamObj, Variable
 from pulser.pulse import Pulse
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
+from pulser.register.special_layouts import _parse_special_layout_slug
 from pulser.register.weight_maps import DetuningMap
 from pulser.waveforms import (
     BlackmanWaveform,
@@ -389,13 +390,18 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
 
 def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
     try:
-        return RegisterLayout(
+        layout = RegisterLayout(
             layout_obj["coordinates"], slug=layout_obj.get("slug")
         )
     except ValueError as e:
         raise AbstractReprError(
             "Register layout deserialization failed."
         ) from e
+
+    special_layout = (
+        _parse_special_layout_slug(layout.slug) if layout.slug else None
+    )
+    return special_layout if special_layout == layout else layout
 
 
 def _deserialize_register(

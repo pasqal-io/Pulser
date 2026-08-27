@@ -63,7 +63,11 @@ from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
 from pulser.parametrized.variable import Variable, VariableItem
 from pulser.register.register_layout import RegisterLayout
-from pulser.register.special_layouts import TriangularLatticeLayout
+from pulser.register.special_layouts import (
+    RectangularLatticeLayout,
+    SquareLatticeLayout,
+    TriangularLatticeLayout,
+)
 from pulser.sequence import (
     store_extra_metadata,
     store_package_version_metadata,
@@ -151,7 +155,21 @@ def test_abstract_repr_encoder_torch():
     [
         RegisterLayout([[0, 0], [1, 1]]),
         TriangularLatticeLayout(10, 10),
+        SquareLatticeLayout(3, 4, 2.5),
+        RectangularLatticeLayout(3, 4, 2.5, 5),
         RegisterLayout([[10, 0], [1, 10]], slug="foo"),
+        RegisterLayout(
+            SquareLatticeLayout(2, 2, 1).coords,
+            slug="SquareLatticeLayout(2x2, 1.0)",
+        ),
+        RegisterLayout(
+            [[0, 0], [1, 1]],
+            slug="TriangularLatticeLayout(2, 1.0µm)",
+        ),
+        RegisterLayout(
+            [[0, 0], [0, 1], [1, 0], [1, 1]],
+            slug="SquareLatticeLayout(2x2, 0.0µm)",
+        ),
         RegisterLayout([[0.0, 1.0, 2.0], [-0.4, 1.6, 35.0]]),
     ],
 )
@@ -162,6 +180,7 @@ def test_layout(layout: RegisterLayout):
 
     re_layout = RegisterLayout.from_abstract_repr(ser_layout_str)
     assert layout == re_layout
+    assert type(re_layout) is type(layout)
 
     with pytest.raises(TypeError, match="must be given as a string"):
         RegisterLayout.from_abstract_repr(ser_layout_obj)
@@ -411,6 +430,26 @@ class TestDevice:
             assert json.loads(device.to_abstract_repr()) == abstract_device
 
         _roundtrip(abstract_device)
+
+    @pytest.mark.parametrize(
+        "layout",
+        [
+            TriangularLatticeLayout(61, 5),
+            SquareLatticeLayout(3, 4, 5),
+            RectangularLatticeLayout(3, 4, 5, 6),
+        ],
+    )
+    def test_special_layout_roundtrip(self, layout):
+        device = replace(AnalogDevice, pre_calibrated_layouts=(layout,))
+        device = Device.from_abstract_repr(device.to_abstract_repr())
+        deserialized_layout = next(iter(device.pre_calibrated_layouts))
+        assert type(deserialized_layout) is type(layout)
+        assert deserialized_layout == layout
+
+        register = layout.define_register(0)
+        register = Register.from_abstract_repr(register.to_abstract_repr())
+        assert type(register.layout) is type(layout)
+        assert register.layout == layout
 
     def test_interaction_coeff_xy_serialization(self, abstract_device):
         # The abstract repr always carries 'interaction_coeff_xy' (schema
@@ -1004,7 +1043,6 @@ class TestSerialization:
         assert abstract["measurement"] == "digital"
 
     def test_exceptions(self, sequence):
-
         with pytest.raises(
             ValueError, match="No signature found for 'FakeWaveform'"
         ):
