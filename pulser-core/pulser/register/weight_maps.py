@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import typing
 import warnings
 from dataclasses import dataclass
@@ -35,7 +36,10 @@ if TYPE_CHECKING:
 
 from scipy.spatial.distance import cdist
 
+import pulser.json.abstract_repr as pulser_abstract_repr
 import pulser.math as pm
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 
 WEIGHT_PRECISION = 6
 
@@ -213,6 +217,38 @@ class WeightMap(Traps, RegDrawer):
         if self.slug is not None:
             d["slug"] = self.slug
         return d
+
+    def to_abstract_repr(self) -> str:
+        """Serialize the weight map into an abstract JSON object."""
+        abstr_str = json.dumps(self, cls=AbstractReprEncoder)
+        validate_abstract_repr(abstr_str, "weight-map")
+        return abstr_str
+
+    @classmethod
+    def from_abstract_repr(
+        cls: type[WeightMapType], obj_str: str
+    ) -> WeightMapType:
+        """Deserialize a weight map from an abstract JSON object.
+
+        Args:
+            obj_str: The JSON string representing the weight map encoded in
+                the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized weight map must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+        detuning_map = (
+            pulser_abstract_repr.deserializer.deserialize_abstract_weight_map(
+                obj_str
+            )
+        )
+        return cls(
+            detuning_map.trap_coordinates,
+            detuning_map.weights,
+            detuning_map.slug,
+        )
 
 
 @dataclass(init=False, repr=False, eq=False, frozen=True)
