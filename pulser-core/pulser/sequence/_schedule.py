@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Special containers to store the schedule of operations in the Sequence."""
+
 from __future__ import annotations
 
 import warnings
@@ -190,19 +191,26 @@ class _ChannelSchedule:
                 # The phase of detuned delays is not considered
                 continue
 
-            ph_jump_t = self.channel_obj.phase_jump_time
             for last_pulse_ind in range(ind - 1, -1, -1):  # From ind-1 to 0
                 last_pulse_slot = channel_slots[last_pulse_ind]
                 # Skips over detuned delay pulses
+                last_pulse = cast(Pulse, last_pulse_slot.type)
                 if not (
                     ignore_detuned_delay_phase
-                    and self.is_detuned_delay(
-                        cast(Pulse, last_pulse_slot.type)
-                    )
+                    and self.is_detuned_delay(last_pulse)
                 ):
-                    # Accounts for when pulse is added with 'no-delay'
+                    last_pulse_tf_with_fall_time = (
+                        last_pulse_slot.tf
+                        + last_pulse.fall_time(
+                            self.channel_obj,
+                            in_eom_mode=self.in_eom_mode(
+                                time_slot=last_pulse_slot
+                            ),
+                        )
+                    )
+                    # 'min()' accounts for when pulse is added with 'no-delay'
                     # i.e. there is no phase_jump_time in between a phase jump
-                    t_start = max(s.ti - ph_jump_t, last_pulse_slot.tf)
+                    t_start = min(s.ti, last_pulse_tf_with_fall_time)
                     break
             else:
                 t_start = 0
