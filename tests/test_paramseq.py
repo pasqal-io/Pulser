@@ -152,7 +152,13 @@ def test_stored_calls():
     assert sb._calls[-1].name == "declare_channel"
     with pytest.raises(ValueError, match="'Local' channels"):
         sb.target(0, "ch2")
-    with pytest.raises(ValueError, match="target at most 1 qubits"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "This channel can target at most 1 qubit at a time; got 5 "
+            "targets: [Variable(name='q_var', dtype=<class 'int'>, size=5)]."
+        ),
+    ):
         sb.target_index(q_var, "ch1")
 
     sb2 = Sequence(reg, MockDevice)
