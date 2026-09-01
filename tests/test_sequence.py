@@ -72,7 +72,7 @@ def device():
 
 
 def test_init(reg, device):
-    with pytest.raises(TypeError, match="must be of type 'BaseDevice'"):
+    with pytest.raises(TypeError, match="must be an instance of 'BaseDevice'"):
         Sequence(reg, Device)
 
     seq = Sequence(reg, device)
@@ -202,7 +202,12 @@ def test_dmm_declaration(reg, device, det_map, first_dmm_id):
         r"available: \['dmm_0', 'dmm_1'\]\.",
     ):
         seq.config_detuning_map(det_map, "dmm_2")
-    with pytest.raises(ValueError, match="DMM dmm_0 is not available"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "DMM dmm_0 is not available; still available DMM channels are []."
+        ),
+    ):
         seq.config_detuning_map(det_map, "dmm_0")
     with pytest.raises(ValueError, match="No DMM channel is still available"):
         seq.config_detuning_map(det_map)
@@ -1660,7 +1665,13 @@ def test_target(reg, device):
         ),
     ):
         seq.target("q3", "ch1")
-    with pytest.raises(ValueError, match="can target at most 1 qubits"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "This channel can target at most 1 qubit at a time; got 2 "
+            "targets: ['q1', 'q5']."
+        ),
+    ):
         seq.target(["q1", "q5"], "ch0")
     with pytest.raises(ValueError, match="Need at least one qubit to target"):
         seq.target([], "ch0")
@@ -2329,7 +2340,13 @@ def test_config_slm_mask(qubit_ids, device, det_map):
     else:
         assert seq._slm_mask_targets == {0, 2}
     assert not seq._schedule
-    with pytest.raises(ValueError, match="DMM dmm_0 is not available."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "DMM dmm_0 is not available; still available DMM channels are "
+            "['dmm_1']."
+        ),
+    ):
         seq.config_detuning_map(det_map, "dmm_0")
     seq.declare_channel("rydberg_global", "rydberg_global")
     assert set(seq._schedule.keys()) == {"dmm_0", "rydberg_global"}

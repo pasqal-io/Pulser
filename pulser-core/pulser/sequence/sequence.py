@@ -121,7 +121,8 @@ class Sequence(Generic[DeviceType]):
         """Initializes a new pulse sequence."""
         if not isinstance(device, BaseDevice):
             raise TypeError(
-                f"'device' must be of type 'BaseDevice', not {type(device)}."
+                "'device' must be an instance of 'BaseDevice', not "
+                f"{type(device)}."
             )
 
         # Checks if register is compatible with the device
@@ -709,7 +710,15 @@ class Sequence(Generic[DeviceType]):
                 "with the declared 'Microwave' channel."
             )
         if dmm_id not in self.available_channels:
-            raise ValueError(f"DMM {dmm_id} is not available.")
+            still_available = [
+                ch_id
+                for ch_id, ch_obj in self.available_channels.items()
+                if isinstance(ch_obj, DMM)
+            ]
+            raise ValueError(
+                f"DMM {dmm_id} is not available; still available DMM "
+                f"channels are {still_available}."
+            )
 
         # Configures the DMM implementing an SLM mask if configured before
         self._in_ising = True
@@ -2329,9 +2338,19 @@ class Sequence(Generic[DeviceType]):
             channel_obj.max_targets is not None
             and len(qubits_set) > channel_obj.max_targets
         ):
+            given_targets = (
+                [qubits]
+                if isinstance(qubits, str)
+                or not isinstance(qubits, Collection)
+                else list(qubits)
+            )
+            limit = channel_obj.max_targets
             raise ValueError(
-                f"This channel can target at most {channel_obj.max_targets} "
-                "qubits at a time."
+                "This channel can target at most "
+                f"{limit} {'qubit' if limit == 1 else 'qubits'} "
+                f"at a time; got {len(qubits_set)} "
+                f"{'target' if len(qubits_set) == 1 else 'targets'}: "
+                f"{given_targets}."
             )
         qubit_ids_set = self._check_qubits_give_ids(*qubits_set, _index=_index)
 
