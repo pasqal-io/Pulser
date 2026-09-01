@@ -116,8 +116,8 @@ def test_register_definition(layout, layout3d):
     with pytest.raises(
         ValueError,
         match=re.escape(
-            "must have the same size as the number of provided 'trap_ids' "
-            "(2); got qubit ids (3): ['a', 'b', 'c']."
+            "must have the same size as the number of provided 'trap_ids'; "
+            "got 2 'trap_ids' vs. 3 'qubit_ids'."
         ),
     ):
         layout.define_register(0, 1, qubit_ids=["a", "b", "c"])
@@ -304,7 +304,7 @@ def test_mappable_register_creation():
         ValueError,
         match=re.escape(
             "greater than the number of traps in this layout (50); got "
-            "qubit ids (51): ['q0', 'q1',"
+            "51 qubit ids: ['q0', 'q1',"
         ),
     ):
         tri.make_mappable_register(51)

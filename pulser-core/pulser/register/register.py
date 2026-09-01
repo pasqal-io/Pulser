@@ -293,7 +293,7 @@ class Register(BaseRegister, RegDrawer):
         # Check device
         if not isinstance(device, pulser.devices._device_datacls.BaseDevice):
             raise TypeError(
-                "'device' must be of type 'BaseDevice', not "
+                "'device' must be an instance of 'BaseDevice', not "
                 f"{type(device)}: {device}."
             )
 
@@ -361,7 +361,8 @@ class Register(BaseRegister, RegDrawer):
         """
         if not isinstance(device, pulser.devices.Device):
             raise TypeError(
-                f"'device' must be of type Device, not {type(device)}."
+                "'device' must be an instance of 'Device', not "
+                f"{type(device)}."
             )
         if self._coords_arr.requires_grad:
             raise NotImplementedError(

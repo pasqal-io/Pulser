@@ -43,7 +43,7 @@ class MappableRegister:
             raise ValueError(
                 "The number of required qubits is greater than the number of "
                 f"traps in this layout ({self._layout.number_of_traps}); got "
-                f"qubit ids ({len(qubit_ids)}): {list(qubit_ids)}."
+                f"{len(qubit_ids)} qubit ids: {list(qubit_ids)}."
             )
         self._qubit_ids = qubit_ids
 

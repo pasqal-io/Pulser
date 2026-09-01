@@ -206,8 +206,7 @@ class TestDetuningMap:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "Number of traps (2) and weights (1) don't match; got "
-                "weights [0]."
+                "Number of traps (2) and weights (1) don't match."
             ),
         ):
             DetuningMap([(0, 0), (1, 0)], [0])
@@ -241,8 +240,7 @@ class TestDetuningMap:
             with pytest.raises(
                 ValueError,
                 match=re.escape(
-                    "Number of traps (3) and weights (2) don't match; got "
-                    "weights [0.5, 1.5]."
+                    "Number of traps (3) and weights (2) don't match."
                 ),
             ):
                 DetuningMap(

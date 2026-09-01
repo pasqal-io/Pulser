@@ -269,7 +269,7 @@ def test_max_connectivity():
     with pytest.raises(
         TypeError,
         match=re.escape(
-            "'device' must be of type 'BaseDevice', not "
+            "'device' must be an instance of 'BaseDevice', not "
             "<class 'NoneType'>: None."
         ),
     ):
@@ -802,7 +802,7 @@ def test_automatic_layout(optimal_filling, reg, max_atom_num):
             == trap_num
         )
 
-    with pytest.raises(TypeError, match="must be of type Device"):
+    with pytest.raises(TypeError, match="must be an instance of 'Device'"):
         reg.with_automatic_layout(MockDevice)
 
     # Minimum number of traps is too high
