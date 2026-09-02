@@ -42,7 +42,8 @@ class MappableRegister:
         if len(qubit_ids) > self._layout.number_of_traps:
             raise ValueError(
                 "The number of required qubits is greater than the number of "
-                f"traps in this layout ({self._layout.number_of_traps})."
+                f"traps in this layout ({self._layout.number_of_traps}); got "
+                f"{len(qubit_ids)} qubit ids: {list(qubit_ids)}."
             )
         self._qubit_ids = qubit_ids
 
@@ -70,14 +71,17 @@ class MappableRegister:
         """
         chosen_ids = tuple(qubits.keys())
         if not set(chosen_ids) <= set(self._qubit_ids):
+            unknown = [id_ for id_ in chosen_ids if id_ not in self._qubit_ids]
             raise ValueError(
-                "All qubits must be labeled with pre-declared qubit IDs."
+                "All qubits must be labeled with pre-declared qubit IDs; "
+                f"{unknown} not in {list(self._qubit_ids)}."
             )
         elif set(chosen_ids) != set(self.qubit_ids[: len(chosen_ids)]):
             raise ValueError(
                 f"To declare {len(qubits.keys())} qubits, 'qubits' should "
                 f"contain the first {len(qubits.keys())} elements of the "
-                "'qubit_ids'."
+                f"'qubit_ids'; got {list(chosen_ids)}, expected "
+                f"{list(self.qubit_ids[: len(chosen_ids)])}."
             )
         register_ordered_qubits = {
             id: qubits[id] for id in self._qubit_ids if id in chosen_ids
@@ -118,8 +122,10 @@ class MappableRegister:
             given mapping.
         """
         if not set(id_list) <= set(self._qubit_ids):
+            unknown = [id_ for id_ in id_list if id_ not in self._qubit_ids]
             raise ValueError(
-                "The IDs list must be selected among pre-declared qubit IDs."
+                "The IDs list must be selected among pre-declared qubit IDs; "
+                f"{unknown} not in {list(self._qubit_ids)}."
             )
         return [self.qubit_ids.index(id) for id in id_list]
 
