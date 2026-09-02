@@ -355,7 +355,7 @@ class Sequence(Generic[DeviceType]):
         if not self._in_xy:
             raise AttributeError(
                 "The magnetic field is only defined when the "
-                "sequence is in 'XY Mode'; this sequence uses "
+                "sequence is in 'XY Mode'; this sequence addresses "
                 f"{self.get_addressed_bases()}."
             )
         return np.array(self._mag_field)
@@ -2542,8 +2542,9 @@ class Sequence(Generic[DeviceType]):
             ]
             raise ValueError(
                 "You should add a Pulse to a Global Channel prior to"
-                " modulating the DMM used for the SLM Mask; got channel"
-                f" {channel!r}, declared global channels: {global_channels}."
+                " modulating the DMM used for the SLM Mask; before adding a "
+                f"pulse to {channel!r}, make sure at least one of "
+                f"{global_channels} already has a pulse."
             )
 
     def _validate_and_adjust_pulse(
