@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import dataclasses
+import re
 from unittest.mock import patch
 
 import numpy as np
@@ -32,19 +33,42 @@ def test_creation():
     coords = [(0, 0), (1, 0)]
     ids = ("q0", "q1")
     qubits = dict(zip(ids, coords))
-    with pytest.raises(TypeError):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "The qubits have to be stored in a dictionary matching qubit ids "
+            "to position coordinates; got <class 'list'>: [(0, 0), (1, 0)]."
+        ),
+    ):
         Register(coords)
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "The qubits have to be stored in a dictionary matching qubit ids "
+            "to position coordinates; got <class 'tuple'>: ('q0', 'q1')."
+        ),
+    ):
         Register(ids)
 
-    with pytest.raises(ValueError, match="vectors of size 2"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("vectors of size 2; got 4D coordinates."),
+    ):
         Register.from_coordinates([(0, 1, 0, 1)], prefix="q")
 
     with pytest.raises(
-        NotImplementedError, match="a prefix and a set of labels"
+        NotImplementedError,
+        match=re.escape(
+            "a prefix and a set of labels at the same time; got prefix='a' "
+            "and labels=['a', 'b']."
+        ),
     ):
         Register.from_coordinates(coords, prefix="a", labels=["a", "b"])
 
-    with pytest.raises(ValueError, match="vectors of size 3"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("vectors of size 3; got 2D coordinates."),
+    ):
         Register3D.from_coordinates([((1, 0),), ((-1, 0),)], prefix="q")
 
     reg1 = Register(qubits)
@@ -56,7 +80,13 @@ def test_creation():
     reg2b = Register.from_coordinates(coords, center=False, labels=["a", "b"])
     assert reg2b._ids == ("a", "b")
 
-    with pytest.raises(ValueError, match="Label length"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Label length (3) does not match number of coordinates (2); "
+            "got coords [(0, 0), (1, 0)] and labels ['a', 'b', 'c']."
+        ),
+    ):
         Register.from_coordinates(coords, center=False, labels=["a", "b", "c"])
 
     reg3 = Register.from_coordinates(
@@ -124,12 +154,36 @@ def test_rectangular_lattice():
         Register.rectangular_lattice(2, 0, 3, 4)
 
     # Check row spacing
-    with pytest.raises(ValueError, match="Spacing"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Spacing between atoms must be greater than 0; got row spacing "
+            "0.0 and column spacing 5."
+        ),
+    ):
         Register.rectangular_lattice(2, 2, 0.0, 5)
 
     # Check col spacing
-    with pytest.raises(ValueError, match="Spacing"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Spacing between atoms must be greater than 0; got row spacing "
+            "3 and column spacing 0.0."
+        ),
+    ):
         Register.rectangular_lattice(2, 2, 3, 0.0)
+
+    # `square` and `rectangle` forward a single `spacing`, so the message
+    # must not name parameters those signatures don't have
+    with pytest.raises(ValueError, match="Spacing") as exc_info:
+        Register.square(2, spacing=0)
+    assert "row_spacing" not in str(exc_info.value)
+    assert "col_spacing" not in str(exc_info.value)
+
+    with pytest.raises(ValueError, match="Spacing") as exc_info:
+        Register.rectangle(2, 2, spacing=0)
+    assert "row_spacing" not in str(exc_info.value)
+    assert "col_spacing" not in str(exc_info.value)
 
 
 def test_rectangle():
@@ -212,7 +266,13 @@ def test_max_connectivity():
     crest_y = np.sqrt(3) / 2.0
 
     # Check device type
-    with pytest.raises(TypeError):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "'device' must be an instance of 'BaseDevice', not "
+            "<class 'NoneType'>: None."
+        ),
+    ):
         reg = Register.max_connectivity(2, None)
 
     # Check min number of atoms
@@ -466,8 +526,10 @@ def test_find_indices():
 
     with pytest.raises(
         ValueError,
-        match="IDs list must be selected among the IDs of the register's "
-        "qubits",
+        match=re.escape(
+            "IDs list must be selected among the IDs of the register's "
+            "qubits; ['e', 'd'] not in ['a', 'c', 'b']."
+        ),
     ):
         reg.find_indices(["c", "e", "d"])
 
@@ -740,7 +802,7 @@ def test_automatic_layout(optimal_filling, reg, max_atom_num):
             == trap_num
         )
 
-    with pytest.raises(TypeError, match="must be of type Device"):
+    with pytest.raises(TypeError, match="must be an instance of 'Device'"):
         reg.with_automatic_layout(MockDevice)
 
     # Minimum number of traps is too high

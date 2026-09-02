@@ -53,7 +53,8 @@ class Register3D(BaseRegister, RegDrawer):
             or self.dimensionality != 3
         ):
             raise ValueError(
-                "All coordinates must be specified as vectors of size 3."
+                "All coordinates must be specified as vectors of size 3; "
+                f"got {self.dimensionality}D coordinates."
             )
 
     @classmethod
