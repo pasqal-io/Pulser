@@ -18,7 +18,7 @@ The version number is centralized in the `VERSION.txt` file and is shared betwee
 
 A scheduled release is the result of a series of features that were added to the `develop` branch over time. The release process starts out with the creation of a release branch, which should be branched out from `develop` to contain all the desired features and be named `release/v{x}.{y}.{z}`, where `x, y, z` are the MAJOR, MINOR and PATCH of the version to be released (though usually a scheduled release will have PATCH=0).
 
-In the release branch, no other features can be added. Changes to the documentation and bug fixes are allowed, but should only be done when the development in the `develop` branch needs to continue while the release is being prepared; otherwise, do all the changes in `develop` before checking out the release branch. Note that the release branch will ultimately be *merged* to the `master` branch *without being squashed*, so keep the ammount of commits small and document them well to preserve the quality of the history.
+In the release branch, no other features can be added. Changes to the documentation and bug fixes are allowed, but should only be done when the development in the `develop` branch needs to continue while the release is being prepared; otherwise, do all the changes in `develop` before checking out the release branch. Note that the release branch will ultimately be *merged* to the `master` branch *without being squashed*, so keep the amount of commits small and document them well to preserve the quality of the history.
 
 Crucially, the release branch must feature a commit changing the development version in `VERSION.txt` to the desired version of the release.
 
