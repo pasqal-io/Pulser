@@ -337,7 +337,7 @@ def test_magnetic_field(reg):
         AttributeError,
         match=re.escape(
             "only defined when the sequence is in 'XY Mode'; this "
-            "sequence uses ()."
+            "sequence addresses ()."
         ),
     ):
         seq.magnetic_field
@@ -1731,10 +1731,7 @@ def test_delay(reg, device, at_rest):
         seq.delay(1e3, "ch01")
     with pytest.raises(
         ValueError,
-        match=re.escape(
-            "channel has no target; channel 'raman_local' has no time slots "
-            "yet."
-        ),
+        match=re.escape("The chosen channel ('raman_local') has no target."),
     ):
         seq.delay(100, "ch0")
     seq.target("q19", "ch0")
@@ -2547,8 +2544,8 @@ def test_draw_slm_mask_in_ising(
         with pytest.raises(
             NotImplementedError,
             match=re.escape(
-                "Can only draw qubit contents for channels in rydberg "
-                "basis; got {'raman_glob': 'digital'}."
+                "Can only draw qubit contents for channels in the "
+                "'ground-rydberg' basis; got {'raman_glob': 'digital'}."
             ),
         ):
             seq1.draw(
@@ -2587,8 +2584,9 @@ def test_slm_mask_in_ising(patch_plt_show, bottom_detunings):
         ValueError,
         match=re.escape(
             "You should add a Pulse to a Global Channel prior to modulating"
-            " the DMM used for the SLM Mask; got channel 'dmm_0', declared"
-            " global channels: ['ryd']."
+            " the DMM used for the SLM Mask; before adding a pulse to"
+            " 'dmm_0', make sure at least one of ['ryd'] already has a"
+            " pulse."
         ),
     ):
         seq2.add_dmm_detuning(ConstantWaveform(100, -10), "dmm_0")

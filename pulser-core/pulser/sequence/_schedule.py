@@ -259,8 +259,7 @@ class _ChannelSchedule:
     ) -> Union[_TimeSlot, list[_TimeSlot]]:
         if key == -1 and not self.slots:
             raise ValueError(
-                "The chosen channel has no target; channel "
-                f"{self.channel_id!r} has no time slots yet."
+                f"The chosen channel ({self.channel_id!r}) has no target."
             )
         return self.slots[key]
 
