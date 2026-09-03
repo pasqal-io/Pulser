@@ -45,13 +45,21 @@ class Variable(Parametrized, OpSupport):
 
     def __post_init__(self) -> None:
         if not isinstance(self.name, str):
-            raise TypeError("Variable's 'name' has to be of type 'str'.")
+            raise TypeError(
+                "Variable's 'name' has to be of type 'str', not "
+                f"{type(self.name)}."
+            )
         if self.dtype not in [int, float]:
             raise TypeError(f"Invalid data type '{self.dtype}' for Variable.")
         if not isinstance(self.size, int):
-            raise TypeError("Given variable 'size' is not of type 'int'.")
+            raise TypeError(
+                "Variable's 'size' has to be of type 'int', not "
+                f"{type(self.size)}."
+            )
         elif self.size < 1:
-            raise ValueError("Variables must be of size 1 or larger.")
+            raise ValueError(
+                f"Variables must be of size 1 or larger; got {self.size}."
+            )
 
         self._count: int
         object.__setattr__(self, "_count", -1)  # Counts the updates
