@@ -56,7 +56,7 @@ class DimensionTooHighError(DimensionError):
     def __str__(self) -> str:
         return (
             "The device supports register layouts of at most "
-            f"{self.device.dimensions} dimensions."
+            f"{self.device.dimensions} dimensions, not {self.invalid}."
         )
 
 
@@ -67,7 +67,7 @@ class DimensionPositionsTooHighError(DimensionError):
     def __str__(self) -> str:
         return (
             f"All qubit positions must be at most {self.device.dimensions}D "
-            "vectors"
+            f"vectors, not {self.invalid}D."
         )
 
 
@@ -240,7 +240,10 @@ class RydbergLevelError(InvalidSequenceError):
     max: int
 
     def __str__(self) -> str:
-        return f"Rydberg level should be between {self.min} and {self.max}."
+        return (
+            f"Rydberg level should be between {self.min} and {self.max}, "
+            f"not {self.invalid}."
+        )
 
 
 @dataclass
