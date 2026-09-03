@@ -136,5 +136,6 @@ def validate_mod_bandwidth(mod_bandwidth: float) -> None:
         max_bw := calculate_mod_bandwidth_from_amplitude_rise_time(1)
     ):
         raise NotImplementedError(
-            f"'mod_bandwidth' must be lower than {max_bw:.0f} MHz"
+            f"'mod_bandwidth' must be lower than {max_bw:.0f} MHz, not "
+            f"{mod_bandwidth}."
         )
