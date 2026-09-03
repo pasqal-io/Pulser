@@ -56,13 +56,26 @@ def bwf(t, a):
 
 
 def test_var(a, b):
-    with pytest.raises(TypeError, match="'name' has to be of type 'str'"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "Variable's 'name' has to be of type 'str', not <class 'int'>."
+        ),
+    ):
         Variable(1, dtype=int)
     with pytest.raises(TypeError, match="Invalid data type"):
         Variable("x", dtype=list, size=4)
-    with pytest.raises(TypeError, match="'size' is not of type 'int'"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "Variable's 'size' has to be of type 'int', not <class 'tuple'>."
+        ),
+    ):
         Variable("x", dtype=float, size=(2, 2))
-    with pytest.raises(ValueError, match="size 1 or larger"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Variables must be of size 1 or larger; got 0."),
+    ):
         Variable("x", dtype=int, size=0)
     x = Variable("x", dtype=float)
     assert x.value is None
