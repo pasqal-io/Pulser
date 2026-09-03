@@ -161,7 +161,10 @@ class DMM(Channel):
         )
         # Check that detuning is negative
         if np.any(round_detuning > 0):
-            raise ValueError("The detuning in a DMM must not be positive.")
+            raise ValueError(
+                "The detuning in a DMM must not be positive; got a maximum "
+                f"of {round_detuning.max()}."
+            )
         # Check that detuning on each atom is above bottom_detuning
         min_round_detuning = np.min(round_detuning)
         max_weight = np.max(detuning_map.weights)

@@ -437,7 +437,11 @@ class TestDMM:
         # Detuning applied to DMM must be negative
         pos_det_pulse = Pulse.ConstantPulse(100, 0, 1e-3, 0)
         with pytest.raises(
-            ValueError, match="The detuning in a DMM must not be positive."
+            ValueError,
+            match=re.escape(
+                "The detuning in a DMM must not be positive; got a maximum"
+                " of 0.001."
+            ),
         ):
             physical_dmm.validate_pulse(pos_det_pulse)
 
