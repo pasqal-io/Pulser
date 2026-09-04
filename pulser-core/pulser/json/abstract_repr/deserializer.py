@@ -581,11 +581,11 @@ def _deserialize_det_map(ser_det_map: dict) -> DetuningMap:
     )
 
 
-def deserialize_abstract_weight_map(obj_str: str) -> DetuningMap:
-    """Deserialize a weight map from an abstract JSON object.
+def deserialize_detuning_map(obj_str: str) -> DetuningMap:
+    """Deserialize a detuning map from an abstract JSON object.
 
     Args:
-        obj_str: The JSON string representing the weight map encoded in the
+        obj_str: The JSON string representing the detuning map encoded in the
             abstract JSON format.
 
     Returns:

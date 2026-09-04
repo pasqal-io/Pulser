@@ -218,38 +218,6 @@ class WeightMap(Traps, RegDrawer):
             d["slug"] = self.slug
         return d
 
-    def to_abstract_repr(self) -> str:
-        """Serialize the weight map into an abstract JSON object."""
-        abstr_str = json.dumps(self, cls=AbstractReprEncoder)
-        validate_abstract_repr(abstr_str, "weight-map")
-        return abstr_str
-
-    @classmethod
-    def from_abstract_repr(
-        cls: type[WeightMapType], obj_str: str
-    ) -> WeightMapType:
-        """Deserialize a weight map from an abstract JSON object.
-
-        Args:
-            obj_str: The JSON string representing the weight map encoded in
-                the abstract JSON format.
-        """
-        if not isinstance(obj_str, str):
-            raise TypeError(
-                "The serialized weight map must be given as a string. "
-                f"Instead, got object of type {type(obj_str)}."
-            )
-        detuning_map = (
-            pulser_abstract_repr.deserializer.deserialize_abstract_weight_map(
-                obj_str
-            )
-        )
-        return cls(
-            detuning_map.trap_coordinates,
-            detuning_map.weights,
-            detuning_map.slug,
-        )
-
 
 @dataclass(init=False, repr=False, eq=False, frozen=True)
 class DetuningMap(WeightMap):
@@ -265,3 +233,26 @@ class DetuningMap(WeightMap):
         weights: A list of detuning weights (between 0 and 1) to associate
             to the traps.
     """
+
+    def to_abstract_repr(self) -> str:
+        """Serialize the detuning map into an abstract JSON object."""
+        abstr_str = json.dumps(self, cls=AbstractReprEncoder)
+        validate_abstract_repr(abstr_str, "weight-map")
+        return abstr_str
+
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> DetuningMap:
+        """Deserialize a detuning map from an abstract JSON object.
+
+        Args:
+            obj_str: The JSON string representing the detuning map encoded in
+                the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized detuning map must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+        return pulser_abstract_repr.deserializer.deserialize_detuning_map(
+            obj_str
+        )

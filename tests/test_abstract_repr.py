@@ -68,7 +68,7 @@ from pulser.register.special_layouts import (
     SquareLatticeLayout,
     TriangularLatticeLayout,
 )
-from pulser.register.weight_maps import DetuningMap, WeightMap
+from pulser.register.weight_maps import DetuningMap
 from pulser.sequence import (
     store_extra_metadata,
     store_package_version_metadata,
@@ -197,12 +197,11 @@ def test_layout(layout: RegisterLayout):
 @pytest.mark.parametrize(
     "weight_map",
     [
-        WeightMap([[0, 0], [1, 1]], [0.2, 0.8]),
         DetuningMap([[0, 0], [1, 1]], [0.2, 0.8]),
         DetuningMap([[2, 1], [-1, 3]], [1.0, 0.0], slug="map"),
     ],
 )
-def test_weight_map(weight_map: WeightMap):
+def test_detuning_map(weight_map: DetuningMap):
     ser_weight_map_str = weight_map.to_abstract_repr()
     ser_weight_map_obj = json.loads(ser_weight_map_str)
     assert ser_weight_map_obj.get("slug") == weight_map.slug
