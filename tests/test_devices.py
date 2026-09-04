@@ -85,7 +85,8 @@ def test_params():
             "rydberg_level",
             70.0,
             re.escape(
-                "Rydberg level has to be an int; got <class 'float'>: 70.0."
+                "'rydberg_level' must be an instance of 'int', not "
+                "<class 'float'>: 70.0."
             ),
         ),
         (
@@ -93,7 +94,7 @@ def test_params():
             {"fake_channel"},
             re.escape(
                 "When defined, 'channel_ids' must be a tuple or a list "
-                "of strings; got <class 'set'>: {'fake_channel'}."
+                "of strings, not <class 'set'>: {'fake_channel'}."
             ),
         ),
         (
@@ -101,7 +102,7 @@ def test_params():
             ("ch1", 2),
             re.escape(
                 "When defined, 'channel_ids' must be a tuple or a list "
-                "of strings; got <class 'tuple'>: ('ch1', 2)."
+                "of strings, not <class 'tuple'>: ('ch1', 2)."
             ),
         ),
         (
@@ -211,9 +212,8 @@ def test_post_init_type_checks(test_params, param, value, msg):
             ("rydberg_global",),
             re.escape(
                 "When defined, the number of channel IDs must"
-                " match the number of channel objects; "
-                "got 1 channel ids for 0 channel objects: "
-                "('rydberg_global',)."
+                " match the number of channel objects; got "
+                "1 'channel_ids' vs. 0 'channel_objects'."
             ),
         ),
         ("max_sequence_duration", 0, None),
@@ -424,7 +424,8 @@ def test_change_rydberg_level(helpers):
     with pytest.raises(
         TypeError,
         match=re.escape(
-            "Rydberg level has to be an int; got <class 'float'>: 70.5."
+            "'rydberg_level' must be an instance of 'int', not "
+            "<class 'float'>: 70.5."
         ),
     ):
         dev.change_rydberg_level(70.5)
@@ -537,8 +538,8 @@ def test_validate_register(helpers, with_diff):
     with pytest.raises(
         TypeError,
         match=re.escape(
-            "'register' must be a pulser.Register or "
-            f"a pulser.Register3D instance; got {type(bad_coords1)}."
+            "'register' must be an instance of 'Register' or "
+            f"'Register3D', not {type(bad_coords1)}."
         ),
     ):
         DigitalAnalogDevice.validate_register(bad_coords1)
@@ -596,8 +597,8 @@ def test_validate_layout(helpers):
     with pytest.raises(
         TypeError,
         match=re.escape(
-            "'layout' must be a RegisterLayout instance; "
-            f"got {type(not_a_layout)}."
+            "'layout' must be an instance of 'RegisterLayout', not "
+            f"{type(not_a_layout)}."
         ),
     ):
         DigitalAnalogDevice.validate_layout(not_a_layout)
@@ -744,8 +745,7 @@ def test_layout_filling_fail():
         TypeError,
         match=re.escape(
             "'validate_layout_filling' can only be called for"
-            " registers with a register layout; got a Register with "
-            f"{len(register.qubit_ids)} qubits and no layout."
+            " registers with a register layout."
         ),
     ):
         DigitalAnalogDevice.validate_layout_filling(register)
@@ -786,9 +786,8 @@ def test_calibrated_layouts(helpers):
     with pytest.raises(
         TypeError,
         match=re.escape(
-            "The register to check must be an instance of "
-            "'BaseRegister' or 'MappableRegister'; "
-            f"got {type(layout100)}."
+            "'register' must be an instance of 'BaseRegister' or "
+            f"'MappableRegister', not {type(layout100)}."
         ),
     ):
         TestDevice.register_is_from_calibrated_layout(layout100)
@@ -917,8 +916,8 @@ def test_dmm_channels():
         ValueError,
         match=re.escape(
             "When defined, the names of channel IDs must be different"
-            " than the names of DMM channels 'dmm_0', 'dmm_1', ... ; "
-            "got ['dmm_0']."
+            " than the names of DMM channels 'dmm_0', 'dmm_1', "
+            "...; got ['dmm_0']."
         ),
     ):
         device = replace(

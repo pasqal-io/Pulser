@@ -292,8 +292,8 @@ class BaseDevice(ABC):
             ):
                 raise TypeError(
                     "When defined, 'channel_ids' must be a tuple or a list "
-                    "of strings; "
-                    f"got {type(self.channel_ids)}: {self.channel_ids}."
+                    "of strings, not "
+                    f"{type(self.channel_ids)}: {self.channel_ids}."
                 )
             if len(self.channel_ids) != len(set(self.channel_ids)):
                 repeated_ids = [
@@ -309,10 +309,9 @@ class BaseDevice(ABC):
             if len(self.channel_ids) != len(self.channel_objects):
                 raise PulserValueError(
                     "When defined, the number of channel IDs must"
-                    " match the number of channel objects; "
-                    f"got {len(self.channel_ids)} channel ids for "
-                    f"{len(self.channel_objects)} channel objects: "
-                    f"{self.channel_ids}."
+                    " match the number of channel objects; got "
+                    f"{len(self.channel_ids)} 'channel_ids' vs. "
+                    f"{len(self.channel_objects)} 'channel_objects'."
                 )
             conflicting_ids = [
                 ch_id
@@ -322,8 +321,8 @@ class BaseDevice(ABC):
             if conflicting_ids:
                 raise PulserValueError(
                     "When defined, the names of channel IDs must be different"
-                    " than the names of DMM channels 'dmm_0', 'dmm_1', ... ; "
-                    f"got {conflicting_ids}."
+                    " than the names of DMM channels 'dmm_0', 'dmm_1', "
+                    f"...; got {conflicting_ids}."
                 )
 
         else:
@@ -452,9 +451,8 @@ class BaseDevice(ABC):
         """
         if not isinstance(register, BaseRegister):
             raise TypeError(
-                "'register' must be a pulser.Register or "
-                "a pulser.Register3D instance; "
-                f"got {type(register)}."
+                "'register' must be an instance of 'Register' or "
+                f"'Register3D', not {type(register)}."
             )
 
         if register.dimensionality > self.dimensions:
@@ -484,8 +482,8 @@ class BaseDevice(ABC):
         """
         if not isinstance(layout, RegisterLayout):
             raise TypeError(
-                "'layout' must be a RegisterLayout instance; "
-                f"got {type(layout)}."
+                "'layout' must be an instance of 'RegisterLayout', not "
+                f"{type(layout)}."
             )
 
         if layout.dimensionality > self.dimensions:
@@ -522,9 +520,7 @@ class BaseDevice(ABC):
         if register.layout is None:
             raise TypeError(
                 "'validate_layout_filling' can only be called for"
-                " registers with a register layout; got a "
-                f"{type(register).__name__} with "
-                f"{len(register.qubit_ids)} qubits and no layout."
+                " registers with a register layout."
             )
         n_qubits = len(register.qubit_ids)
         min_qubits = int(
@@ -606,8 +602,8 @@ class BaseDevice(ABC):
     def _validate_rydberg_level(self, ryd_lvl: int) -> None:
         if not isinstance(ryd_lvl, int):
             raise TypeError(
-                "Rydberg level has to be an int; "
-                f"got {type(ryd_lvl)}: {ryd_lvl}."
+                "'rydberg_level' must be an instance of 'int', not "
+                f"{type(ryd_lvl)}: {ryd_lvl}."
             )
         if not 49 < ryd_lvl < 101:
             raise RydbergLevelError(
@@ -1032,9 +1028,8 @@ class Device(BaseDevice):
         """
         if not isinstance(register, (BaseRegister, MappableRegister)):
             raise TypeError(
-                "The register to check must be an instance of "
-                "'BaseRegister' or 'MappableRegister'; "
-                f"got {type(register)}."
+                "'register' must be an instance of 'BaseRegister' or "
+                f"'MappableRegister', not {type(register)}."
             )
         if isinstance(register, BaseRegister) and register.layout is None:
             return False
