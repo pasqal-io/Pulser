@@ -1,3 +1,4 @@
+import re
 import unittest
 from dataclasses import replace
 from types import SimpleNamespace
@@ -187,15 +188,19 @@ def test_init_errors():
     register = pulser.Register.square(3, spacing=6, prefix="")
     with pytest.raises(
         TypeError,
-        match=(
-            "The provided sequence has to be a "
-            "valid SequenceSamples instance."
+        match=re.escape(
+            "The provided samples must be an instance of "
+            "'SequenceSamples', not <class 'NoneType'>."
         ),
     ):
         HamiltonianData(None, None, None, None, None)
 
     with pytest.raises(
-        TypeError, match="The device must be a Device or BaseDevice."
+        TypeError,
+        match=re.escape(
+            "'device' must be an instance of 'BaseDevice', not "
+            "<class 'NoneType'>."
+        ),
     ):
         HamiltonianData(seq_samples, None, None, None, None)
 
@@ -208,9 +213,10 @@ def test_init_errors():
 
     with pytest.raises(
         ValueError,
-        match=(
-            "The ids of qubits targeted in SLM "
-            "mask should be defined in register."
+        match=re.escape(
+            "The ids of qubits targeted in the SLM mask must be defined in "
+            "the register; ['batman'] not in "
+            "['0', '1', '2', '3', '4', '5', '6', '7', '8']."
         ),
     ):
         HamiltonianData(
@@ -219,9 +225,10 @@ def test_init_errors():
 
     with pytest.raises(
         ValueError,
-        match=(
-            "The ids of qubits targeted in Local "
-            "channels should be defined in register."
+        match=re.escape(
+            "The ids of qubits targeted by Local channel 'ch1' must be "
+            "defined in the register; ['q0', 'q1'] not in "
+            "['0', '1', '2', '3', '4', '5', '6', '7', '8']."
         ),
     ):
         HamiltonianData(
@@ -249,7 +256,10 @@ def test_init_errors():
     seq_samples = sample(seq)
     with pytest.raises(
         ValueError,
-        match="Bases used in samples should be supported by device.",
+        match=re.escape(
+            "Bases used in samples must be supported by the device; ['XY'] "
+            "not in ['ground-rydberg', 'digital']."
+        ),
     ):
         HamiltonianData(
             seq_samples, seq.register, pulser.DigitalAnalogDevice, None, None
@@ -278,9 +288,9 @@ def test_from_sequence():
 
     with pytest.raises(
         TypeError,
-        match=(
-            "The provided sequence has to be "
-            "a valid pulser.Sequence instance."
+        match=re.escape(
+            "'sequence' must be an instance of 'Sequence', not "
+            "<class 'NoneType'>."
         ),
     ):
         HamiltonianData.from_sequence(None)
