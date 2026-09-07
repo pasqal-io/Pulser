@@ -141,12 +141,14 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     ) -> StateType:
         """Construct the state from its basis states' amplitudes.
 
-        Only states constructed with this method are allowed to be serialized in the remote backend.
+        Only states constructed with this method are allowed to be serialized
+        in the remote backend.
 
         Args:
             eigenstates: The basis states (e.g., ('r', 'g')).
             amplitudes: A mapping between basis state combinations and
-                complex amplitudes (e.g., {"rgr": 1.0 / np.sqrt(2), "grg": 1.0 / np.sqrt(2)}).
+                complex amplitudes (e.g., {"rgr": 1.0 / np.sqrt(2),
+                "grg": 1.0 / np.sqrt(2)}).
 
         Returns:
             The state constructed from the amplitudes.
@@ -273,7 +275,8 @@ class StateRepr(State):
 
     - eigenstates: The basis states (e.g., ('r', 'g')).
     - amplitudes: A mapping between basis state combinations and
-      complex amplitudes (e.g., {"rgr": 1.0 / np.sqrt(2), "grg": 1.0 / np.sqrt(2)}).
+      complex amplitudes (e.g., {"rgr": 1.0 / np.sqrt(2),
+      "grg": 1.0 / np.sqrt(2)}).
 
     The created state, supports de/serialization methods for remote backend
     execution.
