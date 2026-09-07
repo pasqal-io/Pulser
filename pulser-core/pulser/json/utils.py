@@ -123,6 +123,7 @@ ObjectType = Literal[
     "device",
     "layout",
     "register",
+    "weight-map",
     "noise",
     "results",
     "config",
