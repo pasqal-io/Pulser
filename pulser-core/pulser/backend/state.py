@@ -156,8 +156,8 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
             >>> eigenstates = ("r", "g")
             >>> norm_factor = 1.0 / np.sqrt(2)
             >>> amplitudes = {"rgr": norm_factor, "grg": norm_factor}
-            >>> config_class = your_pulser_backend.config_type        
-            >>> state_class = config_class.state_type 
+            >>> config_class = your_pulser_backend.config_type
+            >>> state_class = config_class.state_type
             >>> state = state_class.from_state_amplitudes(
             >>>     eigenstates=eigenstates, amplitudes=amplitudes
             >>> )

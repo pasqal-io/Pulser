@@ -175,7 +175,7 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         >>>         ],
         >>>     )
         >>> ]
-        >>> config_class = your_pulser_backend.config_type        
+        >>> config_class = your_pulser_backend.config_type
         >>> operator_class = config_class.operator_type
         >>> op = operator_class.from_operator_repr(
         >>>     eigenstates=eigenstates,
