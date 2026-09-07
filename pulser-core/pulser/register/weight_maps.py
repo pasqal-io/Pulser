@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import typing
 import warnings
 from dataclasses import dataclass
@@ -35,7 +36,10 @@ if TYPE_CHECKING:
 
 from scipy.spatial.distance import cdist
 
+import pulser.json.abstract_repr as pulser_abstract_repr
 import pulser.math as pm
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 
 WEIGHT_PRECISION = 6
 
@@ -237,3 +241,26 @@ class DetuningMap(WeightMap):
         weights: A list of detuning weights (between 0 and 1) to associate
             to the traps.
     """
+
+    def to_abstract_repr(self) -> str:
+        """Serialize the detuning map into an abstract JSON object."""
+        abstr_str = json.dumps(self, cls=AbstractReprEncoder)
+        validate_abstract_repr(abstr_str, "weight-map")
+        return abstr_str
+
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> DetuningMap:
+        """Deserialize a detuning map from an abstract JSON object.
+
+        Args:
+            obj_str: The JSON string representing the detuning map encoded in
+                the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized detuning map must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+        return pulser_abstract_repr.deserializer.deserialize_detuning_map(
+            obj_str
+        )
