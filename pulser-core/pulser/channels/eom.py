@@ -175,8 +175,8 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         if not isinstance(self.controlled_beams, tuple):
             if not isinstance(self.controlled_beams, list):
                 raise TypeError(
-                    "The 'controlled_beams' must be provided as a tuple "
-                    "or list."
+                    "The 'controlled_beams' must be provided as a tuple or "
+                    f"list, not {type(self.controlled_beams)}."
                 )
             # Convert list to tuple to keep RydbergEOM hashable
             object.__setattr__(
@@ -192,7 +192,7 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
             ):
                 raise TypeError(
                     "Every beam must be one of options of the `RydbergBeam`"
-                    f" enumeration, not {self.limiting_beam}."
+                    f" enumeration, not {beam}."
                 )
 
     @property
