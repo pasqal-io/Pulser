@@ -141,15 +141,26 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     ) -> StateType:
         """Construct the state from its basis states' amplitudes.
 
-        Only states constructed with this method are allowed in remote backend.
+        Only states constructed with this method are allowed to be serialized in the remote backend.
 
         Args:
             eigenstates: The basis states (e.g., ('r', 'g')).
             amplitudes: A mapping between basis state combinations and
-                complex amplitudes (e.g., {"rgr": 0.5, "grg": 0.5}).
+                complex amplitudes (e.g., {"rgr": 1.0 / np.sqrt(2), "grg": 1.0 / np.sqrt(2)}).
 
         Returns:
             The state constructed from the amplitudes.
+
+        Examples:
+        Construct a superposition state for a 2-qubit register:
+            >>> eigenstates = ("r", "g")
+            >>> norm_factor = 1.0 / np.sqrt(2)
+            >>> amplitudes = {"rgr": norm_factor, "grg": norm_factor}
+            >>> config_class = your_pulser_backend.config_type        
+            >>> state_class = config_class.state_type 
+            >>> state = state_class.from_state_amplitudes(
+            >>>     eigenstates=eigenstates, amplitudes=amplitudes
+            >>> )
         """
         cls._validate_eigenstates(eigenstates)
         n_qudits = cls._validate_amplitudes(amplitudes, eigenstates)
@@ -262,14 +273,15 @@ class StateRepr(State):
 
     - eigenstates: The basis states (e.g., ('r', 'g')).
     - amplitudes: A mapping between basis state combinations and
-      complex amplitudes (e.g., {"rgr": 0.5, "grg": 0.5}).
+      complex amplitudes (e.g., {"rgr": 1.0 / np.sqrt(2), "grg": 1.0 / np.sqrt(2)}).
 
     The created state, supports de/serialization methods for remote backend
     execution.
 
     Examples:
         >>> eigenstates = ("r", "g")
-        >>> amplitudes = {"rgr": 0.5, "grg": 0.5}
+        >>> norm_factor = 1.0 / np.sqrt(2)
+        >>> amplitudes = {"rgr": norm_factor, "grg": norm_factor}
         >>> state = StateRepr.from_state_amplitudes(
         >>>     eigenstates=eigenstates, amplitudes=amplitudes
         >>> )
