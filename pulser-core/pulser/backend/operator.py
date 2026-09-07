@@ -164,7 +164,7 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             >>> X = {"gr": 1.0, "rg": 1.0}
             >>> Y = {"gr": 1.0j, "rg": -1.0j}
             >>> Z = {"rr": 1.0, "gg": -1.0}
-            >>> # build for example 0.5*X0Y1X2Z3
+            >>> # build for example 0.5*X0Y1X2Z3 - j0.2*Z1Y3 + (-0.1+j4.0)*X2
             >>> operations = [
             >>>     (
             >>>         0.5,
@@ -172,6 +172,19 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             >>>             (X, [0, 2]), # acts on qudit 0 and 2
             >>>             (Y, [1]),
             >>>             (Z, [3]),
+            >>>         ],
+            >>>     )
+            >>>     (
+            >>>         -0.2j,
+            >>>         [
+            >>>             (Z, [1]),
+            >>>             (Y, [3]),
+            >>>         ],
+            >>>     )
+            >>>     (
+            >>>         -0.1 + 4.0j,
+            >>>         [
+            >>>             (X, [2]),
             >>>         ],
             >>>     )
             >>> ]

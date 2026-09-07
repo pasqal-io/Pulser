@@ -156,6 +156,7 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         Examples:
             >>> eigenstates = ("r", "g")
             >>> norm_factor = 1.0 / np.sqrt(2)
+            >>> # build an equal superposition of "rgr" and "grg" basis states
             >>> amplitudes = {"rgr": norm_factor, "grg": norm_factor}
             >>> config_class = your_pulser_backend.config_type
             >>> state_class = config_class.state_type
