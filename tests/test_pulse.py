@@ -40,19 +40,44 @@ pls4 = Pulse.ConstantDetuning(bwf, -10, 0)
 
 
 def test_creation():
-    with pytest.raises(TypeError):
+    err_msg = "'amplitude' and 'detuning' have to be waveforms"
+    with pytest.raises(TypeError, match=err_msg):
         Pulse(10, 0, 0, post_phase_shift=2)
+    with pytest.raises(TypeError, match=err_msg):
         Pulse(cwf, 1, 0)
+    with pytest.raises(TypeError, match=err_msg):
         Pulse(0, bwf, 1)
-        Pulse(bwf, cwf, bwf)
-        Pulse(bwf, cwf, 0, post_phase_shift=cwf)
+    with pytest.raises(
+        ValueError, match="setting an array element with a sequence."
+    ):
+        Pulse(bwf, bwf, bwf)
+    with pytest.raises(
+        TypeError,
+        match=r"float\(\) argument must be a string or a real number, "
+        "not 'ConstantWaveform'",
+    ):
+        Pulse(bwf, bwf, 0, post_phase_shift=cwf)
 
     with pytest.raises(ValueError, match="The duration of"):
         Pulse(bwf, cwf, 0)
 
-    with pytest.raises(ValueError, match="All samples of an amplitude"):
+    with pytest.raises(
+        ValueError,
+        match="All samples of an amplitude waveform must be >= 0; "
+        "found negative values in amplitude waveform: -10.",
+    ):
         Pulse(cwf, cwf, 0)
+    with pytest.raises(
+        ValueError,
+        match="All samples of an amplitude waveform must be >= 0; "
+        "found negative values in amplitude waveform: -1.",
+    ):
         Pulse.ConstantAmplitude(-1, cwf, 0)
+    with pytest.raises(
+        ValueError,
+        match="All samples of an amplitude waveform must be >= 0; "
+        "found negative values in amplitude waveform: -1.",
+    ):
         Pulse.ConstantPulse(100, -1, 0, 0)
 
     with pytest.raises(TypeError, match="'phase' must be a single float"):
