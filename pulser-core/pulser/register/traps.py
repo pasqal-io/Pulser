@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 from abc import ABC, abstractmethod
+from collections import Counter
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Any
@@ -43,20 +44,22 @@ class Traps(ABC, CoordsCollection):
 
     def __init__(self, trap_coordinates: ArrayLike, slug: str | None = None):
         """Initializes a set of traps."""
-        array_type_error_msg = ValueError(
-            "'trap_coordinates' must be an array or list of coordinates."
-        )
-
         try:
             coords_arr = pm.AbstractArray(
                 trap_coordinates, dtype=float
             ).as_array(detach=True)
         except ValueError as e:
-            raise array_type_error_msg from e
+            raise ValueError(
+                "'trap_coordinates' must be an array or list of coordinates;"
+                f" got {type(trap_coordinates)}: {trap_coordinates!r}."
+            ) from e
 
         shape = np.shape(coords_arr)
         if len(shape) != 2:
-            raise array_type_error_msg
+            raise ValueError(
+                "'trap_coordinates' must be an array or list of coordinates;"
+                f" got an array of shape {shape}: {trap_coordinates!r}."
+            )
 
         if shape[1] not in (2, 3):
             raise ValueError(
@@ -64,8 +67,13 @@ class Traps(ABC, CoordsCollection):
             )
 
         if len(np.unique(coords_arr, axis=0)) != shape[0]:
+            coord_counts = Counter(map(tuple, coords_arr.tolist()))
+            repeated = [
+                list(coord) for coord, freq in coord_counts.items() if freq > 1
+            ]
             raise ValueError(
-                "All trap coordinates of a register layout must be unique."
+                "All trap coordinates of a register layout must be unique;"
+                f" found repeated coordinates {repeated}."
             )
         object.__setattr__(self, "_coords", trap_coordinates)
         object.__setattr__(self, "slug", slug)
