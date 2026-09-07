@@ -110,16 +110,31 @@ def matrices():
 
 def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
     fake_sequence = {"pulse1": "fake", "pulse2": "fake"}
-    with pytest.raises(TypeError, match="sequence has to be a valid"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "'sequence' must be an instance of 'Sequence', not <class 'dict'>."
+        ),
+    ):
         QutipEmulator.from_sequence(fake_sequence)
-    with pytest.raises(TypeError, match="sequence has to be a valid"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "The provided samples must be an instance of 'SequenceSamples', "
+            "not <class 'dict'>."
+        ),
+    ):
         QutipEmulator(
             fake_sequence, Register.square(2, prefix="q"), mod_device
         )
     # Simulation cannot be run on a register not defining "control1"
     with pytest.raises(
         ValueError,
-        match="The ids of qubits targeted in Local channels",
+        match=re.escape(
+            "The ids of qubits targeted by Local channel 'raman' must be "
+            "defined in the register; ['control1'] not in "
+            "['target', 'control2']."
+        ),
     ):
         QutipEmulator(
             sampler.sample(seq),
@@ -188,7 +203,13 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
         "control2": 2,
     }
 
-    with pytest.raises(ValueError, match="too small, less than"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "'sampling_rate' is too small; 0.0001 on a 9000 ns sequence gives "
+            "0 data points, at least 4 are needed."
+        ),
+    ):
         QutipEmulator.from_sequence(seq, sampling_rate=0.0001)
     with pytest.raises(ValueError, match="`sampling_rate`"):
         QutipEmulator.from_sequence(seq, sampling_rate=5)
@@ -400,7 +421,10 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     # seq2 cannot be run on DigitalAnalogDevice because it does not support mw
     with pytest.raises(
         ValueError,
-        match="Bases used in samples should be supported by device.",
+        match=re.escape(
+            "Bases used in samples must be supported by the device; ['XY'] "
+            "not in ['ground-rydberg', 'digital']."
+        ),
     ):
         QutipEmulator(sampler.sample(seq2), seq2.register, DigitalAnalogDevice)
     sim2 = QutipEmulator.from_sequence(
@@ -695,7 +719,7 @@ def test_run(seq, patch_plt_show):
         sim.run(progress_bar=None)
         with pytest.raises(
             ValueError,
-            match="`progress_bar` must be a bool.",
+            match=re.escape("'progress_bar' must be a bool, not 1."),
         ):
             sim.run(progress_bar=1)
 
@@ -720,28 +744,48 @@ def test_run(seq, patch_plt_show):
 
 def test_eval_times(seq):
     with pytest.raises(
-        ValueError, match="evaluation_times float must be between 0 " "and 1."
+        ValueError,
+        match=re.escape(
+            "'evaluation_times' float must be between 0 and 1; got 3.0."
+        ),
     ):
         sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times(3.0)
-    with pytest.raises(ValueError, match="Wrong evaluation time label."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Wrong evaluation time label; got 123. It should be `Full`, "
+            "`Minimal`, an array of times or a float between 0 and 1."
+        ),
+    ):
         sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times(123)
-    with pytest.raises(ValueError, match="Wrong evaluation time label."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Wrong evaluation time label; got 'Best'. It should be `Full`, "
+            "`Minimal`, an array of times or a float between 0 and 1."
+        ),
+    ):
         sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times("Best")
 
     with pytest.raises(
         ValueError,
-        match="Provided evaluation-time list contains " "negative values.",
+        match=re.escape(
+            "Provided evaluation-time list contains negative values; got "
+            "[-1.0]."
+        ),
     ):
         sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times([-1, 0, sim.sampling_times[-2]])
 
     with pytest.raises(
         ValueError,
-        match="Provided evaluation-time list extends "
-        "further than sequence duration.",
+        match=re.escape(
+            "Provided evaluation-time list extends further than the sequence "
+            "duration; got a maximum of 19.0 µs for a 9.0 µs sequence."
+        ),
     ):
         sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times([0, sim.sampling_times[-1] + 10])
@@ -1772,7 +1816,10 @@ def test_mask_equals_remove_xy():
     # Simulation cannot be run on a register not defining "q2"
     with pytest.raises(
         ValueError,
-        match="The ids of qubits targeted in SLM mask",
+        match=re.escape(
+            "The ids of qubits targeted in the SLM mask must be defined in "
+            "the register; ['q2'] not in ['q0', 'q1']."
+        ),
     ):
         QutipEmulator(sampler.sample(seq_masked), reg_two, MockDevice)
     # Simulation on reduced register
