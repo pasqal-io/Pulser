@@ -55,7 +55,16 @@ class AbstractArray:
                 dtype=dtype,  # type: ignore[arg-type]
             )
         else:
-            self._array = np.asarray(array, dtype=dtype)
+            try:
+                self._array = np.asarray(array, dtype=dtype)
+            except ValueError as e:
+                dtype_msg = (
+                    " of type " + dtype.__name__ if dtype is not None else ""
+                )
+                raise ValueError(
+                    "The provided 'array' must be a torch tensor or castable "
+                    f"to an array{dtype_msg}. Got {array!r}."
+                ) from e
 
         if force_array and self._array.ndim == 0:
             self._array = self._array[None]

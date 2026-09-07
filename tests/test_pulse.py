@@ -47,16 +47,17 @@ def test_creation():
         Pulse(cwf, 1, 0)
     with pytest.raises(TypeError, match=err_msg):
         Pulse(0, bwf, 1)
-    with pytest.raises(
-        ValueError, match="setting an array element with a sequence."
-    ):
-        Pulse(bwf, bwf, bwf)
+    err_msg = "'phase' must be a single float"
+    with pytest.raises(TypeError, match=err_msg):
+        Pulse(bwf, rwf, bwf)
+    with pytest.raises(TypeError, match=err_msg):
+        Pulse(bwf, rwf, [0.0, 1.0, 2.0])
+
     with pytest.raises(
         TypeError,
-        match=r"float\(\) argument must be a string or a real number, "
-        "not 'ConstantWaveform'",
+        match="'post_phase_shift' must be castable to a float",
     ):
-        Pulse(bwf, bwf, 0, post_phase_shift=cwf)
+        Pulse(bwf, rwf, 0, post_phase_shift=cwf)
 
     with pytest.raises(ValueError, match="The duration of"):
         Pulse(bwf, cwf, 0)
@@ -79,9 +80,6 @@ def test_creation():
         "found negative values in amplitude waveform: -1.",
     ):
         Pulse.ConstantPulse(100, -1, 0, 0)
-
-    with pytest.raises(TypeError, match="'phase' must be a single float"):
-        Pulse(bwf, rwf, [0.0, 1.0, 2.0])
 
     assert pls.phase == 0
     assert pls2 == pls3

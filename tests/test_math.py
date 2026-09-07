@@ -20,6 +20,7 @@ import sys
 import numpy as np
 import pytest
 
+import pulser
 import pulser.math as pm
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.coders import PulserDecoder, PulserEncoder
@@ -77,6 +78,25 @@ def test_pad(cast_to, requires_grad):
 
 
 class TestAbstractArray:
+
+    def test_non_castable_type(self, monkeypatch):
+        monkeypatch.setitem(sys.modules, "torch", None)
+        pm.AbstractArray.has_torch.cache_clear()
+        with pytest.raises(
+            ValueError,
+            match="The provided 'array' must be a torch tensor or "
+            "castable to an array of type float. Got "
+            r"ConstantWaveform\(100 ns, 1\)",
+        ):
+            pm.AbstractArray(pulser.ConstantWaveform(100, 1), dtype=float)
+        # With dtype=None, works if the class can be stored in a numpy array
+        pm.AbstractArray(pulser.ConstantWaveform(100, 1))
+        with pytest.raises(
+            ValueError,
+            match="The provided 'array' must be a torch tensor or "
+            r"castable to an array. Got \[\[1.0\], \[2.0, 3.0\]\]",
+        ):
+            pm.AbstractArray([[1.0], [2.0, 3.0]])
 
     @pytest.mark.parametrize("force_array", [False, True])
     def test_no_torch(self, monkeypatch, force_array):
