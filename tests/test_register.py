@@ -50,7 +50,10 @@ def test_creation():
     ):
         Register(ids)
 
-    with pytest.raises(ValueError, match="vectors of size 2"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("vectors of size 2; got 4D coordinates."),
+    ):
         Register.from_coordinates([(0, 1, 0, 1)], prefix="q")
 
     with pytest.raises(
@@ -62,7 +65,10 @@ def test_creation():
     ):
         Register.from_coordinates(coords, prefix="a", labels=["a", "b"])
 
-    with pytest.raises(ValueError, match="vectors of size 3"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("vectors of size 3; got 2D coordinates."),
+    ):
         Register3D.from_coordinates([((1, 0),), ((-1, 0),)], prefix="q")
 
     reg1 = Register(qubits)
@@ -148,12 +154,36 @@ def test_rectangular_lattice():
         Register.rectangular_lattice(2, 0, 3, 4)
 
     # Check row spacing
-    with pytest.raises(ValueError, match="Spacing"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Spacing between atoms must be greater than 0; got row spacing "
+            "0.0 and column spacing 5."
+        ),
+    ):
         Register.rectangular_lattice(2, 2, 0.0, 5)
 
     # Check col spacing
-    with pytest.raises(ValueError, match="Spacing"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Spacing between atoms must be greater than 0; got row spacing "
+            "3 and column spacing 0.0."
+        ),
+    ):
         Register.rectangular_lattice(2, 2, 3, 0.0)
+
+    # `square` and `rectangle` forward a single `spacing`, so the message
+    # must not name parameters those signatures don't have
+    with pytest.raises(ValueError, match="Spacing") as exc_info:
+        Register.square(2, spacing=0)
+    assert "row_spacing" not in str(exc_info.value)
+    assert "col_spacing" not in str(exc_info.value)
+
+    with pytest.raises(ValueError, match="Spacing") as exc_info:
+        Register.rectangle(2, 2, spacing=0)
+    assert "row_spacing" not in str(exc_info.value)
+    assert "col_spacing" not in str(exc_info.value)
 
 
 def test_rectangle():
@@ -236,7 +266,13 @@ def test_max_connectivity():
     crest_y = np.sqrt(3) / 2.0
 
     # Check device type
-    with pytest.raises(TypeError):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "'device' must be an instance of 'BaseDevice', not "
+            "<class 'NoneType'>: None."
+        ),
+    ):
         reg = Register.max_connectivity(2, None)
 
     # Check min number of atoms
@@ -766,7 +802,7 @@ def test_automatic_layout(optimal_filling, reg, max_atom_num):
             == trap_num
         )
 
-    with pytest.raises(TypeError, match="must be of type Device"):
+    with pytest.raises(TypeError, match="must be an instance of 'Device'"):
         reg.with_automatic_layout(MockDevice)
 
     # Minimum number of traps is too high

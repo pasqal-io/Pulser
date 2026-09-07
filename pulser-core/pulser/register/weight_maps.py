@@ -66,11 +66,19 @@ class WeightMap(Traps, RegDrawer):
         """Initializes a new weight map."""
         super().__init__(trap_coordinates, slug)
         if len(cast(list, trap_coordinates)) != len(weights):
-            raise ValueError("Number of traps and weights don't match.")
-        if not (
-            np.all(np.array(weights) >= 0) and np.all(np.array(weights) <= 1)
-        ):
-            raise ValueError("All weights must be between 0 and 1.")
+            raise ValueError(
+                f"Number of traps ({len(cast(list, trap_coordinates))}) and "
+                f"weights ({len(weights)}) don't match."
+            )
+        weights_arr = np.array(weights)
+        if not (np.all(weights_arr >= 0) and np.all(weights_arr <= 1)):
+            out_of_range = weights_arr[
+                ~((weights_arr >= 0) & (weights_arr <= 1))
+            ].tolist()
+            raise ValueError(
+                "All weights must be between 0 and 1; found out-of-range "
+                f"weights {out_of_range} in {weights_arr.tolist()}."
+            )
         if np.count_nonzero(weights) == 0:
             warnings.warn(
                 "A WeightMap should have at least one non-zero weight.",
