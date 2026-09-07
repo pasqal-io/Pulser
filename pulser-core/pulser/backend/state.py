@@ -155,14 +155,14 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
 
         Examples:
         Construct a superposition state for a 2-qubit register:
-            >>> eigenstates = ("r", "g")
-            >>> norm_factor = 1.0 / np.sqrt(2)
-            >>> amplitudes = {"rgr": norm_factor, "grg": norm_factor}
-            >>> config_class = your_pulser_backend.config_type
-            >>> state_class = config_class.state_type
-            >>> state = state_class.from_state_amplitudes(
-            >>>     eigenstates=eigenstates, amplitudes=amplitudes
-            >>> )
+        >>> eigenstates = ("r", "g")
+        >>> norm_factor = 1.0 / np.sqrt(2)
+        >>> amplitudes = {"rgr": norm_factor, "grg": norm_factor}
+        >>> config_class = your_pulser_backend.config_type
+        >>> state_class = config_class.state_type
+        >>> state = state_class.from_state_amplitudes(
+        >>>     eigenstates=eigenstates, amplitudes=amplitudes
+        >>> )
         """
         cls._validate_eigenstates(eigenstates)
         n_qudits = cls._validate_amplitudes(amplitudes, eigenstates)
