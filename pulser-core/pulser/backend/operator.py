@@ -158,30 +158,30 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             The constructed operator.
 
         Examples:
-        >>> eigenstates = ("r", "g")
-        >>> n_qudits = 4
-        >>> # define X,Y,Z
-        >>> X = {"gr": 1.0, "rg": 1.0}
-        >>> Y = {"gr": 1.0j, "rg": -1.0j}
-        >>> Z = {"rr": 1.0, "gg": -1.0}
-        >>> # build for example 0.5*X0Y1X2Z3
-        >>> operations = [
-        >>>     (
-        >>>         0.5,
-        >>>         [
-        >>>             (X, [0, 2]), # acts on qudit 0 and 2
-        >>>             (Y, [1]),
-        >>>             (Z, [3]),
-        >>>         ],
-        >>>     )
-        >>> ]
-        >>> config_class = your_pulser_backend.config_type
-        >>> operator_class = config_class.operator_type
-        >>> op = operator_class.from_operator_repr(
-        >>>     eigenstates=eigenstates,
-        >>>     n_qudits=n_qudits,
-        >>>     operations=operations
-        >>> )
+            >>> eigenstates = ("r", "g")
+            >>> n_qudits = 4
+            >>> # define X,Y,Z
+            >>> X = {"gr": 1.0, "rg": 1.0}
+            >>> Y = {"gr": 1.0j, "rg": -1.0j}
+            >>> Z = {"rr": 1.0, "gg": -1.0}
+            >>> # build for example 0.5*X0Y1X2Z3
+            >>> operations = [
+            >>>     (
+            >>>         0.5,
+            >>>         [
+            >>>             (X, [0, 2]), # acts on qudit 0 and 2
+            >>>             (Y, [1]),
+            >>>             (Z, [3]),
+            >>>         ],
+            >>>     )
+            >>> ]
+            >>> config_class = your_pulser_backend.config_type
+            >>> operator_class = config_class.operator_type
+            >>> op = operator_class.from_operator_repr(
+            >>>     eigenstates=eigenstates,
+            >>>     n_qudits=n_qudits,
+            >>>     operations=operations
+            >>> )
         """
         State._validate_eigenstates(eigenstates)
         cls._validate_operations(
