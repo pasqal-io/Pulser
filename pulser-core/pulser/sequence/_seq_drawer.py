@@ -1018,8 +1018,14 @@ def _draw_qubit_content(
             for ch, ch_obj in sampled_seq._ch_objs.items()
         ]
     ):
+        wrong_basis = {
+            ch: ch_obj.basis
+            for ch, ch_obj in sampled_seq._ch_objs.items()
+            if ch_obj.basis != "ground-rydberg"
+        }
         raise NotImplementedError(
-            "Can only draw qubit contents for channels in rydberg basis."
+            "Can only draw qubit contents for channels in the "
+            f"'ground-rydberg' basis; got {wrong_basis}."
         )
     # Gather data per targeted qubits
     total_duration = data["total_duration"]

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import copy
+import re
 from collections.abc import Iterable
 
 import numpy as np
@@ -36,12 +37,24 @@ def test_var_declarations():
     assert isinstance(var, Variable)
     assert var.dtype == float
     assert var.size == 1
-    with pytest.raises(ValueError, match="already being used"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "already being used; got 'var', already declared: ['var']."
+        ),
+    ):
         sb.declare_variable("var", dtype=int, size=10)
     var3 = sb.declare_variable("var3")
     assert sb.declared_variables["var3"] == var3.var
     assert isinstance(var3, VariableItem)
-    with pytest.raises(ValueError, match="'qubits' is a protected name"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "'qubits' is a protected name. Please choose a different name "
+            "for the variable; protected names are ['qubits', 'seq_name', "
+            "'json_dumps_options']."
+        ),
+    ):
         sb.declare_variable("qubits", size=10, dtype=int)
 
 
@@ -62,7 +75,10 @@ def test_stored_calls():
     var = sb.declare_variable("var")
     assert sb._to_build_calls == []
     with pytest.raises(
-        TypeError, match="initial_target cannot be parametrized"
+        TypeError,
+        match=re.escape(
+            "initial_target cannot be parametrized; got VariableItem("
+        ),
     ):
         sb.declare_channel("ch1", "rydberg_local", initial_target=var)
     sb.declare_channel("ch1", "rydberg_local")
@@ -70,7 +86,13 @@ def test_stored_calls():
     assert sb._calls[-1].name == "declare_channel"
     assert sb._to_build_calls[-1].name == "target_index"
     assert sb._to_build_calls[-1].args == (var, "ch1")
-    with pytest.raises(ValueError, match="name of a declared channel"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "name of a declared channel; got 'rydberg_local', declared: "
+            "['ch1']."
+        ),
+    ):
         sb.delay(1000, "rydberg_local")
     x = Variable("x", int)
     var_ = copy.deepcopy(var)
@@ -79,12 +101,21 @@ def test_stored_calls():
     with pytest.raises(ValueError, match="come from this Sequence"):
         sb.target(var_, "ch1")
 
-    with pytest.raises(ValueError, match="ids have to be qubit ids"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "ids have to be qubit ids declared in this sequence's register; "
+            "['q20'] not in "
+        ),
+    ):
         sb.target("q20", "ch1")
 
     with pytest.raises(
         NotImplementedError,
-        match="Using parametrized objects or variables to refer to channels",
+        match=re.escape(
+            "Using parametrized objects or variables to refer to channels "
+            "is not supported; got VariableItem("
+        ),
     ):
         sb.target("q0", var)
     sb.delay(var, "ch1")
@@ -121,7 +152,13 @@ def test_stored_calls():
     assert sb._calls[-1].name == "declare_channel"
     with pytest.raises(ValueError, match="'Local' channels"):
         sb.target(0, "ch2")
-    with pytest.raises(ValueError, match="target at most 1 qubits"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "This channel can target at most 1 qubit at a time; got 5 "
+            "targets: [Variable(name='q_var', dtype=<class 'int'>, size=5)]."
+        ),
+    ):
         sb.target_index(q_var, "ch1")
 
     sb2 = Sequence(reg, MockDevice)
@@ -159,11 +196,25 @@ def test_stored_calls():
     ):
         sb.target_index("q1", channel="ch1")
 
-    with pytest.raises(ValueError, match="correspond to declared channels"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("correspond to declared channels; [VariableItem("),
+    ):
         sb.align("ch1", var)
-    with pytest.raises(ValueError, match="more than once"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "more than once; found repeated names ['ch2'] in "
+            "['ch1', 'ch2', 'ch2']."
+        ),
+    ):
         sb.align("ch1", "ch2", "ch2")
-    with pytest.raises(ValueError, match="at least two channels"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "at least two channels for alignment; got 1: ['ch1']."
+        ),
+    ):
         sb.align("ch1")
 
     with pytest.raises(ValueError, match="not supported"):
@@ -260,7 +311,8 @@ def test_parametrized_in_eom_mode(mod_device):
         seq.enable_eom_mode("ch0", amp_on=2.0, detuning_on=0.0)
 
     with pytest.raises(
-        RuntimeError, match="The chosen channel is in EOM mode"
+        RuntimeError,
+        match=re.escape("The chosen channel is in EOM mode; got 'ch0'."),
     ):
         seq.target_index(1, "ch0")
 
@@ -314,7 +366,10 @@ def test_parametrized_before_eom_mode(mod_device):
         seq.add_eom_pulse("ch0", 1000, 0.0, protocol="smallest")
 
     with pytest.raises(
-        TypeError, match="Phase values must be a numeric value."
+        TypeError,
+        match=re.escape(
+            "Phase values must be a numeric value; got <class 'str'>: '0.'."
+        ),
     ):
         seq.add_eom_pulse("ch0", 200, "0.")
 
