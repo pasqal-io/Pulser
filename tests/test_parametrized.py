@@ -78,7 +78,11 @@ def test_var(a, b):
     assert np.all(b.build() == np.array([-1, 1]))
     assert b._count == 1
 
-    with pytest.raises(ValueError, match="string to float"):
+    with pytest.raises(
+        ValueError,
+        match="The provided 'array' must be a torch tensor or castable to "
+        "an array of type float64. Got 'something'.",
+    ):
         a._assign("something")
     with pytest.raises(ValueError, match="No value"):
         a.build()
