@@ -68,6 +68,7 @@ from pulser.register.special_layouts import (
     SquareLatticeLayout,
     TriangularLatticeLayout,
 )
+from pulser.register.weight_maps import DetuningMap
 from pulser.sequence import (
     store_extra_metadata,
     store_package_version_metadata,
@@ -191,6 +192,30 @@ def test_layout(layout: RegisterLayout):
             [0, 0, 0] if layout.dimensionality == 2 else [0, 0]
         )
         RegisterLayout.from_abstract_repr(json.dumps(ser_layout_obj))
+
+
+@pytest.mark.parametrize(
+    "weight_map",
+    [
+        DetuningMap([[0, 0], [1, 1]], [0.2, 0.8]),
+        DetuningMap([[2, 1], [-1, 3]], [1.0, 0.0], slug="map"),
+    ],
+)
+def test_detuning_map(weight_map: DetuningMap):
+    ser_weight_map_str = weight_map.to_abstract_repr()
+    ser_weight_map_obj = json.loads(ser_weight_map_str)
+    assert ser_weight_map_obj.get("slug") == weight_map.slug
+
+    re_weight_map = type(weight_map).from_abstract_repr(ser_weight_map_str)
+    assert re_weight_map == weight_map
+    assert type(re_weight_map) is type(weight_map)
+
+    with pytest.raises(TypeError, match="must be given as a string"):
+        DetuningMap.from_abstract_repr(ser_weight_map_obj)
+
+    with pytest.raises(jsonschema.exceptions.ValidationError):
+        ser_weight_map_obj["traps"][0]["z"] = 0
+        DetuningMap.from_abstract_repr(json.dumps(ser_weight_map_obj))
 
 
 @pytest.mark.parametrize(
