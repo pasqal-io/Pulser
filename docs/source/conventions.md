@@ -108,6 +108,10 @@ order with which they are stored in the `Register` (as returned by
        | :math:`|0\rangle \rightarrow 0`
 ```
 
+:::{caution}
+Please note that measurements are not possible in the qutrit basis i.e. a qutrit state can only be measured onto the `ground-rydberg` and `digital` basis as indicated above.
+:::
+
 ### Measurement samples order
 
 Measurement samples are returned as a sequence of 0s and 1s, in
