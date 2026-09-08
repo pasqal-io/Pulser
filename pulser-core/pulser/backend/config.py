@@ -419,7 +419,9 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
     def is_evaluation_time(self, t: float, tol: float = 1e-6) -> bool:
         """Assesses whether a relative time is an evaluation time."""
         return (
-            self.default_evaluation_times == "Full" and 0.0 <= t <= 1.0
+            isinstance(self.default_evaluation_times, str)
+            and self.default_evaluation_times == "Full"
+            and 0.0 <= t <= 1.0
         ) or (
             self.is_time_in_evaluation_times(
                 t, self.default_evaluation_times, tol=tol
