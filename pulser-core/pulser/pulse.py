@@ -129,6 +129,7 @@ class Pulse:
                 f"'phase' must be a single float, not {phase!r}."
             ) from e
         object.__setattr__(self, "phase", phase_ % (2 * np.pi))
+        assert not isinstance(post_phase_shift, Parametrized)
         try:
             post_phase_shift_ = float(post_phase_shift)
         except TypeError as e:

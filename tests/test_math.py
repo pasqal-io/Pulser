@@ -85,7 +85,7 @@ class TestAbstractArray:
         with pytest.raises(
             ValueError,
             match="The provided 'array' must be a torch tensor or "
-            "castable to an array of type float. Got "
+            "castable to an array of type float64. Got "
             r"ConstantWaveform\(100 ns, 1\)",
         ):
             pm.AbstractArray(pulser.ConstantWaveform(100, 1), dtype=float)

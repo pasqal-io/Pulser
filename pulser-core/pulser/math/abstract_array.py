@@ -59,7 +59,7 @@ class AbstractArray:
                 self._array = np.asarray(array, dtype=dtype)
             except ValueError as e:
                 dtype_msg = (
-                    " of type " + dtype.__name__ if dtype is not None else ""
+                    f" of type {np.dtype(dtype)}" if dtype is not None else ""
                 )
                 raise ValueError(
                     "The provided 'array' must be a torch tensor or castable "
