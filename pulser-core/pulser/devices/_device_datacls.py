@@ -732,10 +732,10 @@ class BaseDevice(ABC):
             "\nDevice parameters:",
             f" - Rydberg level: {self.rydberg_level}",
             self._param_check_none(self.interaction_coeff)(
-                " - Ising interaction coefficient: {:.4g} :math:`\\mathrm{rad}/\\mu\\mathrm{s} \\times \\mu\\mathrm{m}^6`",
+                " - Ising interaction coefficient: {:.4g} rad/µs x µm^6",
             ),
             self._param_check_none(self.interaction_coeff_xy)(
-                " - XY interaction coefficient: {:.4g} :math:`\\mathrm{rad}/\\mu\\mathrm{s} \\times \\mu\\mathrm{m}^3`",
+                " - XY interaction coefficient: {:.4g} rad/µs x µm^3",
             ),
             " - Channels can be reused: "
             + self._param_yes_no(self.reusable_channels),
@@ -774,6 +774,25 @@ class BaseDevice(ABC):
                 if isinstance(ch, DMM) and ch.bottom_detuning is not None:
                     bottom_detuning = f"{float(ch.bottom_detuning):.4g} rad/µs"
 
+                min_avg_amp = "None"
+                if not isinstance(ch, DMM) and ch.min_avg_amp is not None:
+                    min_avg_amp = f"{float(ch.min_avg_amp):.4g} rad/µs"
+
+                total_bottom_detuning = "None"
+                if (
+                    isinstance(ch, DMM)
+                    and ch.total_bottom_detuning is not None
+                ):
+                    total_bottom_detuning = (
+                        f"{float(ch.total_bottom_detuning):.4g} rad/µs"
+                    )
+
+                min_avg_abs_detuning = "None"
+                if isinstance(ch, DMM) and ch.min_avg_abs_detuning is not None:
+                    min_avg_abs_detuning = (
+                        f"{float(ch.min_avg_abs_detuning):.4g} rad/µs"
+                    )
+
                 ch_lines += [
                     f" - ID: '{name}'",
                     f"\t- Type: {ch.name} (*{ch.basis}* basis)",
@@ -789,8 +808,7 @@ class BaseDevice(ABC):
                             + "\n"
                             + "\t"
                             + r"- Minimum average :math:`\Omega`: "
-                            + f"{float(ch.min_avg_amp):.4g}"
-                            + " rad/µs"
+                            + min_avg_amp
                             + "\n"
                             + "\t"
                             + r"- Maximum :math:`|\delta|`: "
@@ -805,11 +823,11 @@ class BaseDevice(ABC):
                             + "\n"
                             + "\t"
                             + r"- Total bottom :math:`\Delta`: "
-                            + f"{float(ch.total_bottom_detuning):.4g}"
+                            + total_bottom_detuning
                             + "\n"
                             + "\t"
                             + r"- Minimum average absolute :math:`\Delta`: "
-                            + f"{float(ch.min_avg_abs_detuning):.4g}"
+                            + min_avg_abs_detuning
                             + "\n"
                         )
                     ),
