@@ -747,7 +747,7 @@ class NoiseModel:
         """Maps non-zero noise quantities with their value and units.
 
         Returns:
-            A dictionnary, associating to each quantity (a string) a tuple
+            A dictionary, associating to each quantity (a string) a tuple
             composed of their value and their units (a string, that is empty
             if the quantity doesn't have units like for probabilities).
         """

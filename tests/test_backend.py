@@ -801,6 +801,15 @@ def test_emulation_config():
     np.testing.assert_equal(conf.default_evaluation_times, times)
 
 
+def test_is_evaluation_time_with_array_default_evaluation_times():
+    config = EmulationConfig(
+        observables=(BitStrings(),),
+        default_evaluation_times=np.array([0.0, 0.5, 1.0]),
+    )
+    assert config.is_evaluation_time(0.5)
+    assert not config.is_evaluation_time(0.75)
+
+
 @pytest.mark.parametrize("matching_uuids", [True, False])
 def test_results_aggregation(matching_uuids):
     results1 = Results(atom_order=[0, 1], total_duration=100)
