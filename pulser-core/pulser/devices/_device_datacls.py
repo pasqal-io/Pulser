@@ -731,10 +731,10 @@ class BaseDevice(ABC):
         device_lines = [
             "\nDevice parameters:",
             f" - Rydberg level: {self.rydberg_level}",
-            self._param_check_none(self.interaction_coeff)(
+            self._param_check_none(round(self.interaction_coeff, 3))(
                 " - Ising interaction coefficient: {} rad/µs x µm^6",
             ),
-            self._param_check_none(self.interaction_coeff_xy)(
+            self._param_check_none(round(self.interaction_coeff_xy, 3))(
                 " - XY interaction coefficient: {} rad/µs x µm^3",
             ),
             " - Channels can be reused: "
@@ -789,7 +789,7 @@ class BaseDevice(ABC):
                             + "\n"
                             + "\t"
                             + r"- Minimum average amplitude: "
-                            + str(ch.min_avg_amp)
+                            + str(round(ch.min_avg_amp, 3))
                             + " rad/µs"
                             + "\n"
                             + "\t"
