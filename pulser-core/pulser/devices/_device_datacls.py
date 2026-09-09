@@ -801,7 +801,16 @@ class BaseDevice(ABC):
                         else (
                             "\t"
                             + r"- Bottom :math:`\Delta`: "
-                            + bottom_detuning
+                            + str(bottom_detuning)
+                            + "\n"
+                            + "\t"
+                            + r"- Total bottom detuning: "
+                            + str(ch.total_bottom_detuning)
+                            + "\n"
+                            + "\t"
+                            + r"- Minimum average absolute detuning: "
+                            + str(ch.min_avg_abs_detuning)
+                            + "\n"
                         )
                     ),
                 ]
