@@ -731,11 +731,11 @@ class BaseDevice(ABC):
         device_lines = [
             "\nDevice parameters:",
             f" - Rydberg level: {self.rydberg_level}",
-            self._param_check_none(f"{float(self.interaction_coeff):.4g}")(
-                " - Ising interaction coefficient: {} :math:`\\mathrm{rad}/\\mu\\mathrm{s} \\times \\mu\\mathrm{m}^6`",
+            self._param_check_none(self.interaction_coeff)(
+                " - Ising interaction coefficient: {:.4g} :math:`\\mathrm{rad}/\\mu\\mathrm{s} \\times \\mu\\mathrm{m}^6`",
             ),
-            self._param_check_none(f"{float(self.interaction_coeff_xy):.4g}")(
-                " - XY interaction coefficient: {} :math:`\\mathrm{rad}/\\mu\\mathrm{s} \\times \\mu\\mathrm{m}^3`",
+            self._param_check_none(self.interaction_coeff_xy)(
+                " - XY interaction coefficient: {:.4g} :math:`\\mathrm{rad}/\\mu\\mathrm{s} \\times \\mu\\mathrm{m}^3`",
             ),
             " - Channels can be reused: "
             + self._param_yes_no(self.reusable_channels),
@@ -785,7 +785,7 @@ class BaseDevice(ABC):
                             + "\n"
                             + "\t"
                             + r"- Maximum :math:`\Omega`: "
-                            + f"{float(ch.max_amp):.4g}"
+                            + max_amp
                             + "\n"
                             + "\t"
                             + r"- Minimum average :math:`\Omega`: "
@@ -794,14 +794,14 @@ class BaseDevice(ABC):
                             + "\n"
                             + "\t"
                             + r"- Maximum :math:`|\delta|`: "
-                            + f"{float(ch.max_abs_detuning):.4g}"
+                            + max_abs_detuning
                             + "\n"
                         )
                         if not isinstance(ch, DMM)
                         else (
                             "\t"
                             + r"- Bottom :math:`\Delta`: "
-                            + f"{float(bottom_detuning):.4g}"
+                            + bottom_detuning
                             + "\n"
                             + "\t"
                             + r"- Total bottom :math:`\Delta`: "
