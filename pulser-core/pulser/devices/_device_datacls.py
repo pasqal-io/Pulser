@@ -779,9 +779,14 @@ class BaseDevice(ABC):
                     f"\t- Type: {ch.name} (*{ch.basis}* basis)",
                     (
                         (
-                            f"\t- Addressing: {ch.addressing}",
+                            ("\t" + r"- Addressing: " + ch.addressing),
                             ("\t" + r"- Maximum :math:`\Omega`: " + max_amp),
-                            f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
+                            (
+                                "\t"
+                                + r"- Minimum average amplitude: "
+                                + ch.min_avg_amp
+                                + " rad/µs"
+                            ),
                             (
                                 "\t"
                                 + r"- Maximum :math:`|\delta|`: "
