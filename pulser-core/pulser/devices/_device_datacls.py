@@ -826,7 +826,7 @@ class BaseDevice(ABC):
                             + total_bottom_detuning
                             + "\n"
                             + "\t"
-                            + r"- Minimum average absolute :math:`\Delta`: "
+                            + r"- Minimum average :math:`|\Delta|`: "
                             + min_avg_abs_detuning
                             + "\n"
                         )
