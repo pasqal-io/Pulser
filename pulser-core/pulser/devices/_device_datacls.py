@@ -731,11 +731,11 @@ class BaseDevice(ABC):
         device_lines = [
             "\nDevice parameters:",
             f" - Rydberg level: {self.rydberg_level}",
-            self._param_check_none(round(self.interaction_coeff, 3))(
-                " - Ising interaction coefficient: {} rad/µs x µm^6",
+            self._param_check_none(f"{float(self.interaction_coeff):.4g}")(
+                " - Ising interaction coefficient: {} :math:`\\mathrm{rad}/\\mu\\mathrm{s} \\times \\mu\\mathrm{m}^6`",
             ),
-            self._param_check_none(round(self.interaction_coeff_xy, 3))(
-                " - XY interaction coefficient: {} rad/µs x µm^3",
+            self._param_check_none(f"{float(self.interaction_coeff_xy):.4g}")(
+                " - XY interaction coefficient: {} :math:`\\mathrm{rad}/\\mu\\mathrm{s} \\times \\mu\\mathrm{m}^3`",
             ),
             " - Channels can be reused: "
             + self._param_yes_no(self.reusable_channels),
@@ -785,31 +785,31 @@ class BaseDevice(ABC):
                             + "\n"
                             + "\t"
                             + r"- Maximum :math:`\Omega`: "
-                            + str(max_amp)
+                            + f"{float(ch.max_amp):.4g}"
                             + "\n"
                             + "\t"
                             + r"- Minimum average amplitude: "
-                            + str(round(ch.min_avg_amp, 3))
+                            + f"{float(ch.min_avg_amp):.4g}"
                             + " rad/µs"
                             + "\n"
                             + "\t"
                             + r"- Maximum :math:`|\delta|`: "
-                            + str(max_abs_detuning)
+                            + f"{float(ch.max_abs_detuning):.4g}"
                             + "\n"
                         )
                         if not isinstance(ch, DMM)
                         else (
                             "\t"
                             + r"- Bottom :math:`\Delta`: "
-                            + str(bottom_detuning)
+                            + f"{float(bottom_detuning):.4g}"
                             + "\n"
                             + "\t"
                             + r"- Total bottom detuning: "
-                            + str(ch.total_bottom_detuning)
+                            + f"{float(ch.total_bottom_detuning):.4g}"
                             + "\n"
                             + "\t"
                             + r"- Minimum average absolute detuning: "
-                            + str(ch.min_avg_abs_detuning)
+                            + f"{float(ch.min_avg_abs_detuning):.4g}"
                             + "\n"
                         )
                     ),
