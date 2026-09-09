@@ -777,22 +777,24 @@ class BaseDevice(ABC):
                 ch_lines += [
                     f" - ID: '{name}'",
                     f"\t- Type: {ch.name} (*{ch.basis}* basis)",
-                    f"\t- Addressing: {ch.addressing}",
-                    ("\t" + r"- Maximum :math:`\Omega`: " + max_amp),
                     (
                         (
-                            "\t"
-                            + r"- Maximum :math:`|\delta|`: "
-                            + max_abs_detuning
+                            f"\t- Addressing: {ch.addressing}",
+                            ("\t" + r"- Maximum :math:`\Omega`: " + max_amp),
+                            f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
+                            (
+                                "\t"
+                                + r"- Maximum :math:`|\delta|`: "
+                                + max_abs_detuning
+                            ),
                         )
                         if not isinstance(ch, DMM)
                         else (
                             "\t"
-                            + r"- Bottom :math:`|\delta|`: "
+                            + r"- Bottom :math:`\Delta`: "
                             + bottom_detuning
                         )
                     ),
-                    f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
                 ]
                 if ch.addressing == "Local":
                     ch_lines += [
