@@ -779,19 +779,23 @@ class BaseDevice(ABC):
                     f"\t- Type: {ch.name} (*{ch.basis}* basis)",
                     (
                         (
-                            ("\t" + r"- Addressing: " + ch.addressing),
-                            ("\t" + r"- Maximum :math:`\Omega`: " + max_amp),
-                            (
-                                "\t"
-                                + r"- Minimum average amplitude: "
-                                + ch.min_avg_amp
-                                + " rad/µs"
-                            ),
-                            (
-                                "\t"
-                                + r"- Maximum :math:`|\delta|`: "
-                                + max_abs_detuning
-                            ),
+                            "\t"
+                            + r"- Addressing: "
+                            + ch.addressing
+                            + "\n"
+                            + "\t"
+                            + r"- Maximum :math:`\Omega`: "
+                            + str(max_amp)
+                            + "\n"
+                            + "\t"
+                            + r"- Minimum average amplitude: "
+                            + str(ch.min_avg_amp)
+                            + " rad/µs"
+                            + "\n"
+                            + "\t"
+                            + r"- Maximum :math:`|\delta|`: "
+                            + str(max_abs_detuning)
+                            + "\n"
                         )
                         if not isinstance(ch, DMM)
                         else (
