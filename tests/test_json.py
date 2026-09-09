@@ -218,7 +218,10 @@ def test_rare_cases(patch_plt_show, helpers):
     rotated_reg = parametrize(Register.rotated)(reg, var)
     with pytest.raises(
         NotImplementedError,
-        match="Instance or static method serialization is not supported.",
+        match=re.escape(
+            "Instance or static method serialization is not supported; "
+            "got 'Register.rotated'."
+        ),
     ):
         encode(rotated_reg)
 
