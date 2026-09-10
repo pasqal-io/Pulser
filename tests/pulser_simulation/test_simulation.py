@@ -588,6 +588,28 @@ def test_get_hamiltonian():
     )
 
 
+def test_get_hamiltonian_c6_value():
+    """Regression test for the C_6 value used in the Ising Hamiltonian.
+
+    The expected value here is a number from C6_coeffs.json entry for
+    MockDevice's Rydberg level (70).
+    """
+    assert MockDevice.rydberg_level == 70
+    c6_level_70 = 5420158.53
+
+    simple_reg = Register.from_coordinates([[10, 0], [0, 0]], prefix="atom")
+    detun = 1.0
+    rise = Pulse.ConstantDetuning(RampWaveform(1500, 0.0, 2.0), detun, 0.0)
+    simple_seq = Sequence(simple_reg, MockDevice)
+    simple_seq.declare_channel("ising", "rydberg_global")
+    simple_seq.add(rise, "ising")
+
+    simple_sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.01)
+    simple_ham = simple_sim.get_hamiltonian(143)
+    # |rr><rr| term is C_6/r^6 - 2*detuning, with r = 10 µm
+    assert np.isclose(simple_ham[0, 0], c6_level_70 / 10**6 - 2 * detun)
+
+
 def test_single_atom_simulation():
     one_reg = Register.from_coordinates([(0, 0)], prefix="atom")
     one_seq = Sequence(one_reg, DigitalAnalogDevice)
@@ -1490,6 +1512,29 @@ def test_get_xy_hamiltonian():
         * MockDevice.interaction_coeff
         / 1e6,
     )
+
+
+def test_get_xy_hamiltonian_c3_value():
+    """Regression test pinning the C_3 value used in the XY Hamiltonian.
+
+    The expected value here is a number from C3_coeffs.json for
+    MockDevice's Rydberg level (70).
+    """
+    assert MockDevice.rydberg_level == 70
+    c3_level_70 = 36288.3559282823
+
+    simple_reg = Register.from_coordinates([[10, 0], [0, 0]], prefix="atom")
+    detun = 1.0
+    amp = 3.0
+    rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
+    simple_seq = Sequence(simple_reg, MockDevice)
+    simple_seq.declare_channel("ch0", "mw_global")
+    simple_seq.add(rise, "ch0")
+
+    simple_sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.03)
+    simple_ham = simple_sim.get_hamiltonian(143)
+    # |ud><du| term is C_3/r^3 - 2*detuning for any time, with r = 10 µm
+    assert np.isclose(simple_ham[1, 2], c3_level_70 / 10**3)
 
 
 def test_run_xy():
