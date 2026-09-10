@@ -173,20 +173,20 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             >>>             (Y, [1]),
             >>>             (Z, [3]),
             >>>         ],
-            >>>     )
+            >>>     ),
             >>>     (
             >>>         -0.2j,
             >>>         [
             >>>             (Z, [1]),
             >>>             (Y, [3]),
             >>>         ],
-            >>>     )
+            >>>     ),
             >>>     (
             >>>         -0.1 + 4.0j,
             >>>         [
             >>>             (X, [2]),
             >>>         ],
-            >>>     )
+            >>>     ),
             >>> ]
             >>> config_class = your_pulser_backend.config_type
             >>> operator_class = config_class.operator_type
