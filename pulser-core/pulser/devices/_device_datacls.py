@@ -801,36 +801,26 @@ class BaseDevice(ABC):
                     (
                         (
                             "\t"
-                            + r"- Addressing: "
-                            + ch.addressing
-                            + "\n"
-                            + "\t"
-                            + r"- Maximum :math:`\Omega`: "
-                            + max_amp
-                            + "\n"
-                            + "\t"
-                            + r"- Minimum average :math:`\Omega`: "
-                            + min_avg_amp
-                            + "\n"
-                            + "\t"
-                            + r"- Maximum :math:`|\delta|`: "
-                            + max_abs_detuning
-                            + "\n"
+                            rf"- Addressing: {ch.addressing}"
+                            "\n\t"
+                            rf"- Maximum :math:`\Omega`: {max_amp}"
+                            "\n\t"
+                            rf"- Minimum average :math:`\Omega`: {min_avg_amp}"
+                            "\n\t"
+                            rf"- Maximum :math:`|\delta|`: {max_abs_detuning}"
+                            "\n"
                         )
                         if not isinstance(ch, DMM)
                         else (
                             "\t"
-                            + r"- Bottom :math:`\Delta`: "
-                            + bottom_detuning
-                            + "\n"
-                            + "\t"
-                            + r"- Total bottom :math:`\Delta`: "
-                            + total_bottom_detuning
-                            + "\n"
-                            + "\t"
-                            + r"- Minimum average :math:`|\Delta|`: "
-                            + min_avg_abs_detuning
-                            + "\n"
+                            rf"- Bottom :math:`\Delta`: {bottom_detuning}"
+                            "\n\t"
+                            r"- Total bottom :math:`\Delta`: "
+                            f"{total_bottom_detuning}"
+                            "\n\t"
+                            r"- Minimum average :math:`|\Delta|`: "
+                            f"{min_avg_abs_detuning}"
+                            "\n"
                         )
                     ),
                 ]
