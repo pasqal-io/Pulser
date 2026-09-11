@@ -336,11 +336,11 @@ def test_device_specs(device):
             "\nDevice parameters:\n"
             + f" - Rydberg level: {dev.rydberg_level}\n"
             + f" - Ising interaction coefficient: {dev.interaction_coeff:.4g}"
-            + " rad/µs x µm^6\n"
+            + " (rad/µs) :math:`\\cdot` µm^6\n"
             + check_none_fn(
                 dev,
                 "interaction_coeff_xy",
-                "XY interaction coefficient: {:.4g} rad/µs x µm^3",
+                "XY interaction coefficient: {:.4g} (rad/µs) :math:`\\cdot` µm^3",
             )
             + yes_no_fn(dev, "reusable_channels", "Channels can be reused")
             + f" - Supported bases: {', '.join(dev.supported_bases)}\n"

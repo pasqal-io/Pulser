@@ -732,10 +732,12 @@ class BaseDevice(ABC):
             "\nDevice parameters:",
             f" - Rydberg level: {self.rydberg_level}",
             self._param_check_none(self.interaction_coeff)(
-                " - Ising interaction coefficient: {:.4g} rad/µs x µm^6",
+                " - Ising interaction coefficient: {:.4g}"
+                " (rad/µs) :math:`\\cdot` µm^6",
             ),
             self._param_check_none(self.interaction_coeff_xy)(
-                " - XY interaction coefficient: {:.4g} rad/µs x µm^3",
+                " - XY interaction coefficient: {:.4g}"
+                " (rad/µs) :math:`\\cdot` µm^3",
             ),
             " - Channels can be reused: "
             + self._param_yes_no(self.reusable_channels),
