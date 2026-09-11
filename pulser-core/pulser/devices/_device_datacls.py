@@ -732,10 +732,12 @@ class BaseDevice(ABC):
             "\nDevice parameters:",
             f" - Rydberg level: {self.rydberg_level}",
             self._param_check_none(self.interaction_coeff)(
-                " - Ising interaction coefficient: {}",
+                " - Ising interaction coefficient: {:.4g}"
+                " (rad/µs) :math:`\\cdot` µm^6",
             ),
             self._param_check_none(self.interaction_coeff_xy)(
-                " - XY interaction coefficient: {}",
+                " - XY interaction coefficient: {:.4g}"
+                " (rad/µs) :math:`\\cdot` µm^3",
             ),
             " - Channels can be reused: "
             + self._param_yes_no(self.reusable_channels),
@@ -774,25 +776,53 @@ class BaseDevice(ABC):
                 if isinstance(ch, DMM) and ch.bottom_detuning is not None:
                     bottom_detuning = f"{float(ch.bottom_detuning):.4g} rad/µs"
 
+                min_avg_amp = "None"
+                if not isinstance(ch, DMM) and ch.min_avg_amp is not None:
+                    min_avg_amp = f"{float(ch.min_avg_amp):.4g} rad/µs"
+
+                total_bottom_detuning = "None"
+                if (
+                    isinstance(ch, DMM)
+                    and ch.total_bottom_detuning is not None
+                ):
+                    total_bottom_detuning = (
+                        f"{float(ch.total_bottom_detuning):.4g} rad/µs"
+                    )
+
+                min_avg_abs_detuning = "None"
+                if isinstance(ch, DMM) and ch.min_avg_abs_detuning is not None:
+                    min_avg_abs_detuning = (
+                        f"{float(ch.min_avg_abs_detuning):.4g} rad/µs"
+                    )
+
                 ch_lines += [
                     f" - ID: '{name}'",
                     f"\t- Type: {ch.name} (*{ch.basis}* basis)",
-                    f"\t- Addressing: {ch.addressing}",
-                    ("\t" + r"- Maximum :math:`\Omega`: " + max_amp),
                     (
                         (
                             "\t"
-                            + r"- Maximum :math:`|\delta|`: "
-                            + max_abs_detuning
+                            rf"- Addressing: {ch.addressing}"
+                            "\n\t"
+                            rf"- Maximum :math:`\Omega`: {max_amp}"
+                            "\n\t"
+                            rf"- Minimum average :math:`\Omega`: {min_avg_amp}"
+                            "\n\t"
+                            rf"- Maximum :math:`|\delta|`: {max_abs_detuning}"
+                            "\n"
                         )
                         if not isinstance(ch, DMM)
                         else (
                             "\t"
-                            + r"- Bottom :math:`|\delta|`: "
-                            + bottom_detuning
+                            rf"- Bottom :math:`\Delta`: {bottom_detuning}"
+                            "\n\t"
+                            r"- Total bottom :math:`\Delta`: "
+                            f"{total_bottom_detuning}"
+                            "\n\t"
+                            r"- Minimum average :math:`|\Delta|`: "
+                            f"{min_avg_abs_detuning}"
+                            "\n"
                         )
                     ),
-                    f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
                 ]
                 if ch.addressing == "Local":
                     ch_lines += [
