@@ -179,11 +179,13 @@ def test_layout(layout: RegisterLayout):
     ser_layout_obj = json.loads(ser_layout_str)
     assert ser_layout_obj.get("slug", None) == layout.slug
 
-    re_layout = RegisterLayout.from_abstract_repr(ser_layout_str)
-    assert layout == re_layout
-    assert type(re_layout) is type(layout)
-    assert deserialize_layout(ser_layout_str) == re_layout
-    assert deserialize_layout(ser_layout_str, matching_type=None) == re_layout
+    for re_layout in [
+        RegisterLayout.from_abstract_repr(ser_layout_str),
+        deserialize_layout(ser_layout_str),
+        deserialize_layout(ser_layout_str, matching_type=None),
+    ]:
+        assert layout == re_layout
+        assert type(re_layout) is type(layout)
 
     matching_layout = type(layout).from_abstract_repr(ser_layout_str)
     assert matching_layout == layout
@@ -214,13 +216,14 @@ def test_layout_rejects_mismatched_type(layout, matching_type):
     error_match = (
         f"The deserialized layout has type '{type(layout).__name__}', "
         f"which does not match the requested type "
-        f"'{matching_type.__name__}'."
+        f"'{matching_type.__name__}'. Got serialized layout "
+        f"{serialized_layout}."
     )
 
-    with pytest.raises(ValueError, match=error_match):
+    with pytest.raises(ValueError, match=re.escape(error_match)):
         matching_type.from_abstract_repr(serialized_layout)
 
-    with pytest.raises(ValueError, match=error_match):
+    with pytest.raises(ValueError, match=re.escape(error_match)):
         deserialize_layout(serialized_layout, matching_type=matching_type)
 
 

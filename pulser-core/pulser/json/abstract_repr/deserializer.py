@@ -565,9 +565,9 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     # value determined by the Rydberg level, i.e. when it was customized.
     if "interaction_coeff_xy" in obj:
         rydberg_level = params.get("rydberg_level")
-        if (
+        if (  # Defensive, rydberg_level should always exist
             rydberg_level is None
-        ) or (  # Defensive, rydberg_level should always exist
+        ) or (
             obj["interaction_coeff_xy"]
             != devices.interaction_coefficients.c3_dict[rydberg_level]
         ):
@@ -732,8 +732,9 @@ def deserialize_abstract_layout(
     Args:
         obj_str: the JSON string representing the layout encoded
             in the abstract JSON format.
-        matching_type: A specific RegisterLayout type that the deserialized
-            layout must match.
+        matching_type: An optional specific RegisterLayout type that the
+            deserialized layout must match. When omitted, no type check is
+            performed.
 
     Returns:
         The RegisterLayout instance.
@@ -744,7 +745,7 @@ def deserialize_abstract_layout(
         raise ValueError(
             f"The deserialized layout has type '{type(layout).__name__}', "
             f"which does not match the requested type "
-            f"'{matching_type.__name__}'."
+            f"'{matching_type.__name__}'. Got serialized layout {obj_str}."
         )
     return layout
 
