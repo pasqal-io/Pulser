@@ -21,7 +21,7 @@ from collections import Counter
 from collections.abc import Mapping
 from collections.abc import Sequence as abcSequence
 from dataclasses import dataclass
-from typing import Any, Optional, cast
+from typing import Any, Optional, Type, TypeVar, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,6 +36,8 @@ from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.traps import Traps
 from pulser.register.weight_maps import DetuningMap
+
+T = TypeVar("T", bound="RegisterLayout")
 
 
 @dataclass(init=False, repr=False, eq=False, frozen=True)
@@ -293,8 +295,8 @@ class RegisterLayout(Traps, RegDrawer):
         validate_abstract_repr(abstr_layout_str, "layout")
         return abstr_layout_str
 
-    @staticmethod
-    def from_abstract_repr(obj_str: str) -> RegisterLayout:
+    @classmethod
+    def from_abstract_repr(cls: Type[T], obj_str: str) -> T:
         """Deserialize a layout from an abstract JSON object.
 
         Args:
@@ -308,5 +310,5 @@ class RegisterLayout(Traps, RegDrawer):
             )
         # Avoids circular imports
         return pulser_abstract_repr.deserializer.deserialize_abstract_layout(
-            obj_str
+            obj_str, matching_type=cls
         )
