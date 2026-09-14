@@ -329,6 +329,11 @@ def test_device_specs(device):
                 dev, "max_layout_traps", "Maximal number of traps: {}"
             )
             + f" - Minimum layout filling fraction: {dev.min_layout_filling}\n"
+            + check_none_fn(
+                dev,
+                "optimal_layout_filling",
+                "Optimal layout filling fraction: {}",
+            )
             + f" - Maximum layout filling fraction: {dev.max_layout_filling}\n"
         )
 
