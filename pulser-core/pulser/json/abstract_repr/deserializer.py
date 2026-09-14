@@ -17,7 +17,16 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from typing import TYPE_CHECKING, Any, Literal, Type, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 import jsonschema
 import jsonschema.exceptions
@@ -69,6 +78,7 @@ if TYPE_CHECKING:
 VARIABLE_TYPE_MAP = {"int": int, "float": float}
 
 ExpReturnType = Union[int, float, list, ParamObj]
+T = TypeVar("T", bound=RegisterLayout)
 
 
 @overload
@@ -702,18 +712,42 @@ def deserialize_device(obj_str: str) -> Device | VirtualDevice:
         raise DeserializeDeviceError from e
 
 
-def deserialize_abstract_layout(obj_str: str) -> RegisterLayout:
+@overload
+def deserialize_abstract_layout(
+    obj_str: str, matching_type: None = None
+) -> RegisterLayout:
+    pass
+
+
+@overload
+def deserialize_abstract_layout(obj_str: str, matching_type: Type[T]) -> T:
+    pass
+
+
+def deserialize_abstract_layout(
+    obj_str: str, matching_type: Type[RegisterLayout] | None = None
+) -> RegisterLayout:
     """Deserialize a layout from an abstract JSON object.
 
     Args:
         obj_str: the JSON string representing the layout encoded
             in the abstract JSON format.
+        matching_type: An optional specific RegisterLayout type that the
+            deserialized layout must match. When omitted, no type check is
+            performed.
 
     Returns:
         The RegisterLayout instance.
     """
     validate_abstract_repr(obj_str, "layout")
-    return _deserialize_layout(json.loads(obj_str))
+    layout = _deserialize_layout(json.loads(obj_str))
+    if matching_type is not None and not isinstance(layout, matching_type):
+        raise ValueError(
+            f"The deserialized layout has type '{type(layout).__name__}', "
+            f"which does not match the requested type "
+            f"'{matching_type.__name__}'. Got serialized layout {obj_str}."
+        )
+    return layout
 
 
 @overload
