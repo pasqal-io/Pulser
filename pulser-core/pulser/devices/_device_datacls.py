@@ -735,11 +735,11 @@ class BaseDevice(ABC):
             "\nDevice parameters:",
             f" - Rydberg level: {self.rydberg_level}",
             self._param_check_none(self.interaction_coeff)(
-                " - Ising interaction coefficient: {:.4g}"
+                r" - Ising interaction coefficient :math:`(C_6/\hbar)`: {:.4g}"
                 " (rad/µs) :math:`\\cdot` µm^6",
             ),
             self._param_check_none(self.interaction_coeff_xy)(
-                " - XY interaction coefficient: {:.4g}"
+                r" - XY interaction coefficient :math:`(C_3/\hbar)`: {:.4g}"
                 " (rad/µs) :math:`\\cdot` µm^3",
             ),
             " - Channels can be reused: "
@@ -840,11 +840,11 @@ class BaseDevice(ABC):
                             f"{float(ch.eom_config.rise_time):.4g} ns"
                         )
                     ch_lines += [
-                        "\t- EOM Enabled: Yes",
+                        "\t- Supports EOM mode: Yes",
                         f"\t- EOM Rise time: {eom_rise_time}",
                     ]
                 elif not isinstance(ch, DMM):
-                    ch_lines += ["\t- EOM Enabled: No"]
+                    ch_lines += ["\t- Supports EOM mode: No"]
 
                 if ch.addressing == "Local":
                     ch_lines += [
