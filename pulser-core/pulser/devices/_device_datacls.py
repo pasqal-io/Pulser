@@ -721,6 +721,9 @@ class BaseDevice(ABC):
                 " - Maximal number of traps: {}"
             ),
             f" - Minimum layout filling fraction: {self.min_layout_filling}",
+            self._param_check_none(self.optimal_layout_filling)(
+                " - Optimal layout filling fraction: {}"
+            ),
             f" - Maximum layout filling fraction: {self.max_layout_filling}",
         ]
 
@@ -795,6 +798,10 @@ class BaseDevice(ABC):
                         f"{float(ch.min_avg_abs_detuning):.4g} rad/µs"
                     )
 
+                rise_time = "None"
+                if ch.rise_time is not None:
+                    rise_time = f"{float(ch.rise_time):.4g} ns"
+
                 ch_lines += [
                     f" - ID: '{name}'",
                     f"\t- Type: {ch.name} (*{ch.basis}* basis)",
@@ -808,6 +815,8 @@ class BaseDevice(ABC):
                             rf"- Minimum average :math:`\Omega`: {min_avg_amp}"
                             "\n\t"
                             rf"- Maximum :math:`|\delta|`: {max_abs_detuning}"
+                            "\n\t"
+                            rf"- Rise time: {rise_time}"
                             "\n"
                         )
                         if not isinstance(ch, DMM)
@@ -824,6 +833,19 @@ class BaseDevice(ABC):
                         )
                     ),
                 ]
+                if ch.eom_config is not None:
+                    eom_rise_time = "None"
+                    if ch.eom_config.rise_time is not None:
+                        eom_rise_time = (
+                            f"{float(ch.eom_config.rise_time):.4g} ns"
+                        )
+                    ch_lines += [
+                        "\t- EOM Enabled: Yes",
+                        f"\t- EOM Rise time: {eom_rise_time}",
+                    ]
+                elif not isinstance(ch, DMM):
+                    ch_lines += ["\t- EOM Enabled: No"]
+
                 if ch.addressing == "Local":
                     ch_lines += [
                         "\t- Minimum time between retargets: "
