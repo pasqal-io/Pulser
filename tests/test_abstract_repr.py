@@ -29,7 +29,7 @@ import pytest
 
 import pulser
 from pulser import Pulse, Register, Register3D, Sequence, devices
-from pulser.abstract_repr import deserialize_device
+from pulser.abstract_repr import deserialize_device, deserialize_layout
 from pulser.channels import DMM, Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import (
@@ -179,9 +179,17 @@ def test_layout(layout: RegisterLayout):
     ser_layout_obj = json.loads(ser_layout_str)
     assert ser_layout_obj.get("slug", None) == layout.slug
 
-    re_layout = RegisterLayout.from_abstract_repr(ser_layout_str)
-    assert layout == re_layout
-    assert type(re_layout) is type(layout)
+    for re_layout in [
+        RegisterLayout.from_abstract_repr(ser_layout_str),
+        deserialize_layout(ser_layout_str),
+        deserialize_layout(ser_layout_str, matching_type=None),
+    ]:
+        assert layout == re_layout
+        assert type(re_layout) is type(layout)
+
+    matching_layout = type(layout).from_abstract_repr(ser_layout_str)
+    assert matching_layout == layout
+    assert type(matching_layout) is type(layout)
 
     with pytest.raises(TypeError, match="must be given as a string"):
         RegisterLayout.from_abstract_repr(ser_layout_obj)
@@ -192,6 +200,31 @@ def test_layout(layout: RegisterLayout):
             [0, 0, 0] if layout.dimensionality == 2 else [0, 0]
         )
         RegisterLayout.from_abstract_repr(json.dumps(ser_layout_obj))
+
+
+@pytest.mark.parametrize(
+    ("layout", "matching_type"),
+    [
+        (SquareLatticeLayout(2, 3, 4), TriangularLatticeLayout),
+        (TriangularLatticeLayout(7, 4), SquareLatticeLayout),
+        (RectangularLatticeLayout(2, 3, 4, 5), SquareLatticeLayout),
+        (RegisterLayout([[0, 0], [1, 1]]), TriangularLatticeLayout),
+    ],
+)
+def test_layout_rejects_mismatched_type(layout, matching_type):
+    serialized_layout = layout.to_abstract_repr()
+    error_match = (
+        f"The deserialized layout has type '{type(layout).__name__}', "
+        f"which does not match the requested type "
+        f"'{matching_type.__name__}'. Got serialized layout "
+        f"{serialized_layout}."
+    )
+
+    with pytest.raises(ValueError, match=re.escape(error_match)):
+        matching_type.from_abstract_repr(serialized_layout)
+
+    with pytest.raises(ValueError, match=re.escape(error_match)):
+        deserialize_layout(serialized_layout, matching_type=matching_type)
 
 
 @pytest.mark.parametrize(
