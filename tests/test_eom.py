@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import numpy as np
 import pytest
 
@@ -57,7 +59,10 @@ def test_bad_value_init_eom(bad_param, bad_value, params):
     if bad_param == "mod_bandwidth" and bad_value > 0:
         error_type = NotImplementedError
         max_bw = calculate_mod_bandwidth_from_amplitude_rise_time(1)
-        error_message = f"'mod_bandwidth' must be lower than {max_bw:.0f} MHz"
+        error_message = re.escape(
+            f"'mod_bandwidth' must be lower than {max_bw:.0f} MHz, not "
+            f"{bad_value}."
+        )
     else:
         error_type = ValueError
         error_message = f"'{bad_param}' must be greater than zero"
@@ -77,9 +82,14 @@ def test_bad_value_init_eom(bad_param, bad_value, params):
 )
 def test_bad_init_eom_beam(bad_param, bad_value, params):
     params[bad_param] = bad_value
+    # The offending beam is reported, not the limiting beam
+    bad_beam = bad_value if bad_param == "limiting_beam" else bad_value[0]
     with pytest.raises(
         TypeError,
-        match="Every beam must be one of options of the `RydbergBeam`",
+        match=re.escape(
+            "Every beam must be one of options of the `RydbergBeam`"
+            f" enumeration, not {bad_beam}."
+        ),
     ):
         RydbergEOM(**params)
 
@@ -88,7 +98,10 @@ def test_bad_controlled_beam(params):
     params["controlled_beams"] = set(RydbergBeam)
     with pytest.raises(
         TypeError,
-        match="The 'controlled_beams' must be provided as a tuple or list.",
+        match=re.escape(
+            "The 'controlled_beams' must be provided as a tuple or list,"
+            " not <class 'set'>."
+        ),
     ):
         RydbergEOM(**params)
 

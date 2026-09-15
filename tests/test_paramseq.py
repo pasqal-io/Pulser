@@ -302,7 +302,7 @@ def test_parametrized_before_eom_mode(mod_device):
     with pytest.raises(
         ValueError,
         match="The pulse's amplitude goes over the maximum "
-        "value allowed for the chosen channel.",
+        "value allowed for the chosen channel",
     ):
         seq.enable_eom_mode("ch0", 10000, 0.0)
 
@@ -318,7 +318,7 @@ def test_parametrized_before_eom_mode(mod_device):
     ):
         seq.add_eom_pulse("ch0", 200, "0.")
 
-    with pytest.raises(ValueError, match="duration has to be at least"):
+    with pytest.raises(ValueError, match="'duration' has to be at least"):
         seq.add_eom_pulse("ch0", 0, 0.0)
 
     var = seq.declare_variable("var", dtype=float, size=None)

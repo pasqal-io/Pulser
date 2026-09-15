@@ -221,7 +221,8 @@ class Channel(ABC):
             parameters += local_only
             if self.propagation_dir is not None:
                 raise NotImplementedError(
-                    "'propagation_dir' must be left as None in Local channels."
+                    "'propagation_dir' must be left as None in Local "
+                    f"channels; got {self.propagation_dir}."
                 )
 
         for param in parameters:
@@ -444,18 +445,20 @@ class Channel(ABC):
             _duration = int(duration)
         except (TypeError, ValueError):
             raise TypeError(
-                "duration needs to be castable to an int but "
-                "type %s was provided" % type(duration)
+                "'duration' needs to be castable to an int; got "
+                f"{duration!r} of type {type(duration)}."
             )
 
         if duration < self.min_duration:
             raise ValueError(
-                "duration has to be at least " + f"{self.min_duration} ns."
+                f"'duration' has to be at least {self.min_duration} ns; "
+                f"got {duration}."
             )
 
         if self.max_duration is not None and duration > self.max_duration:
             raise ValueError(
-                "duration can be at most " + f"{self.max_duration} ns."
+                f"'duration' can be at most {self.max_duration} ns; "
+                f"got {duration}."
             )
 
         if round_up and duration % self.clock_period != 0:
@@ -482,25 +485,26 @@ class Channel(ABC):
         amp_samples_np = pulse.amplitude.samples.as_array(detach=True)
         if self.max_amp is not None and np.any(amp_samples_np > self.max_amp):
             raise ValueError(
-                "The pulse's amplitude goes over the maximum "
-                "value allowed for the chosen channel."
+                "The pulse's amplitude goes over the maximum value allowed "
+                f"for the chosen channel ({self.max_amp}); got "
+                f"{amp_samples_np.max()}."
             )
-        if self.max_abs_detuning is not None and np.any(
-            np.round(
+        if self.max_abs_detuning is not None:
+            abs_detuning = np.round(
                 np.abs(pulse.detuning.samples.as_array(detach=True)),
                 decimals=6,
             )
-            > self.max_abs_detuning
-        ):
-            raise ValueError(
-                "The pulse's detuning values go out of the range "
-                "allowed for the chosen channel."
-            )
+            if np.any(abs_detuning > self.max_abs_detuning):
+                raise ValueError(
+                    "The pulse's detuning values go out of the range allowed "
+                    f"for the chosen channel ({self.max_abs_detuning}); got "
+                    f"a maximum absolute value of {abs_detuning.max()}."
+                )
         avg_amp = np.average(amp_samples_np)
         if 0 < avg_amp < self.min_avg_amp:
             raise ValueError(
                 "The pulse's average amplitude is below the chosen "
-                f"channel's limit ({self.min_avg_amp})."
+                f"channel's limit ({self.min_avg_amp}); got {avg_amp}."
             )
 
     @property

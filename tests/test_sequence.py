@@ -2123,7 +2123,11 @@ def test_estimate_added_delay_dmm():
     seq.add(pulse_0, "ising")
     assert seq.estimate_added_delay(det_pulse, "dmm_0") == 0
     with pytest.raises(
-        ValueError, match="The detuning in a DMM must not be positive."
+        ValueError,
+        match=re.escape(
+            "The detuning in a DMM must not be positive; got a maximum"
+            " of 1.0."
+        ),
     ):
         seq.estimate_added_delay(Pulse.ConstantPulse(100, 0, 1, 0), "dmm_0")
     with pytest.raises(
@@ -3264,7 +3268,10 @@ def test_truncate_delay(reg, device):
     seq.truncate(197)  # Above current duration, nothing changes
     assert seq.get_duration() == 196
 
-    with pytest.raises(ValueError, match="duration has to be at least 16 ns"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("'duration' has to be at least 16 ns; got 15."),
+    ):
         seq.truncate(15)
 
     # We add another delay and truncate such that it goes below the minimum
