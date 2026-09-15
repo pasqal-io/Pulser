@@ -329,15 +329,27 @@ def test_device_specs(device):
                 dev, "max_layout_traps", "Maximal number of traps: {}"
             )
             + f" - Minimum layout filling fraction: {dev.min_layout_filling}\n"
+            + check_none_fn(
+                dev,
+                "optimal_layout_filling",
+                "Optimal layout filling fraction: {}",
+            )
             + f" - Maximum layout filling fraction: {dev.max_layout_filling}\n"
         )
 
         device_str = (
             "\nDevice parameters:\n"
             + f" - Rydberg level: {dev.rydberg_level}\n"
-            + f" - Ising interaction coefficient: {dev.interaction_coeff}\n"
+            + (
+                r" - Ising interaction coefficient :math:`(C_6/\hbar)`: "
+                + f"{dev.interaction_coeff:.4g}"
+                + " (rad/µs) :math:`\\cdot` µm^6\n"
+            )
             + check_none_fn(
-                dev, "interaction_coeff_xy", "XY interaction coefficient: {}"
+                dev,
+                "interaction_coeff_xy",
+                r"XY interaction coefficient :math:`(C_3/\hbar)`: {:.4g}"
+                + " (rad/µs) :math:`\\cdot` µm^3",
             )
             + yes_no_fn(dev, "reusable_channels", "Channels can be reused")
             + f" - Supported bases: {', '.join(dev.supported_bases)}\n"
