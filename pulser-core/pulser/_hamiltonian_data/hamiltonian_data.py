@@ -23,7 +23,6 @@ from typing import Iterator, List, Literal, NamedTuple, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
-from scipy.spatial.distance import cdist
 
 import pulser.math as pm
 from pulser._hamiltonian_data.basis_data import BasisData
@@ -172,21 +171,10 @@ def _generate_detuning_fluctuations(
 def _distances(register: BaseRegister) -> pm.AbstractArray:
     r"""Distances between each qubits (in :math:`\mu m`)."""
     positions = list(register.qubits.values())
-    if not positions[0].is_tensor:
-        return pm.AbstractArray(
-            np.round(
-                cast(
-                    np.ndarray,
-                    cdist(positions, positions, metric="euclidean"),
-                ),
-                COORD_PRECISION,
-            ),
-        )
-    else:
-        ten = pm.torch.stack(
-            [cast(pm.torch.Tensor, x._array) for x in positions]
-        )
-        return pm.AbstractArray(pm.torch.cdist(ten, ten))
+    distances = pm.cdist(positions, positions)
+    if positions[0].is_tensor:
+        return distances
+    return pm.round(distances, COORD_PRECISION)
 
 
 class HamiltonianData:
