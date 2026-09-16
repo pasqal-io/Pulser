@@ -72,4 +72,4 @@ $$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega_k(t)}{2} e^{-i\phi_k(t)}
 $$
 
 - {ref}`Local pulses and target operations </tutorials/phase_shifts_vz_gates.nblink#Phase-shifts-with-multiple-channels-and-different-targets>` enable to define gates applying on only specific qubits, by defining a driving Hamiltonian for a set of targeted atoms specifically (the quantities $\Omega_k$, $\delta_k$ and $\phi_k$ in the Hamiltonian above depend on the atoms).
-- [Virtual Z gates and phase shifts](tutorials/phase_shifts_vz_gates.nblink): phase shift is an operation that can be programmed in between two pulses to program a _virtual-Z gate_, a phase gate. This tutorial presents how to use it to perform an Hadamard gate.
+- [Virtual Z gates and phase shifts](tutorials/phase_shifts_vz_gates.nblink): phase shift is an operation that can be programmed in between two pulses to program a _virtual-Z gate_, a phase gate. This tutorial presents how to use it to perform a Hadamard gate.
