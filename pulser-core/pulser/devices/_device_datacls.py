@@ -104,7 +104,9 @@ class BaseDevice(ABC):
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
         optimal_layout_filling: An optional value for the fraction of a layout
-            that should be filled with atoms.
+            that should be filled with atoms, used as a target when Pulser
+            autogenerates a layout. Picking a value close to the true
+            optimum improves register preparation reliability on QPU.
         rydberg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
@@ -967,7 +969,9 @@ class Device(BaseDevice):
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
         optimal_layout_filling: An optional value for the fraction of a layout
-            that should be filled with atoms.
+            that should be filled with atoms, used as a target when Pulser
+            autogenerates a layout. Picking a value close to the true
+            optimum improves register preparation reliability on QPU.
         min_layout_traps: The minimum number of traps a layout can have.
         max_layout_traps: An optional value for the maximum number of traps a
             layout can have.
@@ -1150,7 +1154,9 @@ class VirtualDevice(BaseDevice):
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
         optimal_layout_filling: An optional value for the fraction of a layout
-            that should be filled with atoms.
+            that should be filled with atoms, used as a target when Pulser
+            autogenerates a layout. Picking a value close to the true
+            optimum improves register preparation reliability on QPU.
         min_layout_traps: The minimum number of traps a layout can have.
         max_layout_traps: An optional value for the maximum number of traps a
             layout can have.
