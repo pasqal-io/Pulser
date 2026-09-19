@@ -2278,7 +2278,7 @@ def test_estimate_added_delay_dmm():
         ValueError,
         match=re.escape(
             "The detuning in a DMM must not be positive; got a maximum"
-            " of 1.0."
+            " of 1.0 in detuning ConstantWaveform(100 ns, 1)."
         ),
     ):
         seq.estimate_added_delay(Pulse.ConstantPulse(100, 0, 1, 0), "dmm_0")

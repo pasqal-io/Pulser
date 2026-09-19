@@ -82,13 +82,13 @@ def test_bad_value_init_eom(bad_param, bad_value, params):
 )
 def test_bad_init_eom_beam(bad_param, bad_value, params):
     params[bad_param] = bad_value
-    # The offending beam is reported, not the limiting beam
+    # Both the offending beam and the attribute it came from are reported
     bad_beam = bad_value if bad_param == "limiting_beam" else bad_value[0]
     with pytest.raises(
         TypeError,
         match=re.escape(
             "Every beam must be one of options of the `RydbergBeam`"
-            f" enumeration, not {bad_beam}."
+            f" enumeration. Got {bad_beam} for attribute {bad_param}."
         ),
     ):
         RydbergEOM(**params)

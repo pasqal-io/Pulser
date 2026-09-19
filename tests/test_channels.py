@@ -349,34 +349,41 @@ def test_rise_time_consistency():
     assert channel.rise_time == expected_rise_time
 
 
+_over_amp_pulse = Pulse.ConstantPulse(100, 1e6, 0, 0)
+_over_det_pulse = Pulse.ConstantPulse(100, 0, -1e4, 0)
+_low_avg_pulse = Pulse.ConstantPulse(100, 0.99e-3, 0, 0)
+
+
 @pytest.mark.parametrize(
     "pulse, error, msg",
     [
         ("π-pulse", TypeError, "must be of type Pulse"),
         (
-            Pulse.ConstantPulse(100, 1e6, 0, 0),
+            _over_amp_pulse,
             ValueError,
             re.escape(
                 "The pulse's amplitude goes over the maximum value allowed"
-                f" for the chosen channel ({_eom_rydberg.max_amp}); got"
-                " 1000000.0."
+                f" for the chosen channel ({_eom_rydberg.max_amp}); got a"
+                f" maximum amplitude 1000000.0 in pulse {_over_amp_pulse!r}."
             ),
         ),
         (
-            Pulse.ConstantPulse(100, 0, -1e4, 0),
+            _over_det_pulse,
             ValueError,
             re.escape(
                 "The pulse's detuning values go out of the range allowed"
                 f" for the chosen channel ({_eom_rydberg.max_abs_detuning});"
-                " got a maximum absolute value of 10000.0."
+                " got a maximum absolute detuning of 10000.0 in pulse"
+                f" {_over_det_pulse!r}."
             ),
         ),
         (
-            Pulse.ConstantPulse(100, 0.99e-3, 0, 0),
+            _low_avg_pulse,
             ValueError,
             re.escape(
                 "average amplitude is below the chosen channel's"
-                f" limit ({_eom_rydberg.min_avg_amp}); got 0.00099."
+                f" limit ({_eom_rydberg.min_avg_amp}); got average"
+                f" amplitude 0.00099 in pulse {_low_avg_pulse!r}."
             ),
         ),
     ],

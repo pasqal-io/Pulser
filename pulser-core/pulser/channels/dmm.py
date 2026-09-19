@@ -163,7 +163,7 @@ class DMM(Channel):
         if np.any(round_detuning > 0):
             raise ValueError(
                 "The detuning in a DMM must not be positive; got a maximum "
-                f"of {round_detuning.max()}."
+                f"of {round_detuning.max()} in detuning {pulse.detuning!r}."
             )
         # Check that detuning on each atom is above bottom_detuning
         min_round_detuning = np.min(round_detuning)

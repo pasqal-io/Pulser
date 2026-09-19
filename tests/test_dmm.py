@@ -440,7 +440,7 @@ class TestDMM:
             ValueError,
             match=re.escape(
                 "The detuning in a DMM must not be positive; got a maximum"
-                " of 0.001."
+                f" of 0.001 in detuning {pos_det_pulse.detuning!r}."
             ),
         ):
             physical_dmm.validate_pulse(pos_det_pulse)

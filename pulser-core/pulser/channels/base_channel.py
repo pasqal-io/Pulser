@@ -486,8 +486,8 @@ class Channel(ABC):
         if self.max_amp is not None and np.any(amp_samples_np > self.max_amp):
             raise ValueError(
                 "The pulse's amplitude goes over the maximum value allowed "
-                f"for the chosen channel ({self.max_amp}); got "
-                f"{amp_samples_np.max()}."
+                f"for the chosen channel ({self.max_amp}); got a maximum "
+                f"amplitude {amp_samples_np.max()} in pulse {pulse!r}."
             )
         if self.max_abs_detuning is not None:
             abs_detuning = np.round(
@@ -498,13 +498,15 @@ class Channel(ABC):
                 raise ValueError(
                     "The pulse's detuning values go out of the range allowed "
                     f"for the chosen channel ({self.max_abs_detuning}); got "
-                    f"a maximum absolute value of {abs_detuning.max()}."
+                    f"a maximum absolute detuning of {abs_detuning.max()} in "
+                    f"pulse {pulse!r}."
                 )
         avg_amp = np.average(amp_samples_np)
         if 0 < avg_amp < self.min_avg_amp:
             raise ValueError(
                 "The pulse's average amplitude is below the chosen "
-                f"channel's limit ({self.min_avg_amp}); got {avg_amp}."
+                f"channel's limit ({self.min_avg_amp}); got average "
+                f"amplitude {avg_amp} in pulse {pulse!r}."
             )
 
     @property
