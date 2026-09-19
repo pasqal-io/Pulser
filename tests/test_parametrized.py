@@ -59,7 +59,8 @@ def test_var(a, b):
     with pytest.raises(
         TypeError,
         match=re.escape(
-            "Variable's 'name' has to be of type 'str', not <class 'int'>."
+            "Variable's 'name' has to be of type 'str', not "
+            "<class 'int'> (got 1)."
         ),
     ):
         Variable(1, dtype=int)
@@ -68,7 +69,8 @@ def test_var(a, b):
     with pytest.raises(
         TypeError,
         match=re.escape(
-            "Variable's 'size' has to be of type 'int', not <class 'tuple'>."
+            "Variable's 'size' has to be of type 'int', not "
+            "<class 'tuple'> (got (2, 2))."
         ),
     ):
         Variable("x", dtype=float, size=(2, 2))

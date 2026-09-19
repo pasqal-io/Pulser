@@ -47,14 +47,14 @@ class Variable(Parametrized, OpSupport):
         if not isinstance(self.name, str):
             raise TypeError(
                 "Variable's 'name' has to be of type 'str', not "
-                f"{type(self.name)}."
+                f"{type(self.name)} (got {self.name!r})."
             )
         if self.dtype not in [int, float]:
             raise TypeError(f"Invalid data type '{self.dtype}' for Variable.")
         if not isinstance(self.size, int):
             raise TypeError(
                 "Variable's 'size' has to be of type 'int', not "
-                f"{type(self.size)}."
+                f"{type(self.size)} (got {self.size!r})."
             )
         elif self.size < 1:
             raise ValueError(
