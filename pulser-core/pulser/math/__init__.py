@@ -240,7 +240,10 @@ def pdist(a: AbstractArrayLike) -> AbstractArray:
 def cdist(
     a: Sequence[AbstractArrayLike], b: Sequence[AbstractArrayLike]
 ) -> AbstractArray:
-    """Calculate distances between each pair of points in two collections."""
+    """Calculate distances between each pair of points in two collections.
+
+    Uses ``torch.cdist`` when either collection contains a torch tensor.
+    """
     abst_a = tuple(map(AbstractArray, a))
     abst_b = tuple(map(AbstractArray, b))
     if any(arr.is_tensor for arr in (*abst_a, *abst_b)):
