@@ -631,11 +631,7 @@ class Sequence(Generic[DeviceType]):
             return
 
         if self._slm_mask_targets:
-            configured = [
-                q
-                for q in self._register.qubit_ids
-                if q in self._slm_mask_targets
-            ]
+            configured = sorted(self._slm_mask_targets)
             raise ValueError(
                 "SLM mask can be configured only once; already configured "
                 f"with targets {configured}."
@@ -1635,8 +1631,7 @@ class Sequence(Generic[DeviceType]):
         elif len(ph_refs) != 1:
             refs = {
                 q: float(self._basis_ref[basis][q].phase.last_phase)
-                for q in self._register.qubit_ids
-                if q in last.targets
+                for q in sorted(last.targets)
             }
             raise ValueError(
                 "Cannot do a multiple-target pulse on qubits with different "
@@ -2250,8 +2245,7 @@ class Sequence(Generic[DeviceType]):
         elif len(ph_refs) != 1:
             refs = {
                 q: float(self._basis_ref[basis][q].phase.last_phase)
-                for q in self._register.qubit_ids
-                if q in last.targets
+                for q in sorted(last.targets)
             }
             raise ValueError(
                 "Cannot do a multiple-target pulse on qubits with different "
@@ -2363,8 +2357,7 @@ class Sequence(Generic[DeviceType]):
             if len(phase_refs) != 1:
                 refs = {
                     q: float(self._basis_ref[basis][q].phase.last_phase)
-                    for q in self._register.qubit_ids
-                    if q in qubit_ids_set
+                    for q in sorted(qubit_ids_set)
                 }
                 raise ValueError(
                     "Cannot target multiple qubits with different "

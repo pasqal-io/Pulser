@@ -268,7 +268,7 @@ def test_slm_declaration(reg, device, det_map):
         ValueError,
         match=re.escape(
             "SLM mask can be configured only once; already configured with "
-            "targets "
+            "targets ['q0', 'q1', 'q3', 'q4']."
         ),
     ):
         seq.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_1")
