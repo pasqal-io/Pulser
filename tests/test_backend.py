@@ -284,7 +284,12 @@ def test_remote_backend(sequence):
     connection = _MockConnection()
 
     with pytest.raises(
-        TypeError, match="must be a real device, instance of 'Device'"
+        TypeError,
+        match=re.escape(
+            "To be sent to a QPU, the device of the sequence must be an "
+            "instance of 'Device', not "
+            "<class 'pulser.devices._device_datacls.VirtualDevice'>."
+        ),
     ):
         QPUBackend(sequence, connection)
 
@@ -310,7 +315,13 @@ def test_remote_backend(sequence):
         AnalogDevice.pre_calibrated_layouts[0].define_register(1, 2, 3)
     )
 
-    with pytest.raises(TypeError, match="must be a valid RemoteConnection"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "'connection' must be an instance of 'RemoteConnection', "
+            "not <class 'str'>."
+        ),
+    ):
         QPUBackend(seq, "fake_connection")
 
     with pytest.raises(
@@ -397,7 +408,9 @@ def test_remote_backend(sequence):
     qpu = QPUBackend(seq, connection)
     with pytest.raises(
         NotImplementedError,
-        match="Unable to execute open_batch using this remote connection",
+        match=re.escape(
+            "Unable to execute open_batch using '_MockConnection'."
+        ),
     ):
         qpu.open_batch()
 
@@ -947,8 +960,8 @@ def test_results_aggregation_errors(caplog):
     with pytest.raises(NotImplementedError) as ex:
         Results.aggregate([results1, results2])
     assert str(ex.value) == (
-        "You're trying to aggregate results from pulser<1.6,"
-        "aggregation is not supported in this case."
+        "You're trying to aggregate results from pulser<1.6, aggregation "
+        "is not supported in this case."
     )
 
     results1 = Results(atom_order=[0, 1], total_duration=100)
@@ -995,7 +1008,7 @@ def test_results_aggregation_errors(caplog):
         Results.aggregate([results1, results2])
     assert str(ex.value) == (
         "You're trying to aggregate incompatible results: "
-        "they do not all have the same atom order."
+        "they do not all have the same atom order; got [0, 1] vs. [0, 2]."
     )
 
     results1 = Results(atom_order=[0, 1], total_duration=100)
@@ -1018,7 +1031,7 @@ def test_results_aggregation_errors(caplog):
         Results.aggregate([results1, results2])
     assert str(ex.value) == (
         "You're trying to aggregate incompatible results: "
-        "they do not all have the same sequence duration."
+        "they do not all have the same sequence duration; got 100 vs. 200."
     )
 
     results1 = Results(atom_order=[0, 1], total_duration=100)
@@ -1041,7 +1054,8 @@ def test_results_aggregation_errors(caplog):
         Results.aggregate([results1, results2])
     assert str(ex.value) == (
         "You're trying to aggregate incompatible results: "
-        "they do not all contain the same aggregation functions."
+        "they do not all contain the same aggregation functions; "
+        "got different functions for ['dummy_result']."
     )
 
     results1 = Results(atom_order=[0, 1], total_duration=100)

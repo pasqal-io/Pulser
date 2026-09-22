@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import dataclasses
+import re
 
 import numpy as np
 import pytest
@@ -60,7 +61,12 @@ def test_qutip_backend(sequence):
 
     # Test mimic QPU
     with pytest.raises(
-        TypeError, match="must be a real device"
+        TypeError,
+        match=re.escape(
+            "To be sent to a QPU, the device of the sequence must be an "
+            "instance of 'Device', not "
+            "<class 'pulser.devices._device_datacls.VirtualDevice'>."
+        ),
     ), pytest.deprecated_call(match="'QutipBackend' is deprecated"):
         QutipBackend(sequence, mimic_qpu=True)
     sequence = sequence.with_new_device(pulser.DigitalAnalogDevice)

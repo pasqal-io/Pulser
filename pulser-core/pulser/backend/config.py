@@ -335,8 +335,15 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             if not np.allclose(
                 matrix_arr, np.transpose(matrix_arr, (0, 2, 1))
             ):
+                asymmetry = np.abs(
+                    matrix_arr - np.transpose(matrix_arr, (0, 2, 1))
+                )
+                worst = np.unravel_index(asymmetry.argmax(), asymmetry.shape)
+                _, i, j = worst
                 raise ValueError(
-                    "The received interaction matrix is not symmetric."
+                    "The received interaction matrix is not symmetric; the "
+                    f"largest difference is {asymmetry[worst]} between the "
+                    f"entries at ({i}, {j}) and ({j}, {i})."
                 )
             if np.any(np.stack([np.diag(x) for x in matrix_arr]) != 0):
                 warnings.warn(
@@ -547,13 +554,16 @@ class EmulatorConfig(BackendConfig):
             if not (0 < self.evaluation_times <= 1.0):
                 raise ValueError(
                     "If provided as a float, 'evaluation_times' must be"
-                    " greater than 0 and less than or equal to 1."
+                    " greater than 0 and less than or equal to 1; got "
+                    f"{self.evaluation_times}."
                 )
         elif isinstance(self.evaluation_times, (list, tuple, np.ndarray)):
             if np.min(self.evaluation_times, initial=0) < 0:
+                times_arr = np.asarray(self.evaluation_times)
                 raise ValueError(
                     "If provided as a sequence of values, "
-                    "'evaluation_times' must not contain negative values."
+                    "'evaluation_times' must not contain negative values; "
+                    f"got {times_arr[times_arr < 0].tolist()}."
                 )
         else:
             raise TypeError(
@@ -565,7 +575,7 @@ class EmulatorConfig(BackendConfig):
             if self.initial_state != "all-ground":
                 raise ValueError(
                     "If provided as a string, 'initial_state' must be"
-                    " 'all-ground'."
+                    f" 'all-ground', not {self.initial_state!r}."
                 )
         elif not isinstance(self.initial_state, (tuple, list, np.ndarray)):
             raise TypeError(

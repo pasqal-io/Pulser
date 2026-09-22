@@ -380,8 +380,9 @@ class Results:
             if results._results and (not results._aggregation_methods):
                 raise NotImplementedError(
                     (
-                        "You're trying to aggregate results from pulser<1.6,"
-                        "aggregation is not supported in this case."
+                        "You're trying to aggregate results from "
+                        "pulser<1.6, aggregation is not supported in this "
+                        "case."
                     )
                 )
             for tag, uid in results._tagmap.items():
@@ -405,25 +406,47 @@ class Results:
             }
             for results in results_to_aggregate
         ):
+            differing = [
+                tag
+                for tag in common_tags
+                if any(
+                    results._aggregation_methods[results._find_uuid(tag)]
+                    != result_0._aggregation_methods[result_0._find_uuid(tag)]
+                    for results in results_to_aggregate
+                )
+            ]
             raise ValueError(
                 "You're trying to aggregate incompatible results: "
-                "they do not all contain the same aggregation functions."
+                "they do not all contain the same aggregation functions; "
+                f"got different functions for {differing}."
             )
         if not all(
             results.atom_order == result_0.atom_order
             for results in results_to_aggregate
         ):
+            other = next(
+                r
+                for r in results_to_aggregate
+                if r.atom_order != result_0.atom_order
+            )
             raise ValueError(
                 "You're trying to aggregate incompatible results: "
-                "they do not all have the same atom order."
+                "they do not all have the same atom order; got "
+                f"{list(result_0.atom_order)} vs. {list(other.atom_order)}."
             )
         if not all(
             results.total_duration == result_0.total_duration
             for results in results_to_aggregate
         ):
+            other = next(
+                r
+                for r in results_to_aggregate
+                if r.total_duration != result_0.total_duration
+            )
             raise ValueError(
                 "You're trying to aggregate incompatible results: "
-                "they do not all have the same sequence duration."
+                "they do not all have the same sequence duration; got "
+                f"{result_0.total_duration} vs. {other.total_duration}."
             )
         aggregated = Results(
             atom_order=result_0.atom_order,

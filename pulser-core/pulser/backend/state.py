@@ -216,11 +216,21 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
                 f"(list or tuple), not {type(eigenstates).__name__}."
             )
         if any(not isinstance(s, str) or len(s) != 1 for s in eigenstates):
+            bad = [
+                s for s in eigenstates if not isinstance(s, str) or len(s) != 1
+            ]
             raise ValueError(
-                "All eigenstates must be represented by single characters."
+                "All eigenstates must be represented by single characters; "
+                f"got {bad}."
             )
         if len(eigenstates) != len(set(eigenstates)):
-            raise ValueError("'eigenstates' can't contain repeated entries.")
+            repeated = [
+                s for s, freq in Counter(eigenstates).items() if freq > 1
+            ]
+            raise ValueError(
+                "'eigenstates' can't contain repeated entries; got repeated "
+                f"{repeated}."
+            )
 
     @staticmethod
     def _validate_amplitudes(

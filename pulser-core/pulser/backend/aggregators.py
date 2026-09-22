@@ -46,7 +46,9 @@ def _assert_values_not_empty(values: list[T]) -> None:
         ValueError: If ``values`` is not a list or is empty.
     """
     if not isinstance(values, list):
-        raise ValueError("Need to supply a list of values to process.")
+        raise ValueError(
+            f"Need to supply a list of values to process, not {type(values)}."
+        )
     if values == []:
         raise ValueError("Cannot process 0 samples.")
 

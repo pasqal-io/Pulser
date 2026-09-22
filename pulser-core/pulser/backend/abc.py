@@ -64,8 +64,8 @@ class Backend(ABC):
 
         if not isinstance(device := sequence.device, Device):
             raise TypeError(
-                "To be sent to a QPU, the device of the sequence "
-                "must be a real device, instance of 'Device'."
+                "To be sent to a QPU, the device of the sequence must be an "
+                f"instance of 'Device', not {type(device)}."
             )
         reg = sequence.get_register(include_mappable=True)
         if device.requires_layout and (layout := reg.layout) is None:
@@ -115,9 +115,10 @@ class EmulatorBackend(Backend):
                 and noise_model.detuning_map_spot_waist is None
             ):
                 raise ValueError(
-                    "Combining register noise with a DMM requires"
-                    "`detuning_map_spot_waist` to be defined. If not defined,"
-                    "atom thermal motion can lead to non-physical effects."
+                    "Combining register noise with a DMM requires "
+                    "`detuning_map_spot_waist` to be defined. If not "
+                    "defined, atom thermal motion can lead to non-physical "
+                    "effects."
                 )
 
         if (

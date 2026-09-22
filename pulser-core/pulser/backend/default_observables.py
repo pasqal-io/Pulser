@@ -65,10 +65,10 @@ class StateResult(Observable):
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         raise AbstractReprError(
-            """`StateResult` observable is not supported in any remote backend.
-            If you are interested in the full quantum state at arbitrary times
-            during the emulation, please, consider using the local version of
-            the same backend."""
+            "`StateResult` observable is not supported in any remote "
+            "backend. If you are interested in the full quantum state at "
+            "arbitrary times during the emulation, please, consider using "
+            "the local version of the same backend."
         )
 
     def apply(self, *, state: StateType, **kwargs: Any) -> StateType:
