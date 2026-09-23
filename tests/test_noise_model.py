@@ -309,7 +309,10 @@ class TestNoiseModel:
 
     def test_eff_noise_rates(self, matrices):
         with pytest.raises(
-            ValueError, match="The provided rates must be greater than 0."
+            ValueError,
+            match=re.escape(
+                "The provided rates must not be negative; got [-1.0]."
+            ),
         ):
             NoiseModel(
                 eff_noise_opers=[matrices["I"], matrices["X"]],

@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import re
+
 import pytest
 from qutip import Qobj, qeye, sigmax, sigmaz
 
@@ -112,7 +114,10 @@ def test_eff_noise_opers(matrices):
         )
     with pytest.raises(
         ValueError,
-        match="The effective noise parameters have not been filled.",
+        match=re.escape(
+            "The effective noise parameters have not been filled; "
+            "['eff_noise_opers', 'eff_noise_rates'] are empty."
+        ),
     ):
         SimConfig(noise=("eff_noise"))
     with pytest.raises(TypeError, match="is not a Qobj."):
