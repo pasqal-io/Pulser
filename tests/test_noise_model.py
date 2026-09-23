@@ -307,6 +307,16 @@ class TestNoiseModel:
         ):
             NoiseModel(disable_doppler=value)
 
+    def test_leakage_without_eff_noise(self):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "At least one effective noise operator must be defined to"
+                " simulate leakage; got noise types ['leakage']."
+            ),
+        ):
+            NoiseModel(with_leakage=True)
+
     def test_eff_noise_rates(self, matrices):
         with pytest.raises(
             ValueError,

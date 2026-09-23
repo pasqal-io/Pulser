@@ -533,7 +533,7 @@ class NoiseModel:
         if "eff_noise" not in noise_types:
             raise ValueError(
                 "At least one effective noise operator must be defined to"
-                " simulate leakage."
+                f" simulate leakage; got noise types {sorted(noise_types)}."
             )
 
     @staticmethod
