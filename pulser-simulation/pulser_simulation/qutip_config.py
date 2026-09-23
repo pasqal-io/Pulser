@@ -106,12 +106,8 @@ class QutipConfig(EmulationConfig[QutipState]):
                 f"The sampling rate (`sampling_rate` = {sampling_rate}) must"
                 " be greater than 0 and less than or equal to 1."
             )
-        initial_state = backend_options.setdefault("initial_state")
-        if initial_state and not isinstance(initial_state, QutipState):
-            raise TypeError(
-                "If provided, `initial_state` must be an instance of "
-                f"`QutipState`, not {type(initial_state)}."
-            )
+        # 'initial_state' is validated (and cast to QutipState, if needed)
+        # by EmulationConfig
         if "noise_model" in backend_options and backend_options[
             "noise_model"
         ].samples_per_run not in [None, 1]:

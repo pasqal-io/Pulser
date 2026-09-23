@@ -306,7 +306,7 @@ class StateRepr(State):
         in serialization.
         """
         state = cls(eigenstates=eigenstates)
-        cls._n_qudits = n_qudits
+        state._n_qudits = n_qudits
         return state, amplitudes
 
     def _to_abstract_repr(self) -> dict[str, Any]:
