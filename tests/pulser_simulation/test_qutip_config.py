@@ -3,9 +3,17 @@ import re
 
 import numpy as np
 import pytest
+import qutip
 
 from pulser import NoiseModel
-from pulser.backend.default_observables import BitStrings, StateResult
+from pulser.backend import EmulationConfig, OperatorRepr, StateRepr
+from pulser.backend.default_observables import (
+    BitStrings,
+    Expectation,
+    Fidelity,
+    StateResult,
+)
+from pulser_simulation import QutipBackendV2
 from pulser_simulation.qutip_config import (
     QutipConfig,
     QutipOperator,
@@ -69,9 +77,7 @@ def test_samples_per_run():
 def test_initial_state():
     with pytest.raises(
         TypeError,
-        match=re.escape(
-            "If provided, `initial_state` must be an instance of `QutipState`"
-        ),
+        match=re.escape("'initial_state' must be an instance of State"),
     ):
         QutipConfig(
             observables=[
@@ -79,6 +85,93 @@ def test_initial_state():
             ],
             initial_state="all-ground",
         )
+
+
+def _repr_state_and_op():
+    state = StateRepr.from_state_amplitudes(
+        eigenstates=("r", "g"), amplitudes={"rr": 1.0}
+    )
+    op = OperatorRepr.from_operator_repr(
+        eigenstates=("r", "g"),
+        n_qudits=2,
+        operations=[(1.0, [({"rr": 1.0}, [0])])],
+    )
+    return state, op
+
+
+def test_implicit_cast():
+    state, op = _repr_state_and_op()
+    fid = Fidelity(state)
+    exp = Expectation(op)
+    config = QutipConfig(initial_state=state, observables=[fid, exp])
+
+    assert isinstance(config.initial_state, QutipState)
+    assert config.initial_state._amplitudes == {"rr": 1.0}
+    new_fid, new_exp = config.observables
+    assert isinstance(new_fid.state, QutipState)
+    assert isinstance(new_exp.operator, QutipOperator)
+    # UUIDs are kept, so results can be retrieved with the originals
+    assert new_fid.uuid == fid.uuid and new_exp.uuid == exp.uuid
+    assert new_fid.tag == fid.tag and new_exp.tag == exp.tag
+    # The originals are not modified
+    assert fid.state is state and exp.operator is op
+    assert new_fid is not fid and new_exp is not exp
+
+
+def test_implicit_cast_from_base_config():
+    state, op = _repr_state_and_op()
+    base_config = EmulationConfig(
+        initial_state=state, observables=[Fidelity(state), Expectation(op)]
+    )
+    # Base config keeps the backend-agnostic types
+    assert type(base_config.initial_state) is StateRepr
+    assert type(base_config.observables[0].state) is StateRepr
+    assert type(base_config.observables[1].operator) is OperatorRepr
+    # Casting happens when the config is given to a backend
+    config = QutipBackendV2.validate_config(base_config)
+    assert isinstance(config, QutipConfig)
+    assert isinstance(config.initial_state, QutipState)
+    assert isinstance(config.observables[0].state, QutipState)
+    assert isinstance(config.observables[1].operator, QutipOperator)
+
+
+def test_no_cast_needed():
+    qutip_state = QutipState(qutip.basis(4, 0), eigenstates=("r", "g"))
+    config = QutipConfig(
+        initial_state=qutip_state, observables=[Fidelity(qutip_state)]
+    )
+    # Non-serializable states are fine when they already have the right type
+    assert config.initial_state._amplitudes is None
+    assert config.initial_state.overlap(qutip_state) == pytest.approx(1.0)
+    assert config.observables[0].state._amplitudes is None
+    # ...and also in the backend-agnostic config
+    base_config = EmulationConfig(
+        initial_state=qutip_state, observables=[StateResult()]
+    )
+    assert type(base_config.initial_state) is QutipState
+
+
+def test_failed_cast():
+    qutip_state = QutipState(qutip.basis(4, 0), eigenstates=("r", "g"))
+    base_config = EmulationConfig(
+        initial_state=StateRepr.from_state_amplitudes(
+            eigenstates=("r", "g"), amplitudes={"rr": 1.0}
+        ),
+        observables=[Fidelity(qutip_state)],
+    )
+
+    class OtherState(StateRepr):
+        pass
+
+    class OtherConfig(EmulationConfig):
+        _state_type = OtherState
+
+    with pytest.raises(
+        TypeError,
+        match="Failed to convert the state of observable 'fidelity' of type "
+        "'QutipState' to the expected state type 'OtherState'",
+    ):
+        OtherConfig(**base_config._backend_options)
 
 
 def test_preferred_types():
