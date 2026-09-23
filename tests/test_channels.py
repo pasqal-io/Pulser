@@ -363,8 +363,8 @@ _low_avg_pulse = Pulse.ConstantPulse(100, 0.99e-3, 0, 0)
             ValueError,
             re.escape(
                 "The pulse's amplitude goes over the maximum value allowed"
-                f" for the chosen channel ({_eom_rydberg.max_amp}); got a"
-                f" maximum amplitude 1000000.0 in pulse {_over_amp_pulse!r}."
+                f" for the chosen channel ({_eom_rydberg.max_amp}); exceeded"
+                f" at 0-99 ns in pulse {_over_amp_pulse!r}."
             ),
         ),
         (
@@ -373,7 +373,7 @@ _low_avg_pulse = Pulse.ConstantPulse(100, 0.99e-3, 0, 0)
             re.escape(
                 "The pulse's detuning values go out of the range allowed"
                 f" for the chosen channel ({_eom_rydberg.max_abs_detuning});"
-                " got a maximum absolute detuning of 10000.0 in pulse"
+                " exceeded at 0-99 ns in pulse"
                 f" {_over_det_pulse!r}."
             ),
         ),

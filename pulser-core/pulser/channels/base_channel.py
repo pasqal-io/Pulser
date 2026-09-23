@@ -63,6 +63,18 @@ def get_states_from_bases(bases: Collection[str]) -> list[States]:
     return [state for state in STATES_RANK if state in all_states]
 
 
+def _format_violation_times(mask: np.ndarray) -> str:
+    """Contiguous time ranges (in ns) where 'mask' is True."""
+    inds = np.flatnonzero(mask)
+    breaks = np.flatnonzero(np.diff(inds) > 1)
+    starts = np.concatenate(([inds[0]], inds[breaks + 1]))
+    ends = np.concatenate((inds[breaks], [inds[-1]]))
+    return ", ".join(
+        f"{start}-{end} ns" if start != end else f"{start} ns"
+        for start, end in zip(starts.tolist(), ends.tolist())
+    )
+
+
 @dataclass(init=True, frozen=True)
 class Channel(ABC):
     """Base class of a hardware channel.
@@ -263,7 +275,7 @@ class Channel(ABC):
         if self.eom_config is not None and self.mod_bandwidth is None:
             raise ValueError(
                 "'eom_config' can't be defined in a Channel without a "
-                "modulation bandwidth."
+                f"modulation bandwidth; got {self.eom_config!r}."
             )
 
         if self.propagation_dir is not None:
@@ -479,27 +491,30 @@ class Channel(ABC):
         """
         if not isinstance(pulse, Pulse):
             raise TypeError(
-                f"'pulse' must be of type Pulse, not of type {type(pulse)}."
+                "'pulse' must be of type Pulse, not of type "
+                f"{type(pulse)}: {pulse!r}."
             )
 
         amp_samples_np = pulse.amplitude.samples.as_array(detach=True)
         if self.max_amp is not None and np.any(amp_samples_np > self.max_amp):
             raise ValueError(
                 "The pulse's amplitude goes over the maximum value allowed "
-                f"for the chosen channel ({self.max_amp}); got a maximum "
-                f"amplitude {amp_samples_np.max()} in pulse {pulse!r}."
+                f"for the chosen channel ({self.max_amp}); exceeded at "
+                f"{_format_violation_times(amp_samples_np > self.max_amp)} "
+                f"in pulse {pulse!r}."
             )
         if self.max_abs_detuning is not None:
             abs_detuning = np.round(
                 np.abs(pulse.detuning.samples.as_array(detach=True)),
                 decimals=6,
             )
-            if np.any(abs_detuning > self.max_abs_detuning):
+            over_detuning = abs_detuning > self.max_abs_detuning
+            if np.any(over_detuning):
                 raise ValueError(
                     "The pulse's detuning values go out of the range allowed "
-                    f"for the chosen channel ({self.max_abs_detuning}); got "
-                    f"a maximum absolute detuning of {abs_detuning.max()} in "
-                    f"pulse {pulse!r}."
+                    f"for the chosen channel ({self.max_abs_detuning}); "
+                    f"exceeded at {_format_violation_times(over_detuning)} "
+                    f"in pulse {pulse!r}."
                 )
         avg_amp = np.average(amp_samples_np)
         if 0 < avg_amp < self.min_avg_amp:
