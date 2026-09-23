@@ -185,7 +185,7 @@ class Results:
                 "The final bitstrings are not available. Please make sure "
                 "'BitStrings()' at relative time t=1.0 is included in the "
                 "observables of your emulator backend's configuration (when"
-                " possible)."
+                f" possible); got observables {self.get_result_tags()}."
             )
 
     @property
@@ -198,7 +198,7 @@ class Results:
                 "The final state is not available. Please make sure "
                 "'StateResult()' at relative time t=1.0 is included in the "
                 "observables of your emulator backend's configuration (when"
-                " possible)."
+                f" possible); got observables {self.get_result_tags()}."
             )
 
     def get_result_tags(self) -> list[str]:

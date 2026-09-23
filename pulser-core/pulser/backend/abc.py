@@ -59,7 +59,8 @@ class Backend(ABC):
         if sequence.is_empty():
             raise ValueError(
                 "'sequence' should not be empty, please add an instruction "
-                "to a declared channel."
+                "to a declared channel; got declared channels "
+                f"{list(sequence.declared_channels)}."
             )
 
         if not isinstance(device := sequence.device, Device):
@@ -104,13 +105,14 @@ class EmulatorBackend(Backend):
         noise_model = self._config.noise_model
 
         if noise_model is not None:
-            is_dmm_channel = any(
-                isinstance(ch, DMM)
-                for ch in self._sequence.declared_channels.values()
-            )
+            dmm_channels = [
+                name
+                for name, ch in self._sequence.declared_channels.items()
+                if isinstance(ch, DMM)
+            ]
 
             if (
-                is_dmm_channel
+                dmm_channels
                 and "register" in noise_model.noise_types
                 and noise_model.detuning_map_spot_waist is None
             ):
@@ -118,7 +120,7 @@ class EmulatorBackend(Backend):
                     "Combining register noise with a DMM requires "
                     "`detuning_map_spot_waist` to be defined. If not "
                     "defined, atom thermal motion can lead to non-physical "
-                    "effects."
+                    f"effects; got DMM channels {dmm_channels}."
                 )
 
         if (

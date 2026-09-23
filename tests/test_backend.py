@@ -101,7 +101,13 @@ def test_abc_backend_validate_sequence_empty(parametrized):
     else:
         targ = 0
     seq.target_index(targ, "rydberg_local")
-    with pytest.raises(ValueError, match="should not be empty"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "'sequence' should not be empty, please add an instruction to a"
+            " declared channel; got declared channels ['rydberg_local']."
+        ),
+    ):
         Backend.validate_sequence(seq, mimic_qpu=True)
     # Now it's ok
     seq.delay(100, "rydberg_local")
@@ -377,10 +383,10 @@ def test_remote_backend(sequence):
 
     with pytest.raises(
         RemoteResultsError,
-        match=(
-            "Results are not available for all jobs. "
-            "Use the `get_available_results` method to retrieve partial "
-            "results."
+        match=re.escape(
+            "Results are not available for all jobs. Use the"
+            " `get_available_results` method to retrieve partial results;"
+            " got jobs None."
         ),
     ):
         remote_results.results
@@ -747,8 +753,11 @@ def test_emulation_config():
 
     with pytest.raises(
         ValueError,
-        match="`EmulationConfig.n_trajectories` and `NoiseModel.runs` can't be"
-        " simultaneously defined",
+        match=re.escape(
+            "`EmulationConfig.n_trajectories` and `NoiseModel.runs` can't be"
+            " defined with conflicting values; got 2 `n_trajectories` vs. 10"
+            " `NoiseModel.runs`."
+        ),
     ):
         assert runs_noise_model != 2
         EmulationConfig(
@@ -1150,7 +1159,13 @@ def test_results():
 def test_results_final_bistrings():
     res = Results(atom_order=(), total_duration=0)
     with pytest.raises(
-        RuntimeError, match="final bitstrings are not available"
+        RuntimeError,
+        match=re.escape(
+            "The final bitstrings are not available. Please make sure"
+            " 'BitStrings()' at relative time t=1.0 is included in the"
+            " observables of your emulator backend's configuration (when"
+            " possible); got observables []."
+        ),
     ):
         res.final_bitstrings
 
@@ -1218,7 +1233,13 @@ def test_results_bitstring_counts():
     empty_res = Results(atom_order=("q0",), total_duration=100)
     with pytest.warns(FutureWarning, match="'bitstring_counts'"):
         with pytest.raises(
-            RuntimeError, match="final bitstrings are not available"
+            RuntimeError,
+            match=re.escape(
+                "The final bitstrings are not available. Please make sure"
+                " 'BitStrings()' at relative time t=1.0 is included in the"
+                " observables of your emulator backend's configuration (when"
+                " possible); got observables []."
+            ),
         ):
             empty_res.bitstring_counts
 
@@ -1251,7 +1272,15 @@ def test_results_sampled_result_attrs():
 
 def test_results_final_state():
     res = Results(atom_order=(), total_duration=0)
-    with pytest.raises(RuntimeError, match="final state is not available"):
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape(
+            "The final state is not available. Please make sure"
+            " 'StateResult()' at relative time t=1.0 is included in the"
+            " observables of your emulator backend's configuration (when"
+            " possible); got observables []."
+        ),
+    ):
         res.final_state
 
     obs = StateResult()

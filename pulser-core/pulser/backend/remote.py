@@ -152,7 +152,7 @@ class RemoteResults(ResultsSequence):
                 raise RemoteResultsError(
                     "Results are not available for all jobs. Use the "
                     "`get_available_results` method to retrieve partial "
-                    "results."
+                    f"results; got jobs {self._job_ids}."
                 ) from e
         raise AttributeError(
             f"'RemoteResults' object has no attribute '{name}'."

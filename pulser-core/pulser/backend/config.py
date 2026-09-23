@@ -368,8 +368,10 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         ):
             raise ValueError(
                 "`EmulationConfig.n_trajectories` and `NoiseModel.runs` "
-                "can't be simultaneously defined. Please favour using only"
-                " `EmulationConfig.n_trajectories`."
+                "can't be defined with conflicting values; got "
+                f"{n_trajectories} `n_trajectories` vs. {noise_model.runs} "
+                "`NoiseModel.runs`. Please favour using only "
+                "`EmulationConfig.n_trajectories`."
             )
 
         if n_trajectories is None:
