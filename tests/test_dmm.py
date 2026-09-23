@@ -439,8 +439,8 @@ class TestDMM:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "The detuning in a DMM must not be positive; positive at"
-                f" 0-99 ns in detuning {pos_det_pulse.detuning!r}."
+                "The detuning in a DMM must not be positive; it is positive"
+                f" at 0-99 ns in detuning {pos_det_pulse.detuning!r}."
             ),
         ):
             physical_dmm.validate_pulse(pos_det_pulse)

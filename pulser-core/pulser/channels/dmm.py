@@ -162,7 +162,8 @@ class DMM(Channel):
         # Check that detuning is negative
         if np.any(round_detuning > 0):
             raise ValueError(
-                "The detuning in a DMM must not be positive; positive at "
+                "The detuning in a DMM must not be positive; it is "
+                "positive at "
                 f"{_format_violation_times(round_detuning > 0)} in detuning "
                 f"{pulse.detuning!r}."
             )

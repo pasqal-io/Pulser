@@ -26,7 +26,7 @@ from pulser.channels.modulation import (
     calculate_amplitude_rise_time,
     calculate_mod_bandwidth_from_amplitude_rise_time,
 )
-from pulser.waveforms import BlackmanWaveform, ConstantWaveform
+from pulser.waveforms import BlackmanWaveform, ConstantWaveform, CustomWaveform
 
 
 @pytest.mark.parametrize(
@@ -353,6 +353,26 @@ _over_amp_pulse = Pulse.ConstantPulse(100, 1e6, 0, 0)
 _over_det_pulse = Pulse.ConstantPulse(100, 0, -1e4, 0)
 _low_avg_pulse = Pulse.ConstantPulse(100, 0.99e-3, 0, 0)
 
+# Violations that are not contiguous, to check the reported time ranges
+_max_amp = _eom_rydberg.max_amp
+assert _max_amp is not None
+_split_amp_pulse = Pulse(
+    CustomWaveform(
+        [
+            0,
+            0,
+            _max_amp + 11,
+            0,
+            _max_amp,
+            _max_amp + 10,
+            _max_amp + 9,
+            _max_amp + 8,
+        ]
+    ),
+    ConstantWaveform(8, 0),
+    0,
+)
+
 
 @pytest.mark.parametrize(
     "pulse, error, msg",
@@ -375,6 +395,15 @@ _low_avg_pulse = Pulse.ConstantPulse(100, 0.99e-3, 0, 0)
                 f" for the chosen channel ({_eom_rydberg.max_abs_detuning});"
                 " exceeded at 0-99 ns in pulse"
                 f" {_over_det_pulse!r}."
+            ),
+        ),
+        (
+            _split_amp_pulse,
+            ValueError,
+            re.escape(
+                "The pulse's amplitude goes over the maximum value allowed"
+                f" for the chosen channel ({_eom_rydberg.max_amp}); exceeded"
+                f" at 2 ns, 5-7 ns in pulse {_split_amp_pulse!r}."
             ),
         ),
         (
