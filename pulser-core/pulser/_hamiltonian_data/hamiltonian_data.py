@@ -218,7 +218,7 @@ class HamiltonianData:
         if not isinstance(samples, SequenceSamples):
             raise TypeError(
                 "The provided samples must be an instance of "
-                f"'SequenceSamples', not {type(samples)}."
+                f"'SequenceSamples', not {type(samples)}. Got {samples}."
             )
         if samples.max_duration == 0:
             raise ValueError("SequenceSamples is empty.")
@@ -226,7 +226,7 @@ class HamiltonianData:
         if not isinstance(device, BaseDevice):
             raise TypeError(
                 "'device' must be an instance of 'BaseDevice', not "
-                f"{type(device)}."
+                f"{type(device)}. Got {device}."
             )
         self._device = device
         self.device.validate_register(register)
@@ -250,19 +250,21 @@ class HamiltonianData:
             )
             raise ValueError(
                 "Bases used in samples must be supported by the device; "
-                f"{unsupported} not in {supported}."
+                f"Samples uses {samples.used_bases} but basis "
+                f"{unsupported} is not among basis supported by the "
+                f"Device {supported}."
             )
         # Check compatibility of masked samples and register
         if not samples._slm_mask.targets <= set(self.register.qubits.keys()):
             # The mask targets are a set, so there is no caller order to keep
-            missing_targets = sorted(
-                samples._slm_mask.targets - set(self.register.qubits.keys()),
-                key=str,
+            unknown_targets = samples._slm_mask.targets - set(
+                self.register.qubits.keys()
             )
             raise ValueError(
                 "The ids of qubits targeted in the SLM mask must be defined "
-                f"in the register; {missing_targets} not in "
-                f"{list(self.register.qubit_ids)}."
+                "in the register; SLM mask targets "
+                f"{samples._slm_mask.targets}. Among them, {unknown_targets} "
+                f"not in {list(self.register.qubit_ids)}."
             )
 
         self._samples = self._delocalize_samples(samples)
@@ -307,13 +309,14 @@ class HamiltonianData:
                 )
                 if not targets <= set(self.register.qubits.keys()):
                     # Slot targets are sets: there is no caller order to keep
-                    missing_targets = sorted(
-                        targets - set(self.register.qubits.keys()), key=str
+                    unknown_targets = targets - set(
+                        self.register.qubits.keys()
                     )
                     raise ValueError(
                         "The ids of qubits targeted by Local channel "
                         f"{ch!r} must be defined in the register; "
-                        f"{missing_targets} "
+                        f"Channel targets {targets}. Among them, "
+                        f"{unknown_targets} "
                         f"not in {list(self.register.qubit_ids)}."
                     )
                 samples_list.append(ch_samples)
@@ -388,7 +391,7 @@ class HamiltonianData:
         if not isinstance(sequence, Sequence):
             raise TypeError(
                 "'sequence' must be an instance of 'Sequence', not "
-                f"{type(sequence)}."
+                f"{type(sequence)}. Got {sequence}."
             )
         if sequence.is_parametrized() or sequence.is_register_mappable():
             raise ValueError(

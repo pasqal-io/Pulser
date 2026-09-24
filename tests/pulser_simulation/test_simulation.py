@@ -108,12 +108,24 @@ def matrices():
     return pauli
 
 
+def _any_order_set(*items: str) -> str:
+    """Regex for a set literal holding exactly these items, in any order.
+
+    Sets of strings print in a different order on each run, so a message
+    containing one can't be matched against a fixed string.
+    """
+    alt = "|".join(re.escape(repr(item)) for item in items)
+    rest = f"(?:, (?:{alt})){{{len(items) - 1}}}"
+    return rf"\{{(?:{alt}){rest}\}}"
+
+
 def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
     fake_sequence = {"pulse1": "fake", "pulse2": "fake"}
     with pytest.raises(
         TypeError,
         match=re.escape(
             "'sequence' must be an instance of 'Sequence', not <class 'dict'>."
+            " Got {'pulse1': 'fake', 'pulse2': 'fake'}."
         ),
     ):
         QutipEmulator.from_sequence(fake_sequence)
@@ -121,7 +133,7 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
         TypeError,
         match=re.escape(
             "The provided samples must be an instance of 'SequenceSamples', "
-            "not <class 'dict'>."
+            "not <class 'dict'>. Got {'pulse1': 'fake', 'pulse2': 'fake'}."
         ),
     ):
         QutipEmulator(
@@ -130,10 +142,15 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
     # Simulation cannot be run on a register not defining "control1"
     with pytest.raises(
         ValueError,
-        match=re.escape(
-            "The ids of qubits targeted by Local channel 'raman' must be "
-            "defined in the register; ['control1'] not in "
-            "['target', 'control2']."
+        match=(
+            re.escape(
+                "The ids of qubits targeted by Local channel 'raman' must be "
+                "defined in the register; Channel targets "
+            )
+            + _any_order_set("target", "control1", "control2")
+            + re.escape(
+                ". Among them, {'control1'} not in ['target', 'control2']."
+            )
         ),
     ):
         QutipEmulator(
@@ -422,8 +439,9 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     with pytest.raises(
         ValueError,
         match=re.escape(
-            "Bases used in samples must be supported by the device; ['XY'] "
-            "not in ['ground-rydberg', 'digital']."
+            "Bases used in samples must be supported by the device; "
+            "Samples uses {'XY'} but basis ['XY'] is not among basis "
+            "supported by the Device ['ground-rydberg', 'digital']."
         ),
     ):
         QutipEmulator(sampler.sample(seq2), seq2.register, DigitalAnalogDevice)
@@ -1863,7 +1881,8 @@ def test_mask_equals_remove_xy():
         ValueError,
         match=re.escape(
             "The ids of qubits targeted in the SLM mask must be defined in "
-            "the register; ['q2'] not in ['q0', 'q1']."
+            "the register; SLM mask targets {'q2'}. Among them, {'q2'} not in "
+            "['q0', 'q1']."
         ),
     ):
         QutipEmulator(sampler.sample(seq_masked), reg_two, MockDevice)

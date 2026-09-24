@@ -144,7 +144,8 @@ class QutipEmulator:
         if not isinstance(sampled_seq, SequenceSamples):
             raise TypeError(
                 "The provided samples must be an instance of "
-                f"'SequenceSamples', not {type(sampled_seq)}."
+                f"'SequenceSamples', not {type(sampled_seq)}. "
+                f"Got {sampled_seq}."
             )
         if sampled_seq.max_duration == 0:
             raise ValueError("SequenceSamples is empty.")
@@ -172,19 +173,21 @@ class QutipEmulator:
             )
             raise ValueError(
                 "Bases used in samples must be supported by the device; "
-                f"{unsupported} not in {supported}."
+                f"Samples uses {sampled_seq.used_bases} but basis "
+                f"{unsupported} is not among basis supported by the "
+                f"Device {supported}."
             )
         # Check compatibility of masked samples and register
         if not sampled_seq._slm_mask.targets <= set(register.qubit_ids):
             # The mask targets are a set, so there is no caller order to keep
-            missing_targets = sorted(
-                sampled_seq._slm_mask.targets - set(register.qubit_ids),
-                key=str,
+            unknown_targets = sampled_seq._slm_mask.targets - set(
+                register.qubit_ids
             )
             raise ValueError(
                 "The ids of qubits targeted in the SLM mask must be defined "
-                f"in the register; {missing_targets} not in "
-                f"{list(register.qubit_ids)}."
+                "in the register; SLM mask targets "
+                f"{sampled_seq._slm_mask.targets}. Among them, "
+                f"{unknown_targets} not in {list(register.qubit_ids)}."
             )
 
         self._tot_duration = sampled_seq.max_duration
@@ -1036,7 +1039,7 @@ class QutipEmulator:
         if not isinstance(sequence, Sequence):
             raise TypeError(
                 "'sequence' must be an instance of 'Sequence', not "
-                f"{type(sequence)}."
+                f"{type(sequence)}. Got {sequence}."
             )
         if sequence.is_parametrized() or sequence.is_register_mappable():
             raise ValueError(
