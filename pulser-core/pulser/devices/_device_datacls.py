@@ -176,7 +176,7 @@ class BaseDevice(ABC):
             if not isinstance(value, type_):
                 raise TypeError(
                     f"{param} must be of type '{type_.__name__}', "
-                    f"not '{type(value).__name__}'."
+                    f"not '{type(value).__name__}'. Got {value!r}."
                 )
 
         type_check("name", str)
@@ -292,22 +292,40 @@ class BaseDevice(ABC):
             ):
                 raise TypeError(
                     "When defined, 'channel_ids' must be a tuple or a list "
-                    "of strings."
+                    "of strings, not "
+                    f"{type(self.channel_ids)}. Got: {self.channel_ids}."
                 )
             if len(self.channel_ids) != len(set(self.channel_ids)):
+                repeated_ids = [
+                    ch_id
+                    for ch_id, freq in Counter(self.channel_ids).items()
+                    if freq > 1
+                ]
                 raise PulserValueError(
                     "When defined, 'channel_ids' can't have "
-                    "repeated elements."
+                    "repeated elements; "
+                    f"got repeated ids {repeated_ids} in {self.channel_ids}."
                 )
             if len(self.channel_ids) != len(self.channel_objects):
                 raise PulserValueError(
                     "When defined, the number of channel IDs must"
-                    " match the number of channel objects."
+                    " match the number of channel objects; got "
+                    f"{len(self.channel_ids)} 'channel_ids' vs. "
+                    f"{len(self.channel_objects)} 'channel_objects'. "
+                    f"channel_ids: {self.channel_ids}. "
+                    f"channel_objects: {self.channel_objects}."
                 )
-            if set(self.channel_ids) & set(self.dmm_channels.keys()):
+            conflicting_ids = [
+                ch_id
+                for ch_id in self.channel_ids
+                if ch_id in self.dmm_channels
+            ]
+            if conflicting_ids:
                 raise PulserValueError(
                     "When defined, the names of channel IDs must be different"
-                    " than the names of DMM channels 'dmm_0', 'dmm_1', ... ."
+                    " than the names of DMM channels "
+                    f"{list(self.dmm_channels)}; {conflicting_ids} is a wrong "
+                    f"ID, among {self.channel_ids}."
                 )
 
         else:
@@ -436,8 +454,9 @@ class BaseDevice(ABC):
         """
         if not isinstance(register, BaseRegister):
             raise TypeError(
-                "'register' must be a pulser.Register or "
-                "a pulser.Register3D instance."
+                "'register' must be an instance of 'Register' or "
+                f"'Register3D', not {type(register)}. Got register "
+                f"{register!r}."
             )
 
         if register.dimensionality > self.dimensions:
@@ -466,7 +485,10 @@ class BaseDevice(ABC):
             layout: The RegisterLayout to validate.
         """
         if not isinstance(layout, RegisterLayout):
-            raise TypeError("'layout' must be a RegisterLayout instance.")
+            raise TypeError(
+                "'layout' must be an instance of 'RegisterLayout', not "
+                f"{type(layout)}. Got {layout!r}."
+            )
 
         if layout.dimensionality > self.dimensions:
             raise DimensionTooHighError(self, invalid=layout.dimensionality)
@@ -583,7 +605,10 @@ class BaseDevice(ABC):
 
     def _validate_rydberg_level(self, ryd_lvl: int) -> None:
         if not isinstance(ryd_lvl, int):
-            raise TypeError("Rydberg level has to be an int.")
+            raise TypeError(
+                "'rydberg_level' must be an instance of 'int', not "
+                f"{type(ryd_lvl)}. Got {ryd_lvl}."
+            )
         if not 49 < ryd_lvl < 101:
             raise RydbergLevelError(
                 device=self, min=50, max=100, invalid=ryd_lvl
@@ -1059,8 +1084,9 @@ class Device(BaseDevice):
         """
         if not isinstance(register, (BaseRegister, MappableRegister)):
             raise TypeError(
-                "The register to check must be of type "
-                "BaseRegister or MappableRegister."
+                "'register' must be an instance of 'BaseRegister' or "
+                f"'MappableRegister', not {type(register)}. Got register "
+                f"{register!r}."
             )
         if isinstance(register, BaseRegister) and register.layout is None:
             return False
