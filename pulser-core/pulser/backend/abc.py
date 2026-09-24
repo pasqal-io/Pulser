@@ -51,7 +51,7 @@ class Backend(ABC):
         if not isinstance(sequence, pulser.Sequence):
             raise TypeError(
                 "'sequence' should be a `Sequence` instance"
-                f", not {type(sequence)}."
+                f", not {type(sequence)}. Got {sequence!r}."
             )
         if not mimic_qpu:
             return
@@ -66,7 +66,7 @@ class Backend(ABC):
         if not isinstance(device := sequence.device, Device):
             raise TypeError(
                 "To be sent to a QPU, the device of the sequence must be an "
-                f"instance of 'Device', not {type(device)}."
+                f"instance of 'Device', not {type(device)}. Got {device!r}."
             )
         reg = sequence.get_register(include_mappable=True)
         if device.requires_layout and (layout := reg.layout) is None:
@@ -156,7 +156,7 @@ class EmulatorBackend(Backend):
         if not isinstance(config, EmulationConfig):
             raise TypeError(
                 "'config' must be an instance of 'EmulationConfig', "
-                f"not {type(config)}."
+                f"not {type(config)}. Got {config!r}."
             )
         # Use all the parameters in config and then fill the rest with the
         # ones of default_config

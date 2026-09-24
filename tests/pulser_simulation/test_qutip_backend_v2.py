@@ -112,7 +112,11 @@ def test_callback():
 def test_qutip_backend_v2_energy(capfd):
     seq = sequence()
     with pytest.raises(
-        TypeError, match="'config' must be an instance of 'EmulationConfig'"
+        TypeError,
+        match=re.escape(
+            "'config' must be an instance of 'EmulationConfig', not "
+            "<class 'str'>. Got 'tralala'."
+        ),
     ):
         QutipBackendV2(seq, config="tralala")
 

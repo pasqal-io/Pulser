@@ -306,7 +306,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         if initial_state is not None and not isinstance(initial_state, State):
             raise TypeError(
                 "When defined, 'initial_state' must be an instance of State;"
-                f" got object of type {type(initial_state)} instead."
+                f" got object of type {type(initial_state)} instead. Got "
+                f"{initial_state!r}."
             )
 
         if interaction_matrix is not None:
@@ -358,7 +359,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         elif not isinstance(noise_model, NoiseModel):
             raise TypeError(
                 "When defined, 'noise_model' must be a NoiseModel instance,"
-                f" not {type(noise_model)}."
+                f" not {type(noise_model)}. Got {noise_model!r}."
             )
 
         if (
@@ -470,7 +471,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         if not isinstance(obj_str, str):
             raise TypeError(
                 "The serialized EmulationConfig must be given as a string. "
-                f"Instead, got object of type {type(obj_str)}."
+                f"Instead, got object of type {type(obj_str)}. Got "
+                f"{obj_str!r}."
             )
         validate_abstract_repr(obj_str, "config")
         return _deserialize_emulation_config(
@@ -570,7 +572,8 @@ class EmulatorConfig(BackendConfig):
         else:
             raise TypeError(
                 f"'{type(self.evaluation_times)}' is not a valid"
-                " type for 'evaluation_times'."
+                " type for 'evaluation_times'. Got "
+                f"{self.evaluation_times!r}."
             )
 
         if isinstance(self.initial_state, str):
@@ -582,11 +585,11 @@ class EmulatorConfig(BackendConfig):
         elif not isinstance(self.initial_state, (tuple, list, np.ndarray)):
             raise TypeError(
                 f"'{type(self.initial_state)}' is not a valid type for"
-                " 'initial_state'."
+                f" 'initial_state'. Got {self.initial_state!r}."
             )
 
         if not isinstance(self.noise_model, NoiseModel):
             raise TypeError(
                 "'noise_model' must be a NoiseModel instance,"
-                f" not {type(self.noise_model)}."
+                f" not {type(self.noise_model)}. Got {self.noise_model!r}."
             )

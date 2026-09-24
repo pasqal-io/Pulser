@@ -213,7 +213,8 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         if not isinstance(eigenstates, Sequence):
             raise TypeError(
                 "'eigenstates' must be a 'collections.Sequence' "
-                f"(list or tuple), not {type(eigenstates).__name__}."
+                f"(list or tuple), not {type(eigenstates).__name__}. Got "
+                f"{eigenstates!r}."
             )
         if any(not isinstance(s, str) or len(s) != 1 for s in eigenstates):
             bad = [

@@ -84,10 +84,15 @@ def test_abc_backend(sequence):
         def run(self):
             pass
 
+    abstract_seq = sequence.to_abstract_repr()
     with pytest.raises(
-        TypeError, match="'sequence' should be a `Sequence` instance"
+        TypeError,
+        match=re.escape(
+            "'sequence' should be a `Sequence` instance, not <class 'str'>. "
+            f"Got {abstract_seq!r}."
+        ),
     ):
-        ConcreteBackend(sequence.to_abstract_repr())
+        ConcreteBackend(abstract_seq)
 
 
 @pytest.mark.parametrize("parametrized", [True, False])
@@ -132,9 +137,27 @@ def test_emulator_config_value_errors(param, value, msg):
 @pytest.mark.parametrize(
     "param, msg",
     [
-        ("evaluation_times", "not a valid type for 'evaluation_times'"),
-        ("initial_state", "not a valid type for 'initial_state'"),
-        ("noise_model", "must be a NoiseModel instance"),
+        (
+            "evaluation_times",
+            re.escape(
+                "'<class 'NoneType'>' is not a valid type for "
+                "'evaluation_times'. Got None."
+            ),
+        ),
+        (
+            "initial_state",
+            re.escape(
+                "'<class 'NoneType'>' is not a valid type for "
+                "'initial_state'. Got None."
+            ),
+        ),
+        (
+            "noise_model",
+            re.escape(
+                "'noise_model' must be a NoiseModel instance, not "
+                "<class 'NoneType'>. Got None."
+            ),
+        ),
     ],
 )
 def test_emulator_config_type_errors(param, msg):
@@ -294,7 +317,8 @@ def test_remote_backend(sequence):
         match=re.escape(
             "To be sent to a QPU, the device of the sequence must be an "
             "instance of 'Device', not "
-            "<class 'pulser.devices._device_datacls.VirtualDevice'>."
+            "<class 'pulser.devices._device_datacls.VirtualDevice'>. "
+            f"Got {sequence.device!r}."
         ),
     ):
         QPUBackend(sequence, connection)
@@ -325,15 +349,17 @@ def test_remote_backend(sequence):
         TypeError,
         match=re.escape(
             "'connection' must be an instance of 'RemoteConnection', "
-            "not <class 'str'>."
+            "not <class 'str'>. Got 'fake_connection'."
         ),
     ):
         QPUBackend(seq, "fake_connection")
 
     with pytest.raises(
         TypeError,
-        match="'config' must be an instance of 'BackendConfig'; "
-        "got 'str' instead",
+        match=re.escape(
+            "When given, a 'config' must be an instance of 'BackendConfig'; "
+            "got 'str' instead. Got 'bad config'."
+        ),
     ):
         QPUBackend(seq, connection, config="bad config")
 
@@ -347,11 +373,20 @@ def test_remote_backend(sequence):
         qpu_backend.run()
     for backend in [qpu_backend, remote_backend]:
         # Remote Backend only checks that the type is correct
-        with pytest.raises(TypeError, match="'job_params' must be a list"):
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                "'job_params' must be a list; got <class 'dict'> instead. "
+                "Got {'runs': 100}."
+            ),
+        ):
             backend.run(job_params={"runs": 100})
         with pytest.raises(
             TypeError,
-            match="All elements of 'job_params' must be dictionaries",
+            match=re.escape(
+                "All elements of 'job_params' must be dictionaries; got "
+                "<class 'str'> instead. Got 'foo'."
+            ),
         ):
             backend.run(job_params=[{"runs": 100}, "foo"])
     with pytest.raises(
@@ -462,7 +497,11 @@ def test_emulator_backend(sequence):
             pass
 
     with pytest.raises(
-        TypeError, match="must be an instance of 'EmulationConfig'"
+        TypeError,
+        match=re.escape(
+            "'config' must be an instance of 'EmulationConfig', not "
+            f"{type(EmulatorConfig)}. Got {EmulatorConfig!r}."
+        ),
     ):
         ConcreteEmulator(sequence, config=EmulatorConfig)
 
@@ -653,7 +692,11 @@ def test_emulation_config():
             default_evaluation_times=[0.0, 1.0, 0.5],
         )
     with pytest.raises(
-        TypeError, match="'initial_state' must be an instance of State"
+        TypeError,
+        match=re.escape(
+            "When defined, 'initial_state' must be an instance of State; got"
+            " object of type <class 'list'> instead. Got [[1], [0]]."
+        ),
     ):
         EmulationConfig(observables=(BitStrings(),), initial_state=[[1], [0]])
     with pytest.raises(
@@ -716,7 +759,13 @@ def test_emulation_config():
         observables=(BitStrings(),),
         interaction_matrix=np.array([[[0, 1], [1, 0]], [[0, 2], [2, 0]]]),
     )
-    with pytest.raises(TypeError, match="must be a NoiseModel"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "When defined, 'noise_model' must be a NoiseModel instance, not "
+            "<class 'dict'>. Got {'p_false_pos': 0.1}."
+        ),
+    ):
         EmulationConfig(
             observables=(BitStrings(),), noise_model={"p_false_pos": 0.1}
         )
@@ -1550,10 +1599,15 @@ class TestObservables:
         )
 
     def test_expectation(self, ghz_state, ham, zzz):
+        ham_qobj = ham.to_qobj()
         with pytest.raises(
-            TypeError, match="'operator' must be an Operator instance"
+            TypeError,
+            match=re.escape(
+                "'operator' must be an Operator instance; got "
+                f"{type(ham_qobj)} instead. Got {ham_qobj!r}."
+            ),
         ):
-            Expectation(ham.to_qobj())
+            Expectation(ham_qobj)
         h_exp = Expectation(ham)
         assert h_exp.tag == "expectation"
         assert h_exp.apply(state=ghz_state) == ham.expect(ghz_state)
@@ -1562,10 +1616,15 @@ class TestObservables:
         assert z_exp.apply(state=ghz_state) == zzz.expect(ghz_state)
 
     def test_fidelity(self, ghz_state):
+        ghz_qobj = ghz_state.to_qobj()
         with pytest.raises(
-            TypeError, match="'state' must be a State instance"
+            TypeError,
+            match=re.escape(
+                "'state' must be a State instance; got "
+                f"{type(ghz_qobj)} instead. Got {ghz_qobj!r}."
+            ),
         ):
-            Fidelity(ghz_state.to_qobj())
+            Fidelity(ghz_qobj)
 
         fid_ggg = Fidelity(
             QutipState.from_state_amplitudes(

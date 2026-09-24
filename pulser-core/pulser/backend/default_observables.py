@@ -219,7 +219,8 @@ class Fidelity(Observable):
         )
         if not isinstance(state, State):
             raise TypeError(
-                f"'state' must be a State instance; got {type(state)} instead."
+                "'state' must be a State instance; got "
+                f"{type(state)} instead. Got {state!r}."
             )
         self.state = state
 
@@ -270,7 +271,7 @@ class Expectation(Observable):
         if not isinstance(operator, Operator):
             raise TypeError(
                 "'operator' must be an Operator instance;"
-                f" got {type(operator)} instead."
+                f" got {type(operator)} instead. Got {operator!r}."
             )
         self.operator = operator
 

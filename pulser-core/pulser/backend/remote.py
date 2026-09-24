@@ -330,14 +330,15 @@ class RemoteBackend(Backend):
         if not isinstance(connection, RemoteConnection):
             raise TypeError(
                 "'connection' must be an instance of 'RemoteConnection', "
-                f"not {type(connection)}."
+                f"not {type(connection)}. Got {connection!r}."
             )
         self._connection = connection
         config = config if config is not None else BackendConfig()
         if not isinstance(config, BackendConfig):
             raise TypeError(
                 "When given, a 'config' must be an instance of "
-                f"'BackendConfig'; got {type(config).__name__!r} instead."
+                f"'BackendConfig'; got {type(config).__name__!r} instead. Got "
+                f"{config!r}."
             )
         self._config = config
         self._batch_id: str | None = None
@@ -382,13 +383,14 @@ class RemoteBackend(Backend):
     def _type_check_job_params(job_params: list[JobParams] | None) -> None:
         if not isinstance(job_params, list):
             raise TypeError(
-                f"'job_params' must be a list; got {type(job_params)} instead."
+                "'job_params' must be a list; got "
+                f"{type(job_params)} instead. Got {job_params!r}."
             )
         for d in job_params:
             if not isinstance(d, dict):
                 raise TypeError(
                     "All elements of 'job_params' must be dictionaries; "
-                    f"got {type(d)} instead."
+                    f"got {type(d)} instead. Got {d!r}."
                 )
 
     def open_batch(self) -> _OpenBatchContextManager:

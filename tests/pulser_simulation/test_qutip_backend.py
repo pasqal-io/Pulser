@@ -65,7 +65,8 @@ def test_qutip_backend(sequence):
         match=re.escape(
             "To be sent to a QPU, the device of the sequence must be an "
             "instance of 'Device', not "
-            "<class 'pulser.devices._device_datacls.VirtualDevice'>."
+            "<class 'pulser.devices._device_datacls.VirtualDevice'>. "
+            f"Got {sequence.device!r}."
         ),
     ), pytest.deprecated_call(match="'QutipBackend' is deprecated"):
         QutipBackend(sequence, mimic_qpu=True)

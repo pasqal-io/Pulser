@@ -61,10 +61,15 @@ def test_validate_eigenstates():
     ):
         State._validate_eigenstates(eigenstates=["r", "g", "r"])
 
+    # A set, so its printed order varies; build the text from the same object
+    bad_eigenstates = {"r", "g"}
     with pytest.raises(
         TypeError,
-        match=re.escape("must be a 'collections.Sequence'"),
+        match=re.escape(
+            "'eigenstates' must be a 'collections.Sequence' (list or tuple), "
+            f"not set. Got {bad_eigenstates!r}."
+        ),
     ):
-        State._validate_eigenstates(eigenstates={"r", "g"})
+        State._validate_eigenstates(eigenstates=bad_eigenstates)
 
     State._validate_eigenstates(eigenstates=("r", "g"))
