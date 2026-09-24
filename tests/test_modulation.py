@@ -13,6 +13,7 @@
 # limitations under the License.
 """Tests for the modulation bandwidth utilities."""
 
+import re
 import warnings
 
 import numpy as np
@@ -94,7 +95,10 @@ class TestValidateModBandwidth:
         max_bw = calculate_mod_bandwidth_from_amplitude_rise_time(1)
         with pytest.raises(
             NotImplementedError,
-            match=f"'mod_bandwidth' must be lower than {max_bw:.0f} MHz",
+            match=re.escape(
+                f"'mod_bandwidth' must be lower than {max_bw:.0f} MHz, "
+                f"not {max_bw + 1}."
+            ),
         ):
             validate_mod_bandwidth(max_bw + 1)
 

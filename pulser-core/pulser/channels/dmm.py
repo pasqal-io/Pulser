@@ -21,7 +21,7 @@ from typing import Any, Literal, Optional
 import numpy as np
 
 import pulser.math as pm
-from pulser.channels.base_channel import Channel
+from pulser.channels.base_channel import Channel, _format_violation_times
 from pulser.json.utils import get_dataclass_defaults
 from pulser.pulse import Pulse
 from pulser.register.weight_maps import DetuningMap
@@ -161,7 +161,12 @@ class DMM(Channel):
         )
         # Check that detuning is negative
         if np.any(round_detuning > 0):
-            raise ValueError("The detuning in a DMM must not be positive.")
+            raise ValueError(
+                "The detuning in a DMM must not be positive; it is "
+                "positive at "
+                f"{_format_violation_times(round_detuning > 0)} in detuning "
+                f"{pulse.detuning!r}."
+            )
         # Check that detuning on each atom is above bottom_detuning
         min_round_detuning = np.min(round_detuning)
         max_weight = np.max(detuning_map.weights)
@@ -175,7 +180,8 @@ class DMM(Channel):
                 "rad/µs goes below the local bottom "
                 f"detuning of the DMM ({self.bottom_detuning} rad/µs). "
                 "To respect this constraint, keep the detuning above "
-                f"{self.bottom_detuning/max_weight} rad/µs."
+                f"{self.bottom_detuning/max_weight} rad/µs. Got pulse "
+                f"{pulse!r}."
             )
         # Check that distributed detuning is above total_bottom_detuning
         sum_weight = np.sum(detuning_map.weights)
@@ -213,6 +219,7 @@ class DMM(Channel):
                 f"absolute detuning of {avg_abs_detuning:.3g} rad/µs does not"
                 " respect the minimum threshold for the average absolute "
                 f"detuning of the DMM ({self.min_avg_abs_detuning} rad/µs)."
+                f" Got pulse {pulse!r}."
             )
 
     def _to_abstract_repr(self, id: str) -> dict[str, Any]:

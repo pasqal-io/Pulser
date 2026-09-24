@@ -17,7 +17,6 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass, fields
 from enum import Flag
-from itertools import chain
 from typing import Any, Literal, cast, overload
 
 import numpy as np
@@ -175,8 +174,8 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         if not isinstance(self.controlled_beams, tuple):
             if not isinstance(self.controlled_beams, list):
                 raise TypeError(
-                    "The 'controlled_beams' must be provided as a tuple "
-                    "or list."
+                    "The 'controlled_beams' must be provided as a tuple or "
+                    f"list, not {type(self.controlled_beams)}."
                 )
             # Convert list to tuple to keep RydbergEOM hashable
             object.__setattr__(
@@ -186,14 +185,21 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
             raise ValueError(
                 "There must be at least one beam in 'controlled_beams'."
             )
-        for beam in chain((self.limiting_beam,), self.controlled_beams):
-            if not (
-                isinstance(beam, RydbergBeam) and beam in tuple(RydbergBeam)
-            ):
-                raise TypeError(
-                    "Every beam must be one of options of the `RydbergBeam`"
-                    f" enumeration, not {self.limiting_beam}."
-                )
+        beams_by_attr: dict[str, tuple[RydbergBeam, ...]] = {
+            "limiting_beam": (self.limiting_beam,),
+            "controlled_beams": self.controlled_beams,
+        }
+        for attr, beams in beams_by_attr.items():
+            for beam in beams:
+                if not (
+                    isinstance(beam, RydbergBeam)
+                    and beam in tuple(RydbergBeam)
+                ):
+                    raise TypeError(
+                        "Every beam must be one of options of the"
+                        f" `RydbergBeam` enumeration. Got {beam} for"
+                        f" attribute {attr}."
+                    )
 
     @property
     def _switching_beams_combos(self) -> list[tuple[RydbergBeam, ...]]:
