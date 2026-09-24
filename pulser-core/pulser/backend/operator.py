@@ -358,3 +358,37 @@ class OperatorRepr(Operator):
         raise NotImplementedError(
             "``__matmul__`` not implemented in ``OperatorRepr``."
         )
+
+
+def _cast_operator(
+    operator: Operator, target: Type[OperatorType], name: str = "operator"
+) -> Operator:
+    """Casts an operator to the target type through its abstract repr.
+
+    The operator is returned untouched if it is already of the target type
+    or if the target is the backend-agnostic ``OperatorRepr``.
+
+    Args:
+        operator: The operator to cast.
+        target: The operator type to cast to.
+        name: How to refer to the operator in the error message.
+
+    Returns:
+        The operator, as an instance of the target type.
+    """
+    if target is OperatorRepr or isinstance(operator, target):
+        return operator
+    try:
+        op_repr = operator._to_abstract_repr()
+        return target.from_operator_repr(
+            eigenstates=op_repr["eigenstates"],
+            n_qudits=op_repr["n_qudits"],
+            operations=op_repr["operations"],
+        )
+    except (AbstractReprError, TypeError, ValueError) as e:
+        raise TypeError(
+            f"Failed to convert {name} of type {type(operator).__name__!r} "
+            f"to the expected operator type {target.__name__!r}. Automatic "
+            "conversion is only possible for operators created via "
+            "'from_operator_repr()'."
+        ) from e
