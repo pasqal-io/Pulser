@@ -110,7 +110,8 @@ class QutipConfig(EmulationConfig[QutipState]):
         if initial_state and not isinstance(initial_state, QutipState):
             raise TypeError(
                 "If provided, `initial_state` must be an instance of "
-                f"`QutipState`, not {type(initial_state)}."
+                f"`QutipState`, not {type(initial_state)}. Got "
+                f"{initial_state!r}."
             )
         if "noise_model" in backend_options and backend_options[
             "noise_model"

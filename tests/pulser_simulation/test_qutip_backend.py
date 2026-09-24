@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import dataclasses
+import re
 
 import numpy as np
 import pytest
@@ -42,7 +43,11 @@ def sequence():
 
 def test_qutip_backend(sequence):
     with pytest.raises(
-        TypeError, match="must be of type 'EmulatorConfig'"
+        TypeError,
+        match=re.escape(
+            "'config' must be of type 'EmulatorConfig', not "
+            f"{pulser.NoiseModel}. Got {pulser.NoiseModel()!r}."
+        ),
     ), pytest.deprecated_call(match="'QutipBackend' is deprecated"):
         QutipBackend(sequence, pulser.NoiseModel())
 

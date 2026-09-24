@@ -77,7 +77,8 @@ def abstract_repr(name: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
         ):
             raise ValueError(
                 f"Not enough arguments given for '{name}' (expected "
-                f"{len(signature.pos)}, got {len(args)})."
+                f"{len(signature.pos)}, got {len(args)}). Got arguments "
+                f"{args}."
             )
     res: dict[str, Any] = {}
     res.update(signature.extra)  # Starts with extra info ({} if undefined)
@@ -94,7 +95,7 @@ def abstract_repr(name: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
     elif len(args) > max_pos_args:
         raise ValueError(
             f"Too many positional arguments given for '{name}' (expected "
-            f"{max_pos_args}, got {len(args)})."
+            f"{max_pos_args}, got {len(args)}). Got arguments {args}."
         )
     for kw in kwargs:
         if kw in signature.keyword or kw in arg_as_kwarg:
@@ -161,6 +162,7 @@ def serialize_abstract_sequence(
     for var in seq._variables.values():
         res["variables"][var.name] = dict(type=var.dtype.__name__)
 
+    given_defaults = dict(defaults)
     qubits_default = defaults.pop("qubits", None)
     if defaults or qubits_default:
         seq._cross_check_vars(defaults)
@@ -168,7 +170,8 @@ def serialize_abstract_sequence(
             seq.build(qubits=qubits_default, **defaults)
         except Exception:
             raise ValueError(
-                "The given 'defaults' produce an invalid sequence."
+                "The given 'defaults' produce an invalid sequence; got "
+                f"{given_defaults!r}."
             )
 
         for var in seq._variables.values():

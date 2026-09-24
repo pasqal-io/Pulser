@@ -492,7 +492,11 @@ def test_extend_duration(with_custom_centered_phase):
     assert short.duration < long.duration
     assert short.extend_duration(short.duration).duration == short.duration
     with pytest.raises(
-        ValueError, match="Can't extend samples to a lower duration."
+        ValueError,
+        match=re.escape(
+            "Can't extend samples to a lower duration; got 220 vs. the "
+            "current 520."
+        ),
     ):
         long.extend_duration(short.duration)
 
