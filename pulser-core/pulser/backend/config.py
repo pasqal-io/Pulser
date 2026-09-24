@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Defines the backend configuration classes."""
+
 from __future__ import annotations
 
 import copy
@@ -332,8 +333,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             if len(_shape) == 2:
                 interaction_matrix = interaction_matrix.reshape((-1,) + _shape)
             matrix_arr = interaction_matrix.as_array(detach=True)
-            if not np.allclose(
-                matrix_arr, np.transpose(matrix_arr, (0, 2, 1))
+            if not pm.allclose(
+                interaction_matrix, interaction_matrix.transpose(1, 2)
             ):
                 raise ValueError(
                     "The received interaction matrix is not symmetric."

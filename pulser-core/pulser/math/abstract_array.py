@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Defines the AbstractArray class."""
+
 from __future__ import annotations
 
 import functools
@@ -341,6 +342,17 @@ class AbstractArray:
                 Must be compatible with the current shape.
         """
         return AbstractArray(self._array.reshape(shape))
+
+    def transpose(self, dim0: int = 0, dim1: int = 1) -> AbstractArray:
+        """Return a new array with two axes exchanged.
+
+        Args:
+            dim0: The first axis, defaults to 0.
+            dim1: The second axis, defaults to 1.
+        """
+        if self.is_tensor:
+            return AbstractArray(self.as_tensor().transpose(dim0, dim1))
+        return AbstractArray(np.swapaxes(self.as_array(), dim0, dim1))
 
 
 AbstractArrayLike = Union[AbstractArray, ArrayLike]
