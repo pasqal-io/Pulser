@@ -340,3 +340,36 @@ class StateRepr(State):
     ) -> Counter[str]:
         """``sample`` not implemented in ``StateRepr``."""
         raise NotImplementedError
+
+
+def _cast_state(
+    state: State, target: Type[StateType], name: str = "state"
+) -> State:
+    """Casts a state to the target type through its abstract repr.
+
+    The state is returned untouched if it is already of the target type or
+    if the target is the backend-agnostic ``StateRepr``.
+
+    Args:
+        state: The state to cast.
+        target: The state type to cast to.
+        name: How to refer to the state in the error message.
+
+    Returns:
+        The state, as an instance of the target type.
+    """
+    if target is StateRepr or isinstance(state, target):
+        return state
+    try:
+        state_repr = state._to_abstract_repr()
+        return target.from_state_amplitudes(
+            eigenstates=state_repr["eigenstates"],
+            amplitudes=state_repr["amplitudes"],
+        )
+    except (AbstractReprError, TypeError, ValueError) as e:
+        raise TypeError(
+            f"Failed to convert {name} of type {type(state).__name__!r} "
+            f"to the expected state type {target.__name__!r}. Automatic "
+            "conversion is only possible for states created via "
+            "'from_state_amplitudes()' and not modified afterwards."
+        ) from e

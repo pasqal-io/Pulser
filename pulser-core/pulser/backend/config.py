@@ -37,11 +37,9 @@ from numpy.typing import ArrayLike, NDArray
 
 import pulser.math as pm
 from pulser.backend._classproperty import classproperty
-from pulser.backend.default_observables import Expectation, Fidelity
 from pulser.backend.observable import Callback, Observable
 from pulser.backend.operator import Operator, OperatorRepr
 from pulser.backend.state import State, StateRepr
-from pulser.exceptions.serialization import AbstractReprError
 from pulser.json.abstract_repr.backend import _deserialize_emulation_config
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
@@ -54,84 +52,6 @@ StateType = TypeVar("StateType", bound=State)
 
 # TODO: Replace with built-in Self when python >= 3.11
 Self = TypeVar("Self", bound="BackendConfig")
-
-_CAST_ERRORS = (AbstractReprError, TypeError, ValueError)
-
-
-def _cast_state(state: State, target: Type[State], name: str) -> State:
-    """Casts a state to the target type through its abstract repr.
-
-    The state is returned untouched if it is already of the target type or
-    if the target is the backend-agnostic ``StateRepr``.
-    """
-    if target is StateRepr or isinstance(state, target):
-        return state
-    try:
-        state_repr = state._to_abstract_repr()
-        return target.from_state_amplitudes(
-            eigenstates=state_repr["eigenstates"],
-            amplitudes=state_repr["amplitudes"],
-        )
-    except _CAST_ERRORS as e:
-        raise TypeError(
-            f"Failed to convert {name} of type {type(state).__name__!r} "
-            f"to the expected state type {target.__name__!r}. Automatic "
-            "conversion is only possible for states created via "
-            "'from_state_amplitudes()' and not modified afterwards."
-        ) from e
-
-
-def _cast_operator(
-    operator: Operator, target: Type[Operator], name: str
-) -> Operator:
-    """Casts an operator to the target type through its abstract repr.
-
-    The operator is returned untouched if it is already of the target type
-    or if the target is the backend-agnostic ``OperatorRepr``.
-    """
-    if target is OperatorRepr or isinstance(operator, target):
-        return operator
-    try:
-        op_repr = operator._to_abstract_repr()
-        return target.from_operator_repr(
-            eigenstates=op_repr["eigenstates"],
-            n_qudits=op_repr["n_qudits"],
-            operations=op_repr["operations"],
-        )
-    except _CAST_ERRORS as e:
-        raise TypeError(
-            f"Failed to convert {name} of type {type(operator).__name__!r} "
-            f"to the expected operator type {target.__name__!r}. Automatic "
-            "conversion is only possible for operators created via "
-            "'from_operator_repr()'."
-        ) from e
-
-
-def _cast_observable(
-    obs: Observable, state_type: Type[State], operator_type: Type[Operator]
-) -> Observable:
-    """Casts the state or operator held by an observable, if any.
-
-    A shallow copy is returned when a cast is needed, so that the UUID
-    (used to retrieve results) is kept and the original is not modified.
-    """
-    if isinstance(obs, Fidelity):
-        new_state = _cast_state(
-            obs.state, state_type, f"the state of observable {obs.tag!r}"
-        )
-        if new_state is not obs.state:
-            obs = copy.copy(obs)
-            obs.state = new_state
-    elif isinstance(obs, Expectation):
-        new_op = _cast_operator(
-            obs.operator,
-            operator_type,
-            f"the operator of observable {obs.tag!r}",
-        )
-        if new_op is not obs.operator:
-            obs = copy.copy(obs)
-            obs.operator = new_op
-    return obs
 
 
 class BackendConfig:
@@ -252,10 +172,11 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             (the start of the sequence) and 1 (the end of the sequence), in
             ascending order. Can also be specified as "Full", in which case
             every step in the emulation will also be an evaluation time.
-        initial_state: The initial state from which emulation starts. If
-            its type differs from the config's ``state_type``, it is
-            automatically converted, which requires it to have been created
-            via ``State.from_state_amplitudes()``.
+        initial_state: The initial state from which emulation starts. When
+            given to an ``EmulatorBackend``, it is automatically converted to
+            ``EmulatorBackend.config_type.state_type`` if needed, which
+            requires it to have been created via
+            ``State.from_state_amplitudes()``.
             If left undefined, defaults to starting with all qudits in the
             ground state.
         with_modulation: Whether to emulate the sequence with the programmed
@@ -326,7 +247,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         default_evaluation_times: Sequence[SupportsFloat] | Literal["Full"] = (
             1.0,
         ),
-        initial_state: State | None = None,  # Default is ggg...
+        initial_state: StateType | None = None,  # Default is ggg...
         with_modulation: bool = False,
         interaction_matrix: ArrayLike | None = None,
         prefer_device_noise_model: bool = False,
@@ -383,21 +304,11 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             )
             default_evaluation_times = cast(Sequence[float], eval_times_arr)
 
-        if initial_state is not None:
-            if not isinstance(initial_state, State):
-                raise TypeError(
-                    "When defined, 'initial_state' must be an instance of "
-                    f"State; got object of type {type(initial_state)} "
-                    "instead."
-                )
-            initial_state = _cast_state(
-                initial_state, self._state_type, "'initial_state'"
+        if initial_state is not None and not isinstance(initial_state, State):
+            raise TypeError(
+                "When defined, 'initial_state' must be an instance of State;"
+                f" got object of type {type(initial_state)} instead."
             )
-
-        observables = tuple(
-            _cast_observable(obs, self._state_type, self._operator_type)
-            for obs in observables
-        )
 
         if interaction_matrix is not None:
             interaction_matrix = pm.AbstractArray(interaction_matrix)
