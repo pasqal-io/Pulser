@@ -18,7 +18,7 @@ import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Type, TypeVar
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -31,6 +31,8 @@ if TYPE_CHECKING:
     from pulser.backend.results import Results
 
 TIME_TOLERANCE = 1e-12
+
+CallbackType = TypeVar("CallbackType", bound="Callback")
 
 
 def _fuzzy_unique_sorted(sorted: np.ndarray, tolerance: float) -> bool:
@@ -48,6 +50,30 @@ class Callback(ABC):
     def uuid(self) -> uuid.UUID:
         """A universal unique identifier for this instance."""
         return self._uuid
+
+    def _cast_to(
+        self: CallbackType,
+        state_type: Type[State],
+        operator_type: Type[Operator],
+    ) -> CallbackType:
+        """Casts the states and operators held by this callback.
+
+        Called by ``EmulatorBackend.validate_config()`` so that the callback
+        holds states and operators of the backend's preferred types.
+        Subclasses holding a State or Operator should override this method.
+        When a cast is needed, they must return a copy (e.g. with
+        ``copy.copy()``) instead of modifying the instance, so that the
+        UUID is kept and the user's instance is left untouched.
+
+        Args:
+            state_type: The state type to cast to.
+            operator_type: The operator type to cast to.
+
+        Returns:
+            The callback itself if no cast is needed, or a copy of it holding
+            the cast states and operators otherwise.
+        """
+        return self
 
     @abstractmethod
     def __call__(
