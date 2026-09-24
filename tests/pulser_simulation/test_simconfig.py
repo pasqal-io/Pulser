@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import re
+
 import pytest
 from qutip import Qobj, qeye, sigmax, sigmaz
 
@@ -104,7 +106,13 @@ def test_eff_noise_opers(matrices):
     # Some of these checks are repeated in the NoiseModel UTs
     with pytest.raises(ValueError, match="The operators list length"):
         SimConfig(noise=("eff_noise"), eff_noise_rates=[1.0])
-    with pytest.raises(TypeError, match="eff_noise_rates is a list of floats"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "eff_noise_rates is a list of floats, it must not contain a "
+            "<class 'str'>. Got '0.1'."
+        ),
+    ):
         SimConfig(
             noise=("eff_noise"),
             eff_noise_rates=["0.1"],
@@ -112,7 +120,10 @@ def test_eff_noise_opers(matrices):
         )
     with pytest.raises(
         ValueError,
-        match="The effective noise parameters have not been filled.",
+        match=re.escape(
+            "The effective noise parameters have not been filled; "
+            "['eff_noise_opers', 'eff_noise_rates'] are empty."
+        ),
     ):
         SimConfig(noise=("eff_noise"))
     with pytest.raises(TypeError, match="is not a Qobj."):

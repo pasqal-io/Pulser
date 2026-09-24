@@ -484,10 +484,20 @@ class NoiseModel:
         if "register" not in true_noise_types:
             # trap_waist and trap_depth have default values
             return
-        if trap_waist == 0.0 or trap_depth is None or temperature == 0.0:
+        undefined = [
+            name
+            for name, is_undefined in (
+                ("trap_waist", trap_waist == 0.0),
+                ("trap_depth", trap_depth is None),
+                ("temperature", temperature == 0.0),
+            )
+            if is_undefined
+        ]
+        if undefined:
             raise ValueError(
                 "trap_waist, trap_depth, and temperature must be defined in "
-                "order to simulate register noise."
+                f"order to simulate register noise; {undefined} "
+                f"{'is' if len(undefined) == 1 else 'are'} undefined."
             )
 
     @staticmethod
@@ -523,7 +533,7 @@ class NoiseModel:
         if "eff_noise" not in noise_types:
             raise ValueError(
                 "At least one effective noise operator must be defined to"
-                " simulate leakage."
+                f" simulate leakage; got noise types {sorted(noise_types)}."
             )
 
     @staticmethod
@@ -544,7 +554,9 @@ class NoiseModel:
         if (psd == ()) ^ (freqs == ()):
             raise ValueError(
                 "`detuning_hf_psd` and `detuning_hf_omegas` must either"
-                " both be empty tuples or both be provided."
+                " both be empty tuples or both be provided; got "
+                f"{len(psd)} `detuning_hf_psd` vs. "
+                f"{len(freqs)} `detuning_hf_omegas`."
             )
 
         if psd == ():
@@ -556,30 +568,39 @@ class NoiseModel:
         if psd_a.ndim != 1 or freqs_a.ndim != 1:
             raise ValueError(
                 "`detuning_hf_psd` and `detuning_hf_omegas`"
-                " are expected to be 1D tuples."
+                f" are expected to be 1D tuples; got {psd_a.ndim}D"
+                f" `detuning_hf_psd` and {freqs_a.ndim}D"
+                " `detuning_hf_omegas`."
             )
 
         if psd_a.size != freqs_a.size:
             raise ValueError(
                 "`detuning_hf_psd` and `detuning_hf_omegas`"
-                " are expected to have the same length."
+                f" are expected to have the same length; got {psd_a.size}"
+                f" `detuning_hf_psd` vs. {freqs_a.size}"
+                " `detuning_hf_omegas`."
             )
 
         if psd_a.size <= 1:
             raise ValueError(
                 "`detuning_hf_psd` and `detuning_hf_omegas`"
-                " are expected to have length > 1."
+                f" are expected to have length > 1; got {psd_a.size}."
             )
 
         if not (np.all(psd_a > 0) and np.all(freqs_a > 0)):
             raise ValueError(
                 "`detuning_hf_psd` and `detuning_hf_omegas`"
-                " are expected to have positive values."
+                " are expected to have positive values; got "
+                f"{psd_a[psd_a <= 0].tolist()} in `detuning_hf_psd` and "
+                f"{freqs_a[freqs_a <= 0].tolist()} in `detuning_hf_omegas`."
             )
 
         if np.any(np.diff(freqs_a) < 0):
+            drop = int(np.argmax(np.diff(freqs_a) < 0))
             raise ValueError(
-                "`detuning_hf_omegas` are expected to be monotonously growing."
+                "`detuning_hf_omegas` are expected to be monotonously"
+                f" growing; got {freqs_a[drop + 1]} at index {drop + 1}"
+                f" after {freqs_a[drop]}."
             )
 
     @staticmethod
@@ -599,19 +620,32 @@ class NoiseModel:
             if not (isinstance(rate, float) or isinstance(rate, int)):
                 raise TypeError(
                     "eff_noise_rates is a list of floats,"
-                    f" it must not contain a {type(rate)}."
+                    f" it must not contain a {type(rate)}. Got {rate!r}."
                 )
 
         if not check_contents:
             return
 
         if not eff_noise_opers or not eff_noise_rates:
+            empty = [
+                name
+                for name, values in (
+                    ("eff_noise_opers", eff_noise_opers),
+                    ("eff_noise_rates", eff_noise_rates),
+                )
+                if not values
+            ]
             raise ValueError(
-                "The effective noise parameters have not been filled."
+                "The effective noise parameters have not been filled; "
+                f"{empty} {'is' if len(empty) == 1 else 'are'} empty."
             )
 
-        if np.any(np.array(eff_noise_rates) < 0):
-            raise ValueError("The provided rates must be greater than 0.")
+        rates_arr = np.array(eff_noise_rates)
+        if np.any(rates_arr < 0):
+            raise ValueError(
+                "The provided rates must not be negative; got "
+                f"{rates_arr[rates_arr < 0].tolist()}."
+            )
 
         # Check the validity of operators
         min_shape = 2 if not with_leakage else 3
@@ -733,7 +767,8 @@ class NoiseModel:
         if not isinstance(obj_str, str):
             raise TypeError(
                 "The serialized noise model must be given as a string. "
-                f"Instead, got object of type {type(obj_str)}."
+                f"Instead, got object of type {type(obj_str)}. Got "
+                f"{obj_str!r}."
             )
 
         # Avoids circular imports
