@@ -73,7 +73,7 @@ class QutipBackend(Backend):
         if not isinstance(config, EmulatorConfig):
             raise TypeError(
                 "'config' must be of type 'EmulatorConfig', "
-                f"not {type(config)}."
+                f"not {type(config)}. Got {config!r}."
             )
         self._config = config
         noise_model: None | NoiseModel = None

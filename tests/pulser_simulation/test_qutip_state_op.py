@@ -140,8 +140,15 @@ class TestQutipState:
         assert dm_g.overlap(ket_plus) == ket_plus.overlap(dm_g)
         assert np.isclose(dm_g.overlap(ket_plus), 0.5)
 
-        with pytest.raises(TypeError, match="expects another 'QutipState'"):
-            dm_g.overlap(ket_r.to_qobj())
+        ket_r_qobj = ket_r.to_qobj()
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                "'QutipState.overlap()' expects another 'QutipState', not "
+                f"{type(ket_r_qobj)}. Got {ket_r_qobj!r}."
+            ),
+        ):
+            dm_g.overlap(ket_r_qobj)
 
         with pytest.raises(
             ValueError,
@@ -351,13 +358,15 @@ class TestQutipOperator:
     @pytest.mark.parametrize("op_name", ["apply_to", "expect"])
     def test_errors_on_qutip_state(self, pauli_x, op_name):
         op = getattr(pauli_x, op_name)
+        qobj = qutip.basis(2, 0)
         with pytest.raises(
             TypeError,
             match=re.escape(
-                f"'QutipOperator.{op_name}()' expects a 'QutipState' instance"
+                f"'QutipOperator.{op_name}()' expects a 'QutipState' "
+                f"instance, not {type(qobj)}. Got {qobj!r}."
             ),
         ):
-            op(qutip.basis(2, 0))
+            op(qobj)
         err_msg = (
             f"Can't apply QutipOperator.{op_name}() between a QutipOperator "
             "with eigenstates ('r', 'g') and a QutipState with {}"
@@ -372,11 +381,14 @@ class TestQutipOperator:
             op(QutipState(qutip.basis(2, 0), eigenstates=("g", "r")))
 
     @pytest.mark.parametrize("op_name", ["__add__", "__matmul__"])
-    def test_errors_on_qutip_operator(self, pauli_x, op_name):
+    def test_errors_on_qutip_operator(self, pauli_x, op_name, ket_r):
         op = getattr(pauli_x, op_name)
         with pytest.raises(
             TypeError,
-            match=re.escape(f"'{op_name}' expects a 'QutipOperator' instance"),
+            match=re.escape(
+                f"'{op_name}' expects a 'QutipOperator' instance, not "
+                f"{type(ket_r)}. Got {ket_r!r}."
+            ),
         ):
             op(ket_r)
         err_msg = (
