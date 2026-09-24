@@ -86,7 +86,7 @@ def test_params():
             70.0,
             re.escape(
                 "'rydberg_level' must be an instance of 'int', not "
-                "<class 'float'>: 70.0."
+                "<class 'float'>. Got 70.0."
             ),
         ),
         (
@@ -94,7 +94,7 @@ def test_params():
             {"fake_channel"},
             re.escape(
                 "When defined, 'channel_ids' must be a tuple or a list "
-                "of strings, not <class 'set'>: {'fake_channel'}."
+                "of strings, not <class 'set'>. Got: {'fake_channel'}."
             ),
         ),
         (
@@ -102,7 +102,7 @@ def test_params():
             ("ch1", 2),
             re.escape(
                 "When defined, 'channel_ids' must be a tuple or a list "
-                "of strings, not <class 'tuple'>: ('ch1', 2)."
+                "of strings, not <class 'tuple'>. Got: ('ch1', 2)."
             ),
         ),
         (
@@ -121,7 +121,10 @@ def test_params():
 )
 def test_post_init_type_checks(test_params, param, value, msg):
     test_params[param] = value
-    error_msg = msg or f"{param} must be of type"
+    error_msg = msg or (
+        rf"{param} must be of type '\w+', not '\w+'\. "
+        rf"Got {re.escape(repr(value))}\."
+    )
     with pytest.raises(TypeError, match=error_msg):
         VirtualDevice(**test_params)
 
@@ -204,7 +207,8 @@ def test_post_init_type_checks(test_params, param, value, msg):
             ("rydberg_global", "rydberg_global"),
             re.escape(
                 "When defined, 'channel_ids' can't have repeated elements; "
-                "got repeated ids ['rydberg_global']."
+                "got repeated ids ['rydberg_global'] in "
+                "('rydberg_global', 'rydberg_global')."
             ),
         ),
         (
@@ -213,7 +217,8 @@ def test_post_init_type_checks(test_params, param, value, msg):
             re.escape(
                 "When defined, the number of channel IDs must"
                 " match the number of channel objects; got "
-                "1 'channel_ids' vs. 0 'channel_objects'."
+                "1 'channel_ids' vs. 0 'channel_objects'. channel_ids: "
+                "('rydberg_global',). channel_objects: ()."
             ),
         ),
         ("max_sequence_duration", 0, None),
@@ -437,7 +442,7 @@ def test_change_rydberg_level(helpers):
         TypeError,
         match=re.escape(
             "'rydberg_level' must be an instance of 'int', not "
-            "<class 'float'>: 70.5."
+            "<class 'float'>. Got 70.5."
         ),
     ):
         dev.change_rydberg_level(70.5)
@@ -551,7 +556,8 @@ def test_validate_register(helpers, with_diff):
         TypeError,
         match=re.escape(
             "'register' must be an instance of 'Register' or "
-            f"'Register3D', not {type(bad_coords1)}."
+            f"'Register3D', not {type(bad_coords1)}. Got register "
+            f"{bad_coords1!r}."
         ),
     ):
         DigitalAnalogDevice.validate_register(bad_coords1)
@@ -610,7 +616,7 @@ def test_validate_layout(helpers):
         TypeError,
         match=re.escape(
             "'layout' must be an instance of 'RegisterLayout', not "
-            f"{type(not_a_layout)}."
+            f"{type(not_a_layout)}. Got {not_a_layout!r}."
         ),
     ):
         DigitalAnalogDevice.validate_layout(not_a_layout)
@@ -799,7 +805,8 @@ def test_calibrated_layouts(helpers):
         TypeError,
         match=re.escape(
             "'register' must be an instance of 'BaseRegister' or "
-            f"'MappableRegister', not {type(layout100)}."
+            f"'MappableRegister', not {type(layout100)}. Got register "
+            f"{layout100!r}."
         ),
     ):
         TestDevice.register_is_from_calibrated_layout(layout100)
@@ -928,8 +935,8 @@ def test_dmm_channels():
         ValueError,
         match=re.escape(
             "When defined, the names of channel IDs must be different"
-            " than the names of DMM channels 'dmm_0', 'dmm_1', "
-            "...; got ['dmm_0']."
+            " than the names of DMM channels ['dmm_0']; ['dmm_0'] is a "
+            "wrong ID, among ('dmm_0',)."
         ),
     ):
         device = replace(

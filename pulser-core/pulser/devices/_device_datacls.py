@@ -176,7 +176,7 @@ class BaseDevice(ABC):
             if not isinstance(value, type_):
                 raise TypeError(
                     f"{param} must be of type '{type_.__name__}', "
-                    f"not '{type(value).__name__}'."
+                    f"not '{type(value).__name__}'. Got {value!r}."
                 )
 
         type_check("name", str)
@@ -293,7 +293,7 @@ class BaseDevice(ABC):
                 raise TypeError(
                     "When defined, 'channel_ids' must be a tuple or a list "
                     "of strings, not "
-                    f"{type(self.channel_ids)}: {self.channel_ids}."
+                    f"{type(self.channel_ids)}. Got: {self.channel_ids}."
                 )
             if len(self.channel_ids) != len(set(self.channel_ids)):
                 repeated_ids = [
@@ -304,14 +304,16 @@ class BaseDevice(ABC):
                 raise PulserValueError(
                     "When defined, 'channel_ids' can't have "
                     "repeated elements; "
-                    f"got repeated ids {repeated_ids}."
+                    f"got repeated ids {repeated_ids} in {self.channel_ids}."
                 )
             if len(self.channel_ids) != len(self.channel_objects):
                 raise PulserValueError(
                     "When defined, the number of channel IDs must"
                     " match the number of channel objects; got "
                     f"{len(self.channel_ids)} 'channel_ids' vs. "
-                    f"{len(self.channel_objects)} 'channel_objects'."
+                    f"{len(self.channel_objects)} 'channel_objects'. "
+                    f"channel_ids: {self.channel_ids}. "
+                    f"channel_objects: {self.channel_objects}."
                 )
             conflicting_ids = [
                 ch_id
@@ -321,8 +323,9 @@ class BaseDevice(ABC):
             if conflicting_ids:
                 raise PulserValueError(
                     "When defined, the names of channel IDs must be different"
-                    " than the names of DMM channels 'dmm_0', 'dmm_1', "
-                    f"...; got {conflicting_ids}."
+                    " than the names of DMM channels "
+                    f"{list(self.dmm_channels)}; {conflicting_ids} is a wrong "
+                    f"ID, among {self.channel_ids}."
                 )
 
         else:
@@ -452,7 +455,8 @@ class BaseDevice(ABC):
         if not isinstance(register, BaseRegister):
             raise TypeError(
                 "'register' must be an instance of 'Register' or "
-                f"'Register3D', not {type(register)}."
+                f"'Register3D', not {type(register)}. Got register "
+                f"{register!r}."
             )
 
         if register.dimensionality > self.dimensions:
@@ -483,7 +487,7 @@ class BaseDevice(ABC):
         if not isinstance(layout, RegisterLayout):
             raise TypeError(
                 "'layout' must be an instance of 'RegisterLayout', not "
-                f"{type(layout)}."
+                f"{type(layout)}. Got {layout!r}."
             )
 
         if layout.dimensionality > self.dimensions:
@@ -603,7 +607,7 @@ class BaseDevice(ABC):
         if not isinstance(ryd_lvl, int):
             raise TypeError(
                 "'rydberg_level' must be an instance of 'int', not "
-                f"{type(ryd_lvl)}: {ryd_lvl}."
+                f"{type(ryd_lvl)}. Got {ryd_lvl}."
             )
         if not 49 < ryd_lvl < 101:
             raise RydbergLevelError(
@@ -1081,7 +1085,8 @@ class Device(BaseDevice):
         if not isinstance(register, (BaseRegister, MappableRegister)):
             raise TypeError(
                 "'register' must be an instance of 'BaseRegister' or "
-                f"'MappableRegister', not {type(register)}."
+                f"'MappableRegister', not {type(register)}. Got register "
+                f"{register!r}."
             )
         if isinstance(register, BaseRegister) and register.layout is None:
             return False
