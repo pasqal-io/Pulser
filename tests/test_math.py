@@ -77,6 +77,40 @@ def test_pad(cast_to, requires_grad):
     check_match(pm.pad(arr, (0, 2), mode="edge"), [1.0, 2.0, 3.0, 3.0, 3.0])
 
 
+@pytest.mark.parametrize("use_tensor", [False, True])
+def test_cdist(use_tensor):
+    positions_a = [[0.0, 0.0], [3.0, 4.0]]
+    positions_b = [[0.0, 4.0], [3.0, 0.0]]
+    if use_tensor:
+        torch = pytest.importorskip("torch")
+        positions_a = [
+            torch.tensor(position, requires_grad=True)
+            for position in positions_a
+        ]
+        positions_b = [
+            torch.tensor(position, requires_grad=True)
+            for position in positions_b
+        ]
+
+    positions = [
+        [pm.AbstractArray(position) for position in points]
+        for points in (positions_a, positions_b)
+    ]
+    distances = pm.cdist(*positions)
+
+    assert distances.is_tensor == use_tensor
+    np.testing.assert_allclose(
+        distances.as_array(detach=use_tensor), [[4.0, 3.0], [3.0, 4.0]]
+    )
+    if use_tensor:
+        distances.as_tensor().sum().backward()
+        gradients = [position.grad for position in positions_a + positions_b]
+        np.testing.assert_allclose(
+            [gradient.numpy() for gradient in gradients],
+            [[-1.0, -1.0], [1.0, 1.0], [-1.0, 1.0], [1.0, -1.0]],
+        )
+
+
 class TestAbstractArray:
 
     def test_non_castable_type(self, monkeypatch):

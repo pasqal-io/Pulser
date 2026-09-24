@@ -237,6 +237,30 @@ def pdist(a: AbstractArrayLike) -> AbstractArray:
     return AbstractArray(scipy.spatial.distance.pdist(a.as_array()))
 
 
+def cdist(
+    a: Sequence[AbstractArrayLike], b: Sequence[AbstractArrayLike]
+) -> AbstractArray:
+    """Calculate distances between each pair of points in two collections.
+
+    Uses ``torch.cdist`` when either collection contains a torch tensor.
+    """
+    abst_a = tuple(map(AbstractArray, a))
+    abst_b = tuple(map(AbstractArray, b))
+    if any(arr.is_tensor for arr in (*abst_a, *abst_b)):
+        return AbstractArray(
+            torch.cdist(
+                torch.stack([arr.as_tensor() for arr in abst_a]),
+                torch.stack([arr.as_tensor() for arr in abst_b]),
+            )
+        )
+    return AbstractArray(
+        scipy.spatial.distance.cdist(
+            [arr.as_array() for arr in abst_a],
+            [arr.as_array() for arr in abst_b],
+        )
+    )
+
+
 def concatenate(arrs: Sequence[AbstractArrayLike]) -> AbstractArray:
     abst_arrs = tuple(map(AbstractArray, arrs))
     if any(a.is_tensor for a in abst_arrs):
