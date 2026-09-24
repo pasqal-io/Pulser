@@ -801,6 +801,24 @@ def test_emulation_config():
     np.testing.assert_equal(conf.default_evaluation_times, times)
 
 
+def test_emulation_config_tensor_interaction_matrix():
+    torch = pytest.importorskip("torch")
+    matrix = torch.tensor([[0.0, 1.0], [1.0, 0.0]])
+
+    config = EmulationConfig(
+        observables=(BitStrings(),), interaction_matrix=matrix
+    )
+    assert config.interaction_matrix.is_tensor
+
+    with pytest.raises(
+        ValueError, match="interaction matrix is not symmetric"
+    ):
+        EmulationConfig(
+            observables=(BitStrings(),),
+            interaction_matrix=torch.tensor([[0.0, 1.0], [2.0, 0.0]]),
+        )
+
+
 def test_is_evaluation_time_with_array_default_evaluation_times():
     config = EmulationConfig(
         observables=(BitStrings(),),

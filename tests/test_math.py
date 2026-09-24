@@ -26,6 +26,31 @@ from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.coders import PulserDecoder, PulserEncoder
 
 
+def test_allclose_numpy():
+    a = pm.AbstractArray([1.0, np.nan])
+    b = np.array([1.0001, np.nan])
+
+    assert not pm.allclose(a, b, atol=1e-3)
+    assert pm.allclose(a, b, atol=1e-3, equal_nan=True)
+    assert not pm.allclose(a, b, atol=1e-5, rtol=0, equal_nan=True)
+
+
+def test_allclose_tensor():
+    torch = pytest.importorskip("torch")
+    a = pm.AbstractArray(torch.tensor([1.0, float("nan")], requires_grad=True))
+    b = torch.tensor([1.0001, float("nan")])
+
+    assert not pm.allclose(a, b, atol=1e-3)
+    assert pm.allclose(a, b, atol=1e-3, equal_nan=True)
+    assert not pm.allclose(a, b, atol=1e-5, rtol=0, equal_nan=True)
+    assert pm.allclose(
+        a, b.numpy().astype(np.float64), atol=1e-3, equal_nan=True
+    )
+    assert pm.allclose(
+        b.numpy().astype(np.float64), a, atol=1e-3, equal_nan=True
+    )
+
+
 @pytest.mark.parametrize(
     "cast_to, requires_grad",
     [(None, False), ("array", False), ("tensor", False), ("tensor", True)],
@@ -78,6 +103,34 @@ def test_pad(cast_to, requires_grad):
 
 
 class TestAbstractArray:
+
+    def test_transpose_numpy(self):
+        values = np.arange(24).reshape(2, 3, 4)
+        arr = pm.AbstractArray(values)
+
+        np.testing.assert_array_equal(arr.transpose(), values.swapaxes(0, 1))
+        np.testing.assert_array_equal(
+            arr.transpose(1, -1), values.swapaxes(1, -1)
+        )
+        assert arr.shape == values.shape
+
+    def test_transpose_tensor_preserves_gradients(self):
+        torch = pytest.importorskip("torch")
+        source = torch.arange(24.0, requires_grad=True)
+        values = source.reshape(2, 3, 4)
+        arr = pm.AbstractArray(values)
+
+        transposed = arr.transpose(1, 2)
+        assert transposed.is_tensor
+        assert transposed.requires_grad
+        torch.testing.assert_close(
+            transposed.as_tensor(), values.transpose(1, 2)
+        )
+        torch.testing.assert_close(
+            arr.transpose().as_tensor(), values.transpose(0, 1)
+        )
+        transposed.as_tensor().sum().backward()
+        torch.testing.assert_close(source.grad, torch.ones_like(source))
 
     def test_non_castable_type(self, monkeypatch):
         monkeypatch.setitem(sys.modules, "torch", None)
