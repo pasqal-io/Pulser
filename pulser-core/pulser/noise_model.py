@@ -620,7 +620,7 @@ class NoiseModel:
             if not (isinstance(rate, float) or isinstance(rate, int)):
                 raise TypeError(
                     "eff_noise_rates is a list of floats,"
-                    f" it must not contain a {type(rate)}."
+                    f" it must not contain a {type(rate)}. Got {rate!r}."
                 )
 
         if not check_contents:
@@ -767,7 +767,8 @@ class NoiseModel:
         if not isinstance(obj_str, str):
             raise TypeError(
                 "The serialized noise model must be given as a string. "
-                f"Instead, got object of type {type(obj_str)}."
+                f"Instead, got object of type {type(obj_str)}. Got "
+                f"{obj_str!r}."
             )
 
         # Avoids circular imports

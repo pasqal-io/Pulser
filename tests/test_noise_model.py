@@ -333,7 +333,11 @@ class TestNoiseModel:
         with pytest.raises(ValueError, match="The operators list length"):
             NoiseModel(eff_noise_rates=[1.0])
         with pytest.raises(
-            TypeError, match="eff_noise_rates is a list of floats"
+            TypeError,
+            match=re.escape(
+                "eff_noise_rates is a list of floats, it must not contain a "
+                "<class 'str'>. Got '0.1'."
+            ),
         ):
             NoiseModel(
                 eff_noise_rates=["0.1"],
