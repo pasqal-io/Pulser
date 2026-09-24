@@ -51,7 +51,7 @@ class Backend(ABC):
         if not isinstance(sequence, pulser.Sequence):
             raise TypeError(
                 "'sequence' should be a `Sequence` instance"
-                f", not {type(sequence)}."
+                f", not {type(sequence)}. Got {sequence!r}."
             )
         if not mimic_qpu:
             return
@@ -59,13 +59,14 @@ class Backend(ABC):
         if sequence.is_empty():
             raise ValueError(
                 "'sequence' should not be empty, please add an instruction "
-                "to a declared channel."
+                "to a declared channel; got declared channels "
+                f"{list(sequence.declared_channels)}."
             )
 
         if not isinstance(device := sequence.device, Device):
             raise TypeError(
-                "To be sent to a QPU, the device of the sequence "
-                "must be a real device, instance of 'Device'."
+                "To be sent to a QPU, the device of the sequence must be an "
+                f"instance of 'Device', not {type(device)}. Got {device!r}."
             )
         reg = sequence.get_register(include_mappable=True)
         if device.requires_layout and (layout := reg.layout) is None:
@@ -104,20 +105,22 @@ class EmulatorBackend(Backend):
         noise_model = self._config.noise_model
 
         if noise_model is not None:
-            is_dmm_channel = any(
-                isinstance(ch, DMM)
-                for ch in self._sequence.declared_channels.values()
-            )
+            dmm_channels = [
+                name
+                for name, ch in self._sequence.declared_channels.items()
+                if isinstance(ch, DMM)
+            ]
 
             if (
-                is_dmm_channel
+                dmm_channels
                 and "register" in noise_model.noise_types
                 and noise_model.detuning_map_spot_waist is None
             ):
                 raise ValueError(
-                    "Combining register noise with a DMM requires"
-                    "`detuning_map_spot_waist` to be defined. If not defined,"
-                    "atom thermal motion can lead to non-physical effects."
+                    "Combining register noise with a DMM requires "
+                    "`detuning_map_spot_waist` to be defined. If not "
+                    "defined, atom thermal motion can lead to non-physical "
+                    f"effects; got DMM channels {dmm_channels}."
                 )
 
         if (
@@ -153,7 +156,7 @@ class EmulatorBackend(Backend):
         if not isinstance(config, EmulationConfig):
             raise TypeError(
                 "'config' must be an instance of 'EmulationConfig', "
-                f"not {type(config)}."
+                f"not {type(config)}. Got {config!r}."
             )
         # Use all the parameters in config and then fill the rest with the
         # ones of default_config

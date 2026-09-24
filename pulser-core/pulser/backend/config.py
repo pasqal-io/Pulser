@@ -306,7 +306,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         if initial_state is not None and not isinstance(initial_state, State):
             raise TypeError(
                 "When defined, 'initial_state' must be an instance of State;"
-                f" got object of type {type(initial_state)} instead."
+                f" got object of type {type(initial_state)} instead. Got "
+                f"{initial_state!r}."
             )
 
         if interaction_matrix is not None:
@@ -335,8 +336,15 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             if not np.allclose(
                 matrix_arr, np.transpose(matrix_arr, (0, 2, 1))
             ):
+                asymmetry = np.abs(
+                    matrix_arr - np.transpose(matrix_arr, (0, 2, 1))
+                )
+                worst = np.unravel_index(asymmetry.argmax(), asymmetry.shape)
+                _, i, j = worst
                 raise ValueError(
-                    "The received interaction matrix is not symmetric."
+                    "The received interaction matrix is not symmetric; the "
+                    f"largest difference is {asymmetry[worst]} between the "
+                    f"entries at ({i}, {j}) and ({j}, {i})."
                 )
             if np.any(np.stack([np.diag(x) for x in matrix_arr]) != 0):
                 warnings.warn(
@@ -351,7 +359,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         elif not isinstance(noise_model, NoiseModel):
             raise TypeError(
                 "When defined, 'noise_model' must be a NoiseModel instance,"
-                f" not {type(noise_model)}."
+                f" not {type(noise_model)}. Got {noise_model!r}."
             )
 
         if (
@@ -361,8 +369,10 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         ):
             raise ValueError(
                 "`EmulationConfig.n_trajectories` and `NoiseModel.runs` "
-                "can't be simultaneously defined. Please favour using only"
-                " `EmulationConfig.n_trajectories`."
+                "can't be defined with conflicting values; got "
+                f"{n_trajectories} `n_trajectories` vs. {noise_model.runs} "
+                "`NoiseModel.runs`. Please favour using only "
+                "`EmulationConfig.n_trajectories`."
             )
 
         if n_trajectories is None:
@@ -461,7 +471,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         if not isinstance(obj_str, str):
             raise TypeError(
                 "The serialized EmulationConfig must be given as a string. "
-                f"Instead, got object of type {type(obj_str)}."
+                f"Instead, got object of type {type(obj_str)}. Got "
+                f"{obj_str!r}."
             )
         validate_abstract_repr(obj_str, "config")
         return _deserialize_emulation_config(
@@ -547,34 +558,38 @@ class EmulatorConfig(BackendConfig):
             if not (0 < self.evaluation_times <= 1.0):
                 raise ValueError(
                     "If provided as a float, 'evaluation_times' must be"
-                    " greater than 0 and less than or equal to 1."
+                    " greater than 0 and less than or equal to 1; got "
+                    f"{self.evaluation_times}."
                 )
         elif isinstance(self.evaluation_times, (list, tuple, np.ndarray)):
             if np.min(self.evaluation_times, initial=0) < 0:
+                times_arr = np.asarray(self.evaluation_times)
                 raise ValueError(
                     "If provided as a sequence of values, "
-                    "'evaluation_times' must not contain negative values."
+                    "'evaluation_times' must not contain negative values; "
+                    f"got {times_arr[times_arr < 0].tolist()}."
                 )
         else:
             raise TypeError(
                 f"'{type(self.evaluation_times)}' is not a valid"
-                " type for 'evaluation_times'."
+                " type for 'evaluation_times'. Got "
+                f"{self.evaluation_times!r}."
             )
 
         if isinstance(self.initial_state, str):
             if self.initial_state != "all-ground":
                 raise ValueError(
                     "If provided as a string, 'initial_state' must be"
-                    " 'all-ground'."
+                    f" 'all-ground', not {self.initial_state!r}."
                 )
         elif not isinstance(self.initial_state, (tuple, list, np.ndarray)):
             raise TypeError(
                 f"'{type(self.initial_state)}' is not a valid type for"
-                " 'initial_state'."
+                f" 'initial_state'. Got {self.initial_state!r}."
             )
 
         if not isinstance(self.noise_model, NoiseModel):
             raise TypeError(
                 "'noise_model' must be a NoiseModel instance,"
-                f" not {type(self.noise_model)}."
+                f" not {type(self.noise_model)}. Got {self.noise_model!r}."
             )

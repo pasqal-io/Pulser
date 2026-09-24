@@ -84,10 +84,15 @@ def test_abc_backend(sequence):
         def run(self):
             pass
 
+    abstract_seq = sequence.to_abstract_repr()
     with pytest.raises(
-        TypeError, match="'sequence' should be a `Sequence` instance"
+        TypeError,
+        match=re.escape(
+            "'sequence' should be a `Sequence` instance, not <class 'str'>. "
+            f"Got {abstract_seq!r}."
+        ),
     ):
-        ConcreteBackend(sequence.to_abstract_repr())
+        ConcreteBackend(abstract_seq)
 
 
 @pytest.mark.parametrize("parametrized", [True, False])
@@ -101,7 +106,13 @@ def test_abc_backend_validate_sequence_empty(parametrized):
     else:
         targ = 0
     seq.target_index(targ, "rydberg_local")
-    with pytest.raises(ValueError, match="should not be empty"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "'sequence' should not be empty, please add an instruction to a"
+            " declared channel; got declared channels ['rydberg_local']."
+        ),
+    ):
         Backend.validate_sequence(seq, mimic_qpu=True)
     # Now it's ok
     seq.delay(100, "rydberg_local")
@@ -126,9 +137,27 @@ def test_emulator_config_value_errors(param, value, msg):
 @pytest.mark.parametrize(
     "param, msg",
     [
-        ("evaluation_times", "not a valid type for 'evaluation_times'"),
-        ("initial_state", "not a valid type for 'initial_state'"),
-        ("noise_model", "must be a NoiseModel instance"),
+        (
+            "evaluation_times",
+            re.escape(
+                "'<class 'NoneType'>' is not a valid type for "
+                "'evaluation_times'. Got None."
+            ),
+        ),
+        (
+            "initial_state",
+            re.escape(
+                "'<class 'NoneType'>' is not a valid type for "
+                "'initial_state'. Got None."
+            ),
+        ),
+        (
+            "noise_model",
+            re.escape(
+                "'noise_model' must be a NoiseModel instance, not "
+                "<class 'NoneType'>. Got None."
+            ),
+        ),
     ],
 )
 def test_emulator_config_type_errors(param, msg):
@@ -284,7 +313,13 @@ def test_remote_backend(sequence):
     connection = _MockConnection()
 
     with pytest.raises(
-        TypeError, match="must be a real device, instance of 'Device'"
+        TypeError,
+        match=re.escape(
+            "To be sent to a QPU, the device of the sequence must be an "
+            "instance of 'Device', not "
+            "<class 'pulser.devices._device_datacls.VirtualDevice'>. "
+            f"Got {sequence.device!r}."
+        ),
     ):
         QPUBackend(sequence, connection)
 
@@ -310,13 +345,21 @@ def test_remote_backend(sequence):
         AnalogDevice.pre_calibrated_layouts[0].define_register(1, 2, 3)
     )
 
-    with pytest.raises(TypeError, match="must be a valid RemoteConnection"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "'connection' must be an instance of 'RemoteConnection', "
+            "not <class 'str'>. Got 'fake_connection'."
+        ),
+    ):
         QPUBackend(seq, "fake_connection")
 
     with pytest.raises(
         TypeError,
-        match="'config' must be an instance of 'BackendConfig'; "
-        "got 'str' instead",
+        match=re.escape(
+            "When given, a 'config' must be an instance of 'BackendConfig'; "
+            "got 'str' instead. Got 'bad config'."
+        ),
     ):
         QPUBackend(seq, connection, config="bad config")
 
@@ -330,11 +373,20 @@ def test_remote_backend(sequence):
         qpu_backend.run()
     for backend in [qpu_backend, remote_backend]:
         # Remote Backend only checks that the type is correct
-        with pytest.raises(TypeError, match="'job_params' must be a list"):
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                "'job_params' must be a list; got <class 'dict'> instead. "
+                "Got {'runs': 100}."
+            ),
+        ):
             backend.run(job_params={"runs": 100})
         with pytest.raises(
             TypeError,
-            match="All elements of 'job_params' must be dictionaries",
+            match=re.escape(
+                "All elements of 'job_params' must be dictionaries; got "
+                "<class 'str'> instead. Got 'foo'."
+            ),
         ):
             backend.run(job_params=[{"runs": 100}, "foo"])
     with pytest.raises(
@@ -366,10 +418,10 @@ def test_remote_backend(sequence):
 
     with pytest.raises(
         RemoteResultsError,
-        match=(
-            "Results are not available for all jobs. "
-            "Use the `get_available_results` method to retrieve partial "
-            "results."
+        match=re.escape(
+            "Results are not available for all jobs. Use the"
+            " `get_available_results` method to retrieve partial results;"
+            " got jobs None."
         ),
     ):
         remote_results.results
@@ -397,7 +449,9 @@ def test_remote_backend(sequence):
     qpu = QPUBackend(seq, connection)
     with pytest.raises(
         NotImplementedError,
-        match="Unable to execute open_batch using this remote connection",
+        match=re.escape(
+            "Unable to execute open_batch using '_MockConnection'."
+        ),
     ):
         qpu.open_batch()
 
@@ -443,7 +497,11 @@ def test_emulator_backend(sequence):
             pass
 
     with pytest.raises(
-        TypeError, match="must be an instance of 'EmulationConfig'"
+        TypeError,
+        match=re.escape(
+            "'config' must be an instance of 'EmulationConfig', not "
+            f"{type(EmulatorConfig)}. Got {EmulatorConfig!r}."
+        ),
     ):
         ConcreteEmulator(sequence, config=EmulatorConfig)
 
@@ -634,7 +692,11 @@ def test_emulation_config():
             default_evaluation_times=[0.0, 1.0, 0.5],
         )
     with pytest.raises(
-        TypeError, match="'initial_state' must be an instance of State"
+        TypeError,
+        match=re.escape(
+            "When defined, 'initial_state' must be an instance of State; got"
+            " object of type <class 'list'> instead. Got [[1], [0]]."
+        ),
     ):
         EmulationConfig(observables=(BitStrings(),), initial_state=[[1], [0]])
     with pytest.raises(
@@ -697,7 +759,13 @@ def test_emulation_config():
         observables=(BitStrings(),),
         interaction_matrix=np.array([[[0, 1], [1, 0]], [[0, 2], [2, 0]]]),
     )
-    with pytest.raises(TypeError, match="must be a NoiseModel"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "When defined, 'noise_model' must be a NoiseModel instance, not "
+            "<class 'dict'>. Got {'p_false_pos': 0.1}."
+        ),
+    ):
         EmulationConfig(
             observables=(BitStrings(),), noise_model={"p_false_pos": 0.1}
         )
@@ -734,8 +802,11 @@ def test_emulation_config():
 
     with pytest.raises(
         ValueError,
-        match="`EmulationConfig.n_trajectories` and `NoiseModel.runs` can't be"
-        " simultaneously defined",
+        match=re.escape(
+            "`EmulationConfig.n_trajectories` and `NoiseModel.runs` can't be"
+            " defined with conflicting values; got 2 `n_trajectories` vs. 10"
+            " `NoiseModel.runs`."
+        ),
     ):
         assert runs_noise_model != 2
         EmulationConfig(
@@ -947,8 +1018,8 @@ def test_results_aggregation_errors(caplog):
     with pytest.raises(NotImplementedError) as ex:
         Results.aggregate([results1, results2])
     assert str(ex.value) == (
-        "You're trying to aggregate results from pulser<1.6,"
-        "aggregation is not supported in this case."
+        "You're trying to aggregate results from pulser<1.6, aggregation "
+        "is not supported in this case."
     )
 
     results1 = Results(atom_order=[0, 1], total_duration=100)
@@ -995,7 +1066,7 @@ def test_results_aggregation_errors(caplog):
         Results.aggregate([results1, results2])
     assert str(ex.value) == (
         "You're trying to aggregate incompatible results: "
-        "they do not all have the same atom order."
+        "they do not all have the same atom order; got [0, 1] vs. [0, 2]."
     )
 
     results1 = Results(atom_order=[0, 1], total_duration=100)
@@ -1018,7 +1089,7 @@ def test_results_aggregation_errors(caplog):
         Results.aggregate([results1, results2])
     assert str(ex.value) == (
         "You're trying to aggregate incompatible results: "
-        "they do not all have the same sequence duration."
+        "they do not all have the same sequence duration; got 100 vs. 200."
     )
 
     results1 = Results(atom_order=[0, 1], total_duration=100)
@@ -1041,7 +1112,8 @@ def test_results_aggregation_errors(caplog):
         Results.aggregate([results1, results2])
     assert str(ex.value) == (
         "You're trying to aggregate incompatible results: "
-        "they do not all contain the same aggregation functions."
+        "they do not all contain the same aggregation functions; "
+        "got different functions for ['dummy_result']."
     )
 
     results1 = Results(atom_order=[0, 1], total_duration=100)
@@ -1136,7 +1208,13 @@ def test_results():
 def test_results_final_bistrings():
     res = Results(atom_order=(), total_duration=0)
     with pytest.raises(
-        RuntimeError, match="final bitstrings are not available"
+        RuntimeError,
+        match=re.escape(
+            "The final bitstrings are not available. Please make sure"
+            " 'BitStrings()' at relative time t=1.0 is included in the"
+            " observables of your emulator backend's configuration (when"
+            " possible); got observables []."
+        ),
     ):
         res.final_bitstrings
 
@@ -1204,7 +1282,13 @@ def test_results_bitstring_counts():
     empty_res = Results(atom_order=("q0",), total_duration=100)
     with pytest.warns(FutureWarning, match="'bitstring_counts'"):
         with pytest.raises(
-            RuntimeError, match="final bitstrings are not available"
+            RuntimeError,
+            match=re.escape(
+                "The final bitstrings are not available. Please make sure"
+                " 'BitStrings()' at relative time t=1.0 is included in the"
+                " observables of your emulator backend's configuration (when"
+                " possible); got observables []."
+            ),
         ):
             empty_res.bitstring_counts
 
@@ -1237,7 +1321,15 @@ def test_results_sampled_result_attrs():
 
 def test_results_final_state():
     res = Results(atom_order=(), total_duration=0)
-    with pytest.raises(RuntimeError, match="final state is not available"):
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape(
+            "The final state is not available. Please make sure"
+            " 'StateResult()' at relative time t=1.0 is included in the"
+            " observables of your emulator backend's configuration (when"
+            " possible); got observables []."
+        ),
+    ):
         res.final_state
 
     obs = StateResult()
@@ -1507,10 +1599,15 @@ class TestObservables:
         )
 
     def test_expectation(self, ghz_state, ham, zzz):
+        ham_qobj = ham.to_qobj()
         with pytest.raises(
-            TypeError, match="'operator' must be an Operator instance"
+            TypeError,
+            match=re.escape(
+                "'operator' must be an Operator instance; got "
+                f"{type(ham_qobj)} instead. Got {ham_qobj!r}."
+            ),
         ):
-            Expectation(ham.to_qobj())
+            Expectation(ham_qobj)
         h_exp = Expectation(ham)
         assert h_exp.tag == "expectation"
         assert h_exp.apply(state=ghz_state) == ham.expect(ghz_state)
@@ -1519,10 +1616,15 @@ class TestObservables:
         assert z_exp.apply(state=ghz_state) == zzz.expect(ghz_state)
 
     def test_fidelity(self, ghz_state):
+        ghz_qobj = ghz_state.to_qobj()
         with pytest.raises(
-            TypeError, match="'state' must be a State instance"
+            TypeError,
+            match=re.escape(
+                "'state' must be a State instance; got "
+                f"{type(ghz_qobj)} instead. Got {ghz_qobj!r}."
+            ),
         ):
-            Fidelity(ghz_state.to_qobj())
+            Fidelity(ghz_qobj)
 
         fid_ggg = Fidelity(
             QutipState.from_state_amplitudes(

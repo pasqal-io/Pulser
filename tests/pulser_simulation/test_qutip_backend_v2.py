@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import dataclasses
 import math
+import re
 from unittest.mock import patch
 
 import numpy as np
@@ -111,7 +112,11 @@ def test_callback():
 def test_qutip_backend_v2_energy(capfd):
     seq = sequence()
     with pytest.raises(
-        TypeError, match="'config' must be an instance of 'EmulationConfig'"
+        TypeError,
+        match=re.escape(
+            "'config' must be an instance of 'EmulationConfig', not "
+            "<class 'str'>. Got 'tralala'."
+        ),
     ):
         QutipBackendV2(seq, config="tralala")
 
@@ -607,7 +612,12 @@ def test_dmm_temperature_without_spot_waist():
 
     with pytest.raises(
         ValueError,
-        match="Combining register noise with a DMM requires",
+        match=re.escape(
+            "Combining register noise with a DMM requires"
+            " `detuning_map_spot_waist` to be defined. If not defined, atom"
+            " thermal motion can lead to non-physical effects; got DMM"
+            " channels ['dmm_0']."
+        ),
     ):
         QutipBackendV2(seq, config=config)
 
