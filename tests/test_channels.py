@@ -26,7 +26,7 @@ from pulser.channels.modulation import (
     calculate_amplitude_rise_time,
     calculate_mod_bandwidth_from_amplitude_rise_time,
 )
-from pulser.waveforms import BlackmanWaveform, ConstantWaveform
+from pulser.waveforms import BlackmanWaveform, ConstantWaveform, CustomWaveform
 
 
 @pytest.mark.parametrize(
@@ -91,6 +91,17 @@ def test_bad_init_local_channel(bad_param, bad_value):
         error_type = ValueError
     with pytest.raises(error_type, match=f"'{bad_param}' must be"):
         Rydberg.Local(**kwargs)
+
+
+def test_local_channel_propagation_dir_error():
+    with pytest.raises(
+        NotImplementedError,
+        match=re.escape(
+            "'propagation_dir' must be left as None in Local channels; "
+            "got (1, 0, 0)."
+        ),
+    ):
+        Rydberg.Local(None, None, propagation_dir=(1, 0, 0))
 
 
 def test_bad_durations():
@@ -175,11 +186,23 @@ def test_eigenstates():
 
 def test_validate_duration():
     ch = Rydberg.Local(20, 10, min_duration=16, max_duration=1000)
-    with pytest.raises(TypeError, match="castable to an int"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "'duration' needs to be castable to an int; got 'twenty' of "
+            "type <class 'str'>."
+        ),
+    ):
         ch.validate_duration("twenty")
-    with pytest.raises(ValueError, match="at least 16 ns"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("'duration' has to be at least 16 ns; got 10."),
+    ):
         ch.validate_duration(10)
-    with pytest.raises(ValueError, match="at most 1000 ns"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("'duration' can be at most 1000 ns; got 100000.0."),
+    ):
         ch.validate_duration(1e5)
     with pytest.warns(UserWarning, match="not a multiple"):
         ch.validate_duration(31.4)
@@ -326,26 +349,70 @@ def test_rise_time_consistency():
     assert channel.rise_time == expected_rise_time
 
 
+_over_amp_pulse = Pulse.ConstantPulse(100, 1e6, 0, 0)
+_over_det_pulse = Pulse.ConstantPulse(100, 0, -1e4, 0)
+_low_avg_pulse = Pulse.ConstantPulse(100, 0.99e-3, 0, 0)
+
+# Violations that are not contiguous, to check the reported time ranges
+_max_amp = _eom_rydberg.max_amp
+assert _max_amp is not None
+_split_amp_pulse = Pulse(
+    CustomWaveform(
+        [
+            0,
+            0,
+            _max_amp + 11,
+            0,
+            _max_amp,
+            _max_amp + 10,
+            _max_amp + 9,
+            _max_amp + 8,
+        ]
+    ),
+    ConstantWaveform(8, 0),
+    0,
+)
+
+
 @pytest.mark.parametrize(
     "pulse, error, msg",
     [
         ("π-pulse", TypeError, "must be of type Pulse"),
         (
-            Pulse.ConstantPulse(100, 1e6, 0, 0),
+            _over_amp_pulse,
             ValueError,
-            "amplitude goes over the maximum",
+            re.escape(
+                "The pulse's amplitude goes over the maximum value allowed"
+                f" for the chosen channel ({_eom_rydberg.max_amp}); exceeded"
+                f" at 0-99 ns in pulse {_over_amp_pulse!r}."
+            ),
         ),
         (
-            Pulse.ConstantPulse(100, 0, -1e4, 0),
+            _over_det_pulse,
             ValueError,
-            "detuning values go out of the range",
+            re.escape(
+                "The pulse's detuning values go out of the range allowed"
+                f" for the chosen channel ({_eom_rydberg.max_abs_detuning});"
+                " exceeded at 0-99 ns in pulse"
+                f" {_over_det_pulse!r}."
+            ),
         ),
         (
-            Pulse.ConstantPulse(100, 0.99e-3, 0, 0),
+            _split_amp_pulse,
+            ValueError,
+            re.escape(
+                "The pulse's amplitude goes over the maximum value allowed"
+                f" for the chosen channel ({_eom_rydberg.max_amp}); exceeded"
+                f" at 2 ns, 5-7 ns in pulse {_split_amp_pulse!r}."
+            ),
+        ),
+        (
+            _low_avg_pulse,
             ValueError,
             re.escape(
                 "average amplitude is below the chosen channel's"
-                f" limit ({_eom_rydberg.min_avg_amp})"
+                f" limit ({_eom_rydberg.min_avg_amp}); got average"
+                f" amplitude 0.00099 in pulse {_low_avg_pulse!r}."
             ),
         ),
     ],
