@@ -226,7 +226,7 @@
               "type": "string"
             },
             "optimal_layout_filling": {
-              "description": "The optimal fraction of a layout that should be filled with atoms.",
+              "description": "The optimal fraction of a layout that should be filled with atoms, used as a target when Pulser autogenerates a layout. Picking a value close to the true optimum improves register preparation reliability on QPU.",
               "type": "number"
             },
             "pre_calibrated_layouts": {
@@ -371,7 +371,7 @@
               "type": "string"
             },
             "optimal_layout_filling": {
-              "description": "The optimal fraction of a layout that should be filled with atoms.",
+              "description": "The optimal fraction of a layout that should be filled with atoms, used as a target when Pulser autogenerates a layout. Picking a value close to the true optimum improves register preparation reliability on QPU.",
               "type": "number"
             },
             "pulser_version": {
