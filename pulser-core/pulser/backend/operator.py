@@ -386,9 +386,14 @@ def _cast_operator(
             operations=op_repr["operations"],
         )
     except (AbstractReprError, TypeError, ValueError) as e:
+        if isinstance(e, AbstractReprError):
+            reason = (
+                "Automatic conversion is only possible for operators created "
+                "via 'from_operator_repr()'."
+            )
+        else:
+            reason = f"The target type rejected it: {e}"
         raise TypeError(
             f"Failed to convert {name} of type {type(operator).__name__!r} "
-            f"to the expected operator type {target.__name__!r}. Automatic "
-            "conversion is only possible for operators created via "
-            "'from_operator_repr()'."
+            f"to the expected operator type {target.__name__!r}. {reason}"
         ) from e

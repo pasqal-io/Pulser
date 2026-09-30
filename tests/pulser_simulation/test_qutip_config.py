@@ -224,7 +224,8 @@ def test_failed_cast():
     with pytest.raises(
         TypeError,
         match="Failed to convert 'initial_state' of type 'QutipState' "
-        "to the expected state type '_OtherState'",
+        "to the expected state type '_OtherState'. Automatic conversion is "
+        "only possible for states created via 'from_state_amplitudes\\(\\)'",
     ):
         _OtherBackend.validate_config(
             EmulationConfig(
@@ -242,7 +243,9 @@ def test_failed_cast():
     with pytest.raises(
         TypeError,
         match="Failed to convert the operator of observable 'expectation' of "
-        "type 'QutipOperator' to the expected operator type '_OtherOperator'",
+        "type 'QutipOperator' to the expected operator type '_OtherOperator'. "
+        "Automatic conversion is only possible for operators created via "
+        "'from_operator_repr\\(\\)'",
     ):
         _OtherBackend.validate_config(
             EmulationConfig(observables=[Expectation(qutip_op)])
@@ -261,8 +264,21 @@ class _TwoLevelState(StateRepr):
         )
 
 
+class _TwoLevelOperator(OperatorRepr):
+    """An operator type that only supports ('r', 'g')."""
+
+    @classmethod
+    def _from_operator_repr(cls, *, eigenstates, n_qudits, operations):
+        if tuple(eigenstates) != ("r", "g"):
+            raise ValueError("Only ('r', 'g') eigenstates are supported.")
+        return super()._from_operator_repr(
+            eigenstates=eigenstates, n_qudits=n_qudits, operations=operations
+        )
+
+
 class _TwoLevelConfig(EmulationConfig):
     _state_type = _TwoLevelState
+    _operator_type = _TwoLevelOperator
 
 
 class _TwoLevelBackend(EmulatorBackend):
@@ -279,14 +295,34 @@ def test_failed_cast_unsupported_eigenstates():
     with pytest.raises(
         TypeError,
         match="Failed to convert 'initial_state' of type 'StateRepr' "
-        "to the expected state type '_TwoLevelState'",
+        "to the expected state type '_TwoLevelState'. The target type "
+        "rejected it: Only \\('r', 'g'\\) eigenstates are supported.",
     ) as exc_info:
         _TwoLevelBackend.validate_config(
             EmulationConfig(initial_state=state, observables=[StateResult()])
         )
     # The original error is kept as the cause
     assert isinstance(exc_info.value.__cause__, ValueError)
-    assert "Only ('r', 'g')" in str(exc_info.value.__cause__)
+    # The 'from_state_amplitudes()' hint would be misleading here
+    assert "from_state_amplitudes" not in str(exc_info.value)
+
+    op = OperatorRepr.from_operator_repr(
+        eigenstates=("0", "1"),
+        n_qudits=2,
+        operations=[(1.0, [({"11": 1.0}, [0])])],
+    )
+    with pytest.raises(
+        TypeError,
+        match="Failed to convert the operator of observable 'expectation' of "
+        "type 'OperatorRepr' to the expected operator type "
+        "'_TwoLevelOperator'. The target type rejected it: "
+        "Only \\('r', 'g'\\) eigenstates are supported.",
+    ) as exc_info:
+        _TwoLevelBackend.validate_config(
+            EmulationConfig(observables=[Expectation(op)])
+        )
+    assert isinstance(exc_info.value.__cause__, ValueError)
+    assert "from_operator_repr" not in str(exc_info.value)
 
 
 def test_preferred_types():

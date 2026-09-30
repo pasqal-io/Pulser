@@ -367,9 +367,14 @@ def _cast_state(
             amplitudes=state_repr["amplitudes"],
         )
     except (AbstractReprError, TypeError, ValueError) as e:
+        if isinstance(e, AbstractReprError):
+            reason = (
+                "Automatic conversion is only possible for states created "
+                "via 'from_state_amplitudes()' and not modified afterwards."
+            )
+        else:
+            reason = f"The target type rejected it: {e}"
         raise TypeError(
             f"Failed to convert {name} of type {type(state).__name__!r} "
-            f"to the expected state type {target.__name__!r}. Automatic "
-            "conversion is only possible for states created via "
-            "'from_state_amplitudes()' and not modified afterwards."
+            f"to the expected state type {target.__name__!r}. {reason}"
         ) from e
