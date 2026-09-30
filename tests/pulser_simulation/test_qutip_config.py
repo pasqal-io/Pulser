@@ -20,6 +20,7 @@ from pulser.backend.default_observables import (
     Fidelity,
     StateResult,
 )
+from pulser.backend.operator import _cast_operator
 from pulser.backend.state import _cast_state
 from pulser_simulation import QutipBackendV2
 from pulser_simulation.qutip_config import (
@@ -165,6 +166,12 @@ def test_no_cast_needed():
     assert _cast_state(qutip_state, QutipState) is qutip_state
     # ...or when the target is the backend-agnostic StateRepr
     assert _cast_state(qutip_state, StateRepr) is qutip_state
+    # Same for operators
+    qutip_op = QutipOperator(qutip.qeye([2, 2]), eigenstates=("r", "g"))
+    exp = Expectation(qutip_op)
+    assert exp._cast_to(QutipState, QutipOperator) is exp
+    assert _cast_operator(qutip_op, QutipOperator) is qutip_op
+    assert _cast_operator(qutip_op, OperatorRepr) is qutip_op
     # Callbacks and observables without states are returned as they are
     obs = StateResult()
     assert obs._cast_to(QutipState, QutipOperator) is obs
