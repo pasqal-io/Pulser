@@ -70,7 +70,8 @@ def test_initial_state():
     with pytest.raises(
         TypeError,
         match=re.escape(
-            "If provided, `initial_state` must be an instance of `QutipState`"
+            "If provided, `initial_state` must be an instance of `QutipState`,"
+            " not <class 'str'>. Got 'all-ground'."
         ),
     ):
         QutipConfig(

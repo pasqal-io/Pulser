@@ -234,8 +234,10 @@ def test_qutip_result_state():
 
     with pytest.raises(
         NotImplementedError,
-        match="Cannot sample system with single-atom state vectors of"
-        " dimension > 4",
+        match=re.escape(
+            "Cannot sample system with single-atom state vectors of "
+            "dimension > 4; got dimension 5."
+        ),
     ):
         wrong_result.sampling_dist
 

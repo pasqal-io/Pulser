@@ -106,8 +106,11 @@ def validate_serialization(obj_dict: Mapping[str, Any]) -> None:
         obj_dict["_build"]
         obj_str = obj_dict["__name__"]
         module_str = obj_dict["__module__"]
-    except KeyError:
-        raise TypeError("Invalid 'obj_dict'.")
+    except KeyError as e:
+        raise TypeError(
+            f"Invalid 'obj_dict'; it has no {e.args[0]!r} key. Got keys "
+            f"{list(obj_dict)}."
+        )
 
     if module_str not in SUPPORTED_MODULES:
         raise SerializationSupportModuleMissing(module=module_str)
