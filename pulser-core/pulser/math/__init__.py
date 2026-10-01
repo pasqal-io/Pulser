@@ -17,13 +17,13 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Protocol, TypeVar, cast
+from typing import Any, cast, Protocol, TypeVar
 
 import numpy as np
 import scipy.fft
 
-from pulser.math.abstract_array import AbstractArray as AbstractArray
 from pulser.math.abstract_array import (
+    AbstractArray as AbstractArray,
     AbstractArrayLike,
 )
 
