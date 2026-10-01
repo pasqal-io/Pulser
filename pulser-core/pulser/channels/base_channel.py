@@ -63,6 +63,18 @@ def get_states_from_bases(bases: Collection[str]) -> list[States]:
     return [state for state in STATES_RANK if state in all_states]
 
 
+def _format_violation_times(mask: np.ndarray) -> str:
+    """Contiguous time ranges (in ns) where 'mask' is True."""
+    inds = np.flatnonzero(mask)
+    breaks = np.flatnonzero(np.diff(inds) > 1)
+    starts = np.concatenate(([inds[0]], inds[breaks + 1]))
+    ends = np.concatenate((inds[breaks], [inds[-1]]))
+    return ", ".join(
+        f"{start}-{end} ns" if start != end else f"{start} ns"
+        for start, end in zip(starts.tolist(), ends.tolist())
+    )
+
+
 @dataclass(init=True, frozen=True)
 class Channel(ABC):
     """Base class of a hardware channel.
@@ -221,7 +233,8 @@ class Channel(ABC):
             parameters += local_only
             if self.propagation_dir is not None:
                 raise NotImplementedError(
-                    "'propagation_dir' must be left as None in Local channels."
+                    "'propagation_dir' must be left as None in Local "
+                    f"channels; got {self.propagation_dir}."
                 )
 
         for param in parameters:
@@ -262,7 +275,7 @@ class Channel(ABC):
         if self.eom_config is not None and self.mod_bandwidth is None:
             raise ValueError(
                 "'eom_config' can't be defined in a Channel without a "
-                "modulation bandwidth."
+                f"modulation bandwidth; got {self.eom_config!r}."
             )
 
         if self.propagation_dir is not None:
@@ -444,18 +457,20 @@ class Channel(ABC):
             _duration = int(duration)
         except (TypeError, ValueError):
             raise TypeError(
-                "duration needs to be castable to an int but "
-                "type %s was provided" % type(duration)
+                "'duration' needs to be castable to an int; got "
+                f"{duration!r} of type {type(duration)}."
             )
 
         if duration < self.min_duration:
             raise ValueError(
-                "duration has to be at least " + f"{self.min_duration} ns."
+                f"'duration' has to be at least {self.min_duration} ns; "
+                f"got {duration}."
             )
 
         if self.max_duration is not None and duration > self.max_duration:
             raise ValueError(
-                "duration can be at most " + f"{self.max_duration} ns."
+                f"'duration' can be at most {self.max_duration} ns; "
+                f"got {duration}."
             )
 
         if round_up and duration % self.clock_period != 0:
@@ -476,31 +491,37 @@ class Channel(ABC):
         """
         if not isinstance(pulse, Pulse):
             raise TypeError(
-                f"'pulse' must be of type Pulse, not of type {type(pulse)}."
+                "'pulse' must be of type Pulse, not of type "
+                f"{type(pulse)}: {pulse!r}."
             )
 
         amp_samples_np = pulse.amplitude.samples.as_array(detach=True)
         if self.max_amp is not None and np.any(amp_samples_np > self.max_amp):
             raise ValueError(
-                "The pulse's amplitude goes over the maximum "
-                "value allowed for the chosen channel."
+                "The pulse's amplitude goes over the maximum value allowed "
+                f"for the chosen channel ({self.max_amp}); exceeded at "
+                f"{_format_violation_times(amp_samples_np > self.max_amp)} "
+                f"in pulse {pulse!r}."
             )
-        if self.max_abs_detuning is not None and np.any(
-            np.round(
+        if self.max_abs_detuning is not None:
+            abs_detuning = np.round(
                 np.abs(pulse.detuning.samples.as_array(detach=True)),
                 decimals=6,
             )
-            > self.max_abs_detuning
-        ):
-            raise ValueError(
-                "The pulse's detuning values go out of the range "
-                "allowed for the chosen channel."
-            )
+            over_detuning = abs_detuning > self.max_abs_detuning
+            if np.any(over_detuning):
+                raise ValueError(
+                    "The pulse's detuning values go out of the range allowed "
+                    f"for the chosen channel ({self.max_abs_detuning}); "
+                    f"exceeded at {_format_violation_times(over_detuning)} "
+                    f"in pulse {pulse!r}."
+                )
         avg_amp = np.average(amp_samples_np)
         if 0 < avg_amp < self.min_avg_amp:
             raise ValueError(
                 "The pulse's average amplitude is below the chosen "
-                f"channel's limit ({self.min_avg_amp})."
+                f"channel's limit ({self.min_avg_amp}); got average "
+                f"amplitude {avg_amp} in pulse {pulse!r}."
             )
 
     @property
