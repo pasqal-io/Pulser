@@ -615,8 +615,8 @@ def test_dmm_temperature_without_spot_waist():
         match=re.escape(
             "Combining register noise with a DMM requires"
             " `detuning_map_spot_waist` to be defined. If not defined, atom"
-            " thermal motion can lead to non-physical effects; got DMM"
-            " channels ['dmm_0']."
+            " thermal motion can lead to non-physical effects; sequence uses"
+            " DMM channels ['dmm_0']."
         ),
     ):
         QutipBackendV2(seq, config=config)

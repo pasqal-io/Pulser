@@ -59,7 +59,7 @@ class Backend(ABC):
         if sequence.is_empty():
             raise ValueError(
                 "'sequence' should not be empty, please add an instruction "
-                "to a declared channel; got declared channels "
+                "to one of the declared channels: "
                 f"{list(sequence.declared_channels)}."
             )
 
@@ -120,7 +120,7 @@ class EmulatorBackend(Backend):
                     "Combining register noise with a DMM requires "
                     "`detuning_map_spot_waist` to be defined. If not "
                     "defined, atom thermal motion can lead to non-physical "
-                    f"effects; got DMM channels {dmm_channels}."
+                    f"effects; sequence uses DMM channels {dmm_channels}."
                 )
 
         if (

@@ -558,38 +558,34 @@ class EmulatorConfig(BackendConfig):
             if not (0 < self.evaluation_times <= 1.0):
                 raise ValueError(
                     "If provided as a float, 'evaluation_times' must be"
-                    " greater than 0 and less than or equal to 1; got "
-                    f"{self.evaluation_times}."
+                    " greater than 0 and less than or equal to 1."
                 )
         elif isinstance(self.evaluation_times, (list, tuple, np.ndarray)):
             if np.min(self.evaluation_times, initial=0) < 0:
-                times_arr = np.asarray(self.evaluation_times)
                 raise ValueError(
                     "If provided as a sequence of values, "
-                    "'evaluation_times' must not contain negative values; "
-                    f"got {times_arr[times_arr < 0].tolist()}."
+                    "'evaluation_times' must not contain negative values."
                 )
         else:
             raise TypeError(
                 f"'{type(self.evaluation_times)}' is not a valid"
-                " type for 'evaluation_times'. Got "
-                f"{self.evaluation_times!r}."
+                " type for 'evaluation_times'."
             )
 
         if isinstance(self.initial_state, str):
             if self.initial_state != "all-ground":
                 raise ValueError(
                     "If provided as a string, 'initial_state' must be"
-                    f" 'all-ground', not {self.initial_state!r}."
+                    " 'all-ground'."
                 )
         elif not isinstance(self.initial_state, (tuple, list, np.ndarray)):
             raise TypeError(
                 f"'{type(self.initial_state)}' is not a valid type for"
-                f" 'initial_state'. Got {self.initial_state!r}."
+                " 'initial_state'."
             )
 
         if not isinstance(self.noise_model, NoiseModel):
             raise TypeError(
                 "'noise_model' must be a NoiseModel instance,"
-                f" not {type(self.noise_model)}. Got {self.noise_model!r}."
+                f" not {type(self.noise_model)}."
             )

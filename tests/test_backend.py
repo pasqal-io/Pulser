@@ -109,8 +109,8 @@ def test_abc_backend_validate_sequence_empty(parametrized):
     with pytest.raises(
         ValueError,
         match=re.escape(
-            "'sequence' should not be empty, please add an instruction to a"
-            " declared channel; got declared channels ['rydberg_local']."
+            "'sequence' should not be empty, please add an instruction to one"
+            " of the declared channels: ['rydberg_local']."
         ),
     ):
         Backend.validate_sequence(seq, mimic_qpu=True)
@@ -137,27 +137,9 @@ def test_emulator_config_value_errors(param, value, msg):
 @pytest.mark.parametrize(
     "param, msg",
     [
-        (
-            "evaluation_times",
-            re.escape(
-                "'<class 'NoneType'>' is not a valid type for "
-                "'evaluation_times'. Got None."
-            ),
-        ),
-        (
-            "initial_state",
-            re.escape(
-                "'<class 'NoneType'>' is not a valid type for "
-                "'initial_state'. Got None."
-            ),
-        ),
-        (
-            "noise_model",
-            re.escape(
-                "'noise_model' must be a NoiseModel instance, not "
-                "<class 'NoneType'>. Got None."
-            ),
-        ),
+        ("evaluation_times", "not a valid type for 'evaluation_times'"),
+        ("initial_state", "not a valid type for 'initial_state'"),
+        ("noise_model", "must be a NoiseModel instance"),
     ],
 )
 def test_emulator_config_type_errors(param, msg):
@@ -1213,7 +1195,7 @@ def test_results_final_bistrings():
             "The final bitstrings are not available. Please make sure"
             " 'BitStrings()' at relative time t=1.0 is included in the"
             " observables of your emulator backend's configuration (when"
-            " possible); got observables []."
+            " possible); the available results are []."
         ),
     ):
         res.final_bitstrings
@@ -1287,7 +1269,7 @@ def test_results_bitstring_counts():
                 "The final bitstrings are not available. Please make sure"
                 " 'BitStrings()' at relative time t=1.0 is included in the"
                 " observables of your emulator backend's configuration (when"
-                " possible); got observables []."
+                " possible); the available results are []."
             ),
         ):
             empty_res.bitstring_counts
@@ -1327,7 +1309,7 @@ def test_results_final_state():
             "The final state is not available. Please make sure"
             " 'StateResult()' at relative time t=1.0 is included in the"
             " observables of your emulator backend's configuration (when"
-            " possible); got observables []."
+            " possible); the available results are []."
         ),
     ):
         res.final_state
