@@ -172,10 +172,11 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             (the start of the sequence) and 1 (the end of the sequence), in
             ascending order. Can also be specified as "Full", in which case
             every step in the emulation will also be an evaluation time.
-        initial_state: The initial state from which emulation starts. If
-            specified, the state type needs to be compatible with the emulator
-            backend (i.e. it must match
-            ``EmulatorBackend.config_type.state_type``).
+        initial_state: The initial state from which emulation starts. When
+            given to an ``EmulatorBackend``, it is automatically converted to
+            ``EmulatorBackend.config_type.state_type`` if needed, which
+            requires it to have been created via
+            ``State.from_state_amplitudes()``.
             If left undefined, defaults to starting with all qudits in the
             ground state.
         with_modulation: Whether to emulate the sequence with the programmed
