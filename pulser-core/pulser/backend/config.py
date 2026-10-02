@@ -307,7 +307,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         if initial_state is not None and not isinstance(initial_state, State):
             raise TypeError(
                 "When defined, 'initial_state' must be an instance of State;"
-                f" got object of type {type(initial_state)} instead."
+                f" got object of type {type(initial_state)} instead. Got "
+                f"{initial_state!r}."
             )
 
         if interaction_matrix is not None:
@@ -336,8 +337,15 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             if not pm.allclose(
                 interaction_matrix, interaction_matrix.transpose(1, 2)
             ):
+                asymmetry = np.abs(
+                    matrix_arr - np.transpose(matrix_arr, (0, 2, 1))
+                )
+                worst = np.unravel_index(asymmetry.argmax(), asymmetry.shape)
+                _, i, j = worst
                 raise ValueError(
-                    "The received interaction matrix is not symmetric."
+                    "The received interaction matrix is not symmetric; the "
+                    f"largest difference is {asymmetry[worst]} between the "
+                    f"entries at ({i}, {j}) and ({j}, {i})."
                 )
             if np.any(np.stack([np.diag(x) for x in matrix_arr]) != 0):
                 warnings.warn(
@@ -352,7 +360,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         elif not isinstance(noise_model, NoiseModel):
             raise TypeError(
                 "When defined, 'noise_model' must be a NoiseModel instance,"
-                f" not {type(noise_model)}."
+                f" not {type(noise_model)}. Got {noise_model!r}."
             )
 
         if (
@@ -362,8 +370,10 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         ):
             raise ValueError(
                 "`EmulationConfig.n_trajectories` and `NoiseModel.runs` "
-                "can't be simultaneously defined. Please favour using only"
-                " `EmulationConfig.n_trajectories`."
+                "can't be defined with conflicting values; got "
+                f"{n_trajectories} `n_trajectories` vs. {noise_model.runs} "
+                "`NoiseModel.runs`. Please favour using only "
+                "`EmulationConfig.n_trajectories`."
             )
 
         if n_trajectories is None:
@@ -462,7 +472,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         if not isinstance(obj_str, str):
             raise TypeError(
                 "The serialized EmulationConfig must be given as a string. "
-                f"Instead, got object of type {type(obj_str)}."
+                f"Instead, got object of type {type(obj_str)}. Got "
+                f"{obj_str!r}."
             )
         validate_abstract_repr(obj_str, "config")
         return _deserialize_emulation_config(

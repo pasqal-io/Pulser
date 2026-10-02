@@ -65,10 +65,10 @@ class StateResult(Observable):
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         raise AbstractReprError(
-            """`StateResult` observable is not supported in any remote backend.
-            If you are interested in the full quantum state at arbitrary times
-            during the emulation, please, consider using the local version of
-            the same backend."""
+            "`StateResult` observable is not supported in any remote "
+            "backend. If you are interested in the full quantum state at "
+            "arbitrary times during the emulation, please, consider using "
+            "the local version of the same backend."
         )
 
     def apply(self, *, state: StateType, **kwargs: Any) -> StateType:
@@ -219,7 +219,8 @@ class Fidelity(Observable):
         )
         if not isinstance(state, State):
             raise TypeError(
-                f"'state' must be a State instance; got {type(state)} instead."
+                "'state' must be a State instance; got "
+                f"{type(state)} instead. Got {state!r}."
             )
         self.state = state
 
@@ -270,7 +271,7 @@ class Expectation(Observable):
         if not isinstance(operator, Operator):
             raise TypeError(
                 "'operator' must be an Operator instance;"
-                f" got {type(operator)} instead."
+                f" got {type(operator)} instead. Got {operator!r}."
             )
         self.operator = operator
 
