@@ -17,6 +17,7 @@ from pulser.backend import (
     Expectation,
     Fidelity,
     Occupation,
+    Purity,
     Results,
     StateResult,
 )
@@ -90,6 +91,11 @@ class TestObservableRepr:
                 Fidelity,
                 (example_state,),
                 {"evaluation_times": [i / 7.2 for i in range(5)]},
+            ),
+            (
+                Purity,
+                (),
+                {"evaluation_times": [0.0, 0.5, 1.0]},
             ),
             (
                 Expectation,
