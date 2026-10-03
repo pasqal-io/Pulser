@@ -238,6 +238,55 @@ class Fidelity(Observable):
         return self.state.overlap(state)
 
 
+class Purity(Observable):
+    r"""Stores the purity of the state at the evaluation times.
+
+    The purity of a state ``ρ`` is given by ``Tr[ρ^2]``. It is 1 for a pure
+    state and ``1/d`` for the maximally mixed state of a ``d``-dimensional
+    Hilbert space. When simulating with a noise model, the decay of the
+    purity can serve as a proxy for the effect of noise.
+
+    Note:
+        With stochastic noise, the emulated state at each evaluation time
+        is pure, so this observable trivially returns 1. To probe the effect
+        of stochastic noise, retrieve the states of the simulation (e.g.
+        with ``StateResult``) and compute the purity of the aggregated
+        mixed state with ``State.purity()``.
+
+    Args:
+        evaluation_times: The relative times at which to compute the purity.
+            If left as `None`, uses the ``default_evaluation_times`` of the
+            backend's ``EmulationConfig``.
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
+    """
+
+    def __init__(
+        self,
+        *,
+        evaluation_times: Sequence[float] | None = None,
+        tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+    ):
+        """Initializes the observable."""
+        super().__init__(
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+            default_aggregation_method=default_aggregation_method,
+        )
+
+    @property
+    def _base_tag(self) -> str:
+        return "purity"
+
+    def apply(self, *, state: State, **kwargs: Any) -> Any:
+        """Calculates the observable to store in the Results."""
+        return state.purity()
+
+
 class Expectation(Observable):
     """Stores the expectation of the given operator on the current state.
 

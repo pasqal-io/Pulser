@@ -389,6 +389,16 @@ def test_expect_noisy(results_noisy):
     assert np.isclose(results_noisy.expect([op])[0][-1], 0.68)
 
 
+def test_get_purity(results, results_noisy):
+    t = results._sim_times[-1]
+    # A coherent simulation produces a pure state
+    assert np.isclose(results.get_purity(t), 1.0)
+
+    # Noisy results: purity of the measured state distribution
+    purity = results_noisy.get_purity(results_noisy._sim_times[-1])
+    assert 0.0 < purity < 1.0
+
+
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
 def test_plot(results_noisy, results):
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])

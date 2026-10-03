@@ -34,6 +34,9 @@
                         },
                         {
                             "$ref": "#/energy_variance"
+                        },
+                        {
+                            "$ref": "#/purity"
                         }
                     ]
                 }
@@ -442,6 +445,40 @@
             "observable": {
                 "description": "tag to distinguish different instances of an observable",
                 "const": "energy"
+            },
+            "evaluation_times": {
+                "$ref": "#/evaluation_times"
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": [
+                    "string",
+                    "null"
+                ]
+            },
+            "default_aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
+            "uuid": {
+                "description": "The observable's internal UUID",
+                "type": "string"
+            }
+        },
+        "required": [
+            "observable",
+            "evaluation_times",
+            "tag_suffix"
+        ],
+        "additionalProperties": false
+    },
+    "purity": {
+        "description": "cause the emulator to compute the purity of the emulated state",
+        "type": "object",
+        "properties": {
+            "observable": {
+                "description": "tag to distinguish different instances of an observable",
+                "const": "purity"
             },
             "evaluation_times": {
                 "$ref": "#/evaluation_times"
