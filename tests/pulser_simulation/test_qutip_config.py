@@ -164,14 +164,11 @@ def test_no_cast_needed():
     # Non-serializable states are fine when they already have the right type
     assert fid._cast_to(QutipState, QutipOperator) is fid
     assert _cast_state(qutip_state, QutipState) is qutip_state
-    # ...or when the target is the backend-agnostic StateRepr
-    assert _cast_state(qutip_state, StateRepr) is qutip_state
     # Same for operators
     qutip_op = QutipOperator(qutip.qeye([2, 2]), eigenstates=("r", "g"))
     exp = Expectation(qutip_op)
     assert exp._cast_to(QutipState, QutipOperator) is exp
     assert _cast_operator(qutip_op, QutipOperator) is qutip_op
-    assert _cast_operator(qutip_op, OperatorRepr) is qutip_op
     # Callbacks and observables without states are returned as they are
     obs = StateResult()
     assert obs._cast_to(QutipState, QutipOperator) is obs
@@ -295,14 +292,14 @@ def test_failed_cast_unsupported_eigenstates():
     with pytest.raises(
         TypeError,
         match="Failed to convert 'initial_state' of type 'StateRepr' "
-        "to the expected state type '_TwoLevelState'. The target type "
-        "rejected it: Only \\('r', 'g'\\) eigenstates are supported.",
+        "to the expected state type '_TwoLevelState'.$",
     ) as exc_info:
         _TwoLevelBackend.validate_config(
             EmulationConfig(initial_state=state, observables=[StateResult()])
         )
     # The original error is kept as the cause
     assert isinstance(exc_info.value.__cause__, ValueError)
+    assert "Only ('r', 'g')" in str(exc_info.value.__cause__)
     # The 'from_state_amplitudes()' hint would be misleading here
     assert "from_state_amplitudes" not in str(exc_info.value)
 
@@ -315,13 +312,13 @@ def test_failed_cast_unsupported_eigenstates():
         TypeError,
         match="Failed to convert the operator of observable 'expectation' of "
         "type 'OperatorRepr' to the expected operator type "
-        "'_TwoLevelOperator'. The target type rejected it: "
-        "Only \\('r', 'g'\\) eigenstates are supported.",
+        "'_TwoLevelOperator'.$",
     ) as exc_info:
         _TwoLevelBackend.validate_config(
             EmulationConfig(observables=[Expectation(op)])
         )
     assert isinstance(exc_info.value.__cause__, ValueError)
+    assert "Only ('r', 'g')" in str(exc_info.value.__cause__)
     assert "from_operator_repr" not in str(exc_info.value)
 
 

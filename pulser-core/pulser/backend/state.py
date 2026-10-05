@@ -355,11 +355,10 @@ class StateRepr(State):
 
 def _cast_state(
     state: State, target: Type[StateType], name: str = "state"
-) -> State:
+) -> StateType:
     """Casts a state to the target type through its abstract repr.
 
-    The state is returned untouched if it is already of the target type or
-    if the target is the backend-agnostic ``StateRepr``.
+    The state is returned untouched if it is already of the target type.
 
     Args:
         state: The state to cast.
@@ -369,7 +368,7 @@ def _cast_state(
     Returns:
         The state, as an instance of the target type.
     """
-    if target is StateRepr or isinstance(state, target):
+    if isinstance(state, target):
         return state
     try:
         state_repr = state._to_abstract_repr()
@@ -378,14 +377,13 @@ def _cast_state(
             amplitudes=state_repr["amplitudes"],
         )
     except (AbstractReprError, TypeError, ValueError) as e:
+        reason = ""
         if isinstance(e, AbstractReprError):
             reason = (
-                "Automatic conversion is only possible for states created "
+                " Automatic conversion is only possible for states created "
                 "via 'from_state_amplitudes()' and not modified afterwards."
             )
-        else:
-            reason = f"The target type rejected it: {e}"
         raise TypeError(
             f"Failed to convert {name} of type {type(state).__name__!r} "
-            f"to the expected state type {target.__name__!r}. {reason}"
+            f"to the expected state type {target.__name__!r}.{reason}"
         ) from e

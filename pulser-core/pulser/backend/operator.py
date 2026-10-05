@@ -362,11 +362,10 @@ class OperatorRepr(Operator):
 
 def _cast_operator(
     operator: Operator, target: Type[OperatorType], name: str = "operator"
-) -> Operator:
+) -> OperatorType:
     """Casts an operator to the target type through its abstract repr.
 
-    The operator is returned untouched if it is already of the target type
-    or if the target is the backend-agnostic ``OperatorRepr``.
+    The operator is returned untouched if it is already of the target type.
 
     Args:
         operator: The operator to cast.
@@ -376,7 +375,7 @@ def _cast_operator(
     Returns:
         The operator, as an instance of the target type.
     """
-    if target is OperatorRepr or isinstance(operator, target):
+    if isinstance(operator, target):
         return operator
     try:
         op_repr = operator._to_abstract_repr()
@@ -386,14 +385,13 @@ def _cast_operator(
             operations=op_repr["operations"],
         )
     except (AbstractReprError, TypeError, ValueError) as e:
+        reason = ""
         if isinstance(e, AbstractReprError):
             reason = (
-                "Automatic conversion is only possible for operators created "
+                " Automatic conversion is only possible for operators created "
                 "via 'from_operator_repr()'."
             )
-        else:
-            reason = f"The target type rejected it: {e}"
         raise TypeError(
             f"Failed to convert {name} of type {type(operator).__name__!r} "
-            f"to the expected operator type {target.__name__!r}. {reason}"
+            f"to the expected operator type {target.__name__!r}.{reason}"
         ) from e
