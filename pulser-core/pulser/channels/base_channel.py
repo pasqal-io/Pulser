@@ -98,9 +98,8 @@ class Channel(ABC):
         max_duration: The longest duration an instruction can take.
         min_avg_amp: The minimum average amplitude of a pulse (when not zero).
         mod_bandwidth: The modulation bandwidth (in MHz). Note that this
-            follows a non-standard definition corresponding to 2x the -3dB
-            bandwidth, or equivalently, the frequency at which the amplitude
-            is attenuated by 75%.
+            follows a non-standard definition corresponding to the frequency
+            at which the amplitude is attenuated by 75%.
         custom_phase_jump_time: An optional custom value for the phase jump
             time that overrides the default value estimated from the modulation
             bandwidth. It is not enforced in EOM mode.
@@ -371,8 +370,7 @@ class Channel(ABC):
                 duration an instruction can take.
             mod_bandwidth(Optional[float], default=None): The modulation
                 bandwidth (in MHz), following Pulser's non-standard definition
-                (2x the -3dB bandwidth, or the frequency at 75% amplitude
-                attenuation).
+                (the frequency at 75% amplitude attenuation).
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
             custom_phase_jump_time: An optional custom value for the phase jump
@@ -422,8 +420,7 @@ class Channel(ABC):
                 duration an instruction can take.
             mod_bandwidth(Optional[float], default=None): The modulation
                 bandwidth (in MHz), following Pulser's non-standard definition
-                (2x the -3dB bandwidth, or the frequency at 75% amplitude
-                attenuation).
+                (the frequency at 75% amplitude attenuation).
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
             custom_phase_jump_time: An optional custom value for the phase jump
@@ -594,7 +591,8 @@ class Channel(ABC):
         Args:
             input_samples: The samples to modulate.
             mod_bandwidth: The modulation bandwidth (in MHz), following
-                Pulser's non-standard definition (2x the -3dB bandwidth).
+                Pulser's non-standard definition (the frequency at 75%
+                amplitude attenuation).
         """
         # The cutoff frequency (fc) and the modulation transfer function
         # are defined in https://tinyurl.com/bdeumc8k

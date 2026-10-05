@@ -321,9 +321,8 @@ class BaseRegister(ABC, CoordsCollection):
         if type(other) is not type(self):
             return False
 
-        return self._ids == other._ids and np.allclose(
-            self._coords_arr.as_array(detach=True),
-            other._coords_arr.as_array(detach=True),
+        return self._ids == other._ids and pm.allclose(
+            self._coords_arr, other._coords_arr
         )
 
     def __repr__(self) -> str:

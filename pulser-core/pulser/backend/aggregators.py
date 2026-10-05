@@ -46,7 +46,10 @@ def _assert_values_not_empty(values: list[T]) -> None:
         ValueError: If ``values`` is not a list or is empty.
     """
     if not isinstance(values, list):
-        raise ValueError("Need to supply a list of values to process.")
+        raise ValueError(
+            f"Need to supply a list of values to process, not {type(values)}. "
+            f"Got {values!r}."
+        )
     if values == []:
         raise ValueError("Cannot process 0 samples.")
 
@@ -64,7 +67,9 @@ def _validate_sequence_elements(elt: Sequence) -> None:
         raise ValueError("Cannot process list of empty lists.")
 
     if not isinstance(elt[0], (float, complex, list)):
-        raise ValueError(f"Cannot process list of lists of {type(elt[0])}.")
+        raise ValueError(
+            f"Cannot process list of lists of {type(elt[0])}. Got {elt[0]!r}."
+        )
 
     if isinstance(elt[0], list):
         if len(elt[0]) == 0:
@@ -73,7 +78,8 @@ def _validate_sequence_elements(elt: Sequence) -> None:
             )
         if not isinstance(elt[0][0], (float, complex)):
             raise ValueError(
-                f"Cannot process list of matrices of {type(elt[0][0])}."
+                f"Cannot process list of matrices of {type(elt[0][0])}. "
+                f"Got {elt[0][0]!r}."
             )
 
 
@@ -108,7 +114,8 @@ def _std_aggregator(
 
     if not isinstance(elt, Sequence):
         raise ValueError(
-            f"Std aggregator cannot process data of type {type(elt)}."
+            f"Std aggregator cannot process data of type {type(elt)}. "
+            f"Got {elt!r}."
         )
 
     _validate_sequence_elements(elt)
@@ -147,7 +154,8 @@ def _mean_aggregator(
 
     if not isinstance(elt, Sequence):
         raise ValueError(
-            f"Mean aggregator cannot process data of type {type(elt)}."
+            f"Mean aggregator cannot process data of type {type(elt)}. "
+            f"Got {elt!r}."
         )
 
     _validate_sequence_elements(elt)
