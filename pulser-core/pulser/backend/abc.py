@@ -24,7 +24,7 @@ from pulser.backend._classproperty import classproperty
 from pulser.backend.config import EmulationConfig
 from pulser.backend.observable import Callback
 from pulser.backend.results import Results
-from pulser.backend.state import State, _cast_state
+from pulser.backend.state import State
 from pulser.channels.dmm import DMM
 from pulser.devices import Device
 
@@ -173,8 +173,8 @@ class EmulatorBackend(Backend):
         state_type = cls.config_type.state_type
         operator_type = cls.config_type.operator_type
         if isinstance(options.get("initial_state"), State):
-            options["initial_state"] = _cast_state(
-                options["initial_state"], state_type, "'initial_state'"
+            options["initial_state"] = state_type.from_state(
+                options["initial_state"]
             )
         for key in ("observables", "callbacks"):
             if key in options:

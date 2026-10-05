@@ -20,8 +20,6 @@ from pulser.backend.default_observables import (
     Fidelity,
     StateResult,
 )
-from pulser.backend.operator import _cast_operator
-from pulser.backend.state import _cast_state
 from pulser_simulation import QutipBackendV2
 from pulser_simulation.qutip_config import (
     QutipConfig,
@@ -126,7 +124,7 @@ class _StateCallback(Callback):
 
     def _try_cast_state_ops(self, state_type, operator_type):
         new_cb = copy.copy(self)
-        new_cb.state = _cast_state(self.state, state_type)
+        new_cb.state = state_type.from_state(self.state)
         return new_cb
 
 
@@ -168,21 +166,30 @@ def test_implicit_cast_in_validate_config(repr_state, repr_op):
 def test_no_cast_needed():
     qutip_state = QutipState(qutip.basis(4, 0), eigenstates=("r", "g"))
     fid = Fidelity(qutip_state)
-    # Non-serializable states are fine when they already have the right type
-    assert _cast_state(qutip_state, QutipState) is qutip_state
-    # The observable is always copied, but keeps its UUID and its state
+    # Non-serializable states are fine when they already have the right type,
+    # since a shallow copy is returned without going through serialization
+    new_state = QutipState.from_state(qutip_state)
+    assert new_state is not qutip_state
+    assert type(new_state) is QutipState
+    assert new_state._state is qutip_state._state
+    # The observable is always copied, but keeps its UUID
     new_fid = fid._try_cast_state_ops(QutipState, QutipOperator)
     assert new_fid is not fid
     assert new_fid.uuid == fid.uuid
-    assert new_fid.state is qutip_state
+    assert new_fid.state is not qutip_state
+    assert new_fid.state._state is qutip_state._state
     # Same for operators
     qutip_op = QutipOperator(qutip.qeye([2, 2]), eigenstates=("r", "g"))
-    assert _cast_operator(qutip_op, QutipOperator) is qutip_op
+    new_op = QutipOperator.from_operator(qutip_op)
+    assert new_op is not qutip_op
+    assert type(new_op) is QutipOperator
+    assert new_op._operator is qutip_op._operator
     exp = Expectation(qutip_op)
     new_exp = exp._try_cast_state_ops(QutipState, QutipOperator)
     assert new_exp is not exp
     assert new_exp.uuid == exp.uuid
-    assert new_exp.operator is qutip_op
+    assert new_exp.operator is not qutip_op
+    assert new_exp.operator._operator is qutip_op._operator
     # Callbacks and observables without states are returned as they are
     obs = StateResult()
     assert obs._try_cast_state_ops(QutipState, QutipOperator) is obs
@@ -234,9 +241,9 @@ def test_failed_cast(repr_state, repr_op):
     # Non-serializable objects of another type can't be cast
     with pytest.raises(
         TypeError,
-        match="Failed to convert 'initial_state' of type 'QutipState' "
-        "to the expected state type '_OtherState'. Automatic conversion is "
-        "only possible for states created via 'from_state_amplitudes\\(\\)'",
+        match="Failed to convert a state of type "
+        "'QutipState' to '_OtherState'. Automatic conversion is only "
+        "possible for states created via 'from_state_amplitudes\\(\\)'",
     ):
         _OtherBackend.validate_config(
             EmulationConfig(
@@ -245,17 +252,17 @@ def test_failed_cast(repr_state, repr_op):
         )
     with pytest.raises(
         TypeError,
-        match="Failed to convert the state of observable 'fidelity' of type "
-        "'QutipState' to the expected state type '_OtherState'",
+        match="Failed to convert a state of type "
+        "'QutipState' to '_OtherState'",
     ):
         _OtherBackend.validate_config(
             EmulationConfig(observables=[Fidelity(qutip_state)])
         )
     with pytest.raises(
         TypeError,
-        match="Failed to convert the operator of observable 'expectation' of "
-        "type 'QutipOperator' to the expected operator type '_OtherOperator'. "
-        "Automatic conversion is only possible for operators created via "
+        match="Failed to convert an operator "
+        "of type 'QutipOperator' to '_OtherOperator'. Automatic conversion "
+        "is only possible for operators created via "
         "'from_operator_repr\\(\\)'",
     ):
         _OtherBackend.validate_config(
@@ -305,8 +312,8 @@ def test_failed_cast_unsupported_eigenstates():
     )
     with pytest.raises(
         TypeError,
-        match="Failed to convert 'initial_state' of type 'StateRepr' "
-        "to the expected state type '_TwoLevelState'.$",
+        match="Failed to convert a state of type "
+        "'StateRepr' to '_TwoLevelState'.$",
     ) as exc_info:
         _TwoLevelBackend.validate_config(
             EmulationConfig(initial_state=state, observables=[StateResult()])
@@ -324,9 +331,8 @@ def test_failed_cast_unsupported_eigenstates():
     )
     with pytest.raises(
         TypeError,
-        match="Failed to convert the operator of observable 'expectation' of "
-        "type 'OperatorRepr' to the expected operator type "
-        "'_TwoLevelOperator'.$",
+        match="Failed to convert an operator "
+        "of type 'OperatorRepr' to '_TwoLevelOperator'.$",
     ) as exc_info:
         _TwoLevelBackend.validate_config(
             EmulationConfig(observables=[Expectation(op)])

@@ -70,8 +70,11 @@ class Callback(ABC):
 
         Overrides should return a copy (e.g. with ``copy.copy()``) holding
         the cast objects rather than modifying the instance, to preserve
-        the UUID and the user's config. If a cast fails, they should
-        raise an error instead of returning the callback unchanged.
+        the UUID and the user's config. The cast objects can be obtained
+        with ``state_type.from_state()`` and
+        ``operator_type.from_operator()``, which raise a ``TypeError`` when
+        the cast fails; overrides should let it propagate instead of
+        returning the callback unchanged.
 
         Args:
             state_type: The state type to cast to.

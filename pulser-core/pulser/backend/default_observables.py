@@ -22,8 +22,8 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Type
 
 from pulser.backend.observable import AggregationMethod, Observable
-from pulser.backend.operator import Operator, OperatorType, _cast_operator
-from pulser.backend.state import Eigenstate, State, StateType, _cast_state
+from pulser.backend.operator import Operator, OperatorType
+from pulser.backend.state import Eigenstate, State, StateType
 from pulser.exceptions.serialization import AbstractReprError
 
 if TYPE_CHECKING:
@@ -238,11 +238,8 @@ class Fidelity(Observable):
     def _try_cast_state_ops(
         self, state_type: Type[State], operator_type: Type[Operator]
     ) -> Fidelity:
-        new_state = _cast_state(
-            self.state, state_type, f"the state of observable {self.tag!r}"
-        )
         new_obs = copy.copy(self)
-        new_obs.state = new_state
+        new_obs.state = state_type.from_state(self.state)
         return new_obs
 
     def apply(self, *, state: State, **kwargs: Any) -> Any:
@@ -301,13 +298,8 @@ class Expectation(Observable):
     def _try_cast_state_ops(
         self, state_type: Type[State], operator_type: Type[Operator]
     ) -> Expectation:
-        new_op = _cast_operator(
-            self.operator,
-            operator_type,
-            f"the operator of observable {self.tag!r}",
-        )
         new_obs = copy.copy(self)
-        new_obs.operator = new_op
+        new_obs.operator = operator_type.from_operator(self.operator)
         return new_obs
 
     def apply(self, *, state: State, **kwargs: Any) -> Any:
