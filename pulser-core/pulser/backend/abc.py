@@ -180,7 +180,7 @@ class EmulatorBackend(Backend):
             if key in options:
                 options[key] = tuple(
                     (
-                        cb._cast_to(state_type, operator_type)
+                        cb._try_cast_state_ops(state_type, operator_type)
                         if isinstance(cb, Callback)
                         else cb
                     )

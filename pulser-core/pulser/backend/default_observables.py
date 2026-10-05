@@ -235,7 +235,7 @@ class Fidelity(Observable):
         repr["state"] = self.state
         return repr
 
-    def _cast_to(
+    def _try_cast_state_ops(
         self, state_type: Type[State], operator_type: Type[Operator]
     ) -> Fidelity:
         new_state = _cast_state(
@@ -300,7 +300,7 @@ class Expectation(Observable):
         repr["operator"] = self.operator
         return repr
 
-    def _cast_to(
+    def _try_cast_state_ops(
         self, state_type: Type[State], operator_type: Type[Operator]
     ) -> Expectation:
         new_op = _cast_operator(

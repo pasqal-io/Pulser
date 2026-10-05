@@ -51,27 +51,35 @@ class Callback(ABC):
         """A universal unique identifier for this instance."""
         return self._uuid
 
-    def _cast_to(
+    def _try_cast_state_ops(
         self: CallbackType,
         state_type: Type[State],
         operator_type: Type[Operator],
     ) -> CallbackType:
-        """Casts the states and operators held by this callback.
+        """Returns this callback with its states and operators cast.
 
         Called by ``EmulatorBackend.validate_config()`` so that the callback
         holds states and operators of the backend's preferred types.
-        Subclasses holding a State or Operator should override this method.
-        When a cast is needed, they must return a copy (e.g. with
-        ``copy.copy()``) instead of modifying the instance, so that the
-        UUID is kept and the user's instance is left untouched.
+
+        By default, it does nothing and returns the callback.
+
+        Subclasses with a State or Operator must override this
+        method to support automatic casting; otherwise, their states and
+        operators are left as they are, and an unexpected type will only
+        cause a failure when the callback is called during the emulation.
+
+        Overrides should return a copy (e.g. with ``copy.copy()``) holding
+        the cast objects rather than modifying the instance, to preserve
+        the UUID and the user's config. If a cast fails, they should
+        raise an error instead of returning the callback unchanged.
 
         Args:
             state_type: The state type to cast to.
             operator_type: The operator type to cast to.
 
         Returns:
-            The callback itself if no cast is needed, or a copy of it holding
-            the cast states and operators otherwise.
+            A copy of the callback holding the cast states and operators, or
+            the callback itself if there is nothing to cast.
         """
         return self
 

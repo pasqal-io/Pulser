@@ -98,16 +98,20 @@ def test_initial_state():
         )
 
 
-def _repr_state_and_op():
-    state = StateRepr.from_state_amplitudes(
+@pytest.fixture
+def repr_state():
+    return StateRepr.from_state_amplitudes(
         eigenstates=("r", "g"), amplitudes={"rr": 1.0}
     )
-    op = OperatorRepr.from_operator_repr(
+
+
+@pytest.fixture
+def repr_op():
+    return OperatorRepr.from_operator_repr(
         eigenstates=("r", "g"),
         n_qudits=2,
         operations=[(1.0, [({"rr": 1.0}, [0])])],
     )
-    return state, op
 
 
 class _StateCallback(Callback):
@@ -120,19 +124,18 @@ class _StateCallback(Callback):
     def __call__(self, config, t, state, hamiltonian, result):
         pass
 
-    def _cast_to(self, state_type, operator_type):
+    def _try_cast_state_ops(self, state_type, operator_type):
         new_cb = copy.copy(self)
         new_cb.state = _cast_state(self.state, state_type)
         return new_cb
 
 
-def test_implicit_cast_in_validate_config():
-    state, op = _repr_state_and_op()
-    fid = Fidelity(state)
-    exp = Expectation(op)
-    cb = _StateCallback(state)
+def test_implicit_cast_in_validate_config(repr_state, repr_op):
+    fid = Fidelity(repr_state)
+    exp = Expectation(repr_op)
+    cb = _StateCallback(repr_state)
     base_config = EmulationConfig(
-        initial_state=state, observables=[fid, exp], callbacks=[cb]
+        initial_state=repr_state, observables=[fid, exp], callbacks=[cb]
     )
     # The config itself keeps the types it was given
     assert type(base_config.initial_state) is StateRepr
@@ -154,7 +157,11 @@ def test_implicit_cast_in_validate_config():
     assert config.callbacks[0].uuid == cb.uuid
     assert new_fid.tag == fid.tag and new_exp.tag == exp.tag
     # The user's objects are not modified
-    assert fid.state is state and exp.operator is op and cb.state is state
+    assert (
+        fid.state is repr_state
+        and exp.operator is repr_op
+        and cb.state is repr_state
+    )
     assert type(base_config.initial_state) is StateRepr
 
 
@@ -162,16 +169,16 @@ def test_no_cast_needed():
     qutip_state = QutipState(qutip.basis(4, 0), eigenstates=("r", "g"))
     fid = Fidelity(qutip_state)
     # Non-serializable states are fine when they already have the right type
-    assert fid._cast_to(QutipState, QutipOperator) is fid
+    assert fid._try_cast_state_ops(QutipState, QutipOperator) is fid
     assert _cast_state(qutip_state, QutipState) is qutip_state
     # Same for operators
     qutip_op = QutipOperator(qutip.qeye([2, 2]), eigenstates=("r", "g"))
     exp = Expectation(qutip_op)
-    assert exp._cast_to(QutipState, QutipOperator) is exp
+    assert exp._try_cast_state_ops(QutipState, QutipOperator) is exp
     assert _cast_operator(qutip_op, QutipOperator) is qutip_op
     # Callbacks and observables without states are returned as they are
     obs = StateResult()
-    assert obs._cast_to(QutipState, QutipOperator) is obs
+    assert obs._try_cast_state_ops(QutipState, QutipOperator) is obs
 
     config = QutipBackendV2.validate_config(
         EmulationConfig(initial_state=qutip_state, observables=[fid])
@@ -202,15 +209,15 @@ class _OtherBackend(EmulatorBackend):
         pass
 
 
-def test_failed_cast():
+def test_failed_cast(repr_state, repr_op):
     qutip_state = QutipState(qutip.basis(4, 0), eigenstates=("r", "g"))
     qutip_op = QutipOperator(qutip.qeye([2, 2]), eigenstates=("r", "g"))
-    state, op = _repr_state_and_op()
 
     # Serializable objects of another type are cast
     config = _OtherBackend.validate_config(
         EmulationConfig(
-            initial_state=state, observables=[Fidelity(state), Expectation(op)]
+            initial_state=repr_state,
+            observables=[Fidelity(repr_state), Expectation(repr_op)],
         )
     )
     assert type(config.initial_state) is _OtherState
@@ -226,7 +233,7 @@ def test_failed_cast():
     ):
         _OtherBackend.validate_config(
             EmulationConfig(
-                initial_state=qutip_state, observables=[Fidelity(state)]
+                initial_state=qutip_state, observables=[Fidelity(repr_state)]
             )
         )
     with pytest.raises(
