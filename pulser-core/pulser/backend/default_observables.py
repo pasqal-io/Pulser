@@ -241,8 +241,6 @@ class Fidelity(Observable):
         new_state = _cast_state(
             self.state, state_type, f"the state of observable {self.tag!r}"
         )
-        if new_state is self.state:
-            return self
         new_obs = copy.copy(self)
         new_obs.state = new_state
         return new_obs
@@ -308,8 +306,6 @@ class Expectation(Observable):
             operator_type,
             f"the operator of observable {self.tag!r}",
         )
-        if new_op is self.operator:
-            return self
         new_obs = copy.copy(self)
         new_obs.operator = new_op
         return new_obs
