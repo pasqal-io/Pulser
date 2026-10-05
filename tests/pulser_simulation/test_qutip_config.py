@@ -169,13 +169,20 @@ def test_no_cast_needed():
     qutip_state = QutipState(qutip.basis(4, 0), eigenstates=("r", "g"))
     fid = Fidelity(qutip_state)
     # Non-serializable states are fine when they already have the right type
-    assert fid._try_cast_state_ops(QutipState, QutipOperator) is fid
     assert _cast_state(qutip_state, QutipState) is qutip_state
+    # The observable is always copied, but keeps its UUID and its state
+    new_fid = fid._try_cast_state_ops(QutipState, QutipOperator)
+    assert new_fid is not fid
+    assert new_fid.uuid == fid.uuid
+    assert new_fid.state is qutip_state
     # Same for operators
     qutip_op = QutipOperator(qutip.qeye([2, 2]), eigenstates=("r", "g"))
-    exp = Expectation(qutip_op)
-    assert exp._try_cast_state_ops(QutipState, QutipOperator) is exp
     assert _cast_operator(qutip_op, QutipOperator) is qutip_op
+    exp = Expectation(qutip_op)
+    new_exp = exp._try_cast_state_ops(QutipState, QutipOperator)
+    assert new_exp is not exp
+    assert new_exp.uuid == exp.uuid
+    assert new_exp.operator is qutip_op
     # Callbacks and observables without states are returned as they are
     obs = StateResult()
     assert obs._try_cast_state_ops(QutipState, QutipOperator) is obs
