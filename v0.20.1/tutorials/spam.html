@@ -1,0 +1,425 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SPAM errors &mdash; Pulser 0.20.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/max_width.css" />
+
+  
+      <script src="../_static/jquery.js"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+      <script src="../_static/doctools.js"></script>
+      <script src="../_static/sphinx_highlight.js"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Laser noise" href="laser_noise.html" />
+    <link rel="prev" title="Simulations with Noise and Errors" href="noisy_sim.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v0.20.1" /><meta name="readthedocs-resolver-filename" content="/tutorials/spam.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installation and First Steps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../intro_rydberg_blockade.html">Quickstart: The Rydberg Blockade</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Pulse Sequence Creation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simulating.html">Simulation of Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamental Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../review.html">Quantum Computing with Neutral Atoms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Backend Execution</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution of Pulser Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Classical Simulation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">SPAM errors</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Single-atom-noisy-simulations">Single atom noisy simulations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Sequence-preparation">Sequence preparation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#SPAM-effects">SPAM effects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Changing-\eta">Changing <span class="math notranslate nohighlight">\(\eta\)</span></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Changing-\epsilon-and-\epsilon'">Changing <span class="math notranslate nohighlight">\(\epsilon\)</span> and <span class="math notranslate nohighlight">\(\epsilon'\)</span></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Quantum Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="afm_prep.html">Preparing a state with antiferromagnetic order in the Ising model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Spin Chain</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mw_engineering.html">Simulation of XYZ spin models using Floquet engineering in XY mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shadow_est.html">Efficient estimation techniques for Variational Quantum Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1D_crystals.html">Building 1D Rydberg Crystals</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cz_gate.html">Control-Z Gate Sequence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pulser.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">SPAM errors</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/spam.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="SPAM-errors">
+<h1>SPAM errors<a class="headerlink" href="#SPAM-errors" title="Permalink to this heading"></a></h1>
+<section id="Introduction">
+<h2>Introduction<a class="headerlink" href="#Introduction" title="Permalink to this heading"></a></h2>
+<p>State Preparation And Measurement (SPAM) errors were introduced in the introductory tutorial <a class="reference internal" href="noisy_sim.html"><span class="doc">Simulating sequences with errors and noises</span></a>. They will be further detailed in this notebook. We recommend you to check the introductory tutorial before going through this one.</p>
+<p>SPAM errors can be:</p>
+<ul class="simple">
+<li><p>A state preparation error (with probability η for each atom), where an atom is not correctly pumped to the ground state at the beginning, making it effectively unavailable throughout the sequence.</p></li>
+<li><p>Measurement errors which are linked to the incorrect identification of the final state of the atoms: during the imaging process, excited rydberg atoms in <span class="math notranslate nohighlight">\(\ket{r}\)</span> might decay to the state <span class="math notranslate nohighlight">\(\ket{g}\)</span>, allowing them to be trapped in the tweezers. This produces false negatives with rate <span class="math notranslate nohighlight">\(\epsilon'\)</span>.</p></li>
+<li><p>On the contrary, some atoms in the ground state <span class="math notranslate nohighlight">\(\ket{g}\)</span> might be kicked out for various reasons (e.g. collisions with residual gas in the chamber) and tweezers recapture might fail, inferring them incorrectly as atoms in the excited state <span class="math notranslate nohighlight">\(\ket{r}\)</span> - those are the false positives that happen with rate <span class="math notranslate nohighlight">\(\epsilon\)</span>.</p></li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">qutip</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Register</span><span class="p">,</span> <span class="n">Pulse</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser_simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimConfig</span><span class="p">,</span> <span class="n">QutipEmulator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnalogDevice</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Single-atom-noisy-simulations">
+<h2>Single atom noisy simulations<a class="headerlink" href="#Single-atom-noisy-simulations" title="Permalink to this heading"></a></h2>
+<section id="Sequence-preparation">
+<h3>Sequence preparation<a class="headerlink" href="#Sequence-preparation" title="Permalink to this heading"></a></h3>
+<p>We prepare a single atom.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)],</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We act on this atom with a Constant Pulse, such that it oscillates between the ground state and excited Rydberg state (Rabi oscillations):</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">AnalogDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;channel 0&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">duration</span> <span class="o">=</span> <span class="mi">2500</span>
+<span class="n">pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse</span><span class="p">,</span> <span class="s2">&quot;channel 0&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_spam_8_0.png" src="../_images/tutorials_spam_8_0.png" />
+</div>
+</div>
+<p>We now create the simulation object and an observable which describes the excited state population.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="n">obs</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">proj</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="SPAM-effects">
+<h2>SPAM effects<a class="headerlink" href="#SPAM-effects" title="Permalink to this heading"></a></h2>
+<p>In this part we compare noiseless and noisy simulations for the default SPAM parameters (taken from <a class="reference external" href="https://arxiv.org/abs/1802.10424">De Léséleuc, et al., 2018</a>)</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># SPAM configuration</span>
+<span class="n">config_spam</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;SPAM&quot;</span><span class="p">),</span> <span class="n">runs</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">samples_per_run</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="c1"># Integration of the SPAM noise configuration to the simulation</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">set_config</span><span class="p">(</span><span class="n">config_spam</span><span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">show_config</span><span class="p">()</span>
+
+<span class="c1"># Simulation storing 40% of the results:</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">set_evaluation_times</span><span class="p">(</span><span class="mf">0.4</span><span class="p">)</span>
+<span class="n">res_spam</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Options:
+----------
+Number of runs:        30
+Samples per run:       5
+Noise types:           SPAM
+SPAM dictionary:       {&#39;eta&#39;: 0.005, &#39;epsilon&#39;: 0.01, &#39;epsilon_prime&#39;: 0.05}
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res_spam</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;With SPAM errors&quot;</span><span class="p">)</span>
+
+<span class="c1"># Noiseless simulation:</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">reset_config</span><span class="p">()</span>
+<span class="n">res_clean</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">res_clean</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Noiseless simulation&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.05</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span> <span class="n">borderaxespad</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Excited state population&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_spam_14_0.png" src="../_images/tutorials_spam_14_0.png" />
+</div>
+</div>
+<p>Let’s modify the <em>SPAM</em> dictionary to increase the state preparation error rate (<span class="math notranslate nohighlight">\(\eta=40\)</span>%).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">config_spam_mod</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;SPAM&quot;</span><span class="p">),</span> <span class="n">eta</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">runs</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">set_config</span><span class="p">(</span><span class="n">config_spam_mod</span><span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">set_evaluation_times</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">res_large_eta</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span>
+    <span class="mi">1</span> <span class="o">-</span> <span class="n">config_spam_mod</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;1 - $\eta$&quot;</span>
+<span class="p">)</span>
+<span class="n">res_large_eta</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;With SPAM errors&quot;</span><span class="p">)</span>
+<span class="n">res_clean</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Noiseless simulation&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.05</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span> <span class="n">borderaxespad</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Excited state population&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_spam_16_0.png" src="../_images/tutorials_spam_16_0.png" />
+</div>
+</div>
+<p>We can observe here that the population doesn’t go above <span class="math notranslate nohighlight">\(0.6 = 1 - \eta\)</span>, which is to be expected: badly prepared atoms are not used at all in the simulations. The more runs we perform, the closer the maximum population will be to <span class="math notranslate nohighlight">\(0.6\)</span>.</p>
+</section>
+<section id="Changing-\eta">
+<h2>Changing <span class="math notranslate nohighlight">\(\eta\)</span><a class="headerlink" href="#Changing-\eta" title="Permalink to this heading"></a></h2>
+<p>First, we reset all SPAM errors values to <span class="math notranslate nohighlight">\(0\)</span>. Then, we do a sweep over the parameter <span class="math notranslate nohighlight">\(\eta\)</span> to see how it modifies the simulation results.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res_clean</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">eta</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.99</span><span class="p">,</span> <span class="mi">4</span><span class="p">):</span>
+    <span class="n">config_spam_eta</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span>
+        <span class="n">noise</span><span class="o">=</span><span class="s2">&quot;SPAM&quot;</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="n">eta</span><span class="p">,</span> <span class="n">runs</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">epsilon_prime</span><span class="o">=</span><span class="mi">0</span>
+    <span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">set_config</span><span class="p">(</span><span class="n">config_spam_eta</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">rf</span><span class="s2">&quot;$\eta$ = </span><span class="si">{</span><span class="n">eta</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.01</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span> <span class="n">borderaxespad</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Excited state population&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_spam_20_0.png" src="../_images/tutorials_spam_20_0.png" />
+</div>
+</div>
+<p>As <span class="math notranslate nohighlight">\(\eta\)</span> grows, more atoms are badly prepared (i.e, pumped into a state different from <span class="math notranslate nohighlight">\(\ket{g}\)</span>) and so less atoms are excited into the Rydberg state. You can increase the number of runs to smooth the curves.</p>
+<section id="Changing-\epsilon-and-\epsilon'">
+<h3>Changing <span class="math notranslate nohighlight">\(\epsilon\)</span> and <span class="math notranslate nohighlight">\(\epsilon'\)</span><a class="headerlink" href="#Changing-\epsilon-and-\epsilon'" title="Permalink to this heading"></a></h3>
+<p>Let’s now compare sweeps over <span class="math notranslate nohighlight">\(\epsilon\)</span> and <span class="math notranslate nohighlight">\(\epsilon'\)</span> side by side:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res_clean</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Noiseless simulation&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">eps</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.99</span><span class="p">,</span> <span class="mi">4</span><span class="p">):</span>
+    <span class="n">config_spam_eps</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span>
+        <span class="n">noise</span><span class="o">=</span><span class="s2">&quot;SPAM&quot;</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">runs</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="n">eps</span><span class="p">,</span> <span class="n">epsilon_prime</span><span class="o">=</span><span class="mi">0</span>
+    <span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">set_config</span><span class="p">(</span><span class="n">config_spam_eps</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">rf</span><span class="s2">&quot;$\epsilon$ = </span><span class="si">{</span><span class="n">eps</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.01</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span> <span class="n">borderaxespad</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Excited state population&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_spam_24_0.png" src="../_images/tutorials_spam_24_0.png" />
+</div>
+</div>
+<p>When we increase the proportion of false positives, the percentage of atoms in the excited state increases as expected. Note that when <span class="math notranslate nohighlight">\(\eta=0\)</span>, the results object we obtain is a <code class="docutils literal notranslate"><span class="pre">CoherentResults</span></code> rather than a <code class="docutils literal notranslate"><span class="pre">NoisyResults</span></code>. This is because state preparation errors require you to sample a probability distribution to obtain the atoms that were badly prepared (thus forcing you to use <code class="docutils literal notranslate"><span class="pre">NoisyResults</span></code>), while measurement errors can be applied coherently to a state vector or density
+matrix.</p>
+<p>Finally, we sweep over the <span class="math notranslate nohighlight">\(\epsilon '\)</span> values:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res_clean</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Noiseless simulation&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">eps_p</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.99</span><span class="p">,</span> <span class="mi">4</span><span class="p">):</span>
+    <span class="n">config_spam_eps_p</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span>
+        <span class="n">noise</span><span class="o">=</span><span class="s2">&quot;SPAM&quot;</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">runs</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">epsilon_prime</span><span class="o">=</span><span class="n">eps_p</span>
+    <span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">set_config</span><span class="p">(</span><span class="n">config_spam_eps_p</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">rf</span><span class="s2">&quot;$\epsilon$&#39; = </span><span class="si">{</span><span class="n">eps_p</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.05</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span> <span class="n">borderaxespad</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Excited state population&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_spam_27_0.png" src="../_images/tutorials_spam_27_0.png" />
+</div>
+</div>
+<p>In contrast to the previous case, when the number of false negatives increases, the system behaves as if all atoms are in the ground state leading to zero population in the excited state.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="noisy_sim.html" class="btn btn-neutral float-left" title="Simulations with Noise and Errors" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="laser_noise.html" class="btn btn-neutral float-right" title="Laser noise" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,288 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Energy &mdash; Pulser 1.9.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=c4cb232b"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <script src="../../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="EnergySecondMoment" href="pulser.backend.EnergySecondMoment.html" />
+    <link rel="prev" title="CorrelationMatrix" href="pulser.backend.CorrelationMatrix.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.9.0" /><meta name="readthedocs-resolver-filename" content="/apidoc/_autosummary/pulser.backend.Energy.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Pulser
+              <img src="../../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/backends.html">Execution on an Emulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/qpu.html">QPU Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../results.html">Results and Observables</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../core.html#classes">Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core.html#device-examples">Device Examples</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../core.html#modules">Modules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="pulser.abstract_repr.html">pulser.abstract_repr</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="pulser.backend.html">pulser.backend</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.AggregationMethod.html">AggregationMethod</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.BackendConfig.html">BackendConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.QPUBackend.html">QPUBackend</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.EmulationConfig.html">EmulationConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.EmulatorConfig.html">EmulatorConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.Results.html">Results</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.RemoteResults.html">RemoteResults</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.State.html">State</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.Operator.html">Operator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.StateRepr.html">StateRepr</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.OperatorRepr.html">OperatorRepr</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.Callback.html">Callback</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.Observable.html">Observable</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.BitStrings.html">BitStrings</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.CorrelationMatrix.html">CorrelationMatrix</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">Energy</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.EnergySecondMoment.html">EnergySecondMoment</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.EnergyVariance.html">EnergyVariance</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.Expectation.html">Expectation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.Fidelity.html">Fidelity</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.Occupation.html">Occupation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.backend.StateResult.html">StateResult</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.backends.html">pulser.backends</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.channels.html">pulser.channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.devices.html">pulser.devices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.exceptions.html">pulser.exceptions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.parametrized.html">pulser.parametrized</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.register.html">pulser.register</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.result.html">pulser.result</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.sampler.html">pulser.sampler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.html">pulser.waveforms</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+          <li class="breadcrumb-item"><a href="pulser.backend.html">pulser.backend</a></li>
+      <li class="breadcrumb-item active">Energy</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/apidoc/_autosummary/pulser.backend.Energy.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="energy">
+<h1>Energy<a class="headerlink" href="#energy" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser.backend.Energy">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser.backend.</span></span><span class="sig-name descname"><span class="pre">Energy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluation_times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag_suffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_aggregation_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">AggregationMethod.MEAN</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.backend.Energy" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="pulser.backend.Observable.html#pulser.backend.Observable" title="pulser.backend.observable.Observable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Observable</span></code></a></p>
+<p>Stores the energy of the system at the evaluation times.</p>
+<p>The energy is calculated as the expectation value of the Hamiltonian,
+i.e. <code class="docutils literal notranslate"><span class="pre">&lt;φ(t)|H(t)|φ(t)&gt;</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>evaluation_times</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The relative times at which to compute the energy.
+If left as <cite>None</cite>, uses the <code class="docutils literal notranslate"><span class="pre">default_evaluation_times</span></code> of the
+backend’s <code class="docutils literal notranslate"><span class="pre">EmulationConfig</span></code>.</p></li>
+<li><p><strong>tag_suffix</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An optional suffix to append to the tag. Needed if
+multiple instances of the same observable are given to the
+same EmulationConfig.</p></li>
+<li><p><strong>default_aggregation_method</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod" title="pulser.backend.observable.AggregationMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">AggregationMethod</span></code></a></span>, default: <code class="docutils literal notranslate"><span class="pre">&lt;AggregationMethod.MEAN:</span> <span class="pre">2&gt;</span></code>) – How to combine the values of this
+observable from multiple results.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.backend.Energy.default_aggregation_method" title="pulser.backend.Energy.default_aggregation_method"><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_aggregation_method</span></code></a></p></td>
+<td><p>How the values from multiple results are combined.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.backend.Energy.tag" title="pulser.backend.Energy.tag"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tag</span></code></a></p></td>
+<td><p>Label for the observable, used to index the Results object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.backend.Energy.uuid" title="pulser.backend.Energy.uuid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">uuid</span></code></a></p></td>
+<td><p>A universal unique identifier for this instance.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">evaluation_times</span></code></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.backend.Energy.apply" title="pulser.backend.Energy.apply"><code class="xref py py-obj docutils literal notranslate"><span class="pre">apply</span></code></a></p></td>
+<td><p>Calculates the observable to store in the Results.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Signatures</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.backend.Energy.apply">
+<span class="sig-name descname"><span class="pre">apply</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hamiltonian</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.backend.Energy.apply" title="Link to this definition"></a></dt>
+<dd><p>Calculates the observable to store in the Results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.backend.Energy.default_aggregation_method">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">default_aggregation_method</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod" title="pulser.backend.observable.AggregationMethod"><span class="pre">AggregationMethod</span></a></em><a class="headerlink" href="#pulser.backend.Energy.default_aggregation_method" title="Link to this definition"></a></dt>
+<dd><p>How the values from multiple results are combined.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.backend.Energy.tag">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">tag</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#pulser.backend.Energy.tag" title="Link to this definition"></a></dt>
+<dd><p>Label for the observable, used to index the Results object.</p>
+<p>Within a Results instance, all computed observables must have different
+tags.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The tag of the observable.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.backend.Energy.uuid">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">uuid</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">UUID</span></em><a class="headerlink" href="#pulser.backend.Energy.uuid" title="Link to this definition"></a></dt>
+<dd><p>A universal unique identifier for this instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pulser.backend.CorrelationMatrix.html" class="btn btn-neutral float-left" title="CorrelationMatrix" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pulser.backend.EnergySecondMoment.html" class="btn btn-neutral float-right" title="EnergySecondMoment" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,436 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Noise Model and Noisy Simulations &mdash; Pulser 1.9.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=c4cb232b"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <script src="_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Local Adressability with DMM" href="tutorials/dmm.html" />
+    <link rel="prev" title="JSON Serialization" href="tutorials/serialization.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.9.0" /><meta name="readthedocs-resolver-filename" content="/noise_model.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Pulser
+              <img src="_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/backends.html">Execution on an Emulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/qpu.html">QPU Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results and Observables</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Noise Model and Noisy Simulations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Describing-noise-in-neutral-atom-QPUs-with-a-NoiseModel">Describing noise in neutral-atom QPUs with a NoiseModel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Inspecting-a-NoiseModel">Inspecting a NoiseModel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#How-to-include-noise-in-your-simulations">How to include noise in your simulations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#1.-Choosing-the-type-of-backend">1. Choosing the type of backend</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Preparation-for-noisy-simulations:">Preparation for noisy simulations:</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#2.-Creating-the-pulse-Sequence">2. Creating the pulse Sequence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.-Starting-the-Backend">3. Starting the Backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#4.-Execution">4. Execution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#5.-Retrieving-the-Results">5. Retrieving the Results</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Noise Model and Noisy Simulations</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/noise_model.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Noise-Model-and-Noisy-Simulations">
+<h1>Noise Model and Noisy Simulations<a class="headerlink" href="#Noise-Model-and-Noisy-Simulations" title="Link to this heading"></a></h1>
+<p><em>What you will learn:</em></p>
+<ul class="simple">
+<li><p>what types of noise may be involved in a neutral atom QPU;</p></li>
+<li><p>how they are described in a <code class="docutils literal notranslate"><span class="pre">NoiseModel</span></code>;</p></li>
+<li><p>how to make noisy simulations of a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> on an emulator <code class="docutils literal notranslate"><span class="pre">Backend</span></code>.</p></li>
+</ul>
+<section id="Describing-noise-in-neutral-atom-QPUs-with-a-NoiseModel">
+<h2>Describing noise in neutral-atom QPUs with a NoiseModel<a class="headerlink" href="#Describing-noise-in-neutral-atom-QPUs-with-a-NoiseModel" title="Link to this heading"></a></h2>
+<p>Neutral atom QPUs are subject to noise that is going to make the outcome of the execution of your pulser <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> on QPUs different from their theoretical result. The <code class="docutils literal notranslate"><span class="pre">NoiseModel</span></code> class describes the different types of noise to take into account in a neutral-atom QPU. It takes as input parameters that characterize each of these noise types.</p>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser.noise_model.</span></span><span class="sig-name descname"><span class="pre">NoiseModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">runs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">samples_per_run</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state_prep_error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_false_pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_false_neg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">laser_waist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amp_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detuning_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detuning_hf_psd</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detuning_hf_omegas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relaxation_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dephasing_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trap_waist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trap_depth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hyperfine_dephasing_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depolarizing_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eff_noise_rates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eff_noise_opers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">with_leakage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disable_doppler</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dmm_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detuning_map_spot_waist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Specifies the noise model parameters for emulation.</p>
+<p><strong>Supported noise types:</strong></p>
+<ul>
+<li><p><strong>leakage</strong>: Adds an error state ‘x’ to the computational
+basis, that can interact with the other states via an
+effective noise channel. Must be defined along with at least
+one effective noise channel defining the mechanisms of
+population transfer to the error state.</p></li>
+<li><p><strong>relaxation</strong>: Noise due to a decay from the Rydberg to
+the ground state (parametrized by <code class="docutils literal notranslate"><span class="pre">relaxation_rate</span></code>),
+commonly characterized experimentally by the T1 time.</p></li>
+<li><p><strong>dephasing</strong>: Random phase (Z) flip (parametrized
+by <code class="docutils literal notranslate"><span class="pre">dephasing_rate</span></code>), commonly characterized
+experimentally by the T2* time.</p></li>
+<li><p><strong>depolarizing</strong>: Quantum noise where the state is
+turned into the maximally mixed state with rate
+<code class="docutils literal notranslate"><span class="pre">depolarizing_rate</span></code>. While it does not describe a
+physical phenomenon, it is a commonly used tool to test
+the system under a uniform combination of phase flip (Z) and
+bit flip (X) errors.</p></li>
+<li><p><strong>eff_noise</strong>: General effective noise channel defined by the
+set of collapse operators <code class="docutils literal notranslate"><span class="pre">eff_noise_opers</span></code> and their
+corresponding rates <code class="docutils literal notranslate"><span class="pre">eff_noise_rates</span></code>.</p></li>
+<li><p><strong>doppler</strong>: Local atom detuning due to termal motion of the
+atoms and Doppler effect with respect to laser frequency.
+Parametrized by the <code class="docutils literal notranslate"><span class="pre">temperature</span></code> field. Can be disabled with
+the <code class="docutils literal notranslate"><span class="pre">disable_doppler</span></code> field.</p></li>
+<li><p><strong>register</strong>: Thermal fluctuations in the
+register positions, parametrized by <code class="docutils literal notranslate"><span class="pre">temperature</span></code>, <code class="docutils literal notranslate"><span class="pre">trap_waist</span></code>
+and, <code class="docutils literal notranslate"><span class="pre">trap_depth</span></code>, which must all be defined.</p>
+<p>(1) Plane standard deviation fluctuation given by:
+<span class="math notranslate nohighlight">\(\sigma^{xy} = \sqrt{\frac{T w²}{4 U_{trap}}}\)</span>, where T is
+temperature, w is the trap waist and <span class="math notranslate nohighlight">\(U_{trap}\)</span> is
+the trap depth.</p>
+<p>(2) Off plane standard deviation fluctuation given by:
+<span class="math notranslate nohighlight">\(\sigma^z = \frac{\pi}{\lambda}\sqrt{2} w \sigma^{xy}\)</span>, where
+<span class="math notranslate nohighlight">\(\lambda\)</span> is the trap wavelength with a constant value of 0.85 µm.</p>
+<p>Note: when combined with a DMM channel, register noise also
+requires <code class="docutils literal notranslate"><span class="pre">detuning_map_spot_waist</span></code> to be set.</p>
+</li>
+<li><p><strong>amplitude</strong>: Gaussian damping due to finite laser waist and
+laser amplitude fluctuations. Parametrized by <code class="docutils literal notranslate"><span class="pre">laser_waist</span></code>
+and <code class="docutils literal notranslate"><span class="pre">amp_sigma</span></code>.</p></li>
+<li><p><strong>detuning</strong>: Detuning fluctuations consisting of two
+components:</p>
+<p>(1) constant offset (zero-frequency), parameterized by
+<code class="docutils literal notranslate"><span class="pre">detuning_sigma</span></code></p>
+<p>(2) time-dependent high-frequency fluctuations, defined by the
+<strong>1-sided</strong> power spectral density (PSD) <code class="docutils literal notranslate"><span class="pre">detuning_hf_psd</span></code>
+over the relevant <code class="docutils literal notranslate"><span class="pre">detuning_hf_omegas</span></code> angular frequency support.
+<span class="math notranslate nohighlight">\(\delta_{hf}(t) = \sum_k \sqrt{2*\Delta \omega_k*\mathrm{PSD}_k}
+* \cos(\omega_k * t + \phi_k)\)</span>
+where <span class="math notranslate nohighlight">\(\phi_k \backsim U[0, 2\pi)\)</span> (uniform random phase),
+and <span class="math notranslate nohighlight">\(\Delta \omega_k = \omega_{k+1} - \omega_k\)</span>.</p>
+</li>
+<li><p><strong>SPAM</strong>: SPAM errors. Parametrized by <code class="docutils literal notranslate"><span class="pre">state_prep_error</span></code>,
+<code class="docutils literal notranslate"><span class="pre">p_false_pos</span></code> and <code class="docutils literal notranslate"><span class="pre">p_false_neg</span></code>.</p></li>
+<li><p><strong>dmm_sigma</strong>: Fluctuations in the detuning from the DMM channel,
+defined by <cite>dmm_sigma</cite>. From shot to shot, the local detuning on site k
+is given by
+<span class="math notranslate nohighlight">\(\epsilon_k \delta_{DMM}(1+\eta)\)</span> where <span class="math notranslate nohighlight">\(eta\)</span> is drawn from
+mathcal{N(0, sigma_{dmm})}`, while weights <span class="math notranslate nohighlight">\(\epsilon_k\)</span> are
+defined by a <cite>DetuningMap</cite>.</p></li>
+<li><p><strong>dmm_crosstalk</strong>: With a non-zero <cite>detuning_map_spot_waist</cite>, each
+detuning spot applies an effective detuning on atom <span class="math notranslate nohighlight">\(k\)</span>
+given by
+<span class="math notranslate nohighlight">\(\exp{-\frac{\Delta x_k^2}{2w^2}}\epsilon_k\delta_{DMM}\)</span>,
+where <span class="math notranslate nohighlight">\(\Delta x_k\)</span> is the distance between the detuning spot
+and atom <span class="math notranslate nohighlight">\(k\)</span>,
+and <span class="math notranslate nohighlight">\(w\)</span> is the gaussian waist (<cite>detuning_map_spot_waist</cite>) of each
+detuning spot, which are assumed to be the same.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>runs</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – When reconstructing the Hamiltonian from random noise is
+necessary, this determines how many times that happens. Not
+to be confused with the number of times the resulting
+bitstring distribution is sampled when calculating bitstring
+counts. <em>Deprecated since v1.7; this parameter is only used by
+deprecated backends. Please use ‘EmulationConfig.n_trajectories’
+instead.</em></p></li>
+<li><p><strong>samples_per_run</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">1</span></code>) – Number of samples per noisy Hamiltonian. Useful
+for cutting down on computing time, but unrealistic. <em>Deprecated
+since v1.6; this parameter is only used by deprecated backends.</em></p></li>
+<li><p><strong>state_prep_error</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – The state preparation error probability. Defaults
+to 0.</p></li>
+<li><p><strong>p_false_pos</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – Probability of measuring a false positive. Defaults to 0.</p></li>
+<li><p><strong>p_false_neg</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – Probability of measuring a false negative. Defaults to 0.</p></li>
+<li><p><strong>temperature</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – Temperature, set in µK, of the atoms in the array.
+Also sets the standard deviation of the speed of the atoms.
+Defaults to 0.</p></li>
+<li><p><strong>laser_waist</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Waist of the gaussian lasers, set in µm, for global
+pulses. Assumed to be the same for all global channels.</p></li>
+<li><p><strong>amp_sigma</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – Dictates the fluctuation in amplitude of a channel from
+run to run as a standard deviation of a normal distribution
+centered in 1. Assumed to be the same for all channels (though
+each channel has its own randomly sampled value in each run).</p></li>
+<li><p><strong>detuning_sigma</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – Dictates the fluctuation in detuning (in rad/µs)
+of a channel from shot to shot as a standard deviation of a normal
+distribution centered in 0. Assumed to be the same for all
+channels (though each channel has its own randomly sampled
+value in each run). This noise is additive. Defaults to 0.</p></li>
+<li><p><strong>trap_waist</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – The waist of each optical trap at the focal point (in µm).
+Defaults to 0.</p></li>
+<li><p><strong>trap_depth</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The potential energy well depth that confines the atoms
+(in µK). Defaults to None.</p></li>
+<li><p><strong>detuning_hf_psd</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">()</span></code>) – Power Spectral Density (PSD) is 1D tuple (in rad/µs)
+provided together with <cite>detuning_hf_omegas</cite> define high frequency
+noise contribution of time dependent detuning (in rad/µs).
+Must either be empty or a tuple with at least two values,
+matching the length of <cite>detuning_hf_omegas</cite>.
+Note that this is the 1-sided PSD, which differs from the
+2-sided PSD by a factor of 2! Default is ().</p></li>
+<li><p><strong>detuning_hf_omegas</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">()</span></code>) – 1D tuple (in rad/µs) of relevant angular frequency
+support for the PSD. Along with the PSD, it is required to define
+high frequency noise contribution of time dependent detuning
+(in rad/µs). Must either be empty or a tuple with at least two
+values, matching the length of <cite>detuning_hf_psd</cite>. Default is ().</p></li>
+<li><p><strong>relaxation_rate</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – The rate of relaxation from the Rydberg to the
+ground state (in 1/µs). Corresponds to 1/T1. Defaults to 0.</p></li>
+<li><p><strong>dephasing_rate</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – The rate of a dephasing occuring (in 1/µs) in a
+Rydberg state superpostion. Only used if a Rydberg state is
+involved. Corresponds to 1/T2*. Defaults to 0.</p></li>
+<li><p><strong>hyperfine_dephasing_rate</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – The rate of dephasing occuring (in 1/µs)
+between hyperfine ground states. Only used if the hyperfine
+state is involved. Defaults to 0.</p></li>
+<li><p><strong>depolarizing_rate</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – The rate (in 1/µs) at which a depolarizing
+error occurs. Defaults to 0.</p></li>
+<li><p><strong>eff_noise_rates</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">()</span></code>) – The rate associated to each effective noise operator
+(in 1/µs). Defaults to 0.</p></li>
+<li><p><strong>eff_noise_opers</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractArray</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">TypeAliasType</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">()</span></code>) – The operators for the effective noise model.
+Defaults to 0.</p></li>
+<li><p><strong>with_leakage</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether or not to include an error state in the
+computations (default to False).</p></li>
+<li><p><strong>disable_doppler</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether or not to disable the doppler noise,
+even if the temperature is defined. In this way, ‘register’ noise
+(which requires ‘temperature’) can be activated on its own (i.e
+without doppler).</p></li>
+<li><p><strong>dmm_sigma</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – Dictates the fluctuation in DMM detuning channel
+from shot to shot as a standard deviation of a normal distribution
+centered at 0. <cite>dmm_sigma</cite> is assumed to be the same for all
+registers (though each register has its own randomly sampled
+value in each run). This noise is multiplicative. Defaults to 0.</p></li>
+<li><p><strong>detuning_map_spot_waist</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Defines the waist of each spot
+in the DetuningMap (in µm). Required when ‘register’ noise
+is active (i.e. <code class="docutils literal notranslate"><span class="pre">temperature</span></code>, <code class="docutils literal notranslate"><span class="pre">trap_waist</span></code> and
+<code class="docutils literal notranslate"><span class="pre">trap_depth</span></code> are all set) and the sequence uses a DMM channel;
+otherwise thermal motion can displace an atom off its detuning
+spot entirely. Defaults to None.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="Inspecting-a-NoiseModel">
+<h2>Inspecting a NoiseModel<a class="headerlink" href="#Inspecting-a-NoiseModel" title="Link to this heading"></a></h2>
+<p>If you have a <code class="docutils literal notranslate"><span class="pre">NoiseModel</span></code>, you can know the types of noise that it implements by checking its property <code class="docutils literal notranslate"><span class="pre">noise_types</span></code>. This offers a qualitative description of the noises. If you want to know the quantitative impact of each noise on your <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, the <code class="docutils literal notranslate"><span class="pre">get_noise_table()</span></code> method will return you a mapping between noise quantities and their value, and the <code class="docutils literal notranslate"><span class="pre">summary()</span></code> method will provide you with a readable version of this table.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+
+<span class="c1"># Here is an example of a NoiseModel</span>
+<span class="n">noise_model</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">NoiseModel</span><span class="p">(</span>
+    <span class="n">state_prep_error</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+    <span class="n">temperature</span><span class="o">=</span><span class="mi">11</span><span class="p">,</span>
+    <span class="n">trap_waist</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">trap_depth</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">noise_model</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Noise summary:
+- Register Position Fluctuations**:
+  - XY-Plane Position Fluctuations: 0.000165831 µm
+  - Z-Axis Position Fluctuations: 0.000866787 µm
+- State Preparation Error Probability**: 0.01
+- Detuning fluctuations**:
+  - Shot-to-Shot Detuning fluctuations:
+       - Doppler fluctuations: 0.281495 rad/µs
+**: Emulation will generate EmulationConfig.n_trajectories trajectories with different register, initial state, detuning
+</pre></div></div>
+</div>
+</section>
+<section id="How-to-include-noise-in-your-simulations">
+<h2>How to include noise in your simulations<a class="headerlink" href="#How-to-include-noise-in-your-simulations" title="Link to this heading"></a></h2>
+<p>When designing your Pulser <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, taking into account the effects of noise in your simulations is important so that the outcome of the experiment on the QPU is close to what you expect. Here is a step-by-step guide on how to run noisy simulations using Pulser. It extends the <a class="reference internal" href="tutorials/backends.html"><span class="doc">step-by-step guide</span></a> on executing a Pulser <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> on Pulser <code class="docutils literal notranslate"><span class="pre">Backends</span></code>.</p>
+<section id="1.-Choosing-the-type-of-backend">
+<h3>1. Choosing the type of backend<a class="headerlink" href="#1.-Choosing-the-type-of-backend" title="Link to this heading"></a></h3>
+<p>Simulations are performed with an <strong>Emulator Backend</strong>, which can be <strong>local or remote</strong>.</p>
+<section id="Preparation-for-noisy-simulations:">
+<h4>Preparation for noisy simulations:<a class="headerlink" href="#Preparation-for-noisy-simulations:" title="Link to this heading"></a></h4>
+<p>Noise parameters are specific to each QPU. To access a particular QPU’s specs you’ll need a <strong>remote connection</strong> (like <a class="reference external" href="https://pasqal-io.github.io/pasqal-cloud/">PasqalCloudConnection</a>). With it, you can obtain the list of available QPUs through <code class="docutils literal notranslate"><span class="pre">connection.fetch_available_devices()</span></code>. Through this method, you can get the <code class="docutils literal notranslate"><span class="pre">Device</span></code> associated with the QPU. The <a class="reference internal" href="hardware.html"><span class="doc">Device</span></a> optionally stores a <code class="docutils literal notranslate"><span class="pre">NoiseModel</span></code> in its <code class="docutils literal notranslate"><span class="pre">noise_model</span></code> attribute. When present, you can take into
+account the effect of its parameters during the design of your sequence. For this, have a look at its <code class="docutils literal notranslate"><span class="pre">summary()</span></code> or <code class="docutils literal notranslate"><span class="pre">get_noise_table()</span></code> methods.</p>
+</section>
+</section>
+<section id="2.-Creating-the-pulse-Sequence">
+<h3>2. Creating the pulse Sequence<a class="headerlink" href="#2.-Creating-the-pulse-Sequence" title="Link to this heading"></a></h3>
+<p>The next step is to create the sequence that we want to execute. If you want to take into account all the limitations of the QPU, it is best to use the <code class="docutils literal notranslate"><span class="pre">Device</span></code> associated with the QPU when writing your <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>.</p>
+</section>
+<section id="3.-Starting-the-Backend">
+<h3>3. Starting the Backend<a class="headerlink" href="#3.-Starting-the-Backend" title="Link to this heading"></a></h3>
+<p>An Emulator Backend takes as input:</p>
+<ul class="simple">
+<li><p>the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> to simulate, as all the backends.</p></li>
+<li><p>a <code class="docutils literal notranslate"><span class="pre">RemoteConnection</span></code> if the emulation backend is a remote backend.</p></li>
+<li><p>an <code class="docutils literal notranslate"><span class="pre">EmulatorConfig</span></code>, that sets the parameters of the emulation. This field is optional, emulator backends have a default config.</p></li>
+<li><p>a boolean value for <code class="docutils literal notranslate"><span class="pre">mimic_qpu</span></code>, telling whether or not the same tests as when executing a Sequence on a <code class="docutils literal notranslate"><span class="pre">QPUBackend</span></code> should be enforced.</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">EmulatorConfig</span></code> contains two parameters that configure the noise in the simulation:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">prefer_device_noise_model</span></code>: Whether or not to use the noise model of the device of the Sequence. By default, it is False. If you defined your Sequence using the Device of a QPU, set this parameter to True to automatically use the noise model of the chosen QPU.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">noise_model</span></code>: A specific <code class="docutils literal notranslate"><span class="pre">NoiseModel</span></code> defining the noise to include in the simulation, in case <code class="docutils literal notranslate"><span class="pre">prefer_device_noise_model</span></code> is False or the sequence’s device does not define a noise model. By default, this <code class="docutils literal notranslate"><span class="pre">NoiseModel</span></code> does not include any noise. If you want to use a different <code class="docutils literal notranslate"><span class="pre">NoiseModel</span></code> for your simulation than the <code class="docutils literal notranslate"><span class="pre">NoiseModel</span></code> of your Sequence’s Device, you can provide it here. Possible usecases:</p>
+<ul>
+<li><p>You have used a <a class="reference internal" href="tutorials/virtual_devices.html"><span class="doc">VirtualDevice</span></a> for your Sequence, and now want to include noise.</p></li>
+<li><p>You would like to see how the noise of another QPU would impact your Sequence.</p></li>
+<li><p>You would like to see the influence of a certain noise on the execution of your Sequence. NoiseModels are python <code class="docutils literal notranslate"><span class="pre">dataclasses</span></code>, you can modify them with <code class="docutils literal notranslate"><span class="pre">dataclasses.replace</span></code>. For instance, to delete a certain noise parameter “attr”, you can do <code class="docutils literal notranslate"><span class="pre">dataclasses.replace(noise_model,</span> <span class="pre">attr=None)</span></code>.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="4.-Execution">
+<h3>4. Execution<a class="headerlink" href="#4.-Execution" title="Link to this heading"></a></h3>
+<p>The execution is always done via the <code class="docutils literal notranslate"><span class="pre">run</span></code> method. It returns a <code class="docutils literal notranslate"><span class="pre">Results</span></code> object that stores the state of the system at each evaluation time. In classical simulation, and under certain kinds of noise, this state is a state-vector.</p>
+<p>However, some noises are stochastic: states are stored as density matrices, computed by averaging over the outcomes of multiple simulations. The number of simulations is determined by <code class="docutils literal notranslate"><span class="pre">EmulationConfig.n_trajectories</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Notes</strong>:</p>
+<ul class="simple">
+<li><p>Stochastic noises can be identified by a <code class="docutils literal notranslate"><span class="pre">**</span></code> in <code class="docutils literal notranslate"><span class="pre">NoiseModel.summary()</span></code> (see example <a class="reference internal" href="#Inspecting-a-NoiseModel"><span class="std std-ref">above</span></a>).</p></li>
+<li><p>Defining the number of simulations with <code class="docutils literal notranslate"><span class="pre">NoiseModel.runs</span></code> is deprecated since pulser v1.7.</p></li>
+</ul>
+</div>
+</section>
+<section id="5.-Retrieving-the-Results">
+<h3>5. Retrieving the Results<a class="headerlink" href="#5.-Retrieving-the-Results" title="Link to this heading"></a></h3>
+<p>The returned results are <code class="docutils literal notranslate"><span class="pre">Results</span></code> objects that you can use to get the evolution of some <code class="docutils literal notranslate"><span class="pre">Observable</span></code> at each evaluation times (just like <a class="reference internal" href="tutorials/backends.html#3.-Retrieving-the-Results"><span class="std std-ref">in noiseless simulation</span></a>).</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="tutorials/serialization.html" class="btn btn-neutral float-left" title="JSON Serialization" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tutorials/dmm.html" class="btn btn-neutral float-right" title="Local Adressability with DMM" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

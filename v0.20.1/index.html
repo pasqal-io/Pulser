@@ -1,0 +1,360 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pulser &mdash; Pulser 0.20.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/max_width.css" />
+
+  
+      <script src="_static/jquery.js"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+      <script src="_static/doctools.js"></script>
+      <script src="_static/sphinx_highlight.js"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <script src="_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v0.20.1" /><meta name="readthedocs-resolver-filename" content="/" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            Pulser
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installation and First Steps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="intro_rydberg_blockade.html">Quickstart: The Rydberg Blockade</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/creating.html">Pulse Sequence Creation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/simulating.html">Simulation of Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamental Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="review.html">Quantum Computing with Neutral Atoms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Conventions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Backend Execution</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/backends.html">Backend Execution of Pulser Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Classical Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Quantum Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/afm_prep.html">Preparing a state with antiferromagnetic order in the Ising model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/xy_spin_chain.html">XY Spin Chain</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/mw_engineering.html">Simulation of XYZ spin models using Floquet engineering in XY mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/shadow_est.html">Efficient estimation techniques for Variational Quantum Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/1D_crystals.html">Building 1D Rydberg Crystals</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/cz_gate.html">Control-Z Gate Sequence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/pulser.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Pulser</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pulser">
+<h1>Pulser<a class="headerlink" href="#pulser" title="Permalink to this heading"></a></h1>
+<p><strong>Pulser</strong> is an open-source Python software package. It provides easy-to-use
+libraries for designing and simulating pulse sequences that act on
+programmable arrays of neutral atoms, a promising platform for quantum computation
+and simulation.</p>
+<p><strong>Online documentation</strong>: <a class="reference external" href="https://pulser.readthedocs.io">https://pulser.readthedocs.io</a></p>
+<p><strong>White paper</strong>: <a class="reference external" href="https://quantum-journal.org/papers/q-2022-01-24-629/">Quantum 6, 629 (2022)</a></p>
+<p><strong>Source code repository</strong> (go <a class="reference external" href="https://pulser.readthedocs.io/en/latest/">here</a>
+for the latest docs): <a class="reference external" href="https://github.com/pasqal-io/Pulser">https://github.com/pasqal-io/Pulser</a></p>
+<p><strong>License</strong>: Apache 2.0 – see <a class="reference external" href="https://github.com/pasqal-io/Pulser/blob/master/LICENSE">LICENSE</a>
+for details</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading"></a></h2>
+<p>Pulser is designed to let users create experiments that are tailored to a
+specific device. In this way, you can have maximal flexibility and control over
+the behaviour of relevant physical parameters, within the bounds set by the chosen device.</p>
+<figure class="align-center" id="id1">
+<img alt="pulser_animation" src="_images/pulser_animation.gif" />
+<figcaption>
+<p><span class="caption-text">Execution of a pulse sequence designed for a specific device.</span><a class="headerlink" href="#id1" title="Permalink to this image"></a></p>
+</figcaption>
+</figure>
+<p>Consequently, Pulser breaks free from the paradigm of digital quantum computing
+and also allows the creation of <strong>analog</strong> quantum simulations, outside of the
+scope of traditional quantum circuit approaches. Whatever the type of experiment
+or paradigm, if it can be done on the device, it can be done with Pulser.</p>
+<p>Additionally, Pulser features built-in tools for classical simulation to aid in
+the development and testing of new pulse sequences.</p>
+<p>To get started with Pulser, follow the instructions in <a class="reference internal" href="installation.html"><span class="doc">Installation</span></a> and
+check out the <a class="reference internal" href="intro_rydberg_blockade.html"><span class="doc">Quickstart: The Rydberg Blockade</span></a> page. For a more in-depth
+introduction, consult the tutorials on <a class="reference internal" href="tutorials/creating.html"><span class="doc">Pulse Sequence Creation</span></a> and
+<a class="reference internal" href="tutorials/simulating.html"><span class="doc">Simulation of Sequences</span></a>.
+To better understand neutral atom devices and how they serve as quantum
+computers and simulators, check the pages in <a class="reference internal" href="review.html"><span class="doc">Quantum Computing with Neutral Atoms</span></a>.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Installation and First Steps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#development-version">Development version</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="intro_rydberg_blockade.html">Quickstart: The Rydberg Blockade</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="intro_rydberg_blockade.html#Pulser's-main-features">Pulser’s main features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro_rydberg_blockade.html#Probing-the-Rydberg-Blockade-Mechanism">Probing the Rydberg Blockade Mechanism</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/creating.html">Pulse Sequence Creation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/creating.html#1.-Creating-the-Register">1. Creating the <code class="docutils literal notranslate"><span class="pre">Register</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/creating.html#2.-Initializing-the-Sequence">2. Initializing the Sequence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/creating.html#3.-Declaring-the-channels-that-will-be-used">3. Declaring the channels that will be used</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/creating.html#4.-Composing-the-Sequence">4. Composing the Sequence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/creating.html#5.-Measurement">5. Measurement</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/simulating.html">Simulation of Sequences</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/simulating.html#1.-Running-a-Simulation">1. Running a Simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/simulating.html#2.-Using-the-SimulationResults-object">2. Using the <code class="docutils literal notranslate"><span class="pre">SimulationResults</span></code> object</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Fundamental Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="review.html">Quantum Computing with Neutral Atoms</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="review.html#programmable-arrays-of-rydberg-atoms">Programmable arrays of Rydberg atoms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="review.html#implementation-and-theoretical-details">Implementation and Theoretical Details</a></li>
+<li class="toctree-l2"><a class="reference internal" href="review.html#digital-and-analog-approaches">Digital and Analog Approaches</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Conventions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="conventions.html#states-and-bases">States and Bases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="conventions.html#state-preparation-and-measurement">State Preparation and Measurement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="conventions.html#hamiltonians">Hamiltonians</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Backend Execution</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/backends.html">Backend Execution of Pulser Sequences</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/backends.html#1.-Choosing-the-type-of-backend">1. Choosing the type of backend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/backends.html#2.-Creating-the-Pulse-Sequence">2. Creating the Pulse Sequence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/backends.html#3.-Starting-the-backend">3. Starting the backend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/backends.html#4.-Executing-the-Sequence">4. Executing the Sequence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/backends.html#5.-Retrieving-the-Results">5. Retrieving the Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/backends.html#6.-Alternative-user-interfaces-for-using-remote-backends">6. Alternative user interfaces for using remote backends</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Classical Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/noisy_sim.html">Simulations with Noise and Errors</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/noisy_sim.html#Introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/noisy_sim.html#Single-atom-noisy-simulations">Single atom noisy simulations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/spam.html">SPAM errors</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/spam.html#Introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/spam.html#Single-atom-noisy-simulations">Single atom noisy simulations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/spam.html#SPAM-effects">SPAM effects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/spam.html#Changing-\eta">Changing <span class="math notranslate nohighlight">\(\eta\)</span></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/laser_noise.html">Laser noise</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/laser_noise.html#Introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/laser_noise.html#Single-atom-noisy-simulations">Single atom noisy simulations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/laser_noise.html#Multiple-Atoms">Multiple Atoms</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/effective_noise.html">Effective noise channels</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/effective_noise.html#Introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/effective_noise.html#Single-atom-noisy-simulations">Single atom noisy simulations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/effective_noise.html#Two-atom-noisy-simulations">Two-atom noisy simulations</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Quantum Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/afm_prep.html">Preparing a state with antiferromagnetic order in the Ising model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/xy_spin_chain.html">XY Spin Chain</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/mw_engineering.html">Simulation of XYZ spin models using Floquet engineering in XY mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/shadow_est.html">Efficient estimation techniques for Variational Quantum Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/1D_crystals.html">Building 1D Rydberg Crystals</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Other Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/cz_gate.html">Control-Z Gate Sequence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/pulser.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="apidoc/core.html">Core Features</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/core.html#module-pulser.sequence.sequence">Sequence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/core.html#register">Register</a></li>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/core.html#detuningmap">DetuningMap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/core.html#module-pulser.pulse">Pulse</a></li>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/core.html#module-pulser.waveforms">Waveforms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/core.html#devices">Devices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/core.html#module-pulser.noise_model">Noise Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/core.html#channels">Channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/core.html#module-pulser.sampler.sampler">Sampler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/core.html#module-pulser.result">Result</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="apidoc/simulation.html">Classical Simulation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/simulation.html#qutipemulator">QutipEmulator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/simulation.html#simconfig">SimConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/simulation.html#simulation-results">Simulation Results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="apidoc/backend.html">Backend Interfaces</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/backend.html#qpu">QPU</a></li>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/backend.html#emulators">Emulators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="apidoc/backend.html#remote-backend-connection">Remote backend connection</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading"></a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

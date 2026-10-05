@@ -1,0 +1,339 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quantum Computing with Neutral Atoms &mdash; Pulser 0.20.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/max_width.css" />
+
+  
+      <script src="_static/jquery.js"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+      <script src="_static/doctools.js"></script>
+      <script src="_static/sphinx_highlight.js"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <script src="_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Conventions" href="conventions.html" />
+    <link rel="prev" title="Simulation of Sequences" href="tutorials/simulating.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v0.20.1" /><meta name="readthedocs-resolver-filename" content="/review.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Pulser
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installation and First Steps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="intro_rydberg_blockade.html">Quickstart: The Rydberg Blockade</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/creating.html">Pulse Sequence Creation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/simulating.html">Simulation of Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamental Concepts</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quantum Computing with Neutral Atoms</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#programmable-arrays-of-rydberg-atoms">Programmable arrays of Rydberg atoms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementation-and-theoretical-details">Implementation and Theoretical Details</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#hardware-characteristics">Hardware Characteristics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#driving-two-level-transitions">Driving two-level transitions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#rydberg-states">Rydberg states</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#digital-and-analog-approaches">Digital and Analog Approaches</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#analog-approach">Analog Approach</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#digital-approach">Digital Approach</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Conventions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Backend Execution</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/backends.html">Backend Execution of Pulser Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Classical Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Quantum Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/afm_prep.html">Preparing a state with antiferromagnetic order in the Ising model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/xy_spin_chain.html">XY Spin Chain</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/mw_engineering.html">Simulation of XYZ spin models using Floquet engineering in XY mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/shadow_est.html">Efficient estimation techniques for Variational Quantum Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/1D_crystals.html">Building 1D Rydberg Crystals</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/cz_gate.html">Control-Z Gate Sequence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/pulser.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Quantum Computing with Neutral Atoms</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/review.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quantum-computing-with-neutral-atoms">
+<h1>Quantum Computing with Neutral Atoms<a class="headerlink" href="#quantum-computing-with-neutral-atoms" title="Permalink to this heading"></a></h1>
+<section id="programmable-arrays-of-rydberg-atoms">
+<h2>Programmable arrays of Rydberg atoms<a class="headerlink" href="#programmable-arrays-of-rydberg-atoms" title="Permalink to this heading"></a></h2>
+<p>With the rise in our capacity to control and explore synthetic quantum
+systems, the opportunity to use them to address questions of scientific and
+industrial interest has attracted the efforts of a large community of
+researchers. Today, the control of single atoms as well as the tuning of their
+interactions has been achieved to a high degree in several laboratories.
+One of the leading architectures for constructing these <em>programmable</em> devices
+consists in arranging ensembles of individual (trapped) atoms separated by a
+few micrometers. In order to generate interactions between them, they are
+excited by a resonant laser field to a <strong>Rydberg level</strong>, which has a large
+principal quantum number. At the Rydberg state, the atoms present long
+lifetimes and large interaction strengths and are briefly called
+<strong>Rydberg atoms</strong>.</p>
+<p>This page gives brief insight into the concepts behind <strong>Pulser</strong> and
+the use of neutral-atom devices for quantum computation and simulation. For
+more details, see <a class="reference external" href="https://quantum-journal.org/papers/q-2020-09-21-327/">Quantum 4, 327 (2020)</a>
+for a comprehensive overview of quantum computing with neutral atoms,
+<a class="reference external" href="https://www.nature.com/articles/s41567-019-0733-z">Nature Physics volume 16, pages132–142(2020)</a>
+for a review that’s more focused on their use as a quantum simulation, or even
+<a class="reference external" href="https://iopscience.iop.org/article/10.1088/0953-4075/49/20/202001">M Saffman 2016 J. Phys. B: At. Mol. Opt. Phys. 49 202001</a>.</p>
+</section>
+<section id="implementation-and-theoretical-details">
+<h2>Implementation and Theoretical Details<a class="headerlink" href="#implementation-and-theoretical-details" title="Permalink to this heading"></a></h2>
+<section id="hardware-characteristics">
+<h3>Hardware Characteristics<a class="headerlink" href="#hardware-characteristics" title="Permalink to this heading"></a></h3>
+<p>In a nutshell, neutral atom devices feature two main components:</p>
+<ul class="simple">
+<li><p>The <strong>Register</strong>, a group of trapped atoms in a defined (but reconfigurable)
+configuration. Each atom holds a specific quantum state encoded in specific
+electronic levels. Usually these are two-level systems and we refer to them
+as <em>qubits</em>.</p></li>
+<li><p>The <strong>Channels</strong>, responsible for manipulating the state of the atoms by
+addressing specific electronic transitions. These consist most often, but not
+exclusively, of lasers.</p></li>
+</ul>
+<p>Each <strong>Device</strong> will impose specific restrictions on these components – they define things
+like how many atoms a Register can hold and in what configurations they can be
+arranged in; what channels are available and what values they can reach, among others.
+For this reason, a <strong>Sequence</strong> is closely dependent on the <strong>Device</strong> it
+is meant to run on and should be created with it in mind from the start.</p>
+<p>This <strong>Sequence</strong> is the central object in Pulser and it consists essentially
+of a series of <strong>Pulses</strong> (and other instructions) that are sequentially
+allocated to channels.</p>
+<p>Each <strong>Pulse</strong> describes, over a finite duration, the modulation of a
+channel’s output <em>amplitude</em>, <em>detuning</em> and <em>phase</em>. While the phase is constant
+throughout a pulse, the amplitude and detuning are described by <strong>Waveforms</strong>,
+which define these quantities values throughout the pulse.</p>
+<figure class="align-center" id="id1">
+<img alt="pulser_animation" src="_images/pulser_animation.gif" />
+<figcaption>
+<p><span class="caption-text">A pulse sequence and its execution on a given device.</span><a class="headerlink" href="#id1" title="Permalink to this image"></a></p>
+</figcaption>
+</figure>
+<p>In the animation above, we find an example of a Sequence composed of three
+channels, each containing different pulses played at specific times. Upon
+execution, the channels emit this coordinated stream of pulses, which manipulate
+the state of the atoms in the register.</p>
+<p>Now, what is left to know is <em>how</em> these channels manipulate the state the atoms
+so that we can program them to do meaningful things. To do this, we have to dive
+into the physics and try to understand the underlying <strong>Hamiltonian</strong> of our
+systems.</p>
+</section>
+<section id="driving-two-level-transitions">
+<h3>Driving two-level transitions<a class="headerlink" href="#driving-two-level-transitions" title="Permalink to this heading"></a></h3>
+<p>Each channel is tuned such that each of its pulses coherently drives a
+specific electronic transition between two energy levels of an atom.
+For instance, when addressing the <code class="docutils literal notranslate"><span class="pre">ground-rydberg</span></code> transition, we have that
+our targeted levels are the ground state, <span class="math notranslate nohighlight">\(|g\rangle\)</span>, and the Rydberg
+state, <span class="math notranslate nohighlight">\(|r\rangle\)</span>. These two states can be thought of as the two levels
+of a quantum spin.</p>
+<a class="reference internal image-reference" href="_images/ground_rydberg.png"><img alt="The ground and Rydberg levels become the states of a spin system." class="align-center" src="_images/ground_rydberg.png" style="width: 400px;" /></a>
+<p>In this system, a pulse acting on an atom <span class="math notranslate nohighlight">\(i\)</span>, with <strong>Rabi frequency</strong>
+<span class="math notranslate nohighlight">\(\Omega(t)\)</span>, <strong>detuning</strong> <span class="math notranslate nohighlight">\(\delta(t)\)</span> and a fixed phase <span class="math notranslate nohighlight">\(\phi\)</span>,
+will have the Hamiltonian terms:</p>
+<div class="math notranslate nohighlight">
+\[\frac{\hbar\Omega(t)}{2} (\cos(\phi)\sigma_i^x - \sin(\phi)\sigma_i^y) - \frac{\hbar}{2} \delta(t) \sigma_i^z,\]</div>
+<p>where <span class="math notranslate nohighlight">\(\sigma^\alpha\)</span> for <span class="math notranslate nohighlight">\(\alpha = x,y,z\)</span> are the Pauli matrices.
+Alternatively, one can rewrite this term as:</p>
+<div class="math notranslate nohighlight">
+\[\frac{\hbar}{2} \mathbf{\Omega}(t)\cdot \boldsymbol{\sigma}_i,\]</div>
+<p>where <span class="math notranslate nohighlight">\(\mathbf{\Omega}(t) = (\Omega(t) \cos(\phi),-\Omega(t) \sin(\phi),-\delta(t))^T\)</span>
+and <span class="math notranslate nohighlight">\(\boldsymbol{\sigma}\)</span> is the vector of Pauli matrices. In the Bloch sphere representation,
+for each instant <span class="math notranslate nohighlight">\(t\)</span>, this Hamiltonian describes a rotation around the axis
+<span class="math notranslate nohighlight">\(\mathbf{\Omega}\)</span> with angular velocity <span class="math notranslate nohighlight">\(\Omega_{eff} = |\mathbf{\Omega}| = \sqrt{\Omega^2 + \delta^2}\)</span>,
+as illustrated in the figure below.</p>
+<a class="reference internal image-reference" href="_images/bloch_rotation.png"><img alt="Representation of the dynamics induced by a pulse as a rotation in the Bloch sphere." class="align-center" src="_images/bloch_rotation.png" style="width: 400px;" /></a>
+</section>
+<section id="rydberg-states">
+<h3>Rydberg states<a class="headerlink" href="#rydberg-states" title="Permalink to this heading"></a></h3>
+<p>In neutral atom devices, atoms are driven to Rydberg states as a way to make
+them interact over large distances. The interaction between two atoms at distance
+<span class="math notranslate nohighlight">\(R\)</span> and at the same Rydberg level is described by the <strong>Van der Waals force</strong>,
+which scales as <span class="math notranslate nohighlight">\(R^{-6}\)</span>. This interaction can be exploited to create fast and
+robust quantum gates, using the so-called <strong>Rydberg Blockade Effect</strong> between
+them. This effect consists on the shift in energy between the doubly excited
+Rydberg state of nearby atoms and their ground state, making it non-resonant
+with an applied laser field coupling the ground and Rydberg levels.</p>
+<a class="reference internal image-reference" href="_images/ryd_block.png"><img alt="There is no simultaneous transition to the doubly excited state inside the blockade radius." class="align-center" src="_images/ryd_block.png" style="width: 400px;" /></a>
+<p>Because of the Rydberg blockade, an atom cannot be excited to the Rydberg level
+if a nearby atom is already in such state. To represent this interaction as
+operators in a Hamiltonian, we write them as a penalty for the state in which
+both atoms are excited:</p>
+<div class="math notranslate nohighlight">
+\[U_{ij} n_i n_j,\]</div>
+<p>where <span class="math notranslate nohighlight">\(n = (1+\sigma^z)/2\)</span> is the projector on the Rydberg state,
+<span class="math notranslate nohighlight">\(U_{ij} \propto R_{ij}^{-6}\)</span> and <span class="math notranslate nohighlight">\(R_{ij}\)</span> is the distance
+between the atoms <span class="math notranslate nohighlight">\(i\)</span> and <span class="math notranslate nohighlight">\(j\)</span>. The proportionality constant is set
+by the chosen Rydberg level. If the atoms are excited simultaneously, only the
+entangled state <span class="math notranslate nohighlight">\((|gr\rangle + |rg\rangle)/\sqrt 2\)</span> is obtained.</p>
+<p>An entire array of interacting atoms, acted on by the same pulse, can be
+represented as an Ising-like Hamiltonian:</p>
+<div class="math notranslate nohighlight">
+\[H = \frac{\hbar}{2} \sum_i  \Omega_i(t) \sigma_i^x - \frac{\hbar}{2} \sum_i
+    \delta(t) \sigma_i^z + \sum_{i&lt;j} U_{ij} n_i n_j\]</div>
+</section>
+</section>
+<section id="digital-and-analog-approaches">
+<h2>Digital and Analog Approaches<a class="headerlink" href="#digital-and-analog-approaches" title="Permalink to this heading"></a></h2>
+<section id="analog-approach">
+<h3>Analog Approach<a class="headerlink" href="#analog-approach" title="Permalink to this heading"></a></h3>
+<p>In the analog simulation approach, the laser field acts on the entire array
+of atoms. This creates a <strong>global</strong> Hamiltonian of the form</p>
+<div class="math notranslate nohighlight">
+\[H = \sum_i \left( \frac{\hbar\Omega(t)}{2} \sigma_i^x - \frac{\hbar\delta(t)}{2}
+     \sigma_i^z + \sum_{j&lt;i} U_{ij} n_i n_j \right)\]</div>
+<p>Through the continuous manipulation of <span class="math notranslate nohighlight">\(\Omega(t)\)</span> and <span class="math notranslate nohighlight">\(\delta(t)\)</span>,
+one has a very high degree of control over the system’s dynamics and properties.
+In this way, the analog approach enables the quantum simulation of many-body
+quantum systems, but also provides novel ways of solving combinatorial problems
+that can be mapped onto the hamiltonian above.</p>
+</section>
+<section id="digital-approach">
+<h3>Digital Approach<a class="headerlink" href="#digital-approach" title="Permalink to this heading"></a></h3>
+<p>In opposition to the analog approach stands the digital approach, in which
+a system’s state evolves through a series of discrete manipulations of its qubits’
+states, also known as quantum gates. This is the underlying approach in quantum
+circuits and it can be replicated on neutral-atom devices at the pulse-level. To
+this extent, the qubit states are encoded in two hyperfine ground states of the
+system, named <cite>ground</cite>, <span class="math notranslate nohighlight">\(|g\rangle\)</span>, and <cite>hyperfine</cite>, <span class="math notranslate nohighlight">\(|h\rangle\)</span>. In
+Pulser, these states form the <code class="docutils literal notranslate"><span class="pre">digital</span></code> basis, which is addressed by <code class="docutils literal notranslate"><span class="pre">Raman</span></code>
+channels. In the digital approach, these channels are usually <cite>Local</cite>, meaning they
+target individual qubits instead of the entire system.</p>
+<p>Since the Rydberg blockade effect is not present when atoms are in <span class="math notranslate nohighlight">\(|g\rangle\)</span> or <span class="math notranslate nohighlight">\(|h\rangle\)</span>,
+the dynamics of each qubit’s state are just determined by the driving pulses,
+already illustrated above as rotations on the Bloch sphere. By tuning the parameters of a pulse,
+we can achieve any arbitrary single-qubit unitary, as is shown in <a class="reference internal" href="tutorials/phase_shifts_vz_gates.html"><span class="doc">Phase Shifts and Virtual Z gates</span></a>.</p>
+<a class="reference internal image-reference" href="_images/digital.png"><img alt="The three levels involved in the digital-level approach." class="align-center" src="_images/digital.png" style="width: 400px;" /></a>
+<p>However, without the interaction introduced by the Rydberg blockade effect, it is not
+possible to do multi-qubit gates. Therefore, the Rydberg level is used
+ancillarily in order to generate a conditional logic on the atoms by attempting
+an excitation which will be blocked (or not) depending on the distance and
+current levels of the involved atoms. This is the key behind the <cite>CZ gate</cite>, whose
+implementation is detailed in <a class="reference internal" href="tutorials/cz_gate.html"><span class="doc">Control-Z Gate Sequence</span></a>.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="tutorials/simulating.html" class="btn btn-neutral float-left" title="Simulation of Sequences" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="conventions.html" class="btn btn-neutral float-right" title="Conventions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

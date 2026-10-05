@@ -1,0 +1,492 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Backend Interfaces &mdash; Pulser 0.20.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/max_width.css" />
+
+  
+      <script src="../_static/jquery.js"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+      <script src="../_static/doctools.js"></script>
+      <script src="../_static/sphinx_highlight.js"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Classical Simulation" href="simulation.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v0.20.1" /><meta name="readthedocs-resolver-filename" content="/apidoc/backend.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installation and First Steps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../intro_rydberg_blockade.html">Quickstart: The Rydberg Blockade</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/creating.html">Pulse Sequence Creation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/simulating.html">Simulation of Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamental Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../review.html">Quantum Computing with Neutral Atoms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Backend Execution</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/backends.html">Backend Execution of Pulser Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Classical Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Quantum Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/afm_prep.html">Preparing a state with antiferromagnetic order in the Ising model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/xy_spin_chain.html">XY Spin Chain</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/mw_engineering.html">Simulation of XYZ spin models using Floquet engineering in XY mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/shadow_est.html">Efficient estimation techniques for Variational Quantum Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/1D_crystals.html">Building 1D Rydberg Crystals</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/cz_gate.html">Control-Z Gate Sequence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="pulser.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="core.html">Core Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simulation.html">Classical Simulation</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Backend Interfaces</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#qpu">QPU</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pulser.QPUBackend"><code class="docutils literal notranslate"><span class="pre">QPUBackend</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#emulators">Emulators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#local">Local</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#remote">Remote</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#remote-backend-connection">Remote backend connection</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pulser_pasqal.PasqalCloud"><code class="docutils literal notranslate"><span class="pre">PasqalCloud</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="pulser.html">API Reference</a></li>
+      <li class="breadcrumb-item active">Backend Interfaces</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/apidoc/backend.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="backend-interfaces">
+<h1>Backend Interfaces<a class="headerlink" href="#backend-interfaces" title="Permalink to this heading"></a></h1>
+<section id="qpu">
+<h2>QPU<a class="headerlink" href="#qpu" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser.QPUBackend">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser.</span></span><span class="sig-name descname"><span class="pre">QPUBackend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connection</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.QPUBackend" title="Permalink to this definition"></a></dt>
+<dd><p>Backend for sequence execution on a QPU.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sequence</strong> (<a class="reference internal" href="core.html#pulser.sequence.sequence.Sequence" title="pulser.sequence.sequence.Sequence"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>) – A Sequence or a list of Sequences to execute on a
+backend accessible via a remote connection.</p></li>
+<li><p><strong>connection</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">RemoteConnection</span></code>) – The remote connection through which the jobs
+are executed.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.QPUBackend.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wait</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.QPUBackend.run" title="Permalink to this definition"></a></dt>
+<dd><p>Runs the sequence on the remote QPU and returns the result.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>job_params</strong> (list[JobParams] | None, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – A list of parameters for each job to execute. Each
+mapping must contain a defined ‘runs’ field specifying
+the number of times to run the same sequence. If the sequence
+is parametrized, the values for all the variables necessary
+to build the sequence must be given in it’s own mapping, for
+each job, under the ‘variables’ field.</p></li>
+<li><p><strong>wait</strong> (bool, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether to wait until the results of the jobs become
+available.  If set to False, the call is non-blocking and the
+obtained results’ status can be checked using their <cite>status</cite>
+property.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>RemoteResults</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The results, which can be accessed once all sequences have been
+successfully executed.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.QPUBackend.validate_job_params">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">validate_job_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job_params</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_runs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.QPUBackend.validate_job_params" title="Permalink to this definition"></a></dt>
+<dd><p>Validates a list of job parameters prior to submission.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="emulators">
+<h2>Emulators<a class="headerlink" href="#emulators" title="Permalink to this heading"></a></h2>
+<section id="configuration">
+<h3>Configuration<a class="headerlink" href="#configuration" title="Permalink to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser.EmulatorConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser.</span></span><span class="sig-name descname"><span class="pre">EmulatorConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backend_options=&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_rate=1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluation_times='Full'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_state='all-ground'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">with_modulation=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefer_device_noise_model=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_model=&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.EmulatorConfig" title="Permalink to this definition"></a></dt>
+<dd><p>The configuration for emulator backends.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pulser.EmulatorConfig.backend_options">
+<span class="sig-name descname"><span class="pre">backend_options</span></span><a class="headerlink" href="#pulser.EmulatorConfig.backend_options" title="Permalink to this definition"></a></dt>
+<dd><p>A dictionary of backend-specific options.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pulser.EmulatorConfig.sampling_rate">
+<span class="sig-name descname"><span class="pre">sampling_rate</span></span><a class="headerlink" href="#pulser.EmulatorConfig.sampling_rate" title="Permalink to this definition"></a></dt>
+<dd><p>The fraction of samples to extract from the pulse
+sequence for emulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pulser.EmulatorConfig.evaluation_times">
+<span class="sig-name descname"><span class="pre">evaluation_times</span></span><a class="headerlink" href="#pulser.EmulatorConfig.evaluation_times" title="Permalink to this definition"></a></dt>
+<dd><p>The times at which results are returned. Choose
+between:</p>
+<ul class="simple">
+<li><p>“Full”: The times are set to be the ones used to define the
+Hamiltonian to the solver.</p></li>
+<li><p>“Minimal”: The times are set to only include initial and final
+times.</p></li>
+<li><p>“Final”: Returns only the result at the end of the sequence.</p></li>
+<li><p>A list of times in µs if you wish to only include those specific
+times.</p></li>
+<li><p>A float to act as a sampling rate for the resulting state.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float | <a class="reference internal" href="core.html#pulser.sequence.sequence.Sequence" title="pulser.sequence.sequence.Sequence">Sequence</a>[float] | EVAL_TIMES_LITERAL</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pulser.EmulatorConfig.initial_state">
+<span class="sig-name descname"><span class="pre">initial_state</span></span><a class="headerlink" href="#pulser.EmulatorConfig.initial_state" title="Permalink to this definition"></a></dt>
+<dd><p>The initial state from which emulation starts.
+Choose between:</p>
+<ul class="simple">
+<li><p>“all-ground” for all atoms in the ground state</p></li>
+<li><p>An array of floats with a shape compatible with the system</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Literal[‘all-ground’] | Sequence[complex]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pulser.EmulatorConfig.with_modulation">
+<span class="sig-name descname"><span class="pre">with_modulation</span></span><a class="headerlink" href="#pulser.EmulatorConfig.with_modulation" title="Permalink to this definition"></a></dt>
+<dd><p>Whether to emulate the sequence with the programmed
+input or the expected output.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pulser.EmulatorConfig.prefer_device_noise_model">
+<span class="sig-name descname"><span class="pre">prefer_device_noise_model</span></span><a class="headerlink" href="#pulser.EmulatorConfig.prefer_device_noise_model" title="Permalink to this definition"></a></dt>
+<dd><p>If the sequence’s device has a default noise
+model, this option signals the backend to prefer it over the noise
+model given with this configuration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pulser.EmulatorConfig.noise_model">
+<span class="sig-name descname"><span class="pre">noise_model</span></span><a class="headerlink" href="#pulser.EmulatorConfig.noise_model" title="Permalink to this definition"></a></dt>
+<dd><p>An optional noise model to emulate the sequence with.
+Ignored if the sequence’s device has default noise model and
+<cite>prefer_device_noise_model=True</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="core.html#pulser.noise_model.NoiseModel" title="pulser.noise_model.NoiseModel">NoiseModel</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="local">
+<h3>Local<a class="headerlink" href="#local" title="Permalink to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser_simulation.QutipBackend">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser_simulation.</span></span><span class="sig-name descname"><span class="pre">QutipBackend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">EmulatorConfig(backend_options={},</span> <span class="pre">sampling_rate=1.0,</span> <span class="pre">evaluation_times='Full',</span> <span class="pre">initial_state='all-ground',</span> <span class="pre">with_modulation=False,</span> <span class="pre">prefer_device_noise_model=False,</span> <span class="pre">noise_model=NoiseModel(noise_types=()))</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mimic_qpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipBackend" title="Permalink to this definition"></a></dt>
+<dd><p>A backend for emulating the sequences using qutip.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sequence</strong> (<a class="reference internal" href="core.html#pulser.sequence.sequence.Sequence" title="pulser.sequence.sequence.Sequence"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>) – The sequence to emulate.</p></li>
+<li><p><strong>config</strong> (<a class="reference internal" href="#pulser.EmulatorConfig" title="pulser.backend.config.EmulatorConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmulatorConfig</span></code></a>, default: <code class="docutils literal notranslate"><span class="pre">EmulatorConfig(backend_options={},</span> <span class="pre">sampling_rate=1.0,</span> <span class="pre">evaluation_times='Full',</span> <span class="pre">initial_state='all-ground',</span> <span class="pre">with_modulation=False,</span> <span class="pre">prefer_device_noise_model=False,</span> <span class="pre">noise_model=NoiseModel(noise_types=()))</span></code>) – The configuration for the Qutip emulator.</p></li>
+<li><p><strong>mimic_qpu</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether to mimic the validations necessary for
+execution on a QPU.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.QutipBackend.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">progress_bar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">qutip_options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipBackend.run" title="Permalink to this definition"></a></dt>
+<dd><p>Emulates the sequence using QuTiP’s solvers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>progress_bar</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – If True, the progress bar of QuTiP’s
+solver will be shown. If None or False, no text appears.</p></li>
+<li><p><strong>options</strong> – <p>Used as arguments for qutip.Options(). If specified, will
+override SimConfig solver_options. If no <cite>max_step</cite> value is
+provided, an automatic one is calculated from the <cite>Sequence</cite>’s
+schedule (half of the shortest duration among pulses and
+delays).
+Refer to the QuTiP <a class="reference external" href="https://bit.ly/3il9A2u">docs</a> for an overview of the parameters.</p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>In particular, returns NoisyResults if the
+noise model in EmulatorConfig requires it.
+Otherwise, returns CoherentResults.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SimulationResults</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="remote">
+<h3>Remote<a class="headerlink" href="#remote" title="Permalink to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser_pasqal.EmuTNBackend">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser_pasqal.</span></span><span class="sig-name descname"><span class="pre">EmuTNBackend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mimic_qpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_pasqal.EmuTNBackend" title="Permalink to this definition"></a></dt>
+<dd><p>An emulator backend using tensor network simulation.</p>
+<dl class="simple">
+<dt>Configurable fields in EmulatorConfig:</dt><dd><ul class="simple">
+<li><p>sampling_rate: Defaults to 0.1. This value must remain low to use
+this backend efficiently.</p></li>
+<li><dl class="simple">
+<dt>backend_options:</dt><dd><ul>
+<li><p>precision (str): The precision of the simulation. Can be “low”,
+“normal” or “high”. Defaults to “normal”.</p></li>
+<li><p>max_bond_dim (int): The maximum bond dimension of the Matrix
+Product State (MPS). Defaults to 500.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+<p>All other parameters should not be changed from their default values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sequence</strong> (<em>pulser.Sequence</em>) – The sequence to send to the backend.</p></li>
+<li><p><strong>connection</strong> (<a class="reference internal" href="#pulser_pasqal.PasqalCloud" title="pulser_pasqal.PasqalCloud"><em>PasqalCloud</em></a>) – An open PasqalCloud connection.</p></li>
+<li><p><strong>config</strong> (EmulatorConfig | None, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An EmulatorConfig to configure the backend. If not provided,
+the default configuration is used.</p></li>
+<li><p><strong>mimic_qpu</strong> (bool, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether to mimic the validations necessary for
+execution on a QPU.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser_pasqal.EmuFreeBackend">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser_pasqal.</span></span><span class="sig-name descname"><span class="pre">EmuFreeBackend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mimic_qpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_pasqal.EmuFreeBackend" title="Permalink to this definition"></a></dt>
+<dd><p>An emulator backend using free Hamiltonian time evolution.</p>
+<dl class="simple">
+<dt>Configurable fields in EmulatorConfig:</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>backend_options:</dt><dd><ul>
+<li><p>with_noise (bool): Whether to add noise to the simulation.
+Defaults to False.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+<p>All other parameters should not be changed from their default values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sequence</strong> (<em>pulser.Sequence</em>) – The sequence to send to the backend.</p></li>
+<li><p><strong>connection</strong> (<a class="reference internal" href="#pulser_pasqal.PasqalCloud" title="pulser_pasqal.PasqalCloud"><em>PasqalCloud</em></a>) – An open PasqalCloud connection.</p></li>
+<li><p><strong>config</strong> (EmulatorConfig | None, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An EmulatorConfig to configure the backend. If not provided,
+the default configuration is used.</p></li>
+<li><p><strong>mimic_qpu</strong> (bool, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether to mimic the validations necessary for
+execution on a QPU.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="remote-backend-connection">
+<h2>Remote backend connection<a class="headerlink" href="#remote-backend-connection" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser_pasqal.PasqalCloud">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser_pasqal.</span></span><span class="sig-name descname"><span class="pre">PasqalCloud</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">username</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">password</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_pasqal.PasqalCloud" title="Permalink to this definition"></a></dt>
+<dd><p>Manager of the connection to PASQAL’s cloud platform.</p>
+<p>The cloud connection enables to run sequences on simulators or on real
+QPUs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>username</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, default: <code class="docutils literal notranslate"><span class="pre">''</span></code>) – Your username in the PASQAL cloud platform.</p></li>
+<li><p><strong>password</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, default: <code class="docutils literal notranslate"><span class="pre">''</span></code>) – The password for your PASQAL cloud platform account.</p></li>
+<li><p><strong>project_id</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, default: <code class="docutils literal notranslate"><span class="pre">''</span></code>) – The project ID associated to the account.</p></li>
+<li><p><strong>kwargs</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>) – Additional arguments to provide to the pasqal_cloud.SDK()</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="simulation.html" class="btn btn-neutral float-left" title="Classical Simulation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
