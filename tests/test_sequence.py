@@ -2596,7 +2596,8 @@ def test_draw_slm_mask_in_ising(
             NotImplementedError,
             match=re.escape(
                 "Can only draw qubit contents for channels in the "
-                "'ground-rydberg' basis; got {'raman_glob': 'digital'}."
+                "'ground-rydberg' or 'XY' basis; got "
+                "{'raman_glob': 'digital'}."
             ),
         ):
             seq1.draw(
@@ -2604,6 +2605,21 @@ def test_draw_slm_mask_in_ising(
                 draw_qubit_det=draw_qubit_det,
                 draw_qubit_amp=draw_qubit_amp,
             )
+
+
+def test_draw_qubit_contents_in_xy(reg, det_map, patch_plt_show):
+    # The quantities per qubit can also be drawn in XY mode
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.config_detuning_map(det_map, "dmm_1")
+    seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch0")
+    seq.add_dmm_detuning(ConstantWaveform(100, 1), "dmm_1")
+    seq.draw(
+        draw_qubit_amp=True,
+        draw_qubit_det=True,
+        draw_register=True,
+        draw_detuning_maps=True,
+    )
 
 
 @pytest.mark.parametrize(
