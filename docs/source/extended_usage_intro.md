@@ -1,6 +1,6 @@
 # Introduction to Extended Usage
 
-In the "Fundamentals" section, we introduced the basic tools for Analog quantum computing with the Ising Hamiltonian. In this section, we present more tools for Analog quantum computing with the Ising Hamiltonian, as well as introduce other tools to program in other quantum computing paradigms: Weighted Analog with the Ising Hamiltonian, Analog with the XY Hamiltonian and Digital. 
+In the "Fundamentals" section, we introduced the basic tools for Analog quantum computing with the Ising Hamiltonian. In this section, we present more tools for Analog quantum computing with the Ising Hamiltonian, as well as introduce other tools to program in other quantum computing paradigms: Weighted Analog with the Ising Hamiltonian, Analog and Weighted Analog with the XY Hamiltonian and Digital. 
 
 :::{important}
 To program in a specific quantum computing paradigm, ensure the needed features are in your chosen Device's specifications.
@@ -61,6 +61,17 @@ $$
 
 - An in-depth presentation of Analog quantum computing with XY Hamiltonian can be found [in this notebook](tutorials/xy_spin_chain.nblink).
 - An [SLM mask](./tutorials/slm_mask.nblink) can also be used to prepare the initial state in a combination of XY basis states, $\left|0\right>$ and $\left|1\right>$.
+
+## Weighted Analog with the XY Hamiltonian
+
+A `DMM` channel can also address the `XY` basis. Combined with the `Microwave.Global` channel, it gives local control over the detuning of the XY Hamiltonian:
+
+$$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |0\rangle\langle 1|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |1\rangle\langle 0|_k - \left[\delta(t)\mathbf{+\epsilon_k\delta_{DMM}(t)}\right] |1\rangle\langle 1|_k + \sum_{j<k}\left[\frac{C_3}{\hbar R_{kj}^3} (|1\rangle\langle 0|_k |0\rangle\langle 1|_j + |0\rangle\langle 1|_j |1\rangle\langle 0|_k) + \frac{C_6}{R_{kj}^6} |0\rangle\langle 0|_k |0\rangle\langle 0|_j\right] \right)
+$$
+
+Contrary to the `ground-rydberg` basis, the detuning $\delta_{DMM}$ applied by such a `DMM` has to be **positive**. Configuring it puts the `Sequence` in XY mode, in the same way as declaring a `Microwave` channel does.
+
+- The {ref}`last section of the notebook on local addressability </tutorials/dmm.nblink#DMM-in-XY-mode>` shows how to combine a `DMM` addressing the `XY` basis with a `Microwave.Global` channel.
 
 ## Digital Quantum Computing
 
