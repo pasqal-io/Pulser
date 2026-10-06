@@ -15,8 +15,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from collections.abc import Collection, Mapping, Sequence
-from numbers import Integral
 from typing import Any, Generic, Type, TypeVar
 
 from pulser.backend.state import Eigenstate, State
@@ -269,29 +269,37 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             >>> Expectation(op, tag_suffix="zxz")
         """
         State._validate_eigenstates(eigenstates)
+
         basis = [s for s in eigenstates if s != "x"]
+
         if len(basis) != 2:
             raise ValueError(
                 "Pauli strings are only defined for qubits, i.e. with "
                 "exactly two eigenstates (besides the leakage state 'x'); "
                 f"got eigenstates {tuple(eigenstates)}."
             )
+
         if not isinstance(paulis, Mapping):
             raise TypeError(
                 "'paulis' must be a mapping between qudit indices and Pauli "
                 f"matrices; got {type(paulis)} instead. Got {paulis!r}."
             )
+
         if not paulis:
             raise ValueError("'paulis' must contain at least one entry.")
+
         e0, e1 = basis
+
         pauli_reprs: dict[str, QuditOp[complex]] = {
             "X": {e0 + e1: 1.0, e1 + e0: 1.0},
             "Y": {e0 + e1: -1.0j, e1 + e0: 1.0j},
             "Z": {e0 + e0: 1.0, e1 + e1: -1.0},
         }
-        qudits_per_pauli: dict[str, set[int]] = {}
+
+        qudits_per_pauli = defaultdict(set)
+
         for index, pauli in paulis.items():
-            if not isinstance(index, Integral):
+            if not isinstance(index, int):
                 raise TypeError(
                     "The qudit indices in 'paulis' must be integers; got "
                     f"{index!r} of type {type(index)}."
@@ -301,8 +309,8 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
                     "The Pauli matrices in 'paulis' must be one of "
                     f"{tuple(pauli_reprs)}; got {pauli!r} for qudit {index}."
                 )
-            qudits_per_pauli.setdefault(pauli.upper(), set()).add(int(index))
-        # Invalid indices are caught when validating the operations
+            qudits_per_pauli[pauli.upper()].add(index)
+
         return cls.from_operator_repr(
             eigenstates=eigenstates,
             n_qudits=n_qudits,

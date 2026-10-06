@@ -192,6 +192,13 @@ def test_from_pauli_string(eigenstates, paulis, expected_operations):
         (
             ("r", "g"),
             2,
+            {0.99: "Z"},
+            TypeError,
+            "The qudit indices in 'paulis' must be integers; got 0.99",
+        ),
+        (
+            ("r", "g"),
+            2,
             {0: "Z", 1: "W"},
             ValueError,
             "The Pauli matrices in 'paulis' must be one of ('X', 'Y', 'Z'); "
