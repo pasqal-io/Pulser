@@ -641,9 +641,14 @@ class TestOperatorRepr:
             )
 
     def test_from_pauli_string_invalid_eigenstates(self):
-        with pytest.raises(ValueError, match="exactly two eigenstates"):
+        with pytest.raises(
+            ValueError,
+            match="exactly two qubit eigenstates",
+        ):
             OperatorRepr.from_pauli_string(
-                eigenstates=("r", "g", "h"), n_qudits=2, pauli_string={0: "x"}
+                eigenstates=("r", "g", "h"),
+                n_qudits=2,
+                pauli_string={0: "x"},
             )
 
     def test_from_pauli_string_invalid_index(self):
@@ -690,6 +695,29 @@ class TestOperatorRepr:
             op.__rmul__(3.0)
         with pytest.raises(NotImplementedError):
             op.__matmul__(op)
+
+    def test_from_pauli_string_with_leakage(self):
+        operator = OperatorRepr.from_pauli_string(
+            eigenstates=("r", "g", "x"),
+            n_qudits=2,
+            pauli_string={0: "x", 1: "z"},
+        )
+        assert operator._to_abstract_repr() == {
+            "eigenstates": ("r", "g", "x"),
+            "n_qudits": 2,
+            "operations": [
+                (
+                    1.0,
+                    [
+                        (
+                            {"gr": 1.0, "rg": 1.0},
+                            {0},
+                        ),
+                        ({"rr": 1.0, "gg": -1.0}, {1}),
+                    ],
+                )
+            ],
+        }
 
 
 @pytest.mark.parametrize(

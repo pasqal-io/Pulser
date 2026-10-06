@@ -140,7 +140,8 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         )
         if len(qubit_eigenstates) != 2:
             raise ValueError(
-                "Pauli operators require exactly two qubit eigenstates,with an optional leakage state 'x'."
+                "Pauli operators require exactly two qubit eigenstates, "
+                "with an optional leakage state 'x'."
             )
         state_0, state_1 = qubit_eigenstates
         pauli_repr: dict[str, Mapping[str, complex]] = {
