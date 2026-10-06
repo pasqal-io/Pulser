@@ -15,8 +15,9 @@
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field, fields
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, cast
 
 import numpy as np
 
@@ -27,6 +28,9 @@ from pulser.pulse import Pulse
 from pulser.register.weight_maps import DetuningMap
 
 OPTIONAL_ABSTR_DMM_FIELDS = ["total_bottom_detuning", "min_avg_abs_detuning"]
+
+# The bases a DMM can address, depending on the mode of the Sequence
+DMMBasis = Literal["ground-rydberg", "XY"]
 
 
 @dataclass(init=True, frozen=True)
@@ -40,9 +44,15 @@ class DMM(Channel):
     (detuning map weight on this qubit)*(detuning pulse value). The detuning
     of the pulses added to a DMM has to be negative, such that each detuning
     map spot is between 0 and `bottom_detuning`, and that the sum of all the
-    detuning map spots is below `total_bottom_detuning`. This Channel targets
-    the transition between the ground and rydberg states, thus encoding the
-    'ground-rydberg' basis.
+    detuning map spots is below `total_bottom_detuning`.
+
+    By default, this Channel targets the transition between the ground and
+    rydberg states, thus encoding the 'ground-rydberg' basis. When configured
+    in a Sequence in XY mode, the same hardware addresses the transition
+    between the two rydberg states instead, thus encoding the 'XY' basis. The
+    light shift then has the opposite sign, so the detuning of the pulses must
+    be positive and each detuning map spot is between 0 and
+    `-bottom_detuning`, with their sum below `-total_bottom_detuning`.
 
     Note:
         The protocol to add pulses to the DMM Channel is by default
@@ -129,9 +139,29 @@ class DMM(Channel):
             )
 
     @property
-    def basis(self) -> Literal["ground-rydberg"]:
+    def basis(self) -> DMMBasis:
         """The addressed basis name."""
-        return "ground-rydberg"
+        # '_addressed_basis' is deliberately not a dataclass field, so that it
+        # stays out of the DMM's signature, equality and serialization: which
+        # basis is addressed is a property of the Sequence using the DMM, not
+        # of the DMM the Device declares. It is only set by '_with_basis()',
+        # so a DMM that was never configured in XY mode carries no trace of it
+        return cast(
+            DMMBasis, getattr(self, "_addressed_basis", "ground-rydberg")
+        )
+
+    def _with_basis(self, basis: DMMBasis) -> DMM:
+        """A copy of this DMM addressing the given basis.
+
+        Args:
+            basis: The basis the returned DMM addresses.
+
+        Returns:
+            The DMM addressing the given basis.
+        """
+        new_dmm = copy.copy(self)
+        object.__setattr__(new_dmm, "_addressed_basis", basis)
+        return new_dmm
 
     def _undefined_fields(self) -> list[str]:
         optional = ["bottom_detuning", "max_duration", "total_bottom_detuning"]
@@ -150,6 +180,12 @@ class DMM(Channel):
     ) -> None:
         """Checks if a pulse can be executed via this DMM on a DetuningMap.
 
+        The sign of the detuning is imposed by the addressed basis: it must
+        be negative in the 'ground-rydberg' basis and positive in the 'XY'
+        basis, where the light shift has the opposite sign. In both cases its
+        magnitude is bounded by ``bottom_detuning`` and
+        ``total_bottom_detuning``.
+
         Args:
             pulse: The pulse to validate.
             detuning_map: The detuning map on which the pulse is applied
@@ -159,44 +195,72 @@ class DMM(Channel):
         round_detuning = pm.round(pulse.detuning.samples, 6).as_array(
             detach=True
         )
-        # Check that detuning is negative
-        if np.any(round_detuning > 0):
+        in_xy = self.basis == "XY"
+        # The checks below are written for the 'ground-rydberg' convention,
+        # where the detuning is negative. In XY it is positive, so it is
+        # flipped (alongside the bounds it is compared to) to keep a single
+        # implementation. The values reported in the error messages are
+        # flipped back, so that they match the detuning the user gave.
+        signed_detuning = -round_detuning if in_xy else round_detuning
+        # Check that the detuning has the sign imposed by the basis
+        if np.any(signed_detuning > 0):
+            wrong_sign = "negative" if in_xy else "positive"
             raise ValueError(
-                "The detuning in a DMM must not be positive; it is "
-                "positive at "
-                f"{_format_violation_times(round_detuning > 0)} in detuning "
+                f"The detuning in a DMM must not be {wrong_sign}; it is "
+                f"{wrong_sign} at "
+                f"{_format_violation_times(signed_detuning > 0)} in detuning "
                 f"{pulse.detuning!r}."
             )
-        # Check that detuning on each atom is above bottom_detuning
-        min_round_detuning = np.min(round_detuning)
+        # Check that detuning on each atom is within bottom_detuning
+        min_signed_detuning = np.min(signed_detuning)
         max_weight = np.max(detuning_map.weights)
         if (
             self.bottom_detuning is not None
-            and max_weight * min_round_detuning < self.bottom_detuning
+            and max_weight * min_signed_detuning < self.bottom_detuning
         ):
+            extremum_detuning = (
+                -min_signed_detuning if in_xy else min_signed_detuning
+            )
+            bottom_detuning = (
+                -self.bottom_detuning if in_xy else self.bottom_detuning
+            )
             raise ValueError(
                 f"For a detuning map with a maximum weight of {max_weight},"
-                f" a DMM pulse with minimum detuning {min_round_detuning} "
-                "rad/µs goes below the local bottom "
-                f"detuning of the DMM ({self.bottom_detuning} rad/µs). "
-                "To respect this constraint, keep the detuning above "
-                f"{self.bottom_detuning/max_weight} rad/µs. Got pulse "
+                f" a DMM pulse with {'maximum' if in_xy else 'minimum'} "
+                f"detuning {extremum_detuning} "
+                f"rad/µs goes {'above' if in_xy else 'below'} the local "
+                f"{'top' if in_xy else 'bottom'} "
+                f"detuning of the DMM ({bottom_detuning} rad/µs). "
+                "To respect this constraint, keep the detuning "
+                f"{'below' if in_xy else 'above'} "
+                f"{bottom_detuning/max_weight} rad/µs. Got pulse "
                 f"{pulse!r}."
             )
-        # Check that distributed detuning is above total_bottom_detuning
+        # Check that distributed detuning is within total_bottom_detuning
         sum_weight = np.sum(detuning_map.weights)
         if (
             self.total_bottom_detuning is not None
-            and sum_weight * min_round_detuning < self.total_bottom_detuning
+            and sum_weight * min_signed_detuning < self.total_bottom_detuning
         ):
+            extremum_detuning = (
+                -min_signed_detuning if in_xy else min_signed_detuning
+            )
+            total_bottom_detuning = (
+                -self.total_bottom_detuning
+                if in_xy
+                else self.total_bottom_detuning
+            )
             raise ValueError(
                 "For a detuning map with a total summed weight of "
                 f"{sum_weight}, the total applied detuning from a DMM pulse "
-                f"with minimum detuning {min_round_detuning} rad/µs goes below"
-                " the total bottom detuning "
-                f"of the DMM ({self.total_bottom_detuning} rad/µs). "
-                "To respect this constraint, keep the detuning above "
-                f"{self.total_bottom_detuning/sum_weight} rad/µs."
+                f"with {'maximum' if in_xy else 'minimum'} detuning "
+                f"{extremum_detuning} rad/µs goes "
+                f"{'above' if in_xy else 'below'}"
+                f" the total {'top' if in_xy else 'bottom'} detuning "
+                f"of the DMM ({total_bottom_detuning} rad/µs). "
+                "To respect this constraint, keep the detuning "
+                f"{'below' if in_xy else 'above'} "
+                f"{total_bottom_detuning/sum_weight} rad/µs."
             )
 
         weights_arr = np.array(detuning_map.weights)

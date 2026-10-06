@@ -240,14 +240,14 @@ def test_dmm_declaration(reg, device, det_map, first_dmm_id):
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "mw_global")
-    # DMM channels are still available,
-    # but can only be declared using an SLM Mask
+    # DMM channels are available in XY mode too
     assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
-    with pytest.raises(
-        ValueError,
-        match="cannot work simultaneously with the declared 'Microwave'",
-    ):
-        seq2.config_detuning_map(det_map, "dmm_0")
+    seq2.config_detuning_map(det_map, "dmm_0")
+    assert list(seq2.declared_channels) == ["ch0", "dmm_0"]
+    # In XY mode, the DMM addresses the XY transition
+    assert seq2.declared_channels["dmm_0"].basis == "XY"
+    assert seq2.get_addressed_bases() == ("XY",)
+    assert seq2._in_xy and not seq2._in_ising
 
 
 def test_slm_declaration(reg, device, det_map):
@@ -314,7 +314,9 @@ def test_slm_declaration(reg, device, det_map):
     assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
     assert set(seq2.declared_channels.keys()) == {"ch0"}
     seq2.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_0")
-    assert set(seq2.available_channels) == {"mw_global"}
+    # dmm_0 is reserved for the SLM mask, but MockDevice allows a channel to
+    # be declared more than once, so it stays available for a local detuning
+    assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
     assert set(seq2.declared_channels.keys()) == {"ch0"}
 
     # Declaring a microwave channel after having configured an SLM
@@ -324,9 +326,9 @@ def test_slm_declaration(reg, device, det_map):
     # If a DMM was declared as an SLM Mask, all channels are still available
     assert set(seq2.available_channels) == available_channels
     assert set(seq2.declared_channels.keys()) == set()
-    # If MW channel is defined, only mw channels are available
+    # If MW channel is defined, only the mw and DMM channels are available
     seq2.declare_channel("ch0", "mw_global")
-    assert set(seq2.available_channels) == {"mw_global"}
+    assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
     # DMM is not shown as declared
     assert set(seq2.declared_channels.keys()) == {"ch0"}
 
@@ -391,9 +393,9 @@ def test_magnetic_field(reg):
     seq3 = Sequence(reg, MockDevice)
     seq3.config_slm_mask(["q0", "q1"], "dmm_0")
     seq3.set_magnetic_field(1.0, 0.0, 0.0)  # sets seq to XY mode
-    # dmm_0 doesn't appear because there can only be one in XY mode
-    # and the SLM is already configured
-    assert set(seq3.available_channels) == {"mw_global"}
+    # dmm_0 is reserved for the SLM mask, but MockDevice allows a channel
+    # to be declared more than once, so it remains available (as in Ising)
+    assert set(seq3.available_channels) == {"mw_global", "dmm_0"}
     assert list(seq3.declared_channels.keys()) == []
     seq3.declare_channel("ch0", "mw_global")
     assert list(seq3.declared_channels.keys()) == ["ch0"]
@@ -3684,3 +3686,136 @@ def test_truncate_target(reg, device):
         built_seq = seq.build(t=end_target_t - 1)
     assert built_seq.get_duration() == start_target_t
     assert built_seq.is_measured()
+
+
+class TestDMMInXYMode:
+    """Local addressability with a DMM in XY mode."""
+
+    @pytest.fixture
+    def xy_reg(self):
+        return Register({"q0": (0, 0), "q1": (10, 0)})
+
+    @pytest.fixture
+    def xy_det_map(self, xy_reg):
+        return xy_reg.define_detuning_map({"q0": 1.0, "q1": 0.5})
+
+    def _build(self, xy_reg, xy_det_map, detuning=3.0, duration=1000):
+        seq = Sequence(xy_reg, MockDevice)
+        seq.declare_channel("mw", "mw_global")
+        seq.config_detuning_map(xy_det_map, "dmm_0")
+        seq.add(Pulse.ConstantPulse(duration, 5.0, 0.0, 0.0), "mw")
+        seq.add_dmm_detuning(ConstantWaveform(duration, detuning), "dmm_0")
+        return seq
+
+    def test_config_detuning_map(self, xy_reg, xy_det_map):
+        seq = Sequence(xy_reg, MockDevice)
+        seq.declare_channel("mw", "mw_global")
+        assert seq._in_xy and not seq._in_ising
+        seq.config_detuning_map(xy_det_map, "dmm_0")
+        # Configuring a detuning map does not leave XY mode
+        assert seq._in_xy and not seq._in_ising
+        assert seq.declared_channels["dmm_0"].basis == "XY"
+        assert seq.get_addressed_bases() == ("XY",)
+        assert set(seq._basis_ref) == {"XY"}
+
+    def test_dmm_available_in_xy(self, xy_reg):
+        seq = Sequence(xy_reg, MockDevice)
+        seq.declare_channel("mw", "mw_global")
+        assert {
+            ch_id
+            for ch_id, ch_obj in seq.available_channels.items()
+            if isinstance(ch_obj, DMM)
+        } == {"dmm_0"}
+
+    def test_detuning_sign(self, xy_reg, xy_det_map):
+        seq = Sequence(xy_reg, MockDevice)
+        seq.declare_channel("mw", "mw_global")
+        seq.config_detuning_map(xy_det_map, "dmm_0")
+        # In XY mode the light shift is positive
+        seq.add_dmm_detuning(ConstantWaveform(100, 3.0), "dmm_0")
+        with pytest.raises(
+            ValueError, match="The detuning in a DMM must not be negative"
+        ):
+            seq.add_dmm_detuning(ConstantWaveform(100, -3.0), "dmm_0")
+
+    def test_ising_detuning_sign_unchanged(self, xy_reg, xy_det_map):
+        seq = Sequence(xy_reg, MockDevice)
+        seq.declare_channel("ryd", "rydberg_global")
+        seq.config_detuning_map(xy_det_map, "dmm_0")
+        assert seq.declared_channels["dmm_0"].basis == "ground-rydberg"
+        seq.add_dmm_detuning(ConstantWaveform(100, -3.0), "dmm_0")
+        with pytest.raises(
+            ValueError, match="The detuning in a DMM must not be positive"
+        ):
+            seq.add_dmm_detuning(ConstantWaveform(100, 3.0), "dmm_0")
+
+    def test_samples_are_weighted_per_qubit(self, xy_reg, xy_det_map):
+        seq = self._build(xy_reg, xy_det_map, detuning=3.0)
+        nested = sample(seq).to_nested_dict(all_local=True)
+        # The detuning is weighted by the detuning map, on the XY basis
+        assert set(nested["Local"]) == {"XY"}
+        np.testing.assert_allclose(nested["Local"]["XY"]["q0"]["det"], 3.0)
+        np.testing.assert_allclose(nested["Local"]["XY"]["q1"]["det"], 1.5)
+
+    def test_eigenbasis_stays_xy(self, xy_reg, xy_det_map):
+        samples = sample(self._build(xy_reg, xy_det_map))
+        assert samples._in_xy
+        assert samples.used_bases == {"XY"}
+        assert samples.eigenbasis == ["u", "d"]
+
+    def test_abstract_repr_round_trip(self, xy_reg, xy_det_map):
+        seq = self._build(xy_reg, xy_det_map)
+        new_seq = Sequence.from_abstract_repr(seq.to_abstract_repr())
+        assert new_seq._in_xy and not new_seq._in_ising
+        assert new_seq.declared_channels["dmm_0"].basis == "XY"
+        # The Device keeps declaring its DMMs on the ground-rydberg basis
+        assert (
+            json.loads(seq.to_abstract_repr())["device"]["dmm_objects"][0][
+                "basis"
+            ]
+            == "ground-rydberg"
+        )
+        old = sample(seq).to_nested_dict(all_local=True)["Local"]["XY"]
+        new = sample(new_seq).to_nested_dict(all_local=True)["Local"]["XY"]
+        for qubit in ("q0", "q1"):
+            np.testing.assert_allclose(old[qubit]["det"], new[qubit]["det"])
+
+    def test_with_new_device(self, xy_reg, xy_det_map):
+        seq = self._build(xy_reg, xy_det_map)
+        new_device = dataclasses.replace(MockDevice, name="OtherMockDevice")
+        new_seq = seq.with_new_device(new_device)
+        assert new_seq.declared_channels["dmm_0"].basis == "XY"
+        old = sample(seq).to_nested_dict(all_local=True)["Local"]["XY"]
+        new = sample(new_seq).to_nested_dict(all_local=True)["Local"]["XY"]
+        for qubit in ("q0", "q1"):
+            np.testing.assert_allclose(old[qubit]["det"], new[qubit]["det"])
+
+    def test_dmm_first_stays_in_ising(self, xy_reg, xy_det_map):
+        # The mode is set by the first declaration, as for regular channels
+        seq = Sequence(xy_reg, MockDevice)
+        seq.config_detuning_map(xy_det_map, "dmm_0")
+        assert seq._in_ising and not seq._in_xy
+        assert seq.declared_channels["dmm_0"].basis == "ground-rydberg"
+        with pytest.raises(
+            ValueError, match="type 'Microwave' cannot work simultaneously"
+        ):
+            seq.declare_channel("mw", "mw_global")
+
+    def test_slm_mask_stays_emulated(self, xy_reg, xy_det_map):
+        # The XY SLM mask is not implemented with a DMM (see #1128), so it
+        # must keep working alongside a DMM holding a detuning map
+        seq = Sequence(xy_reg, MockDevice)
+        seq.declare_channel("mw", "mw_global")
+        seq.config_slm_mask(["q0"], "dmm_0")
+        seq.config_detuning_map(xy_det_map, "dmm_0")
+        seq.add(Pulse.ConstantPulse(1000, 5.0, 0.0, 0.0), "mw")
+        seq.add_dmm_detuning(ConstantWaveform(1000, 3.0), "dmm_0")
+        # Only the detuning map DMM is scheduled
+        assert [
+            name
+            for name, ch in seq.declared_channels.items()
+            if isinstance(ch, DMM)
+        ] == ["dmm_0"]
+        samples = sample(seq)
+        assert samples._slm_mask.targets == {"q0"}
+        assert samples._slm_mask.end > 0

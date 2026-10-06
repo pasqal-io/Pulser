@@ -2702,3 +2702,52 @@ def test_eom_limit_det(mod_device, reg, min_detuning_on):
         match="QutipEmulator is deprecated as of pulser 1.9",
     ):
         sim.run()
+
+
+class TestXYDMMHamiltonian:
+    """The DMM applies a local detuning on the XY transition."""
+
+    reg = Register({"q0": (0, 0), "q1": (10, 0)})
+    weights = {"q0": 1.0, "q1": 0.5}
+    detuning = 3.0
+
+    def _sequence(self, with_dmm: bool) -> Sequence:
+        seq = Sequence(self.reg, MockDevice)
+        seq.declare_channel("mw", "mw_global")
+        if with_dmm:
+            seq.config_detuning_map(
+                self.reg.define_detuning_map(self.weights), "dmm_0"
+            )
+        seq.add(Pulse.ConstantPulse(1000, 0.0, 0.0, 0.0), "mw")
+        if with_dmm:
+            seq.add_dmm_detuning(
+                ConstantWaveform(1000, self.detuning), "dmm_0"
+            )
+        return seq
+
+    def test_local_detuning_term(self):
+        hamiltonians = [
+            np.array(
+                QutipEmulator.from_sequence(self._sequence(with_dmm))
+                .get_hamiltonian(500)
+                .full()
+            )
+            for with_dmm in (True, False)
+        ]
+        dmm_term = hamiltonians[0] - hamiltonians[1]
+
+        # The simulation convention is unchanged: the DMM contributes
+        # -detuning * weight * |d><d| on each qubit
+        n_d = np.diag([0.0, 1.0])
+        identity = np.eye(2)
+        expected = -self.detuning * (
+            self.weights["q0"] * np.kron(n_d, identity)
+            + self.weights["q1"] * np.kron(identity, n_d)
+        )
+        np.testing.assert_allclose(dmm_term, expected, atol=1e-12)
+
+    def test_eigenbasis_is_xy(self):
+        sim = QutipEmulator.from_sequence(self._sequence(True))
+        assert sim.basis_name == "XY"
+        assert list(sim.basis) == ["u", "d"]
+        assert sim.dim == 2

@@ -21,7 +21,7 @@ import warnings
 from typing import TYPE_CHECKING, Any, cast
 
 from pulser.channels.base_channel import Channel
-from pulser.channels.dmm import _get_dmm_name
+from pulser.channels.dmm import DMM, _get_dmm_name
 from pulser.channels.eom import BaseEOM
 from pulser.devices._device_datacls import BaseDevice
 from pulser.exceptions.sequence import PulserValueError, SwitchDeviceError
@@ -118,7 +118,12 @@ def switch_device(
         # We verify the channel class then
         # check whether the addressing is Global or Local
         type_match = type(old_ch_obj) is type(new_ch_obj)
-        basis_match = old_ch_obj.basis == new_ch_obj.basis
+        # The basis a DMM addresses is imposed by the mode of the Sequence,
+        # which the switch does not change, so it is not compared for DMMs
+        # (where a matching type already guarantees a matching basis)
+        basis_match = isinstance(old_ch_obj, DMM) or (
+            old_ch_obj.basis == new_ch_obj.basis
+        )
         addressing_match = old_ch_obj.addressing == new_ch_obj.addressing
         if not (type_match and basis_match and addressing_match):
             # If there already is a message, keeps it

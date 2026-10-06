@@ -321,10 +321,19 @@ class Sequence(Generic[DeviceType]):
                         or self.device.reusable_channels
                     )
                     and (
-                        # If we are in XY mode, the dmm channels are available
-                        # to configure a SLM mask if no slm mask was defined
+                        # In XY mode, the DMM channels are available to
+                        # apply a local detuning or to configure an SLM
+                        # mask, except the one already reserved for the
+                        # SLM mask
                         ch.basis == "XY"
-                        or (isinstance(ch, DMM) and self._slm_mask_dmm is None)
+                        or (
+                            isinstance(ch, DMM)
+                            and (
+                                self._slm_mask_dmm is None
+                                or id != self._slm_mask_dmm
+                                or self.device.reusable_channels
+                            )
+                        )
                         if self._in_xy
                         else ch.basis != "XY"
                     )
@@ -661,9 +670,21 @@ class Sequence(Generic[DeviceType]):
 
         Associates a DetuningMap to a DMM channel of the Device.
 
+        In Ising mode, the DMM applies a local detuning on the
+        'ground-rydberg' transition and the detuning of its pulses must be
+        negative. In XY mode, the same hardware applies a local detuning on
+        the 'XY' transition instead; the light shift then has the opposite
+        sign, so the detuning of its pulses must be positive.
+
         Note:
             Regular devices only allow a DMM to be declared once, but
             ``MockDevice`` DMM can be repeatedly declared if needed.
+
+        Note:
+            The mode is set by the first channel declared in the Sequence. To
+            configure a detuning map in XY mode, declare a ``Microwave``
+            channel or call ``set_magnetic_field()`` beforehand; otherwise the
+            Sequence is placed in Ising mode.
 
         Args:
             detuning_map: A DetuningMap defining the amount of detuning each
@@ -701,10 +722,8 @@ class Sequence(Generic[DeviceType]):
 
         dmm_ch = self.device.dmm_channels[dmm_id]
         if self._in_xy:
-            raise ValueError(
-                f"DMM '{dmm_ch}' cannot work simultaneously "
-                "with the declared 'Microwave' channel."
-            )
+            # The same hardware addresses the XY transition in XY mode
+            dmm_ch = dmm_ch._with_basis("XY")
         if dmm_id not in self.available_channels:
             still_available = [
                 ch_id
@@ -716,8 +735,9 @@ class Sequence(Generic[DeviceType]):
                 f"channels are {still_available}."
             )
 
-        # Configures the DMM implementing an SLM mask if configured before
-        self._in_ising = True
+        if not self._in_xy:
+            # Configures the DMM implementing an SLM mask if configured before
+            self._in_ising = True
 
         if self.is_parametrized():
             return
@@ -732,8 +752,8 @@ class Sequence(Generic[DeviceType]):
         self._schedule[dmm_name] = _DMMSchedule(
             dmm_id, dmm_ch, detuning_map=detuning_map
         )
-        if "ground-rydberg" not in self._basis_ref:
-            self._basis_ref["ground-rydberg"] = {
+        if dmm_ch.basis not in self._basis_ref:
+            self._basis_ref[dmm_ch.basis] = {
                 q: _QubitRef() for q in self._qids
             }
 
@@ -1460,6 +1480,9 @@ class Sequence(Generic[DeviceType]):
         protocol: PROTOCOLS = "no-delay",
     ) -> None:
         """Add a waveform to the detuning of a DMM.
+
+        The waveform must be negative in Ising mode and positive in XY mode,
+        where the light shift of the DMM has the opposite sign.
 
         Args:
             waveform: The waveform to add to the detuning of the DMM.

@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import dataclasses
 import re
 from typing import Union, cast
 from unittest.mock import patch
@@ -513,3 +514,123 @@ class TestDMM:
                 {0: 0.0}
             )
         physical_dmm.validate_pulse(too_low_pulse, det_map)
+
+
+class TestDMMInXY:
+    """A DMM addresses the XY transition when used in XY mode."""
+
+    @pytest.fixture
+    def physical_dmm(self):
+        return DMM(
+            bottom_detuning=-1,
+            total_bottom_detuning=-10,
+            min_avg_abs_detuning=0.1,
+            clock_period=1,
+            min_duration=1,
+            max_duration=1e6,
+            mod_bandwidth=20,
+        )
+
+    def test_with_basis(self, physical_dmm):
+        assert physical_dmm.basis == "ground-rydberg"
+        xy_dmm = physical_dmm._with_basis("XY")
+        assert xy_dmm.basis == "XY"
+        # The original DMM is left untouched
+        assert physical_dmm.basis == "ground-rydberg"
+        assert xy_dmm._with_basis("ground-rydberg").basis == "ground-rydberg"
+
+    def test_addressed_basis_is_not_a_field(self, physical_dmm):
+        # The addressed basis is a property of the Sequence using the DMM, so
+        # it must not leak into the DMM's identity nor into its serialization
+        xy_dmm = physical_dmm._with_basis("XY")
+        assert xy_dmm == physical_dmm
+        assert hash(xy_dmm) == hash(physical_dmm)
+        assert repr(xy_dmm) == repr(physical_dmm)
+        assert [f.name for f in dataclasses.fields(xy_dmm)] == [
+            f.name for f in dataclasses.fields(physical_dmm)
+        ]
+        # A DMM that was never used in XY mode carries no trace of it
+        assert "_addressed_basis" not in vars(physical_dmm)
+
+    def test_abstract_repr_unaffected(self, physical_dmm):
+        # The Device always declares its DMMs on the ground-rydberg basis
+        assert (
+            physical_dmm._to_abstract_repr("dmm_0")["basis"]
+            == "ground-rydberg"
+        )
+        xy_repr = physical_dmm._with_basis("XY")._to_abstract_repr("dmm_0")
+        gr_repr = physical_dmm._to_abstract_repr("dmm_0")
+        assert xy_repr.keys() == gr_repr.keys()
+        assert {k: v for k, v in xy_repr.items() if k != "basis"} == {
+            k: v for k, v in gr_repr.items() if k != "basis"
+        }
+
+    @pytest.mark.parametrize("detuning", [1.0, 0.5, 0.0])
+    def test_validate_pulse_accepts_positive(self, physical_dmm, detuning):
+        xy_dmm = physical_dmm._with_basis("XY")
+        xy_dmm.validate_pulse(Pulse.ConstantPulse(100, 0, detuning, 0))
+
+    def test_validate_pulse_rejects_negative(self, physical_dmm):
+        xy_dmm = physical_dmm._with_basis("XY")
+        with pytest.raises(
+            ValueError,
+            match="The detuning in a DMM must not be negative; it is "
+            "negative at 0-99 ns",
+        ):
+            xy_dmm.validate_pulse(Pulse.ConstantPulse(100, 0, -0.5, 0))
+        # The ground-rydberg DMM still rejects a positive detuning
+        with pytest.raises(
+            ValueError,
+            match="The detuning in a DMM must not be positive; it is "
+            "positive at 0-99 ns",
+        ):
+            physical_dmm.validate_pulse(Pulse.ConstantPulse(100, 0, 0.5, 0))
+
+    def test_bottom_detuning_bound(self, physical_dmm):
+        # In XY the bound applies as '-bottom_detuning', ie +1 rad/µs
+        xy_dmm = physical_dmm._with_basis("XY")
+        det_map = DetuningMap(
+            trap_coordinates=[(0, 0), (1, 0)], weights=[1.0, 0.5]
+        )
+        xy_dmm.validate_pulse(Pulse.ConstantPulse(100, 0, 1.0, 0), det_map)
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "For a detuning map with a maximum weight of 1.0, a DMM "
+                "pulse with maximum detuning 1.2 rad/µs goes above the local "
+                "top detuning of the DMM (1 rad/µs). To respect this "
+                "constraint, keep the detuning below 1.0 rad/µs."
+            ),
+        ):
+            xy_dmm.validate_pulse(Pulse.ConstantPulse(100, 0, 1.2, 0), det_map)
+
+    def test_total_bottom_detuning_bound(self, physical_dmm):
+        xy_dmm = physical_dmm._with_basis("XY")
+        # 11 traps of weight 1.0 -> a detuning of 1.0 sums to 11 > 10
+        det_map = DetuningMap(
+            trap_coordinates=[(i, 0) for i in range(11)], weights=[1.0] * 11
+        )
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "For a detuning map with a total summed weight of 11.0, the "
+                "total applied detuning from a DMM pulse with maximum "
+                "detuning 1.0 rad/µs goes above the total top detuning of "
+                "the DMM (10 rad/µs)."
+            ),
+        ):
+            xy_dmm.validate_pulse(Pulse.ConstantPulse(100, 0, 1.0, 0), det_map)
+
+    def test_min_avg_abs_detuning_unaffected(self, physical_dmm):
+        # This bound is on the absolute detuning, so it is sign-independent
+        xy_dmm = physical_dmm._with_basis("XY")
+        det_map = DetuningMap(trap_coordinates=[(0, 0)], weights=[1.0])
+        for dmm, detuning in ((physical_dmm, -0.05), (xy_dmm, 0.05)):
+            with pytest.raises(
+                ValueError,
+                match="does not respect the minimum threshold for the "
+                "average absolute detuning",
+            ):
+                dmm.validate_pulse(
+                    Pulse.ConstantPulse(100, 0, detuning, 0), det_map
+                )
