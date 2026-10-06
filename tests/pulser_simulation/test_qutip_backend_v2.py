@@ -36,7 +36,11 @@ from pulser.channels.dmm import DMM
 from pulser.devices import AnalogDevice
 from pulser.sampler import sample
 from pulser_simulation.qutip_backend import QutipBackendV2
-from pulser_simulation.qutip_config import QutipConfig, Solver
+from pulser_simulation.qutip_config import (
+    QutipConfig,
+    Solver,
+    _merge_evaluation_times,
+)
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simulation import QutipEmulator
@@ -143,7 +147,9 @@ def test_qutip_backend_v2_energy(capfd):
     assert results.get_result("energy", 0.5) == pytest.approx(
         qutip.expect(
             backend._sim_obj.get_hamiltonian(seq.get_duration() // 2),
-            results.state[len(results.state) // 2].to_qobj(),
+            # The state at the midpoint is requested by its time rather
+            # than by its index, which depends on the evaluation times
+            results.get_result("state", 0.5).to_qobj(),
         ),
         rel=1e-5,
     )
@@ -658,3 +664,48 @@ def test_run_from_sequence_samples(modulation):
     s2 = results2.final_state._state.full()
 
     assert np.allclose(s1, s2, atol=0, rtol=1e-16)  # really the same
+
+
+class TestEvaluationTimesWithCallbacks:
+    """The evaluation times must survive the presence of a callback.
+
+    Callbacks require the full sampling grid, but that must not discard the
+    evaluation times requested by the observables.
+    """
+
+    eval_times = [n / 10 for n in range(11)]
+
+    def _run(self, callbacks):
+        seq = sequence()
+        config = QutipConfig(
+            observables=[StateResult(evaluation_times=self.eval_times)],
+            callbacks=callbacks,
+        )
+        backend = QutipBackendV2(seq, config=config)
+        return backend, backend.run(), seq.get_duration()
+
+    @pytest.mark.parametrize("with_callback", [False, True])
+    def test_evaluation_times_are_kept(self, with_callback):
+        callbacks = [CountCalls()] if with_callback else []
+        backend, results, duration = self._run(callbacks)
+        times = results.get_result_times("state")
+        # One result per requested evaluation time, no duplicates around it
+        assert len(times) == len(self.eval_times)
+        np.testing.assert_allclose(times, self.eval_times, atol=1e-12)
+        if with_callback:
+            # The callback still sees every time step of the sampling grid
+            assert backend._config.callbacks[0].counter == duration + 1
+
+    def test_merge_evaluation_times(self):
+        base = np.array([0.0, 0.25, 0.5, 0.75, 1.0])
+        # 0.26 is within tolerance of 0.25, which is therefore dropped
+        merged = _merge_evaluation_times(base, np.array([0.26, 0.9]), tol=0.05)
+        np.testing.assert_allclose(merged, [0.0, 0.26, 0.5, 0.75, 0.9, 1.0])
+        # Without a close evaluation time, every base time is kept
+        merged = _merge_evaluation_times(base, np.array([0.9]), tol=0.05)
+        np.testing.assert_allclose(merged, [0.0, 0.25, 0.5, 0.75, 0.9, 1.0])
+        # An empty base returns the evaluation times untouched
+        extra = np.array([0.1, 0.2])
+        np.testing.assert_allclose(
+            _merge_evaluation_times(np.array([]), extra, tol=0.05), extra
+        )
