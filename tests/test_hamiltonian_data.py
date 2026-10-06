@@ -16,7 +16,7 @@ from pulser._hamiltonian_data.hamiltonian_data import (
     has_shot_to_shot_except_spam,
 )
 from pulser.channels.dmm import DMM
-from pulser.devices import AnalogDevice
+from pulser.devices import AnalogDevice, MockDevice
 from pulser.sampler import sample
 
 from .test_sequence_sampler import seq_rydberg, seq_with_SLM
@@ -756,4 +756,77 @@ def test_dmm_detuning():
         assert np.allclose(
             noisy_samples["Local"]["ground-rydberg"][q_id]["det"],
             expected_noisy[q_id],
+        )
+
+
+def test_dmm_detuning_in_xy():
+    np.random.seed(0xDEADBEEF)
+    coordinates = [(0.0, 0.0), (0.0, 5.0)]
+    weights = [1.0, 0.5]
+    dmm_detuning = 10
+    detuning = 1
+
+    register = pulser.Register.from_coordinates(coordinates, prefix="q")
+
+    detuning_map = register.define_detuning_map(
+        {f"q{idx}": weight for idx, weight in enumerate(weights)}
+    )
+
+    seq = pulser.Sequence(register, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.add(
+        pulser.Pulse.ConstantPulse(
+            duration=100,
+            amplitude=1,
+            detuning=detuning,
+            phase=0,
+        ),
+        "ch0",
+    )
+
+    seq.config_detuning_map(detuning_map, "dmm_1")
+    seq.add_dmm_detuning(
+        pulser.pulse.ConstantWaveform(duration=100, value=dmm_detuning),
+        "dmm_1",
+    )
+
+    # The DMM detuning fluctuates from shot to shot
+    ham_noisy = HamiltonianData.from_sequence(
+        seq,
+        noise_model=pulser.NoiseModel(dmm_sigma=0.5),
+        n_trajectories=1,
+    )
+    traj_noise = ham_noisy.noise_trajectories[0].trajectory
+    dmm_fluct = traj_noise.dmm_det_fluctuation["dmm_1"]
+    assert not np.isclose(dmm_fluct, 1.0)
+    noisy_samples = ham_noisy._sample_with_trajectory(
+        traj_noise
+    ).to_nested_dict(all_local=True)
+
+    for q_id, weight in zip(["q0", "q1"], weights):
+        assert np.allclose(
+            noisy_samples["Local"]["XY"][q_id]["det"],
+            detuning + dmm_detuning * weight * dmm_fluct,
+        )
+
+    # Each detuning map spot also leaks onto the neighbouring qubits
+    spot_waist = 3.0
+    ham_crosstalk = HamiltonianData.from_sequence(
+        seq,
+        noise_model=pulser.NoiseModel(detuning_map_spot_waist=spot_waist),
+        n_trajectories=1,
+    )
+    crosstalk_samples = ham_crosstalk._sample_with_trajectory(
+        ham_crosstalk.noise_trajectories[0].trajectory
+    ).to_nested_dict(all_local=True)
+
+    leak = np.exp(-(5.0**2) / (2 * spot_waist**2))
+    expected_weights = [
+        weights[0] + leak * weights[1],
+        leak * weights[0] + weights[1],
+    ]
+    for q_id, weight in zip(["q0", "q1"], expected_weights):
+        assert np.allclose(
+            crosstalk_samples["Local"]["XY"][q_id]["det"],
+            detuning + dmm_detuning * weight,
         )
