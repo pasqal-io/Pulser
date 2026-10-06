@@ -135,19 +135,20 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     def entanglement_entropy(
         self,
         *,
-        excluded_indices: Sequence[int],
-    ) -> ReturnScalarType:
+        excluded_indices: Sequence[int] | None = None,
+    ) -> float:
         """Compute the entanglement entropy between two subparts of the system.
 
         The indices specified in `indices` must contain the indices of the
-        qubits which are NOT part of the subparition to compute the entropy
+        qubits which are NOT part of the subpartition to compute the entropy
         for.
 
-        Must use qubit indices as they are sorted internally. Qubits are sorted
-        from the bottom-right to the upper left of their register space.
+        Must use qubit indices as they are sorted in `Register.qubit_ids`.
 
         Args:
-            indices: The indices of the qubits to remove from the subparition.
+            excluded_indices: The indices of the qubits to remove from the
+                subpartition. Defauts to the first half of the qubits in the
+                system.
 
         Returns:
             The entropy between the two subparts of the system. The
@@ -155,7 +156,8 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
             which aren't part of `indices`.
         """
         raise NotImplementedError(
-            "Entropy computation is not implemented for this State type."
+            "The entanglement entropy computation is not implemented for a "
+            f"state of type {type(self).__name__}."
         )
 
     @classmethod

@@ -17,12 +17,12 @@ from __future__ import annotations
 import math
 from collections import Counter, defaultdict
 from collections.abc import Collection, Mapping, Sequence
-from typing import Any, Type, TypeVar, override
 
 import numpy as np
 import qutip
+from typing_extensions import Any, Type, TypeVar, override
 
-from pulser.backend.state import Eigenstate, ReturnScalarType, State
+from pulser.backend.state import Eigenstate, State
 from pulser.math.multinomial import multinomial
 
 QutipStateType = TypeVar("QutipStateType", bound="QutipState")
@@ -220,25 +220,30 @@ class QutipState(State[complex, float]):
     def entanglement_entropy(
         self,
         *,
-        excluded_indices: Sequence[int],
-    ) -> ReturnScalarType:
+        excluded_indices: Sequence[int] | None = None,
+    ) -> float:
         """Compute the entanglement entropy between two subparts of the system.
 
         The indices specified in `indices` must contain the indices of the
-        qubits which are NOT part of the subparition to compute the entropy
+        qubits which are NOT part of the subpartition to compute the entropy
         for.
 
         Must use qubit indices as they are sorted internally. Qubits are sorted
         from the bottom-right to the upper left of their register space.
 
         Args:
-            indices: The indices of the qubits of the subparition.
+            excluded_indices: The indices of the qubits to remove from the
+                subpartition. Defauts to the first half of the qubits in the
+                system.
 
         Returns:
             The entropy between the two subparts of the system. The
             returned value will refer to the subpartition made of the indices
             which aren't part of `indices`.
         """
+        if excluded_indices is None:
+            excluded_indices = list(range(self.n_qudits // 2, self.n_qudits))
+
         return qutip.entropy_vn(self.to_qobj().ptrace(excluded_indices))
 
     @classmethod

@@ -22,7 +22,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Type
 
 from pulser.backend.observable import AggregationMethod, Observable
-from pulser.backend.operator import Operator, OperatorType, ReturnScalarType
+from pulser.backend.operator import Operator, OperatorType
 from pulser.backend.state import Eigenstate, State, StateType
 from pulser.exceptions.serialization import AbstractReprError
 
@@ -584,14 +584,16 @@ class EntanglementEntropy(Observable):
     """Stores the entanglement entropy between two subpartitions of the system.
 
     The indices specified in `indices` must contain the indices of the qubits
-    which are part of the subparition to compute the entropy for.
+    which are part of the subpartition to compute the entropy for.
 
     When defining an entanglement entropy observable using qubit indices, one
     must use qubit indices as they are sorted internally. Qubits are sorted
     from the bottom-right to the upper left of their register space.
 
     Args:
-        indices: The indices of the qubits to include in the subparition.
+        excluded_indices: The indices of the qubits to include in the
+            subpartition. Defauts to the first half of the qubits in the
+            system.
         evaluation_times: The relative times at which to compute the moment.
             If left as `None`, uses the ``default_evaluation_times`` of the
             backend's ``EmulationConfig``.
@@ -604,7 +606,7 @@ class EntanglementEntropy(Observable):
 
     def __init__(
         self,
-        indices: Sequence[int],
+        excluded_indices: Sequence[int] | None = None,
         *,
         evaluation_times: Sequence[float] | None = None,
         tag_suffix: str | None = None,
@@ -616,16 +618,20 @@ class EntanglementEntropy(Observable):
             evaluation_times=evaluation_times,
             tag_suffix=tag_suffix,
         )
-        self.indices = indices
+        self.excluded_indices: Sequence[int] = excluded_indices
 
     def _base_tag(self) -> str:
         return "entanglement_entropy"
 
-    def apply(self, *, state: State, **kwargs: Any) -> ReturnScalarType:
+    def apply(self, *, state: State, **kwargs: Any) -> float:
         """Calculate the observable to store in the Results."""
+        excluded_indices = self.excluded_indices or list(
+            range(state.n_qudits // 2)
+        )
+
         other_subpartition = [
             indice
             for indice in range(state.n_qudits)
-            if indice not in self.indices
+            if indice not in excluded_indices
         ]
         return state.entanglement_entropy(excluded_indices=other_subpartition)
