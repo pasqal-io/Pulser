@@ -223,7 +223,7 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
             reason = ""
             if isinstance(e, AbstractReprError):
                 reason = (
-                    " Automatic conversion is only possible for states "
+                    " Conversion is only possible for states "
                     "created via 'from_state_amplitudes()' and not modified "
                     "afterwards."
                 )

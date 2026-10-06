@@ -242,7 +242,7 @@ def test_failed_cast(repr_state, repr_op):
     with pytest.raises(
         TypeError,
         match="Failed to convert a state of type "
-        "'QutipState' to '_OtherState'. Automatic conversion is only "
+        "'QutipState' to '_OtherState'. Conversion is only "
         "possible for states created via 'from_state_amplitudes\\(\\)'",
     ):
         _OtherBackend.validate_config(
@@ -261,7 +261,7 @@ def test_failed_cast(repr_state, repr_op):
     with pytest.raises(
         TypeError,
         match="Failed to convert an operator "
-        "of type 'QutipOperator' to '_OtherOperator'. Automatic conversion "
+        "of type 'QutipOperator' to '_OtherOperator'. Conversion "
         "is only possible for operators created via "
         "'from_operator_repr\\(\\)'",
     ):

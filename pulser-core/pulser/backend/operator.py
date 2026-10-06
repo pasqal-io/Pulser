@@ -262,7 +262,7 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             reason = ""
             if isinstance(e, AbstractReprError):
                 reason = (
-                    " Automatic conversion is only possible for operators "
+                    " Conversion is only possible for operators "
                     "created via 'from_operator_repr()'."
                 )
             raise TypeError(
