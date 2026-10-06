@@ -142,7 +142,9 @@ def test_channel_declaration(reg, device):
     }
     for channel, channel_id in channel_map.items():
         seq2.declare_channel(channel, channel_id)
-    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
+    assert set(seq2.available_channels) == (
+        available_channels - {"mw_global", "dmm_1"}
+    )
     assert set(
         seq2._schedule[channel].channel_id
         for channel in seq2.declared_channels
@@ -158,7 +160,7 @@ def test_channel_declaration(reg, device):
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "mw_global")
-    assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
+    assert set(seq2.available_channels) == {"mw_global", "dmm_0", "dmm_1"}
     with pytest.raises(
         ValueError,
         match=re.escape(
@@ -226,10 +228,14 @@ def test_dmm_declaration(reg, device, det_map, first_dmm_id):
     }
     seq2.config_detuning_map(det_map, first_dmm_id)
     # If a DMM was declared but not as an SLM Mask,
-    # MW channels are not available
-    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
+    # the channels addressing the 'XY' basis are not available
+    assert set(seq2.available_channels) == (
+        available_channels - {"mw_global", "dmm_1"}
+    )
     seq2.config_detuning_map(det_map)  # Will use "dmm_0" again
-    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
+    assert set(seq2.available_channels) == (
+        available_channels - {"mw_global", "dmm_1"}
+    )
     assert channel_map.keys() == seq2.declared_channels.keys()
     assert set(
         seq2._schedule[channel].channel_id
@@ -240,14 +246,53 @@ def test_dmm_declaration(reg, device, det_map, first_dmm_id):
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "mw_global")
-    # DMM channels are still available,
-    # but can only be declared using an SLM Mask
-    assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
+    # DMM channels addressing the 'ground-rydberg' basis are still
+    # available, but can only be declared using an SLM Mask
+    assert set(seq2.available_channels) == {"mw_global", "dmm_0", "dmm_1"}
     with pytest.raises(
         ValueError,
         match="cannot work simultaneously with the declared 'Microwave'",
     ):
         seq2.config_detuning_map(det_map, "dmm_0")
+
+
+def test_dmm_declaration_xy(reg, det_map):
+    # Configuring a DMM addressing the 'XY' basis enables the XY mode
+    seq = Sequence(reg, MockDevice)
+    seq.config_detuning_map(det_map, "dmm_1")
+    assert seq._in_xy and not seq._in_ising
+    assert seq.get_addressed_bases() == ("XY",)
+    assert seq.get_addressed_states() == ["u", "d"]
+    # Like declaring a 'Microwave' channel, it sets the default magnetic field
+    assert np.all(seq.magnetic_field == np.array((0.0, 0.0, 30.0)))
+    seq.declare_channel("ch0", "mw_global")
+
+    # It can also be configured on a sequence already in XY mode, which
+    # leaves the magnetic field untouched
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.set_magnetic_field(1.0, 0.0, 0.0)
+    seq.config_detuning_map(det_map, "dmm_1")
+    assert np.all(seq.magnetic_field == np.array((1.0, 0.0, 0.0)))
+    # The detuning it applies must be positive in the 'XY' basis
+    seq.add_dmm_detuning(ConstantWaveform(100, 1), "dmm_1")
+    assert seq.get_duration() == 100
+    with pytest.raises(
+        ValueError, match="The detuning in a DMM must not be negative"
+    ):
+        seq.add_dmm_detuning(ConstantWaveform(100, -1), "dmm_1")
+
+    # But it is not available on a sequence in Ising mode
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "DMM dmm_1 is not available; still available DMM channels "
+            "are ['dmm_0']."
+        ),
+    ):
+        seq.config_detuning_map(det_map, "dmm_1")
 
 
 def test_slm_declaration(reg, device, det_map):
@@ -288,10 +333,12 @@ def test_slm_declaration(reg, device, det_map):
     assert set(seq2.declared_channels.keys()) == set()
     # If a DMM was declared as an SLM Mask, MW channels are still available
     assert set(seq2.available_channels) == available_channels
-    # If other DMM are configured, the MW channel is no longer available
+    # If other DMM are configured, the 'XY' channels are no longer available
     seq2.config_detuning_map(det_map, "dmm_0")
     assert seq2._slm_mask_dmm == "dmm_0"
-    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
+    assert set(seq2.available_channels) == (
+        available_channels - {"mw_global", "dmm_1"}
+    )
     assert channel_map.keys() == seq2.declared_channels.keys()
     assert set(
         seq2._schedule[channel].channel_id
@@ -310,11 +357,11 @@ def test_slm_declaration(reg, device, det_map):
     # Configuring a SLM after having declared a microwave channel
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "mw_global")
-    # DMM channels are still available, but can be configured using an SLM Mask
-    assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
+    # DMM channels are still available, dmm_0 only through an SLM Mask
+    assert set(seq2.available_channels) == {"mw_global", "dmm_0", "dmm_1"}
     assert set(seq2.declared_channels.keys()) == {"ch0"}
     seq2.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_0")
-    assert set(seq2.available_channels) == {"mw_global"}
+    assert set(seq2.available_channels) == {"mw_global", "dmm_1"}
     assert set(seq2.declared_channels.keys()) == {"ch0"}
 
     # Declaring a microwave channel after having configured an SLM
@@ -324,9 +371,9 @@ def test_slm_declaration(reg, device, det_map):
     # If a DMM was declared as an SLM Mask, all channels are still available
     assert set(seq2.available_channels) == available_channels
     assert set(seq2.declared_channels.keys()) == set()
-    # If MW channel is defined, only mw channels are available
+    # If MW channel is defined, only the 'XY' channels are available
     seq2.declare_channel("ch0", "mw_global")
-    assert set(seq2.available_channels) == {"mw_global"}
+    assert set(seq2.available_channels) == {"mw_global", "dmm_1"}
     # DMM is not shown as declared
     assert set(seq2.declared_channels.keys()) == {"ch0"}
 
@@ -393,14 +440,14 @@ def test_magnetic_field(reg):
     seq3.set_magnetic_field(1.0, 0.0, 0.0)  # sets seq to XY mode
     # dmm_0 doesn't appear because there can only be one in XY mode
     # and the SLM is already configured
-    assert set(seq3.available_channels) == {"mw_global"}
+    assert set(seq3.available_channels) == {"mw_global", "dmm_1"}
     assert list(seq3.declared_channels.keys()) == []
     seq3.declare_channel("ch0", "mw_global")
     assert list(seq3.declared_channels.keys()) == ["ch0"]
 
     seq3 = Sequence(reg, MockDevice)
     seq3.set_magnetic_field(1.0, 0.0, 0.0)  # sets seq to XY mode
-    assert set(seq3.available_channels) == {"mw_global", "dmm_0"}
+    assert set(seq3.available_channels) == {"mw_global", "dmm_0", "dmm_1"}
     seq3.declare_channel("ch0", "mw_global")
     # Does not change to default
     assert np.all(seq3.magnetic_field == np.array((1.0, 0.0, 0.0)))

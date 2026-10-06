@@ -665,6 +665,10 @@ class Sequence(Generic[DeviceType]):
             Regular devices only allow a DMM to be declared once, but
             ``MockDevice`` DMM can be repeatedly declared if needed.
 
+        Note:
+            A DMM addressing the 'XY' basis enables the "XY Mode", in the
+            same way as declaring a ``Microwave`` channel does.
+
         Args:
             detuning_map: A DetuningMap defining the amount of detuning each
                 atom receives.
@@ -700,7 +704,7 @@ class Sequence(Generic[DeviceType]):
             )
 
         dmm_ch = self.device.dmm_channels[dmm_id]
-        if self._in_xy:
+        if self._in_xy and dmm_ch.basis != "XY":
             raise ValueError(
                 f"DMM '{dmm_ch}' cannot work simultaneously "
                 "with the declared 'Microwave' channel."
@@ -716,8 +720,13 @@ class Sequence(Generic[DeviceType]):
                 f"channels are {still_available}."
             )
 
-        # Configures the DMM implementing an SLM mask if configured before
-        self._in_ising = True
+        if dmm_ch.basis == "XY":
+            if not self._in_xy:
+                self.set_magnetic_field()
+                self._in_xy = True
+        else:
+            # Configures the DMM implementing an SLM mask if configured before
+            self._in_ising = True
 
         if self.is_parametrized():
             return
@@ -732,8 +741,8 @@ class Sequence(Generic[DeviceType]):
         self._schedule[dmm_name] = _DMMSchedule(
             dmm_id, dmm_ch, detuning_map=detuning_map
         )
-        if "ground-rydberg" not in self._basis_ref:
-            self._basis_ref["ground-rydberg"] = {
+        if dmm_ch.basis not in self._basis_ref:
+            self._basis_ref[dmm_ch.basis] = {
                 q: _QubitRef() for q in self._qids
             }
 
