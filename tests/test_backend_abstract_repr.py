@@ -566,6 +566,116 @@ class TestOperatorRepr:
         deserialized_operator_repr = deserialized_operator._to_abstract_repr()
         assert deserialized_operator_repr == operator_repr
 
+    def test_from_pauli_string(self):
+        operator = OperatorRepr.from_pauli_string(
+            eigenstates=("r", "g"),
+            n_qudits=10,
+            pauli_string={0: "z", 2: "x", 9: "z"},
+        )
+        assert operator._to_abstract_repr() == {
+            "eigenstates": ("r", "g"),
+            "n_qudits": 10,
+            "operations": [
+                (
+                    1.0,
+                    [
+                        (
+                            {"gr": 1.0, "rg": 1.0},
+                            {2},
+                        ),
+                        ({"rr": 1.0, "gg": -1.0}, {0, 9}),
+                    ],
+                )
+            ],
+        }
+
+    @pytest.mark.parametrize(
+        ("pauli_string", "expected_indices"),
+        [
+            ({2: "x"}, {"x": {2}}),
+            ({1: "z", 3: "z"}, {"z": {1, 3}}),
+            ({0: "y", 1: "y", 2: "y", 3: "y"}, {"y": {0, 1, 2, 3}}),
+        ],
+    )
+    def test_pauli_string_point_operators(
+        self, pauli_string, expected_indices
+    ):
+        operator = OperatorRepr.from_pauli_string(
+            eigenstates=("r", "g"), n_qudits=4, pauli_string=pauli_string
+        )
+        operations = operator._to_abstract_repr()["operations"][0][1]
+        actual_indices = {}
+        for pauli_op, indices in operations:
+            if pauli_op == {"gr": 1.0, "rg": 1.0}:
+                actual_indices["x"] = indices
+            elif pauli_op == {"gr": 1.0j, "rg": -1.0j}:
+                actual_indices["y"] = indices
+            elif pauli_op == {"rr": 1.0, "gg": -1.0}:
+                actual_indices["z"] = indices
+        assert actual_indices == expected_indices
+
+    def test_from_pauli_string_uppercase(self):
+        operator = OperatorRepr.from_pauli_string(
+            eigenstates=("r", "g"),
+            n_qudits=3,
+            pauli_string={0: "X", 1: "Y", 2: "Z"},
+        )
+        assert operator._to_abstract_repr()["operations"] == [
+            (
+                1.0,
+                [
+                    (
+                        {"gr": 1.0, "rg": 1.0},
+                        {0},
+                    ),
+                    ({"gr": 1.0j, "rg": -1.0j}, {1}),
+                    ({"rr": 1.0, "gg": -1.0}, {2}),
+                ],
+            )
+        ]
+
+    def test_from_pauli_string_invalid_pauli(self):
+        with pytest.raises(ValueError, match="Invalid Pauli operator"):
+            OperatorRepr.from_pauli_string(
+                eigenstates=("r", "g"), n_qudits=2, pauli_string={0: "a"}
+            )
+
+    def test_from_pauli_string_invalid_eigenstates(self):
+        with pytest.raises(ValueError, match="exactly two eigenstates"):
+            OperatorRepr.from_pauli_string(
+                eigenstates=("r", "g", "h"), n_qudits=2, pauli_string={0: "x"}
+            )
+
+    def test_from_pauli_string_invalid_index(self):
+        with pytest.raises(ValueError, match="invalid indices"):
+            OperatorRepr.from_pauli_string(
+                eigenstates=("r", "g"), n_qudits=2, pauli_string={3: "x"}
+            )
+
+    def test_from_pauli_string_negative_index(self):
+        with pytest.raises(ValueError, match="invalid indices"):
+            OperatorRepr.from_pauli_string(
+                eigenstates=("r", "g"), n_qudits=3, pauli_string={-1: "x"}
+            )
+
+    def test_from_pauli_string_serialization(self):
+        operator = OperatorRepr.from_pauli_string(
+            eigenstates=("r", "g"),
+            n_qudits=3,
+            pauli_string={0: "z", 1: "x", 2: "z"},
+        )
+        serialized_operator = json.dumps(operator, cls=AbstractReprEncoder)
+        expected_repr = json.loads(serialized_operator)
+        deserialized_operator = _deserialize_operator(
+            json.loads(serialized_operator),
+            OperatorRepr,
+        )
+        assert isinstance(deserialized_operator, OperatorRepr)
+        reserialized_operator = json.loads(
+            json.dumps(deserialized_operator, cls=AbstractReprEncoder)
+        )
+        assert reserialized_operator == expected_repr
+
     def test_operator_repr_not_implemented(self):
         op_repr = {"eigenstates": ("r", "g"), "n_qudits": 5, "operations": []}
         op = OperatorRepr.from_operator_repr(**op_repr)

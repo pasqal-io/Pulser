@@ -112,6 +112,63 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         pass
 
     @classmethod
+    def from_pauli_string(
+        cls: Type[OperatorType],
+        *,
+        eigenstates: Sequence[Eigenstate],
+        n_qudits: int,
+        pauli_string: Mapping[int, str],
+    ) -> OperatorType:
+        """Create an operator from a Pauli string.
+
+        Args:
+            eigenstates: The two eigenstates defining the qubit basis.
+            n_qudits: The number of qubits in the system.
+            pauli_string: Mapping from qubit indices to Pauli operators
+                ("x", "y" or "z"). Qubits not included in the mapping
+                are acted on by the identity.
+
+        Returns:
+            The constructed Pauli-string operator.
+
+        Raises:
+            ValueError: If there are not exactly two eigenstates or an
+                invalid Pauli operator is specified.
+        """
+        if len(eigenstates) != 2:
+            raise ValueError(
+                "Pauli operators require exactly two eigenstates."
+            )
+        state_0, state_1 = eigenstates
+        pauli_repr: dict[str, Mapping[str, complex]] = {
+            "x": {f"{state_1}{state_0}": 1.0, f"{state_0}{state_1}": 1.0},
+            "y": {f"{state_1}{state_0}": 1.0j, f"{state_0}{state_1}": -1.0j},
+            "z": {f"{state_0}{state_0}": 1.0, f"{state_1}{state_1}": -1.0},
+        }
+        grouped_indices: dict[str, set[int]] = {
+            "x": set(),
+            "y": set(),
+            "z": set(),
+        }
+        for index, pauli in pauli_string.items():
+            pauli = pauli.lower()
+            if pauli not in pauli_repr:
+                raise ValueError(
+                    f"Invalid Pauli operator '{pauli}' at index {index}."
+                )
+            grouped_indices[pauli].add(index)
+        tensor_op = [
+            (pauli_repr[pauli], indices)
+            for pauli, indices in grouped_indices.items()
+            if indices
+        ]
+        return cls.from_operator_repr(
+            eigenstates=eigenstates,
+            n_qudits=n_qudits,
+            operations=[(1.0, tensor_op)],
+        )
+
+    @classmethod
     def from_operator_repr(
         cls: Type[OperatorType],
         *,

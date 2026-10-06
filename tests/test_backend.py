@@ -1348,6 +1348,30 @@ def test_results_final_state():
     assert res.final_state == res.get_result(obs, 1.0) == state
 
 
+def test_qutip_operator_from_pauli_string():
+    pauli_operator = QutipOperator.from_pauli_string(
+        eigenstates=("r", "g"),
+        n_qudits=3,
+        pauli_string={0: "z", 1: "x", 2: "z"},
+    )
+    expected_operator = QutipOperator.from_operator_repr(
+        eigenstates=("r", "g"),
+        n_qudits=3,
+        operations=[
+            (
+                1.0,
+                [
+                    ({"gr": 1.0, "rg": 1.0}, {1}),
+                    ({"rr": 1.0, "gg": -1.0}, {0, 2}),
+                ],
+            )
+        ],
+    )
+    assert np.allclose(
+        pauli_operator.to_qobj().full(), expected_operator.to_qobj().full()
+    )
+
+
 class TestObservables:
     @pytest.fixture
     def ghz_state(self):
@@ -1614,6 +1638,19 @@ class TestObservables:
         z_exp = Expectation(zzz, tag_suffix="zzz")
         assert z_exp.tag == "expectation_zzz"
         assert z_exp.apply(state=ghz_state) == zzz.expect(ghz_state)
+
+    def test_expectation_from_pauli_string(self):
+        state = QutipState.from_state_amplitudes(
+            eigenstates=("r", "g"),
+            amplitudes={"rrr": np.sqrt(0.5), "rgr": np.sqrt(0.5)},
+        )
+        operator = QutipOperator.from_pauli_string(
+            eigenstates=("r", "g"),
+            n_qudits=3,
+            pauli_string={0: "z", 1: "x", 2: "z"},
+        )
+        expectation = Expectation(operator)
+        assert np.isclose(expectation.apply(state=state), 1.0)
 
     def test_fidelity(self, ghz_state):
         ghz_qobj = ghz_state.to_qobj()
