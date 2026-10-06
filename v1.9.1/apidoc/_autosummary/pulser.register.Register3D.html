@@ -1,0 +1,522 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register3D &mdash; Pulser 1.9.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=60b3a732"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <script src="../../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Sequence" href="pulser.sequence.Sequence.html" />
+    <link rel="prev" title="Register" href="pulser.register.Register.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.9.1" /><meta name="readthedocs-resolver-filename" content="/apidoc/_autosummary/pulser.register.Register3D.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Pulser
+              <img src="../../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/backends.html">Execution on an Emulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/qpu.html">QPU Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../results.html">Results and Observables</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../core.html#classes">Classes</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.CompositeWaveform.html">CompositeWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.CustomWaveform.html">CustomWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.ConstantWaveform.html">ConstantWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.RampWaveform.html">RampWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.BlackmanWaveform.html">BlackmanWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.InterpolatedWaveform.html">InterpolatedWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.KaiserWaveform.html">KaiserWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.pulse.Pulse.html">Pulse</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.register.Register.html">Register</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Register3D</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pulser.register.Register3D"><code class="docutils literal notranslate"><span class="pre">Register3D</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.sequence.Sequence.html">Sequence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.noise_model.NoiseModel.html">NoiseModel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.backend.EmulatorConfig.html">EmulatorConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.backend.QPUBackend.html">QPUBackend</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../core.html#device-examples">Device Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core.html#modules">Modules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+      <li class="breadcrumb-item active">Register3D</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/apidoc/_autosummary/pulser.register.Register3D.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="register3d">
+<h1>Register3D<a class="headerlink" href="#register3d" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser.register.Register3D">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser.register.</span></span><span class="sig-name descname"><span class="pre">Register3D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qubits</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.register.Register3D" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseRegister</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">RegDrawer</span></code></p>
+<p>A 3D quantum register containing a set of qubits.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>qubits</strong> (<span class="sphinx_autodoc_typehints-type">Mapping[Any, ArrayLike | pm.TensorLike]</span>) – Dictionary with the qubit names as keys and their
+position coordinates (in μm) as values
+(e.g. {‘q0’:(2, -1, 0), ‘q1’:(-5, 10, 0), …}).</p>
+</dd>
+</dl>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.register.Register3D.dimensionality" title="pulser.register.Register3D.dimensionality"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dimensionality</span></code></a></p></td>
+<td><p>The dimensionality of the coordinates (2 or 3).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.register.Register3D.layout" title="pulser.register.Register3D.layout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">layout</span></code></a></p></td>
+<td><p>The layout used to define the register.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.register.Register3D.qubit_ids" title="pulser.register.Register3D.qubit_ids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">qubit_ids</span></code></a></p></td>
+<td><p>The qubit IDs of this register.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.register.Register3D.qubits" title="pulser.register.Register3D.qubits"><code class="xref py py-obj docutils literal notranslate"><span class="pre">qubits</span></code></a></p></td>
+<td><p>Dictionary of the qubit names and their position coordinates.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.register.Register3D.sorted_coords" title="pulser.register.Register3D.sorted_coords"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sorted_coords</span></code></a></p></td>
+<td><p>The sorted coordinates.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.register.Register3D.coords_hex_hash" title="pulser.register.Register3D.coords_hex_hash"><code class="xref py py-obj docutils literal notranslate"><span class="pre">coords_hex_hash</span></code></a></p></td>
+<td><p>Returns the idempotent hash of the coordinates.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.register.Register3D.cubic" title="pulser.register.Register3D.cubic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cubic</span></code></a></p></td>
+<td><p>Initializes the register with the qubits in a cubic array.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.register.Register3D.cuboid" title="pulser.register.Register3D.cuboid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cuboid</span></code></a></p></td>
+<td><p>Initializes the register with the qubits in a cuboid array.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.register.Register3D.define_detuning_map" title="pulser.register.Register3D.define_detuning_map"><code class="xref py py-obj docutils literal notranslate"><span class="pre">define_detuning_map</span></code></a></p></td>
+<td><p>Defines a DetuningMap for some qubits of the register.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.register.Register3D.draw" title="pulser.register.Register3D.draw"><code class="xref py py-obj docutils literal notranslate"><span class="pre">draw</span></code></a></p></td>
+<td><p>Draws the entire register.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.register.Register3D.find_indices" title="pulser.register.Register3D.find_indices"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_indices</span></code></a></p></td>
+<td><p>Computes indices of qubits.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.register.Register3D.from_abstract_repr" title="pulser.register.Register3D.from_abstract_repr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_abstract_repr</span></code></a></p></td>
+<td><p>Deserialize a 3D register from an abstract JSON object.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.register.Register3D.from_coordinates" title="pulser.register.Register3D.from_coordinates"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_coordinates</span></code></a></p></td>
+<td><p>Creates the register from an array of coordinates.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.register.Register3D.to_2D" title="pulser.register.Register3D.to_2D"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_2D</span></code></a></p></td>
+<td><p>Converts a Register3D into a Register (if possible).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.register.Register3D.to_abstract_repr" title="pulser.register.Register3D.to_abstract_repr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_abstract_repr</span></code></a></p></td>
+<td><p>Serializes the register into an abstract JSON object.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Signatures</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.register.Register3D.coords_hex_hash">
+<span class="sig-name descname"><span class="pre">coords_hex_hash</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.register.Register3D.coords_hex_hash" title="Link to this definition"></a></dt>
+<dd><p>Returns the idempotent hash of the coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>An hexstring encoding the hash.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This hash will be returned as an hexstring without
+the ‘0x’ prefix (unlike what is returned by ‘hex()’).</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.register.Register3D.cubic">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cubic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">side</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spacing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.register.Register3D.cubic" title="Link to this definition"></a></dt>
+<dd><p>Initializes the register with the qubits in a cubic array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>side</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Side of the cube in number of qubits.</p></li>
+<li><p><strong>spacing</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">TensorLike</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">4.0</span></code>) – The distance between neighbouring qubits in μm.</p></li>
+<li><p><strong>prefix</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The prefix for the qubit ids. If defined, each qubit
+id starts with the prefix, followed by an int from 0 to N-1
+(e.g. prefix=’q’ -&gt; IDs: ‘q0’, ‘q1’, ‘q2’, …).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#pulser.register.Register3D" title="pulser.register.register3d.Register3D"><code class="xref py py-class docutils literal notranslate"><span class="pre">Register3D</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A 3D register with qubits placed in a cubic array.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.register.Register3D.cuboid">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cuboid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spacing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.register.Register3D.cuboid" title="Link to this definition"></a></dt>
+<dd><p>Initializes the register with the qubits in a cuboid array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rows</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Number of rows.</p></li>
+<li><p><strong>columns</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Number of columns.</p></li>
+<li><p><strong>layers</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Number of layers.</p></li>
+<li><p><strong>spacing</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">TensorLike</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">4.0</span></code>) – The distance between neighbouring qubits in μm.</p></li>
+<li><p><strong>prefix</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The prefix for the qubit ids. If defined, each qubit
+id starts with the prefix, followed by an int from 0 to N-1
+(e.g. prefix=’q’ -&gt; IDs: ‘q0’, ‘q1’, ‘q2’, …)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#pulser.register.Register3D" title="pulser.register.register3d.Register3D"><code class="xref py py-class docutils literal notranslate"><span class="pre">Register3D</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A 3D register with qubits placed in a cuboid array.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.register.Register3D.define_detuning_map">
+<span class="sig-name descname"><span class="pre">define_detuning_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">detuning_weights</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slug</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.register.Register3D.define_detuning_map" title="Link to this definition"></a></dt>
+<dd><p>Defines a DetuningMap for some qubits of the register.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>detuning_weights</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>]</span>) – A mapping between the IDs of the targeted qubits
+and detuning weights (between 0 and 1).</p></li>
+<li><p><strong>slug</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An optional identifier for the detuning map.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser.register.DetuningMap.html#pulser.register.DetuningMap" title="pulser.register.weight_maps.DetuningMap"><code class="xref py py-class docutils literal notranslate"><span class="pre">DetuningMap</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A DetuningMap associating detuning weights to the trap coordinates
+of the targeted qubits.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.register.Register3D.draw">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">with_labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">blockade_radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_graph</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_half_radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qubit_colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">projection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fig_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kwargs_savefig</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.register.Register3D.draw" title="Link to this definition"></a></dt>
+<dd><p>Draws the entire register.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>with_labels</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – If True, writes the qubit ID’s
+next to each qubit.</p></li>
+<li><p><strong>blockade_radius</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The distance (in μm) between
+atoms below the Rydberg blockade effect occurs.</p></li>
+<li><p><strong>draw_half_radius</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether or not to draw the
+half the blockade radius surrounding each atoms. If <cite>True</cite>,
+requires <cite>blockade_radius</cite> to be defined.</p></li>
+<li><p><strong>draw_graph</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Whether or not to draw the
+interaction between atoms as edges in a graph. Will only draw
+if the <cite>blockade_radius</cite> is defined.</p></li>
+<li><p><strong>qubit_colors</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">{}</span></code>) – By default, atoms are drawn with a common default
+color. If this parameter is present, it replaces the colors
+for the specified atoms. Non-specified ones are stilled colored
+with the default value.</p></li>
+<li><p><strong>projection</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether to draw a 2D projection
+instead of a perspective view.</p></li>
+<li><p><strong>fig_name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The name on which to save the figure.
+If None the figure will not be saved.</p></li>
+<li><p><strong>kwargs_savefig</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">{}</span></code>) – Keywords arguments for
+<code class="docutils literal notranslate"><span class="pre">matplotlib.pyplot.savefig</span></code>. Not applicable if <cite>fig_name</cite>
+is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When drawing half the blockade radius, we say there is a blockade
+effect between atoms whenever their respective circles overlap.
+This representation is preferred over drawing the full Rydberg
+radius because it helps in seeing the interactions between atoms.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.register.Register3D.find_indices">
+<span class="sig-name descname"><span class="pre">find_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.register.Register3D.find_indices" title="Link to this definition"></a></dt>
+<dd><p>Computes indices of qubits.</p>
+<p>This can especially be useful when building a Pulser Sequence
+with a parameter denoting qubits.</p>
+<p class="rubric">Example</p>
+<p>Let <code class="docutils literal notranslate"><span class="pre">reg</span></code> be a register with qubit Ids “a”, “b” and “c”:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">reg</span><span class="o">.</span><span class="n">find_indices</span><span class="p">([</span><span class="s2">"a"</span><span class="p">,</span> <span class="s2">"b"</span><span class="p">,</span> <span class="s2">"c"</span><span class="p">,</span> <span class="s2">"a"</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>It returns <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1,</span> <span class="pre">2,</span> <span class="pre">0]</span></code>, following the qubit order of the
+register.</p>
+<p>Then, it is possible to use these indices when building a
+sequence, typically by assigning them to an array of variables
+that can be provided as an argument to <code class="docutils literal notranslate"><span class="pre">target_index</span></code>
+and <code class="docutils literal notranslate"><span class="pre">phase_shift_index</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>id_list</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – IDs of the qubits to find.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Indices of the qubits to denote, only valid for the
+given mapping.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.register.Register3D.from_abstract_repr">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_abstract_repr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj_str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.register.Register3D.from_abstract_repr" title="Link to this definition"></a></dt>
+<dd><p>Deserialize a 3D register from an abstract JSON object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obj_str</strong> (<em>str</em>) – the JSON string representing the register encoded
+in the abstract JSON format.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#pulser.register.Register3D" title="pulser.register.register3d.Register3D"><code class="xref py py-class docutils literal notranslate"><span class="pre">Register3D</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.register.Register3D.from_coordinates">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_coordinates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coords</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.register.Register3D.from_coordinates" title="Link to this definition"></a></dt>
+<dd><p>Creates the register from an array of coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coords</strong> (<span class="sphinx_autodoc_typehints-type">ArrayLike | pm.TensorLike</span>) – The coordinates of each qubit to include in the
+register.</p></li>
+<li><p><strong>center</strong> (<span class="sphinx_autodoc_typehints-type">bool</span>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Whether or not to center the entire array around the
+origin.</p></li>
+<li><p><strong>prefix</strong> (<span class="sphinx_autodoc_typehints-type">Optional[str]</span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The prefix for the qubit ids. If defined, each qubit
+id starts with the prefix, followed by an int from 0 to N-1
+(e.g. prefix=’q’ -&gt; IDs: ‘q0’, ‘q1’, ‘q2’, …).</p></li>
+<li><p><strong>labels</strong> (<span class="sphinx_autodoc_typehints-type">Optional[abcSequence[QubitId]]</span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The list of qubit ids. If defined, each qubit id will be
+set to the corresponding value.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type">T</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A register with qubits placed on the given coordinates.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.register.Register3D.to_2D">
+<span class="sig-name descname"><span class="pre">to_2D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tol_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.register.Register3D.to_2D" title="Link to this definition"></a></dt>
+<dd><p>Converts a Register3D into a Register (if possible).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>tol_width</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – The allowed transverse width of the register to be
+projected.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser.register.Register.html#pulser.register.Register" title="pulser.register.register.Register"><code class="xref py py-class docutils literal notranslate"><span class="pre">Register</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Returns a 2D register with the coordinates of the atoms
+in a plane, if they are coplanar.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the atoms are not coplanar.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.register.Register3D.to_abstract_repr">
+<span class="sig-name descname"><span class="pre">to_abstract_repr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.register.Register3D.to_abstract_repr" title="Link to this definition"></a></dt>
+<dd><p>Serializes the register into an abstract JSON object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.register.Register3D.dimensionality">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dimensionality</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#pulser.register.Register3D.dimensionality" title="Link to this definition"></a></dt>
+<dd><p>The dimensionality of the coordinates (2 or 3).</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.register.Register3D.layout">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">layout</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="pulser.register.RegisterLayout.html#pulser.register.RegisterLayout" title="pulser.register.register_layout.RegisterLayout"><span class="pre">RegisterLayout</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#pulser.register.Register3D.layout" title="Link to this definition"></a></dt>
+<dd><p>The layout used to define the register.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.register.Register3D.qubit_ids">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">qubit_ids</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pulser.register.Register3D.qubit_ids" title="Link to this definition"></a></dt>
+<dd><p>The qubit IDs of this register.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.register.Register3D.qubits">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">qubits</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">AbstractArray</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pulser.register.Register3D.qubits" title="Link to this definition"></a></dt>
+<dd><p>Dictionary of the qubit names and their position coordinates.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.register.Register3D.sorted_coords">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sorted_coords</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></em><a class="headerlink" href="#pulser.register.Register3D.sorted_coords" title="Link to this definition"></a></dt>
+<dd><p>The sorted coordinates.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pulser.register.Register.html" class="btn btn-neutral float-left" title="Register" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pulser.sequence.Sequence.html" class="btn btn-neutral float-right" title="Sequence" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

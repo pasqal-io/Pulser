@@ -1,0 +1,665 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tutorial: Programming with Pulser &mdash; Pulser 1.9.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=60b3a732"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Conventions" href="../conventions.html" />
+    <link rel="prev" title="Programming a neutral-atom QPU" href="../programming.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.9.1" /><meta name="readthedocs-resolver-filename" content="/tutorials/creating.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Tutorial: Programming with Pulser</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Preparing-an-atom-in-the-Rydberg-state">Preparing an atom in the Rydberg state</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#1.-Picking-a-Device">1. Picking a <code class="docutils literal notranslate"><span class="pre">Device</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.-Creating-the-Register">2. Creating the <code class="docutils literal notranslate"><span class="pre">Register</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.-Picking-the-Channels">3. Picking the Channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#4.-Adding-the-pulses">4. Adding the pulses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Executing-the-Pulse-Sequence">Executing the Pulse Sequence</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Adiabatic-preparation-of-an-Anti-Ferromagnetic-State">Adiabatic preparation of an Anti-Ferromagnetic State</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">1. Picking a <code class="docutils literal notranslate"><span class="pre">Device</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id2">2. Creating the <code class="docutils literal notranslate"><span class="pre">Register</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id3">3. Picking the Channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id4">4. Adding the pulses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id5">Executing the Pulse Sequence</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Execution on an Emulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qpu.html">QPU Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../results.html">Results and Observables</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Tutorial: Programming with Pulser</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/creating.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Tutorial:-Programming-with-Pulser">
+<h1>Tutorial: Programming with Pulser<a class="headerlink" href="#Tutorial:-Programming-with-Pulser" title="Link to this heading"></a></h1>
+<p>This tutorial demonstrates how to use Pulser to program the evolution of a quantum system. Two programs are presented:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#Preparing-an-atom-in-the-Rydberg-state"><span class="std std-ref">In a first part</span></a>, we excite one atom from its ground state to its excited state using a constant pulse.</p></li>
+<li><p><a class="reference internal" href="#Adiabatic-preparation-of-an-Anti-Ferromagnetic-State"><span class="std std-ref">In a second part</span></a>, we show how to prepare a quantum system of 9 atoms in an anti-ferromagnetic state using time-dependent pulses.</p></li>
+</ul>
+<p>This tutorial follows the step-py-step guide on how to create a quantum program using Pulser that is provided in the <a class="reference internal" href="../programming.html"><span class="doc">programming page</span></a>. For more information regarding the steps followed and the mathematical objects at stake, please refer to this page.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+</pre></div>
+</div>
+</div>
+<section id="Preparing-an-atom-in-the-Rydberg-state">
+<h2>Preparing an atom in the Rydberg state<a class="headerlink" href="#Preparing-an-atom-in-the-Rydberg-state" title="Link to this heading"></a></h2>
+<p>As presented in <a class="reference internal" href="../programming.html"><span class="doc">“Programming a neutral-atom QPU”</span></a>, Pulser enables you to program <a class="reference internal" href="../programming.html#hamiltonian-evolves-the-state"><span class="std std-ref">an Hamiltonian</span></a> composed of an <a class="reference internal" href="../programming.html#interaction-hamiltonian"><span class="std std-ref">interaction Hamiltonian</span></a> and a <a class="reference internal" href="../programming.html#driving-hamiltonian"><span class="std std-ref">drive Hamiltonian</span></a>.</p>
+<p>Let’s program this Hamiltonian <span class="math notranslate nohighlight">\(H\)</span> such that an atom initially in the ground state <span class="math notranslate nohighlight">\(\left|g\right&gt;\)</span> is measured in the Rydberg state <span class="math notranslate nohighlight">\(\left|r\right&gt;\)</span> after a time <span class="math notranslate nohighlight">\(\Delta t\)</span>.</p>
+<p>Since we are working with a single atom, there is no <a class="reference internal" href="../programming.html#interaction-hamiltonian"><span class="std std-ref">interaction Hamiltonian</span></a>. In this specific example, <span class="math notranslate nohighlight">\(H=H^D\)</span>. For a simple pulse having a duration <span class="math notranslate nohighlight">\(\Delta t\)</span>, a constant amplitude along time <span class="math notranslate nohighlight">\(\Omega\)</span>, detuning <span class="math notranslate nohighlight">\(\delta=0\)</span> and phase <span class="math notranslate nohighlight">\(\phi=0\)</span> <a class="reference internal" href="../programming.html#hamiltonian-evolves-the-state"><span class="std std-ref">the Hamiltonian between 0 and Δt is</span></a>:</p>
+<div class="math notranslate nohighlight">
+\[H(t) = \hbar\frac{\Omega}{2} (|g\rangle\langle r| + |r\rangle\langle g|)\]</div>
+<p>To find the atom in the Rydberg state at the end of the program, we want <span class="math notranslate nohighlight">\(\Omega \Delta t = \pi\)</span> so we choose <span class="math notranslate nohighlight">\(\Delta t=1000\ ns\)</span> and <span class="math notranslate nohighlight">\(\Omega=\pi\ rad/\mu s\)</span>.</p>
+<details><ul>
+<li><p>We can use the Bloch sphere representation</p>
+<p>The pulse being of duration <span class="math notranslate nohighlight">\(\Delta t\)</span>, of detuning <span class="math notranslate nohighlight">\(\delta=0\)</span>, of phase <span class="math notranslate nohighlight">\(\phi=0\)</span> and constant amplitude <span class="math notranslate nohighlight">\(\Omega\)</span>, the pulse will make the vector representing the state rotate by an angle <span class="math notranslate nohighlight">\(\Omega \Delta t\)</span> around the axis <span class="math notranslate nohighlight">\((1, 0, 0)\)</span>. To go from the ground state <span class="math notranslate nohighlight">\(\left|g\right&gt;\)</span> to the excited state <span class="math notranslate nohighlight">\(\left|r\right&gt;\)</span> by rotating around the <span class="math notranslate nohighlight">\((1, 0, 0)\)</span> axis, we need to make a rotation of angle <span class="math notranslate nohighlight">\(\pi\)</span>.</p>
+<p>Therefore we get that the final state will be the Rydberg state if <span class="math notranslate nohighlight">\(\Omega \Delta t = \pi\)</span>. From this condition, we choose <span class="math notranslate nohighlight">\(\Delta t = 1000\ ns\)</span> and <span class="math notranslate nohighlight">\(\Omega=\pi\ rad/\mu s\)</span>.</p>
+<center><figure><p><img alt="Bloch rotation of angle pi" class="no-scaled-link" src="../_images/bloch_pi_rotation.png" style="width: 300px;" /></p>
+<figcaption><p>The Bloch vector rotates around the x axis by an angle of π, going from the ground state to the Rydberg state.</p>
+</figcaption></figure></center></li>
+<li><p>We can compute the final state knowing the initial state</p>
+<p>The initial state being the ground state and the Hamiltonian <span class="math notranslate nohighlight">\(H\)</span> being constant along time, <a class="reference internal" href="../programming.html#hamiltonian-evolves-the-state"><span class="std std-ref">the final state is</span></a>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align}
+\left|\Psi_f\right&gt; &amp;= e^{-\frac{i}{\hbar} H \Delta t} \left|g\right&gt; \\
+&amp;= \left(\cos\left(\frac{\Omega}{2} \Delta t\right)(|g\rangle\langle g| + |r\rangle\langle r|) - i \sin\left(\frac{\Omega}{2} \Delta t\right)(|g\rangle\langle r| + |r\rangle\langle g|)\right)\left|g\right&gt;\\
+&amp;= \cos\left(\frac{\Omega}{2} \Delta t\right)\left|g\right&gt; - i \sin\left(\frac{\Omega}{2} \Delta t\right)\left|r\right&gt;
+\end{align}\end{split}\]</div>
+<p>The final state will be the Rydberg state <span class="math notranslate nohighlight">\(\left|r\right&gt;\)</span> if <span class="math notranslate nohighlight">\(\frac{\Omega}{2} \Delta t = \frac{\pi}{2}\)</span>. From this condition, we choose <span class="math notranslate nohighlight">\(\Delta t = 1000\ ns\)</span> and <span class="math notranslate nohighlight">\(\Omega=\pi\ rad/\mu s\)</span>.</p>
+</li>
+</ul>
+</details><p></p><section id="1.-Picking-a-Device">
+<h3>1. Picking a <code class="docutils literal notranslate"><span class="pre">Device</span></code><a class="headerlink" href="#1.-Picking-a-Device" title="Link to this heading"></a></h3>
+<p>We need a <code class="docutils literal notranslate"><span class="pre">Device</span></code> that will enable us to target the transition between the ground and the Rydberg state. <code class="docutils literal notranslate"><span class="pre">pulser.AnalogDevice</span></code> contains the <code class="docutils literal notranslate"><span class="pre">Rydberg.Global</span></code> channel, which targets the transition between these two states. Let’s select this <code class="docutils literal notranslate"><span class="pre">Device</span></code>!</p>
+<p>We can check in the device specifications (accessed via <code class="docutils literal notranslate"><span class="pre">Device.specs</span></code>) that the <code class="docutils literal notranslate"><span class="pre">AnalogDevice</span></code> supports the ground-rydberg transition.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">AnalogDevice</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">device</span><span class="o">.</span><span class="n">specs</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+A realistic device for analog sequence execution.
+
+Register parameters:
+ - Dimensions: 2D
+ - Maximum number of atoms: 80
+ - Maximum distance from origin: 38 µm
+ - Minimum distance between neighbouring atoms: 5 μm
+
+Layout parameters:
+ - Requires layout: Yes
+ - Accepts new layout: Yes
+ - Minimal number of traps: 1
+ - Minimum layout filling fraction: 0.0
+ - Maximum layout filling fraction: 0.5
+
+Device parameters:
+ - Rydberg level: 60
+ - Ising interaction coefficient: 865723.02
+ - XY interaction coefficient: 19071.447974615883
+ - Channels can be reused: No
+ - Supported bases: ground-rydberg
+ - Supported states: r, g
+ - SLM Mask: No
+ - Maximum sequence duration: 6000 ns
+ - Maximum number of runs: 2000
+
+Channels:
+ - &#39;rydberg_global&#39;: Rydberg(addressing=&#39;Global&#39;,
+        max_abs_detuning=125.66370614359172,
+        max_amp=12.566370614359172,
+        min_retarget_interval=None,
+        fixed_retarget_t=None,
+        max_targets=None,
+        clock_period=4,
+        min_duration=16,
+        max_duration=100000000,
+        min_avg_amp=0,
+        mod_bandwidth=8,
+        custom_phase_jump_time=None,
+        eom_config=RydbergEOM(limiting_beam=&lt;RydbergBeam.RED: 2&gt;,
+                              max_limiting_amp=188.49555921538757,
+                              intermediate_detuning=2827.4333882308138,
+                              controlled_beams=(&lt;RydbergBeam.BLUE: 1&gt;,),
+                              mod_bandwidth=40,
+                              custom_buffer_time=240,
+                              multiple_beam_control=True,
+                              blue_shift_coeff=1.0,
+                              red_shift_coeff=1.0),
+        propagation_dir=None)
+</pre></div></div>
+</div>
+</section>
+<section id="2.-Creating-the-Register">
+<h3>2. Creating the <code class="docutils literal notranslate"><span class="pre">Register</span></code><a class="headerlink" href="#2.-Creating-the-Register" title="Link to this heading"></a></h3>
+<p>We want to excite one atom. There will therefore be only one atom in the <code class="docutils literal notranslate"><span class="pre">Register</span></code>, whose position does not matter because it will not interact with another atom.</p>
+<p>Let’s then create a <code class="docutils literal notranslate"><span class="pre">Register</span></code> containing one atom at the coordinate (0, 0).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">register</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)],</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">"q"</span><span class="p">)</span>
+<span class="n">register</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_11_0.png" src="../_images/tutorials_creating_11_0.png" />
+</div>
+</div>
+<p>At this stage, we can initialize the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, our quantum program. This will check that the created <code class="docutils literal notranslate"><span class="pre">Register</span></code> matches the parameters set by the <code class="docutils literal notranslate"><span class="pre">Device</span></code> we picked.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sequence</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">register</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="3.-Picking-the-Channels">
+<h3>3. Picking the Channels<a class="headerlink" href="#3.-Picking-the-Channels" title="Link to this heading"></a></h3>
+<p>The only channel we need to pick is a <code class="docutils literal notranslate"><span class="pre">Rydberg</span></code> channel to target the transition between <span class="math notranslate nohighlight">\(\left|g\right&gt;\)</span> and <span class="math notranslate nohighlight">\(\left|r\right&gt;\)</span>. Since we only have one atom, the addressing does not matter, the <code class="docutils literal notranslate"><span class="pre">Rydberg.Global</span></code> channel will address the atom in the register.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sequence</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">"rydberg_global"</span><span class="p">,</span> <span class="s2">"rydberg_global"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="s2">"The states used in the computation are"</span><span class="p">,</span> <span class="n">sequence</span><span class="o">.</span><span class="n">get_addressed_states</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+The states used in the computation are [&#39;r&#39;, &#39;g&#39;]
+</pre></div></div>
+</div>
+<p>At this stage, the atom is initialized in the ground state <span class="math notranslate nohighlight">\(\left|g\right&gt;\)</span> and only two energy levels are used in the computation - the state of the system is described by a qubit.</p>
+</section>
+<section id="4.-Adding-the-pulses">
+<h3>4. Adding the pulses<a class="headerlink" href="#4.-Adding-the-pulses" title="Link to this heading"></a></h3>
+<p>Let’s now add the pulse of duration <span class="math notranslate nohighlight">\(\Delta t = 1000\ ns\)</span>, amplitude <span class="math notranslate nohighlight">\(\Omega=\pi\ rad/\mu s\)</span>, detuning <span class="math notranslate nohighlight">\(\delta=0\)</span> and phase <span class="math notranslate nohighlight">\(\phi=0\)</span> to the <code class="docutils literal notranslate"><span class="pre">Rydberg.Global</span></code> channel to modify the state of the atom and make it reach the state <span class="math notranslate nohighlight">\(\left|r\right&gt;\)</span>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pi_pulse</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">sequence</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pi_pulse</span><span class="p">,</span> <span class="s2">"rydberg_global"</span><span class="p">)</span>
+<span class="n">sequence</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"input"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_20_0.png" src="../_images/tutorials_creating_20_0.png" />
+</div>
+</div>
+</section>
+<section id="Executing-the-Pulse-Sequence">
+<h3>Executing the Pulse Sequence<a class="headerlink" href="#Executing-the-Pulse-Sequence" title="Link to this heading"></a></h3>
+<p>We are now done with our first Pulser program! We can now submit it to a backend for execution. Pulser provides multiple backends, notably the QPUs, but also a backend to simulate small quantum systems on your laptop based on <strong>QuTip</strong>. Let’s use this <code class="docutils literal notranslate"><span class="pre">QutipBackendV2</span></code> to simulate the final state of the system:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">backend</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">QutipBackendV2</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">backend</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>When running an experiment on a neutral-atom QPU, the output of the quantum program is the sampling of the final state. It is a dictionary associating to each measured state the number of times it was measured.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">result</span><span class="o">.</span><span class="n">final_bitstrings</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Counter({&#39;1&#39;: 1000})
+</pre></div></div>
+</div>
+<p>When measuring in the ground-rydberg basis, <a class="reference internal" href="../conventions.html#state-preparation-and-measurement"><span class="std std-ref">the ground state is labelled “0” and the rydberg state “1”</span></a>. For each of the 1000 measurements we did, the atom was measured in the Rydberg state, which means we designed our quantum program correctly!</p>
+</section>
+</section>
+<section id="Adiabatic-preparation-of-an-Anti-Ferromagnetic-State">
+<h2>Adiabatic preparation of an Anti-Ferromagnetic State<a class="headerlink" href="#Adiabatic-preparation-of-an-Anti-Ferromagnetic-State" title="Link to this heading"></a></h2>
+<p>Let’s now program the <a class="reference internal" href="../programming.html#ising-hamiltonian"><span class="std std-ref">Ising Hamiltonian</span></a> such that a set of 9 atoms initially in the ground state <span class="math notranslate nohighlight">\(\left|ggggggggg\right&gt;\)</span> are prepared in an antiferromagnetic state <span class="math notranslate nohighlight">\(\left|rgrgrgrgr\right&gt;\)</span>.</p>
+<p>To reach the desired antiferromagentic state, we can take advantage of the <a class="reference external" href="https://en.wikipedia.org/wiki/Adiabatic_theorem">adiabatic theorem</a>. The idea is to use a time-dependent Hamiltonian that changes slowly so that the system stays in its ground state. Therefore, we must choose a final Hamiltonian that has the antiferromagnetic state as its ground state.</p>
+<p>This final Hamiltonian should simultaneously favor having the largest number of atoms in the <span class="math notranslate nohighlight">\(\left|r\right&gt;\)</span> state (by having <span class="math notranslate nohighlight">\(\delta &gt; 0\)</span>) and discourage nearest neighbors from being both in <span class="math notranslate nohighlight">\(\left|r\right&gt;\)</span> (via the <a class="reference internal" href="../programming.html#ising-hamiltonian"><span class="std std-ref">interaction Hamiltonian</span></a>). When these contributions are appropriately balanced, we get an Hamiltonian with <span class="math notranslate nohighlight">\(\left|rgrgrgrgr\right&gt;\)</span> as its ground state.</p>
+<p>Let’s follow the protocol from <a class="reference external" href="https://journals.aps.org/prx/abstract/10.1103/PhysRevX.8.021070">this paper</a>, where we define the parameters with respect to the interaction strength between nearest neighbours, <span class="math notranslate nohighlight">\(U\)</span> (see Table 1 of the paper):</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}U = 2\pi\ rad/\mu s\\
+\Omega_{max} = 2 U\\
+\delta_0 = -6 U\\
+\delta_f = 2U\\
+t_{rise} = 252\ ns,\ t_{fall} = 500\ ns\\
+t_{sweep} = \frac{\delta_f - \delta_0 [rad\cdot\mu s^{-1}]}{2 \pi \cdot 10\ [rad\cdot\mu s^{-2}]}\end{split}\]</div>
+<p>and define <span class="math notranslate nohighlight">\(\Omega(t)\)</span> and <span class="math notranslate nohighlight">\(\delta(t)\)</span> over time as (see Figure 1 (b)):</p>
+<center><p><img alt="AF Pulse Sequence" class="no-scaled-link" src="../_images/AF_Ising_program.png" style="width: 300px;" /></p>
+</center><p>The <a class="reference internal" href="../programming.html#hamiltonian-evolves-the-state"><span class="std std-ref">Hamiltonian</span></a> we are implementing is (the phase is constant and equal to <span class="math notranslate nohighlight">\(0\)</span> over time):</p>
+<div class="math notranslate nohighlight">
+\[H = \hbar \sum_i \left (\frac{\Omega(t)}{2} \left(|g\rangle\langle r| + |r\rangle\langle g|\right) - \delta(t) |r\rangle\langle r| + \sum_{j&lt;i}U_{ij}\hat{n}_i \hat{n}_j \right)\]</div>
+<p>where <span class="math notranslate nohighlight">\(U_{ij} = \frac{C_6}{\hbar R_{ij}^6}\)</span>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Parameters in rad/µs</span>
+<span class="n">U</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">Omega_max</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">U</span>
+<span class="n">delta_0</span> <span class="o">=</span> <span class="o">-</span><span class="mi">6</span> <span class="o">*</span> <span class="n">U</span>
+<span class="n">delta_f</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">U</span>
+
+<span class="c1"># Parameters in ns</span>
+<span class="n">t_rise</span> <span class="o">=</span> <span class="mi">252</span>
+<span class="n">t_fall</span> <span class="o">=</span> <span class="mi">500</span>
+<span class="n">t_sweep</span> <span class="o">=</span> <span class="p">(</span><span class="n">delta_f</span> <span class="o">-</span> <span class="n">delta_0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span>
+</pre></div>
+</div>
+</div>
+<section id="id1">
+<h3>1. Picking a <code class="docutils literal notranslate"><span class="pre">Device</span></code><a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<p>We need a <code class="docutils literal notranslate"><span class="pre">Device</span></code> that will enable us to target the transition between the ground and the rydberg state. As above, we select <code class="docutils literal notranslate"><span class="pre">pulser.AnalogDevice</span></code> since it contains the <code class="docutils literal notranslate"><span class="pre">Rydberg.Global</span></code> channel, that targets the transition between these two states.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">AnalogDevice</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">device</span><span class="o">.</span><span class="n">specs</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+A realistic device for analog sequence execution.
+
+Register parameters:
+ - Dimensions: 2D
+ - Maximum number of atoms: 80
+ - Maximum distance from origin: 38 µm
+ - Minimum distance between neighbouring atoms: 5 μm
+
+Layout parameters:
+ - Requires layout: Yes
+ - Accepts new layout: Yes
+ - Minimal number of traps: 1
+ - Minimum layout filling fraction: 0.0
+ - Maximum layout filling fraction: 0.5
+
+Device parameters:
+ - Rydberg level: 60
+ - Ising interaction coefficient: 865723.02
+ - XY interaction coefficient: 19071.447974615883
+ - Channels can be reused: No
+ - Supported bases: ground-rydberg
+ - Supported states: r, g
+ - SLM Mask: No
+ - Maximum sequence duration: 6000 ns
+ - Maximum number of runs: 2000
+
+Channels:
+ - &#39;rydberg_global&#39;: Rydberg(addressing=&#39;Global&#39;,
+        max_abs_detuning=125.66370614359172,
+        max_amp=12.566370614359172,
+        min_retarget_interval=None,
+        fixed_retarget_t=None,
+        max_targets=None,
+        clock_period=4,
+        min_duration=16,
+        max_duration=100000000,
+        min_avg_amp=0,
+        mod_bandwidth=8,
+        custom_phase_jump_time=None,
+        eom_config=RydbergEOM(limiting_beam=&lt;RydbergBeam.RED: 2&gt;,
+                              max_limiting_amp=188.49555921538757,
+                              intermediate_detuning=2827.4333882308138,
+                              controlled_beams=(&lt;RydbergBeam.BLUE: 1&gt;,),
+                              mod_bandwidth=40,
+                              custom_buffer_time=240,
+                              multiple_beam_control=True,
+                              blue_shift_coeff=1.0,
+                              red_shift_coeff=1.0),
+        propagation_dir=None)
+</pre></div></div>
+</div>
+</section>
+<section id="id2">
+<h3>2. Creating the <code class="docutils literal notranslate"><span class="pre">Register</span></code><a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
+<p>Let’s keep following the <a class="reference external" href="https://journals.aps.org/prx/abstract/10.1103/PhysRevX.8.021070">protocol</a> and create the <code class="docutils literal notranslate"><span class="pre">Register</span></code>. We place the atoms in a square lattice, such that the distance between two neighbouring atoms (that is, the spacing of the square layout) is the same, and we choose that distance such that <span class="math notranslate nohighlight">\(\frac{C_6}{R^6}=\hbar U\)</span>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">R_interatomic</span> <span class="o">=</span> <span class="p">(</span><span class="n">device</span><span class="o">.</span><span class="n">interaction_coeff</span> <span class="o">/</span> <span class="n">U</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">6</span><span class="p">)</span>
+<span class="n">N_side</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">register</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Register</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">N_side</span><span class="p">,</span> <span class="n">R_interatomic</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">"q"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Interatomic Radius is: </span><span class="si">{</span><span class="n">R_interatomic</span><span class="si">}</span><span class="s2">µm."</span><span class="p">)</span>
+<span class="n">register</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Interatomic Radius is: 7.186760677748386µm.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_35_1.png" src="../_images/tutorials_creating_35_1.png" />
+</div>
+</div>
+<p>Note: In Pulser, we can access the interaction coefficient <span class="math notranslate nohighlight">\(\frac{C_6}{\hbar}\)</span> with <code class="docutils literal notranslate"><span class="pre">device.interaction_coeff</span></code></p>
+<p>Let’s now initialize our quantum program, the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, and check that the created <code class="docutils literal notranslate"><span class="pre">Register</span></code> matches the parameters set by the <code class="docutils literal notranslate"><span class="pre">Device</span></code> we picked:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sequence</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">register</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="id3">
+<h3>3. Picking the Channels<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
+<p>The only channel we need to pick is a <code class="docutils literal notranslate"><span class="pre">Rydberg</span></code> channel to target the transition between <span class="math notranslate nohighlight">\(\left|g\right&gt;\)</span> and <span class="math notranslate nohighlight">\(\left|r\right&gt;\)</span>. Since we want to apply the same amplitude, detuning and phase on each atom, we can use the <code class="docutils literal notranslate"><span class="pre">Rydberg.Global</span></code> channel:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sequence</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">"rydberg_global"</span><span class="p">,</span> <span class="s2">"rydberg_global"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="s2">"The states used in the computation are"</span><span class="p">,</span> <span class="n">sequence</span><span class="o">.</span><span class="n">get_addressed_states</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+The states used in the computation are [&#39;r&#39;, &#39;g&#39;]
+</pre></div></div>
+</div>
+<p>At this stage, all the atoms are initialized in the state <span class="math notranslate nohighlight">\(\left|g\right&gt;\)</span> and only two energy levels are used in the computation, i.e. each atom is a qubit and the initial state of the quantum system is <span class="math notranslate nohighlight">\(\left|ggggggggg\right&gt;\)</span>.</p>
+<p>The interaction Hamiltonian is now completely determined, and will not change over time.</p>
+</section>
+<section id="id4">
+<h3>4. Adding the pulses<a class="headerlink" href="#id4" title="Link to this heading"></a></h3>
+<p>Let’s now define the driving Hamiltonian at each nanosecond between <span class="math notranslate nohighlight">\(0\)</span> and <span class="math notranslate nohighlight">\(t_{tot}=t_{rise}+t_{sweep}+t_{fall}\)</span>. We follow the program that we described above. The <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> will be composed of three pulses:</p>
+<ul class="simple">
+<li><p>A first “rise” pulse with:</p>
+<ul>
+<li><p>Duration: <span class="math notranslate nohighlight">\(t_{rise}\)</span></p></li>
+<li><p>Amplitude: <span class="math notranslate nohighlight">\(0 \rightarrow \Omega_{max}\)</span></p></li>
+<li><p>Detuning: <span class="math notranslate nohighlight">\(\delta_0\)</span></p></li>
+<li><p>Phase: <span class="math notranslate nohighlight">\(0\)</span></p></li>
+</ul>
+</li>
+<li><p>A second “sweep” pulse with:</p>
+<ul>
+<li><p>Duration: <span class="math notranslate nohighlight">\(t_{sweep}\)</span></p></li>
+<li><p>Amplitude: <span class="math notranslate nohighlight">\(\Omega_{max}\)</span></p></li>
+<li><p>Detuning: <span class="math notranslate nohighlight">\(\delta_0 \rightarrow\delta_{final}\)</span></p></li>
+<li><p>Phase: <span class="math notranslate nohighlight">\(0\)</span></p></li>
+</ul>
+</li>
+<li><p>A third “fall” pulse with:</p>
+<ul>
+<li><p>Duration: <span class="math notranslate nohighlight">\(t_{fall}\)</span></p></li>
+<li><p>Amplitude: <span class="math notranslate nohighlight">\(\Omega_{max}\rightarrow 0\)</span></p></li>
+<li><p>Detuning: <span class="math notranslate nohighlight">\(\delta_{final}\)</span></p></li>
+<li><p>Phase: <span class="math notranslate nohighlight">\(0\)</span></p></li>
+</ul>
+</li>
+</ul>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rise</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span>
+    <span class="n">pulser</span><span class="o">.</span><span class="n">RampWaveform</span><span class="p">(</span><span class="n">t_rise</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">Omega_max</span><span class="p">),</span> <span class="n">delta_0</span><span class="p">,</span> <span class="mf">0.0</span>
+<span class="p">)</span>
+<span class="n">sweep</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantAmplitude</span><span class="p">(</span>
+    <span class="n">Omega_max</span><span class="p">,</span> <span class="n">pulser</span><span class="o">.</span><span class="n">RampWaveform</span><span class="p">(</span><span class="n">t_sweep</span><span class="p">,</span> <span class="n">delta_0</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">),</span> <span class="mf">0.0</span>
+<span class="p">)</span>
+<span class="n">fall</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span>
+    <span class="n">pulser</span><span class="o">.</span><span class="n">RampWaveform</span><span class="p">(</span><span class="n">t_fall</span><span class="p">,</span> <span class="n">Omega_max</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="n">delta_f</span><span class="p">,</span> <span class="mf">0.0</span>
+<span class="p">)</span>
+<span class="n">sequence</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rise</span><span class="p">,</span> <span class="s2">"rydberg_global"</span><span class="p">)</span>
+<span class="n">sequence</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">sweep</span><span class="p">,</span> <span class="s2">"rydberg_global"</span><span class="p">)</span>
+<span class="n">sequence</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">fall</span><span class="p">,</span> <span class="s2">"rydberg_global"</span><span class="p">)</span>
+<span class="n">sequence</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"input"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_44_0.png" src="../_images/tutorials_creating_44_0.png" />
+</div>
+</div>
+</section>
+<section id="id5">
+<h3>Executing the Pulse Sequence<a class="headerlink" href="#id5" title="Link to this heading"></a></h3>
+<p>We are now done with this program! Let’s use the <code class="docutils literal notranslate"><span class="pre">QutipBackendV2</span></code> to simulate the final state of the system:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">backend</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">QutipBackendV2</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">backend</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">counts</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">final_bitstrings</span>
+<span class="c1"># Let's plot the histogram associated to the measurements</span>
+<span class="c1"># Let's select only the states that are measured more than 10 times</span>
+<span class="n">most_freq</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">counts</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">}</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">most_freq</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="nb">list</span><span class="p">(</span><span class="n">most_freq</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">rotation</span><span class="o">=</span><span class="s2">"vertical"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_47_0.png" src="../_images/tutorials_creating_47_0.png" />
+</div>
+</div>
+<p>The state that is measured the most frequently is the <span class="math notranslate nohighlight">\(\left|101010101\right&gt;\rightarrow\left|rgrgrgrgr\right&gt;\)</span>: our quantum program correctly excites the ground sate <span class="math notranslate nohighlight">\(\left|ggggggggg\right&gt;\)</span> into the state <span class="math notranslate nohighlight">\(\left|rgrgrgrgr\right&gt;\)</span>.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>To go further</strong>:</p>
+<p>In this tutorial, we have executed the Sequences on a local emulator named <code class="docutils literal notranslate"><span class="pre">QutipBackendV2</span></code>.</p>
+<ul class="simple">
+<li><p>Once you are done with building your <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, we advise you to first emulate it using a local or a remote emulator. Read more about the execution of a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> on an emulator <a class="reference internal" href="backends.html"><span class="doc">in this tutorial</span></a>.</p></li>
+<li><p>The next stage is to submit your <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> to a QPU! Follow <a class="reference internal" href="qpu.html"><span class="doc">this tutorial</span></a> to see how to execute your <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> on a QPU.</p></li>
+</ul>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../programming.html" class="btn btn-neutral float-left" title="Programming a neutral-atom QPU" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../conventions.html" class="btn btn-neutral float-right" title="Conventions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
