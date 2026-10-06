@@ -352,12 +352,12 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
 def _deserialize_channel(obj: dict[str, Any]) -> Channel:
     params: dict[str, Any] = {}
     channel_cls: Type[Channel]
-    if obj["basis"] == "ground-rydberg":
-        if "bottom_detuning" in obj:
-            channel_cls = DMM
-        else:
-            channel_cls = Rydberg
-            params["eom_config"] = None
+    if "bottom_detuning" in obj:
+        # Only a DMM has a bottom detuning, whichever basis it addresses
+        channel_cls = DMM
+    elif obj["basis"] == "ground-rydberg":
+        channel_cls = Rydberg
+        params["eom_config"] = None
         if obj["eom_config"] is not None:
             data = obj["eom_config"]
             try:
