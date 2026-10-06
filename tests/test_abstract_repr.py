@@ -851,7 +851,12 @@ class TestDevice:
 
     @pytest.mark.parametrize(
         "dmm_ch_obj",
-        [DMM(total_bottom_detuning=-10), DMM(min_avg_abs_detuning=0.1)],
+        [
+            DMM(total_bottom_detuning=-10),
+            DMM(min_avg_abs_detuning=0.1),
+            DMM(basis="XY"),
+            DMM(bottom_detuning=10, total_bottom_detuning=20, basis="XY"),
+        ],
     )
     def test_optional_DMM_fields(self, dmm_ch_obj):
         device = replace(MockDevice, dmm_objects=(dmm_ch_obj,))
@@ -1639,6 +1644,30 @@ class TestSerialization:
 
             assert abstract["operations"][3]["op"] == "pulse"
             assert abstract["operations"][3]["channel"] == "rydberg_global"
+
+    def test_dmm_in_xy(self, triangular_lattice):
+        det_map = {"q0": 1.0, "q1": 0.5, "q2": 0.0}
+        reg = triangular_lattice.rectangular_register(3, 4)
+        seq = Sequence(reg, MockDevice)
+        seq.declare_channel("mw_global", "mw_global")
+        seq.config_detuning_map(
+            reg.define_detuning_map(det_map, "det_map"), "dmm_1"
+        )
+        seq.add_dmm_detuning(ConstantWaveform(100, 10), "dmm_1")
+
+        abstract_str = seq.to_abstract_repr()
+        abstract = json.loads(abstract_str)
+        validate_schema(abstract)
+        assert abstract["device"]["dmm_objects"][1]["basis"] == "XY"
+        assert abstract["operations"][0]["op"] == "config_detuning_map"
+        assert abstract["operations"][0]["dmm_id"] == "dmm_1"
+        assert abstract["operations"][1]["op"] == "add_dmm_detuning"
+
+        new_seq = Sequence.from_abstract_repr(abstract_str)
+        assert new_seq.device == seq.device
+        assert new_seq._in_xy
+        assert new_seq.declared_channels == seq.declared_channels
+        assert json.loads(new_seq.to_abstract_repr()) == abstract
 
     def test_multi_qubit_target(self):
         seq_ = Sequence(Register.square(2, prefix="q"), MockDevice)
