@@ -40,9 +40,10 @@ class DMM(Channel):
     (detuning map weight on this qubit)*(detuning pulse value). The detuning
     of the pulses added to a DMM has to be negative, such that each detuning
     map spot is between 0 and `bottom_detuning`, and that the sum of all the
-    detuning map spots is below `total_bottom_detuning`. This Channel targets
-    the transition between the ground and rydberg states, thus encoding the
-    'ground-rydberg' basis.
+    detuning map spots is below `total_bottom_detuning`. By default, this
+    Channel targets the transition between the ground and rydberg states,
+    thus encoding the 'ground-rydberg' basis, but it can also target the
+    transition between two rydberg states, encoding the 'XY' basis.
 
     Note:
         The protocol to add pulses to the DMM Channel is by default
@@ -56,6 +57,8 @@ class DMM(Channel):
         min_avg_abs_detuning: The minimum acceptable value for the average
             absolute detuning (in rad/µs) applied on any detuning
             map spot (when not 0). Defaults to 0.
+        basis: The basis addressed by this DMM, either 'ground-rydberg' or
+            'XY'. Defaults to 'ground-rydberg'.
         clock_period: The duration of a clock cycle (in ns). The duration of a
             pulse or delay instruction is enforced to be a multiple of the
             clock cycle.
@@ -69,6 +72,7 @@ class DMM(Channel):
     bottom_detuning: float | None = None
     total_bottom_detuning: float | None = None
     min_avg_abs_detuning: float = 0.0
+    basis: Literal["ground-rydberg", "XY"] = "ground-rydberg"
     addressing: Literal["Global"] = field(
         default="Global", init=False, repr=False
     )
@@ -129,9 +133,12 @@ class DMM(Channel):
             )
 
     @property
-    def basis(self) -> Literal["ground-rydberg"]:
-        """The addressed basis name."""
-        return "ground-rydberg"
+    def _internal_param_valid_options(self) -> dict[str, tuple[str, ...]]:
+        """Internal parameters and their valid options."""
+        return {
+            **super()._internal_param_valid_options,
+            "basis": ("ground-rydberg", "XY"),
+        }
 
     def _undefined_fields(self) -> list[str]:
         optional = ["bottom_detuning", "max_duration", "total_bottom_detuning"]

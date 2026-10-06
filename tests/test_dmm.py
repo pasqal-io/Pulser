@@ -369,6 +369,10 @@ class TestDMM:
         dmm = physical_dmm
         assert not dmm.is_virtual()
         assert dmm.basis == "ground-rydberg"
+        assert dmm.eigenstates == ["r", "g"]
+        xy_dmm = DMM(basis="XY")
+        assert xy_dmm.basis == "XY"
+        assert xy_dmm.eigenstates == ["u", "d"]
         assert dmm.addressing == "Global"
         assert dmm.bottom_detuning == -1
         assert dmm.total_bottom_detuning == -10
@@ -415,6 +419,15 @@ class TestDMM:
             ),
         ):
             DMM(min_avg_abs_detuning=10.1, bottom_detuning=-10)
+
+        with pytest.raises(
+            AssertionError,
+            match=re.escape(
+                "The channel basis must be one of ('ground-rydberg', 'XY'),"
+                " not digital."
+            ),
+        ):
+            DMM(basis="digital")
 
         with pytest.raises(
             NotImplementedError,
