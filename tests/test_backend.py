@@ -44,6 +44,7 @@ from pulser.backend.default_observables import (
     Occupation,
     StateResult,
 )
+from pulser.backend.observable import Observable
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
     BatchStatus,
@@ -1620,8 +1621,8 @@ class TestObservables:
         with pytest.raises(
             TypeError,
             match=re.escape(
-                "'state' must be a State instance; got "
-                f"{type(ghz_qobj)} instead. Got {ghz_qobj!r}."
+                "'state' must be a State instance or a sequence of them; "
+                f"got {type(ghz_qobj)} instead. Got {ghz_qobj!r}."
             ),
         ):
             Fidelity(ghz_qobj)
@@ -1638,3 +1639,138 @@ class TestObservables:
         fid_ghz = Fidelity(ghz_state)
         assert fid_ghz.tag == "fidelity"
         assert np.isclose(fid_ghz.apply(state=ghz_state), 1.0)
+        # 't' is accepted but ignored when the reference state is constant
+        assert np.isclose(fid_ghz.apply(state=ghz_state, t=0.3), 1.0)
+
+    @pytest.fixture
+    def ggg_state(self):
+        return QutipState.from_state_amplitudes(
+            eigenstates=("r", "g"), amplitudes={"ggg": 1.0}
+        )
+
+    def test_time_dependent_fidelity(self, ghz_state, ggg_state):
+        eval_times = [0.0, 0.5, 1.0]
+        fid = Fidelity(
+            [ghz_state, ggg_state, ghz_state], evaluation_times=eval_times
+        )
+        assert fid.state == (ghz_state, ggg_state, ghz_state)
+        # Each evaluation time uses its own reference state
+        assert np.isclose(fid.apply(state=ghz_state, t=0.0), 1.0)
+        # |<ggg|ghz>|^2 == 0.5, as 'overlap' already squares the overlap
+        assert np.isclose(fid.apply(state=ghz_state, t=0.5), 0.5)
+        assert np.isclose(fid.apply(state=ghz_state, t=1.0), 1.0)
+
+    @pytest.mark.parametrize("t, expected_index", [(0.2, 0), (0.3, 1)])
+    def test_time_dependent_fidelity_matches_closest_time(
+        self, ghz_state, ggg_state, t, expected_index
+    ):
+        # The backend only guarantees 't' to be within a tolerance of the
+        # evaluation time, so the closest one is used
+        fid = Fidelity([ghz_state, ggg_state], evaluation_times=[0.0, 1.0])
+        assert fid._reference_state(t) is fid.state[0]
+        fid = Fidelity([ghz_state, ggg_state], evaluation_times=[0.25, 0.32])
+        assert fid._reference_state(t) is fid.state[expected_index]
+
+    def test_time_dependent_fidelity_errors(self, ghz_state, ggg_state):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "'evaluation_times' must be given when 'state' holds more "
+                "than one state"
+            ),
+        ):
+            Fidelity([ghz_state, ggg_state])
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "'state' must hold one state per entry in "
+                "'evaluation_times'; got 2 states for 3 evaluation times."
+            ),
+        ):
+            Fidelity([ghz_state, ggg_state], evaluation_times=[0.0, 0.5, 1.0])
+
+        with pytest.raises(
+            TypeError,
+            match=re.escape("Every entry of 'state' must be a State instance"),
+        ):
+            Fidelity([ghz_state, "not a state"], evaluation_times=[0.0, 1.0])
+
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                "'state' must be a State instance or a sequence of them"
+            ),
+        ):
+            Fidelity("rgr", evaluation_times=[0.0])
+
+        fid = Fidelity([ghz_state, ggg_state], evaluation_times=[0.0, 1.0])
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "'t' is required to compute the fidelity with a "
+                "time-dependent reference state."
+            ),
+        ):
+            fid.apply(state=ghz_state)
+
+    def test_apply_receives_time(self, config, results, ham, ghz_state):
+        seen = []
+
+        class TimeRecorder(Observable):
+            _base_tag = "time_recorder"
+
+            def apply(self, *, t, state, **kwargs):
+                seen.append(t)
+                return t
+
+        obs = TimeRecorder(
+            evaluation_times=[0.0, 0.5, 1.0],
+            default_aggregation_method=AggregationMethod.MEAN,
+        )
+        for t in (0.0, 0.25, 0.5, 1.0):
+            obs(
+                config=config,
+                t=t,
+                state=ghz_state,
+                hamiltonian=ham,
+                result=results,
+            )
+        # 0.25 is not an evaluation time, so 'apply' is not called for it
+        assert seen == [0.0, 0.5, 1.0]
+
+    def test_apply_without_time_is_deprecated(
+        self, config, results, ham, ghz_state
+    ):
+        class LegacyObservable(Observable):
+            """An observable written before 'apply' was given 't'."""
+
+            _base_tag = "legacy"
+
+            def apply(self, *, config, state, hamiltonian):
+                return "computed"
+
+        obs = LegacyObservable(
+            evaluation_times=[0.5],
+            default_aggregation_method=AggregationMethod.MEAN,
+        )
+        with pytest.warns(
+            DeprecationWarning,
+            match="'LegacyObservable.apply\\(\\)' does not take a 't'",
+        ):
+            obs(
+                config=config,
+                t=0.5,
+                state=ghz_state,
+                hamiltonian=ham,
+                result=results,
+            )
+        # It still works, it is only deprecated
+        assert results.get_result("legacy", 0.5) == "computed"
+
+    def test_empty_state_sequence(self):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("'state' cannot be an empty sequence."),
+        ):
+            Fidelity([], evaluation_times=[])

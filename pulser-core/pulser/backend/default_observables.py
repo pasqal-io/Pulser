@@ -21,6 +21,8 @@ from collections import Counter
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Type
 
+import numpy as np
+
 from pulser.backend.observable import AggregationMethod, Observable
 from pulser.backend.operator import Operator, OperatorType
 from pulser.backend.state import Eigenstate, State, StateType
@@ -190,22 +192,45 @@ class Fidelity(Observable):
     to ``|<ψ|φ(t)>|^2`` for the given state ``|ψ>`` and the state ``|φ(t)>``
     obtained by time evolution.
 
+    The reference state may also depend on time, by giving one state per
+    evaluation time instead of a single one. The fidelity is then
+    ``|<ψ(t)|φ(t)>|^2``, with ``|ψ(t)>`` the state given for that
+    evaluation time. This is useful to compare an evolution against another
+    one, e.g. the same sequence emulated with and without modulation.
+
     Args:
-        state: The state ``|ψ>``. Note that this must be of an appropriate type
-            for the backend.
+        state: The state ``|ψ>``, or one state per entry in
+            ``evaluation_times`` for a time-dependent reference state. Note
+            that these must be of an appropriate type for the backend.
         evaluation_times: The relative times at which to compute the fidelity.
             If left as `None`, uses the ``default_evaluation_times`` of the
-            backend's ``EmulationConfig``.
+            backend's ``EmulationConfig``. It is required when ``state`` holds
+            more than one state.
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
         default_aggregation_method: How to combine the values of this
             observable from multiple results.
+
+    Raises:
+        TypeError: If ``state`` is not a ``State`` or a sequence of them.
+        ValueError: If a sequence of states is given without
+            ``evaluation_times``, or with a different number of entries.
+
+    Examples:
+        >>> # the fidelity with a fixed reference state
+        >>> Fidelity(psi, evaluation_times=[0.0, 0.5, 1.0])
+        >>> # the fidelity with the states of a previous emulation
+        >>> times = previous.get_result_times("state")
+        >>> Fidelity(
+        >>>     [previous.get_result("state", t) for t in times],
+        >>>     evaluation_times=times,
+        >>> )
     """
 
     def __init__(
         self,
-        state: State,
+        state: State | Sequence[State],
         *,
         evaluation_times: Sequence[float] | None = None,
         tag_suffix: str | None = None,
@@ -217,12 +242,36 @@ class Fidelity(Observable):
             tag_suffix=tag_suffix,
             default_aggregation_method=default_aggregation_method,
         )
-        if not isinstance(state, State):
+        self.state: State | tuple[State, ...]
+        if isinstance(state, State):
+            self.state = state
+            return
+        if not isinstance(state, Sequence) or isinstance(state, str):
             raise TypeError(
-                "'state' must be a State instance; got "
+                "'state' must be a State instance or a sequence of them; got "
                 f"{type(state)} instead. Got {state!r}."
             )
-        self.state = state
+        states = tuple(state)
+        if not states:
+            raise ValueError("'state' cannot be an empty sequence.")
+        if bad_states := [s_ for s_ in states if not isinstance(s_, State)]:
+            raise TypeError(
+                "Every entry of 'state' must be a State instance; got "
+                f"{type(bad_states[0])} instead. Got {bad_states[0]!r}."
+            )
+        if self.evaluation_times is None:
+            raise ValueError(
+                "'evaluation_times' must be given when 'state' holds more "
+                "than one state, so that each state can be matched with the "
+                "time it is the reference for."
+            )
+        if len(states) != len(self.evaluation_times):
+            raise ValueError(
+                "'state' must hold one state per entry in "
+                f"'evaluation_times'; got {len(states)} states for "
+                f"{len(self.evaluation_times)} evaluation times."
+            )
+        self.state = states
 
     @property
     def _base_tag(self) -> str:
@@ -233,9 +282,26 @@ class Fidelity(Observable):
         repr["state"] = self.state
         return repr
 
-    def apply(self, *, state: State, **kwargs: Any) -> Any:
+    def apply(
+        self, *, state: State, t: float | None = None, **kwargs: Any
+    ) -> Any:
         """Calculates the observable to store in the Results."""
-        return self.state.overlap(state)
+        return self._reference_state(t).overlap(state)
+
+    def _reference_state(self, t: float | None) -> State:
+        """The state to compute the fidelity with, at the relative time t."""
+        if isinstance(self.state, State):
+            # 't' is irrelevant when the reference state is constant
+            return self.state
+        if t is None:
+            raise ValueError(
+                "'t' is required to compute the fidelity with a "
+                "time-dependent reference state."
+            )
+        assert self.evaluation_times is not None
+        # 't' is the time the backend matched with an evaluation time, so it
+        # is only equal to it up to the backend's own tolerance.
+        return self.state[int(np.argmin(np.abs(self.evaluation_times - t)))]
 
 
 class Expectation(Observable):

@@ -14,11 +14,14 @@
 """Defines the abstract base class for a callback and an observable."""
 from __future__ import annotations
 
+import functools
+import inspect
 import uuid
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -35,6 +38,16 @@ TIME_TOLERANCE = 1e-12
 
 def _fuzzy_unique_sorted(sorted: np.ndarray, tolerance: float) -> bool:
     return not np.any(np.abs(sorted[:-1] - sorted[1:]) < tolerance)
+
+
+@functools.lru_cache(maxsize=None)
+def _takes_time_argument(apply_method: Callable) -> bool:
+    """Whether an ``Observable.apply()`` implementation accepts ``t``."""
+    params = inspect.signature(apply_method).parameters
+    return "t" in params or any(
+        param.kind is inspect.Parameter.VAR_KEYWORD
+        for param in params.values()
+    )
 
 
 class Callback(ABC):
@@ -187,9 +200,23 @@ class Observable(Callback):
             self.evaluation_times is None
             and config.is_evaluation_time(t, tol=time_tol)
         ):
-            value_to_store = self.apply(
+            apply_kwargs: dict[str, Any] = dict(
                 config=config, state=state, hamiltonian=hamiltonian
             )
+            if _takes_time_argument(type(self).apply):
+                apply_kwargs["t"] = t
+            else:
+                warnings.warn(
+                    f"'{type(self).__name__}.apply()' does not take a 't' "
+                    "argument. Since v1.10, 'Observable.apply()' is given the "
+                    "relative time at which it is called; add a 't' parameter "
+                    "(or '**kwargs') to its signature, as support for "
+                    "implementations without it will be removed in a future "
+                    "version.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+            value_to_store = self.apply(**apply_kwargs)
             result._store(observable=self, time=t, value=value_to_store)
 
     @abstractmethod
@@ -197,6 +224,7 @@ class Observable(Callback):
         self,
         *,
         config: EmulationConfig,
+        t: float,
         state: State,
         hamiltonian: Operator,
     ) -> Any:
@@ -204,6 +232,7 @@ class Observable(Callback):
 
         Args:
             config: The config object passed to the backend.
+            t: The relative time as a float between 0 and 1.
             state: The current state.
             hamiltonian: The Hamiltonian at this time.
 

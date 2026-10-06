@@ -95,8 +95,14 @@ def _deserialize_observable(
                 **obs_params,
             )
         case "fidelity":
+            ser_state = obs_params.pop("state")
             obs = Fidelity(
-                _deserialize_state(obs_params.pop("state"), state_type),
+                # A list of states is a time-dependent reference state
+                (
+                    [_deserialize_state(s, state_type) for s in ser_state]
+                    if isinstance(ser_state, list)
+                    else _deserialize_state(ser_state, state_type)
+                ),
                 **obs_params,
             )
         case "occupation":
