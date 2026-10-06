@@ -38,9 +38,10 @@ class DMM(Channel):
     by the weights of a `DetuningMap`, such that qubits experience a detuning
     map spot i.e. a detuning pulse equal to
     (detuning map weight on this qubit)*(detuning pulse value). The detuning
-    of the pulses added to a DMM has to be negative, such that each detuning
-    map spot is between 0 and `bottom_detuning`, and that the sum of all the
-    detuning map spots is below `total_bottom_detuning`. By default, this
+    of the pulses added to a DMM has to be negative in the 'ground-rydberg'
+    basis and positive in the 'XY' basis, such that each detuning map spot is
+    between 0 and `bottom_detuning`, and that the sum of all the detuning map
+    spots is between 0 and `total_bottom_detuning`. By default, this
     Channel targets the transition between the ground and rydberg states,
     thus encoding the 'ground-rydberg' basis, but it can also target the
     transition between two rydberg states, encoding the 'XY' basis.
@@ -51,9 +52,11 @@ class DMM(Channel):
 
     Args:
         bottom_detuning: Minimum possible detuning per detuning map spot
-            (in rad/µs); must be below zero.
+            (in rad/µs) in the 'ground-rydberg' basis, maximum possible
+            detuning in the 'XY' basis.
         total_bottom_detuning: Minimum possible total detuning summed over all
-            detuning map spots (in rad/µs); must be below zero.
+            detuning map spots (in rad/µs) in the 'ground-rydberg' basis,
+            maximum possible total detuning in the 'XY' basis.
         min_avg_abs_detuning: The minimum acceptable value for the average
             absolute detuning (in rad/µs) applied on any detuning
             map spot (when not 0). Defaults to 0.
@@ -97,24 +100,28 @@ class DMM(Channel):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if self.bottom_detuning and self.bottom_detuning > 0:
+        sign = self._detuning_sign
+        sign_name = "positive" if sign > 0 else "negative"
+        if self.bottom_detuning and sign * self.bottom_detuning < 0:
             raise ValueError(
-                "'bottom_detuning' must be negative (got "
+                f"'bottom_detuning' must be {sign_name} (got "
                 f"{self.bottom_detuning})."
             )
         if self.total_bottom_detuning:
-            if self.total_bottom_detuning > 0:
+            if sign * self.total_bottom_detuning < 0:
                 raise ValueError(
-                    "'total_bottom_detuning' must be negative "
+                    f"'total_bottom_detuning' must be {sign_name} "
                     f"(got {self.total_bottom_detuning})."
                 )
             if (
                 self.bottom_detuning
-                and self.bottom_detuning < self.total_bottom_detuning
+                and sign * self.bottom_detuning
+                > sign * self.total_bottom_detuning
             ):
                 raise ValueError(
                     f"'total_bottom_detuning' (got "
-                    f"{self.total_bottom_detuning}) must be lower than "
+                    f"{self.total_bottom_detuning}) must be "
+                    f"{'higher' if sign > 0 else 'lower'} than "
                     f"'bottom_detuning' (got {self.bottom_detuning})."
                 )
         if self.min_avg_abs_detuning < 0:
@@ -124,13 +131,18 @@ class DMM(Channel):
             )
         if (
             self.bottom_detuning
-            and self.min_avg_abs_detuning >= -self.bottom_detuning
+            and self.min_avg_abs_detuning >= sign * self.bottom_detuning
         ):
-            bottom_detuning = self.bottom_detuning
             raise ValueError(
                 f"'min_avg_abs_detuning' (got {self.min_avg_abs_detuning}) "
-                f"must be lower than or equal to {-bottom_detuning=}."
+                "must be lower than or equal to "
+                f"abs(bottom_detuning)={abs(self.bottom_detuning)}."
             )
+
+    @property
+    def _detuning_sign(self) -> int:
+        """The sign the detuning applied by this DMM must have."""
+        return 1 if self.basis == "XY" else -1
 
     @property
     def _internal_param_valid_options(self) -> dict[str, tuple[str, ...]]:
@@ -166,43 +178,56 @@ class DMM(Channel):
         round_detuning = pm.round(pulse.detuning.samples, 6).as_array(
             detach=True
         )
-        # Check that detuning is negative
-        if np.any(round_detuning > 0):
+        sign = self._detuning_sign
+        # Only the wording of the error messages depends on the sign, as the
+        # constraints below are all checked on magnitudes
+        banned = "negative" if sign > 0 else "positive"
+        if sign > 0:
+            extremum, exceeds, keep = "maximum", "above", "below"
+        else:
+            extremum, exceeds, keep = "minimum", "below", "above"
+        # Check that the detuning has the sign imposed by the basis
+        wrong_sign = sign * round_detuning < 0
+        if np.any(wrong_sign):
             raise ValueError(
-                "The detuning in a DMM must not be positive; it is "
-                "positive at "
-                f"{_format_violation_times(round_detuning > 0)} in detuning "
+                f"The detuning in a DMM must not be {banned}; it is "
+                f"{banned} at "
+                f"{_format_violation_times(wrong_sign)} in detuning "
                 f"{pulse.detuning!r}."
             )
-        # Check that detuning on each atom is above bottom_detuning
-        min_round_detuning = np.min(round_detuning)
+        # Check that detuning on each atom does not exceed bottom_detuning
+        # The detuning and both bounds carry the sign imposed by the basis,
+        # so multiplying them by it gives the magnitudes to compare
+        abs_detuning = np.max(sign * round_detuning)
+        extreme_detuning = sign * abs_detuning
         max_weight = np.max(detuning_map.weights)
         if (
             self.bottom_detuning is not None
-            and max_weight * min_round_detuning < self.bottom_detuning
+            and max_weight * abs_detuning > sign * self.bottom_detuning
         ):
             raise ValueError(
                 f"For a detuning map with a maximum weight of {max_weight},"
-                f" a DMM pulse with minimum detuning {min_round_detuning} "
-                "rad/µs goes below the local bottom "
+                f" a DMM pulse with {extremum} detuning {extreme_detuning} "
+                f"rad/µs goes {exceeds} the local bottom "
                 f"detuning of the DMM ({self.bottom_detuning} rad/µs). "
-                "To respect this constraint, keep the detuning above "
+                f"To respect this constraint, keep the detuning {keep} "
                 f"{self.bottom_detuning/max_weight} rad/µs. Got pulse "
                 f"{pulse!r}."
             )
-        # Check that distributed detuning is above total_bottom_detuning
+        # Check that distributed detuning does not exceed
+        # total_bottom_detuning
         sum_weight = np.sum(detuning_map.weights)
         if (
             self.total_bottom_detuning is not None
-            and sum_weight * min_round_detuning < self.total_bottom_detuning
+            and sum_weight * abs_detuning > sign * self.total_bottom_detuning
         ):
             raise ValueError(
                 "For a detuning map with a total summed weight of "
                 f"{sum_weight}, the total applied detuning from a DMM pulse "
-                f"with minimum detuning {min_round_detuning} rad/µs goes below"
-                " the total bottom detuning "
+                f"with {extremum} detuning {extreme_detuning} rad/µs goes "
+                f"{exceeds} the total bottom detuning "
                 f"of the DMM ({self.total_bottom_detuning} rad/µs). "
-                "To respect this constraint, keep the detuning above "
+                f"To respect this constraint, keep the detuning {keep} "
                 f"{self.total_bottom_detuning/sum_weight} rad/µs."
             )
 

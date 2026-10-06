@@ -415,7 +415,7 @@ class TestDMM:
             ValueError,
             match=re.escape(
                 "'min_avg_abs_detuning' (got 10.1) must be lower than or equal"
-                " to -bottom_detuning=10."
+                " to abs(bottom_detuning)=10."
             ),
         ):
             DMM(min_avg_abs_detuning=10.1, bottom_detuning=-10)
@@ -526,3 +526,102 @@ class TestDMM:
                 {0: 0.0}
             )
         physical_dmm.validate_pulse(too_low_pulse, det_map)
+
+    @pytest.fixture
+    def xy_dmm(self):
+        return DMM(
+            bottom_detuning=1,
+            total_bottom_detuning=10,
+            min_avg_abs_detuning=0.1,
+            clock_period=1,
+            min_duration=1,
+            max_duration=1e6,
+            mod_bandwidth=20,
+            basis="XY",
+        )
+
+    def test_init_xy(self, xy_dmm):
+        assert not xy_dmm.is_virtual()
+        assert xy_dmm.basis == "XY"
+        assert xy_dmm.bottom_detuning == 1
+        assert xy_dmm.total_bottom_detuning == 10
+        with pytest.raises(
+            ValueError,
+            match=re.escape("'bottom_detuning' must be positive (got -1)."),
+        ):
+            DMM(bottom_detuning=-1, basis="XY")
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "'total_bottom_detuning' must be positive (got -10)"
+            ),
+        ):
+            DMM(total_bottom_detuning=-10, basis="XY")
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "'total_bottom_detuning' (got 1) must be higher than "
+                "'bottom_detuning' (got 10)"
+            ),
+        ):
+            DMM(total_bottom_detuning=1, bottom_detuning=10, basis="XY")
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "'min_avg_abs_detuning' (got 10.1) must be lower than or equal"
+                " to abs(bottom_detuning)=10."
+            ),
+        ):
+            DMM(min_avg_abs_detuning=10.1, bottom_detuning=10, basis="XY")
+
+    def test_validate_pulse_xy(self, xy_dmm):
+        # Detuning applied to a DMM in the XY basis must be positive
+        neg_det_pulse = Pulse.ConstantPulse(100, 0, -1e-3, 0)
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "The detuning in a DMM must not be negative; it is negative"
+                f" at 0-99 ns in detuning {neg_det_pulse.detuning!r}."
+            ),
+        ):
+            xy_dmm.validate_pulse(neg_det_pulse)
+
+        # Local detuning is given by Pulse.detuning * local_weight
+        det_value = xy_dmm.bottom_detuning + 0.01
+        too_high_pulse = Pulse.ConstantPulse(100, 0, det_value, 0)
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "For a detuning map with a maximum weight of 1.0, a DMM pulse "
+                f"with maximum detuning {det_value} rad/µs "
+                "goes above the local bottom detuning of the DMM "
+                f"({xy_dmm.bottom_detuning} rad/µs). "
+                "To respect this constraint, keep the detuning below "
+                f"{float(xy_dmm.bottom_detuning)} rad/µs."
+            ),
+        ):
+            # tested with detuning map with weight 1
+            xy_dmm.validate_pulse(too_high_pulse)
+
+        # Not too high if weights of detuning map are lower than 1
+        det_map = TriangularLatticeLayout(100, 10).define_detuning_map(
+            {i: 0.5 if i < 20 else 0.0 for i in range(100)}
+        )
+        summed_weight = sum(det_map.weights)
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "For a detuning map with a total summed weight of "
+                f"{summed_weight}, the total applied detuning from a DMM pulse"
+                f" with maximum detuning {det_value} rad/µs goes above the "
+                "total bottom detuning of the DMM "
+                f"({xy_dmm.total_bottom_detuning} rad/µs). "
+                "To respect this constraint, keep the detuning below "
+                f"{xy_dmm.total_bottom_detuning/summed_weight} rad/µs."
+            ),
+        ):
+            # local detunings match bottom_detuning, global don't
+            xy_dmm.validate_pulse(too_high_pulse, det_map)
+
+        # A positive detuning respecting both bounds is valid
+        xy_dmm.validate_pulse(Pulse.ConstantPulse(100, 0, 0.5, 0))
