@@ -179,8 +179,6 @@ class DMM(Channel):
             detach=True
         )
         sign = self._detuning_sign
-        # Only the wording of the error messages depends on the sign, as the
-        # constraints below are all checked on magnitudes
         banned = "negative" if sign > 0 else "positive"
         if sign > 0:
             extremum, exceeds, keep = "maximum", "above", "below"
@@ -196,8 +194,7 @@ class DMM(Channel):
                 f"{pulse.detuning!r}."
             )
         # Check that detuning on each atom does not exceed bottom_detuning
-        # The detuning and both bounds carry the sign imposed by the basis,
-        # so multiplying them by it gives the magnitudes to compare
+        # Multiplying by the sign gives the magnitudes to compare
         abs_detuning = np.max(sign * round_detuning)
         extreme_detuning = sign * abs_detuning
         max_weight = np.max(detuning_map.weights)
@@ -214,8 +211,7 @@ class DMM(Channel):
                 f"{self.bottom_detuning/max_weight} rad/µs. Got pulse "
                 f"{pulse!r}."
             )
-        # Check that distributed detuning does not exceed
-        # total_bottom_detuning
+        # Check that the total detuning does not exceed total_bottom_detuning
         sum_weight = np.sum(detuning_map.weights)
         if (
             self.total_bottom_detuning is not None

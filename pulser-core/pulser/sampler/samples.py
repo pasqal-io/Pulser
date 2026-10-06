@@ -591,8 +591,7 @@ class SequenceSamples:
                 for s in cs.slots:
                     for t in s.targets:
                         ti = s.ti
-                        # The SLM mask only delays the global drive, not
-                        # the detuning a DMM applies on the masked qubits
+                        # The SLM mask does not delay the DMM detuning
                         if (
                             in_xy
                             and not is_dmm

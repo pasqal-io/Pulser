@@ -680,8 +680,6 @@ class Sequence(Generic[DeviceType]):
         """
         if dmm_id is None:
             for ch_id, ch_obj in self.available_channels.items():
-                # Only a DMM addressing the basis of the current mode can
-                # be configured, so the others are skipped
                 if isinstance(ch_obj, DMM) and (
                     ch_obj.basis == "XY"
                     if self._in_xy
