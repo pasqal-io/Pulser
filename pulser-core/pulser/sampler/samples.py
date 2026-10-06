@@ -591,7 +591,13 @@ class SequenceSamples:
                 for s in cs.slots:
                     for t in s.targets:
                         ti = s.ti
-                        if in_xy and t in self._slm_mask.targets:
+                        # The SLM mask only delays the global drive, not
+                        # the detuning a DMM applies on the masked qubits
+                        if (
+                            in_xy
+                            and not is_dmm
+                            and t in self._slm_mask.targets
+                        ):
                             ti = max(ti, self._slm_mask.end)
                         times = slice(ti, s.tf)
                         d[_LOCAL][basis][t][_AMP][times] += cs.amp[times]

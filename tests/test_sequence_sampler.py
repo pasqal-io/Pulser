@@ -31,7 +31,7 @@ from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sample
 from pulser.sequence._seq_drawer import draw_samples
-from pulser.waveforms import BlackmanWaveform, RampWaveform
+from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 
 # Helpers
 
@@ -466,6 +466,32 @@ def test_SLM_samples():
     assert_nested_dict_equality(got, want)
     assert samples.used_bases == {"ground-rydberg"}
     assert samples.eigenbasis == ["r", "g"]
+
+
+def test_SLM_samples_with_dmm_in_xy():
+    # The SLM mask delays the global drive on the masked qubits, but not
+    # the detuning a DMM applies on them
+    q_dict = {
+        "batman": np.array([-4.0, 0.0]),  # masked
+        "superman": np.array([4.0, 0.0]),  # unmasked
+    }
+    reg = pulser.Register(q_dict)
+    weights = {"batman": 1.0, "superman": 0.5}
+    seq = pulser.Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.config_slm_mask(["batman"])
+    seq.config_detuning_map(reg.define_detuning_map(weights), "dmm_1")
+    pulse = Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi / 2), 0.0, 0.0)
+    seq.add(pulse, "ch0")
+    seq.add_dmm_detuning(ConstantWaveform(200, 1.0), "dmm_1")
+
+    got = sample(seq).to_nested_dict()
+    for q_id, weight in weights.items():
+        assert np.all(got["Local"]["XY"][q_id]["det"] == weight)
+    assert np.all(got["Local"]["XY"]["batman"]["amp"] == 0.0)
+    assert np.all(
+        got["Local"]["XY"]["superman"]["amp"] == pulse.amplitude.samples
+    )
 
 
 def test_SLM_against_simulation():
