@@ -17,12 +17,12 @@ from __future__ import annotations
 import math
 from collections import Counter, defaultdict
 from collections.abc import Collection, Mapping, Sequence
-from typing import Any, Type, TypeVar
+from typing import Any, Type, TypeVar, override
 
 import numpy as np
 import qutip
 
-from pulser.backend.state import Eigenstate, State
+from pulser.backend.state import Eigenstate, ReturnScalarType, State
 from pulser.math.multinomial import multinomial
 
 QutipStateType = TypeVar("QutipStateType", bound="QutipState")
@@ -215,6 +215,31 @@ class QutipState(State[complex, float]):
         return Counter(
             {"".join(map(str, k)): v for k, v in new_counts.items()}
         )
+
+    @override
+    def intrication_entropy(
+        self,
+        *,
+        indices: Collection[int],
+    ) -> ReturnScalarType:
+        """Compute the intrication entropy between two subparts of the system.
+
+        The indices specified in `indices` must contain the indices of the
+        qubits which are NOT part of the subparition to compute the entropy
+        for.
+
+        Must use qubit indices as they are sorted internally. Qubits are sorted
+        from the bottom-right to the upper left of their register space.
+
+        Args:
+            indices: The indices of the qubits of the subparition.
+
+        Returns:
+            The entropy between the two subparts of the system. The
+            returned value will refer to the subpartition made of the indices
+            which aren't part of `indices`.
+        """
+        return qutip.entropy_vn(self.to_qobj().ptrace(indices))
 
     @classmethod
     def _from_state_amplitudes(

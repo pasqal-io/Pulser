@@ -22,7 +22,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Type
 
 from pulser.backend.observable import AggregationMethod, Observable
-from pulser.backend.operator import Operator, OperatorType
+from pulser.backend.operator import Operator, OperatorType, ReturnScalarType
 from pulser.backend.state import Eigenstate, State, StateType
 from pulser.exceptions.serialization import AbstractReprError
 
@@ -578,3 +578,54 @@ class EnergySecondMoment(Observable):
             operations=[(1.0, [])],
         )
         return identity.expect(h_state)
+
+
+class IntricationEntropy(Observable):
+    """Store the intrication entropy between two subparitions of the system.
+
+    The indices specified in `indices` must contain the indices of the qubits
+    which are part of the subparition to compute the entropy for.
+
+    When defining an intrication entropy observable using qubit indices, one
+    must use qubit indices as they are sorted internally. Qubits are sorted
+    from the bottom-right to the upper left of their register space.
+
+    Args:
+        indices: The indices of the qubits to remove from the subparition.
+        evaluation_times: The relative times at which to compute the moment.
+            If left as `None`, uses the ``default_evaluation_times`` of the
+            backend's ``EmulationConfig``.
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
+    """
+
+    def __init__(
+        self,
+        indices: Sequence[int],
+        *,
+        evaluation_times: Sequence[float] | None = None,
+        tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+    ):
+        """Initializes the observable."""
+        super().__init__(
+            default_aggregation_method=default_aggregation_method,
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+        )
+        self.indices = indices
+
+    def _base_tag(self) -> str:
+        return "intrication_entropy"
+
+    def apply(self, *, state: State, **kwargs: Any) -> ReturnScalarType:
+        """Calculate the observable to store in the Results."""
+        other_subpartition = [
+            indice
+            for indice in range(state.n_qudits)
+            if indice not in self.indices
+        ]
+        return state.intrication_entropy(indices=other_subpartition)

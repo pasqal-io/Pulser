@@ -132,6 +132,32 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         """
         pass
 
+    def intrication_entropy(
+        self,
+        *,
+        indices: Sequence[int],
+    ) -> ReturnScalarType:
+        """Compute the intrication entropy between two subparts of the system.
+
+        The indices specified in `indices` must contain the indices of the
+        qubits which are NOT part of the subparition to compute the entropy
+        for.
+
+        Must use qubit indices as they are sorted internally. Qubits are sorted
+        from the bottom-right to the upper left of their register space.
+
+        Args:
+            indices: The indices of the qubits to remove from the subparition.
+
+        Returns:
+            The entropy between the two subparts of the system. The
+            returned value will refer to the subpartition made of the indices
+            which aren't part of `indices`.
+        """
+        raise NotImplementedError(
+            "Entropy computation is not implemented for this State type."
+        )
+
     @classmethod
     def from_state_amplitudes(
         cls: Type[StateType],
