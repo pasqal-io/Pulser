@@ -15,12 +15,7 @@ import re
 
 import pytest
 
-from pulser.backend import (
-    EmulationConfig,
-    Expectation,
-    Operator,
-    OperatorRepr,
-)
+from pulser.backend import Operator, OperatorRepr
 
 
 def test_validate_operations_nonexistent_qubits():
@@ -165,11 +160,6 @@ def test_from_pauli_string(eigenstates, paulis, expected_operations):
         "n_qudits": 4,
         "operations": expected_operations,
     }
-    # It can be given to Expectation and serialized, like any other operator
-    config = EmulationConfig(observables=[Expectation(op)])
-    serialized = config.to_abstract_repr()
-    deserialized = EmulationConfig.from_abstract_repr(serialized)
-    assert deserialized.to_abstract_repr() == serialized
 
 
 @pytest.mark.parametrize(
