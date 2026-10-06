@@ -1142,6 +1142,25 @@ def test_switch_device_down(
         seq.with_new_device(DigitalAnalogDevice, True)
 
 
+def test_switch_device_dmm_basis(reg, det_map):
+    # A DMM can only be matched with a DMM addressing the same basis
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.config_detuning_map(det_map, "dmm_1")
+    with pytest.raises(
+        TypeError,
+        match="No match for channel 'dmm_1' with the"
+        " right type, basis and addressing.",
+    ):
+        seq.with_new_device(
+            dataclasses.replace(MockDevice, dmm_objects=(DMM(),))
+        )
+    new_seq = seq.with_new_device(
+        dataclasses.replace(MockDevice, dmm_objects=(DMM(basis="XY"),))
+    )
+    assert list(new_seq.declared_channels) == ["ch0", "dmm_0"]
+
+
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("trap_id", [20, 38, 50])
 @pytest.mark.parametrize("parametrized", [False, True])
