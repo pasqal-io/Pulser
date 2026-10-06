@@ -325,7 +325,18 @@
                 "$ref": "#/evaluation_times"
             },
             "state": {
-                "$ref": "#/state"
+                "description": "the reference state, or one state per evaluation time for a time-dependent reference state",
+                "oneOf": [
+                    {
+                        "$ref": "#/state"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/state"
+                        }
+                    }
+                ]
             },
             "tag_suffix": {
                 "description": "added to base_tag to distinguish different instances",

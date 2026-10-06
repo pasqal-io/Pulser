@@ -282,6 +282,69 @@ class TestObservableRepr:
             )
 
 
+class TestTimeDependentFidelityRepr:
+    """A time-dependent reference state must survive (de)serialization."""
+
+    states = [
+        StateRepr.from_state_amplitudes(
+            eigenstates=("r", "g"), amplitudes={"rg": 1.0}
+        ),
+        StateRepr.from_state_amplitudes(
+            eigenstates=("r", "g"), amplitudes={"gr": 1.0}
+        ),
+    ]
+    eval_times = [0.0, 1.0]
+
+    def test_abstract_repr(self):
+        fid = Fidelity(self.states, evaluation_times=self.eval_times)
+        ser = json.loads(json.dumps(fid, cls=AbstractReprEncoder))
+        assert isinstance(ser["state"], list)
+        assert len(ser["state"]) == 2
+        assert ser["state"][0]["amplitudes"] == {"rg": 1.0}
+        assert ser["state"][1]["amplitudes"] == {"gr": 1.0}
+
+    def test_round_trip(self):
+        fid = Fidelity(
+            self.states, evaluation_times=self.eval_times, tag_suffix="vs_ref"
+        )
+        deserialized = _deserialize_observable(
+            json.loads(json.dumps(fid, cls=AbstractReprEncoder)),
+            StateRepr,
+            OperatorRepr,
+        )
+        assert isinstance(deserialized, Fidelity)
+        assert deserialized.tag == "fidelity_vs_ref"
+        assert isinstance(deserialized.state, tuple)
+        assert len(deserialized.state) == 2
+        for original, restored in zip(self.states, deserialized.state):
+            assert isinstance(restored, StateRepr)
+            assert restored._to_abstract_repr() == original._to_abstract_repr()
+        np.testing.assert_allclose(
+            deserialized.evaluation_times, self.eval_times
+        )
+
+    def test_single_state_still_round_trips(self):
+        # The constant reference state keeps serializing as a single state
+        fid = Fidelity(self.states[0], evaluation_times=self.eval_times)
+        ser = json.loads(json.dumps(fid, cls=AbstractReprEncoder))
+        assert isinstance(ser["state"], dict)
+        deserialized = _deserialize_observable(ser, StateRepr, OperatorRepr)
+        assert isinstance(deserialized.state, StateRepr)
+
+    def test_config_schema_validation(self):
+        # The emulation config holding it must validate against the schema
+        config = EmulationConfig(
+            observables=[
+                Fidelity(self.states, evaluation_times=self.eval_times)
+            ]
+        )
+        reserialized = EmulationConfig.from_abstract_repr(
+            config.to_abstract_repr()
+        )
+        assert isinstance(reserialized.observables[0].state, tuple)
+        assert len(reserialized.observables[0].state) == 2
+
+
 class TestConfigRepr:
     example_state = StateRepr.from_state_amplitudes(
         eigenstates=("0", "1"), amplitudes={"1111": 0.1}

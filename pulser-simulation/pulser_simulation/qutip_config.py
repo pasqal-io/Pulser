@@ -20,9 +20,39 @@ from typing import Any, ClassVar, Literal
 import numpy as np
 
 from pulser.backend.config import EmulationConfig
+from pulser.backend.observable import _evaluation_time_tolerance
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simulation import Solver
+
+
+def _merge_evaluation_times(
+    base: np.ndarray, extra: np.ndarray, tol: float
+) -> np.ndarray:
+    """Adds the 'extra' evaluation times to 'base', without near-duplicates.
+
+    The times in 'base' that fall within 'tol' of a requested evaluation time
+    are dropped in its favour. Without this, an observable whose evaluation
+    time lies between two sampling times would match both of them and be
+    stored twice around the same requested time.
+
+    Args:
+        base: The sorted relative times to add the evaluation times to.
+        extra: The sorted relative evaluation times to add.
+        tol: The tolerance within which two times are considered the same.
+
+    Returns:
+        The sorted union of both, with the near-duplicates of 'base' removed.
+    """
+    if base.size == 0:
+        return extra
+    right = np.searchsorted(extra, base)
+    left_inds = np.clip(right - 1, 0, extra.size - 1)
+    right_inds = np.clip(right, 0, extra.size - 1)
+    dist_to_extra = np.minimum(
+        np.abs(base - extra[left_inds]), np.abs(base - extra[right_inds])
+    )
+    return np.union1d(base[dist_to_extra > tol], extra)
 
 
 class QutipConfig(EmulationConfig[QutipState]):
@@ -170,20 +200,27 @@ class QutipConfig(EmulationConfig[QutipState]):
         self, total_duration_ns: int
     ) -> Literal["Full"] | np.ndarray:
         extra_eval_times: set[float] = set()
-        if self.callbacks:
-            return "Full"
         for obs in self.observables:
             if obs.evaluation_times is not None:
                 extra_eval_times.update(obs.evaluation_times)
 
-        rel_eval_times = self.default_evaluation_times
+        # Callbacks are called at every time step, so they require the full
+        # sampling grid. The observables' evaluation times are still added on
+        # top of it, as they are not necessarily part of the sampling grid.
+        rel_eval_times = (
+            "Full" if self.callbacks else self.default_evaluation_times
+        )
         if extra_eval_times:
             if isinstance(rel_eval_times, str) and rel_eval_times == "Full":
                 rel_eval_times = (
                     self._get_sampling_indices(total_duration_ns)
                     / total_duration_ns
                 )
-            rel_eval_times = np.union1d(rel_eval_times, list(extra_eval_times))
+            rel_eval_times = _merge_evaluation_times(
+                np.asarray(rel_eval_times, dtype=float),
+                np.array(sorted(extra_eval_times), dtype=float),
+                tol=_evaluation_time_tolerance(total_duration_ns),
+            )
 
         return (
             "Full"
