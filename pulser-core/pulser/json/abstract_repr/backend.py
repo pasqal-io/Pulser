@@ -14,7 +14,6 @@ from pulser.backend.default_observables import (
     Expectation,
     Fidelity,
     Occupation,
-    PauliString,
 )
 from pulser.backend.observable import AggregationMethod
 from pulser.exceptions.serialization import AbstractReprError
@@ -104,11 +103,6 @@ def _deserialize_observable(
             obs = Occupation(**obs_params)
         case "correlation_matrix":
             obs = CorrelationMatrix(**obs_params)
-        case "pauli_string":
-            obs = PauliString(
-                {int(i): p for i, p in obs_params.pop("paulis")},
-                **obs_params,
-            )
         case "energy":
             obs = Energy(**obs_params)
         case "energy_second_moment":

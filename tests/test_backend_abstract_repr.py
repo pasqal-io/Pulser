@@ -2,7 +2,6 @@ import json
 import re
 from unittest.mock import MagicMock
 
-import jsonschema
 import numpy as np
 import pytest
 from pytest import mark
@@ -18,7 +17,6 @@ from pulser.backend import (
     Expectation,
     Fidelity,
     Occupation,
-    PauliString,
     Results,
     StateResult,
 )
@@ -72,16 +70,6 @@ class TestObservableRepr:
                 Occupation,
                 (),
                 {"one_state": "g"},
-            ),
-            (
-                PauliString,
-                ({2: "X", 0: "z"},),
-                {"tag_suffix": "zx"},
-            ),
-            (
-                PauliString,
-                ({1: "Y"},),
-                {"evaluation_times": [0.0, 0.5, 1.0]},
             ),
             (
                 Energy,
@@ -293,20 +281,6 @@ class TestObservableRepr:
                 corrupted_obs_repr, StateRepr, OperatorRepr
             )
 
-    @mark.parametrize(
-        "bad_paulis",
-        [[], [[0, "W"]], [[-1, "Z"]], [[0, "Z", 1]], [[0.5, "X"]]],
-    )
-    def test_invalid_pauli_string_schema(self, bad_paulis):
-        ser_config = json.loads(
-            EmulationConfig(
-                observables=[PauliString({0: "Z"})]
-            ).to_abstract_repr()
-        )
-        ser_config["observables"][0]["paulis"] = bad_paulis
-        with pytest.raises(jsonschema.exceptions.ValidationError):
-            EmulationConfig.from_abstract_repr(json.dumps(ser_config))
-
 
 class TestConfigRepr:
     example_state = StateRepr.from_state_amplitudes(
@@ -363,10 +337,6 @@ class TestConfigRepr:
                 CorrelationMatrix(),
             ),
             (Energy(), Occupation(one_state="0")),
-            (
-                PauliString({0: "Z", 1: "X", 9: "Y"}),
-                PauliString({3: "Z"}, tag_suffix="z3"),
-            ),
         ],
     )
     @mark.parametrize(
