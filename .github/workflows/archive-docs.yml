@@ -1,0 +1,81 @@
+# Archives the HTML of a Pulser release docs in the `docs-archive` branch,
+# so the Pasqal Doc Portal can show the older versions without downloading
+# them from Read the Docs on every build.
+name: Archive docs
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+# The job waits on Read the Docs, then pushes docs-archive. A second release
+# waits its turn instead of cancelling the first one mid-download.
+concurrency:
+  group: docs-archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    # Pre-releases aren't shown in the portal
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      VERSION: ${{ github.event.release.tag_name }}
+      DOCS_URL: https://pulser.readthedocs.io/en
+    steps:
+      - name: Check out the docs archive
+        uses: actions/checkout@v4
+        with:
+          ref: docs-archive
+
+      - name: Wait for Read the Docs to build the version
+        run: |
+          [[ $VERSION =~ ^v[0-9]+(\.[0-9]+)+$ ]] \
+            || { echo "Only release versions are archived, like v1.9.1"; exit 1; }
+          for _ in $(seq 10); do
+            curl -sfI -o /dev/null "$DOCS_URL/$VERSION/" && exit 0
+            sleep 60
+          done
+          echo "$VERSION isn't on Read the Docs after 10 minutes"
+          exit 1
+
+      - name: Download the docs
+        run: |
+          rm -rf "$VERSION"
+          wget --recursive --no-parent --no-host-directories --cut-dirs=1 \
+            --accept html \
+            --reject-regex '/_(modules|sources|static|images)/' \
+            -o "$RUNNER_TEMP/wget.log" \
+            "$DOCS_URL/$VERSION/" || [ $? -eq 8 ]
+          if grep -q '429 Too Many Requests' "$RUNNER_TEMP/wget.log"; then
+            echo 'Rate limited by Read the Docs, re-run the job later'
+            exit 1
+          fi
+          test -s "$VERSION/index.html"
+
+      - name: Add the version to versions.json
+        # Newest version first, with the `latest` alias like mike: the portal
+        # then shows it as latest instead of building it twice
+        run: |
+          [ -f versions.json ] || echo '[]' > versions.json
+          jq --arg version "$VERSION" '
+            map(select(.version != $version))
+            + [{ version: $version, title: $version }]
+            | sort_by(.version | ltrimstr("v") | split(".") | map(tonumber))
+            | reverse
+            | map(.aliases = [])
+            | .[0].aliases = ["latest"]
+          ' versions.json > versions.json.tmp
+          mv versions.json.tmp versions.json
+
+      - name: Commit and push
+        run: |
+          git add -A
+          git diff --cached --quiet && exit 0
+          git -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m "Archive the $VERSION docs"
+          git push origin HEAD:docs-archive
