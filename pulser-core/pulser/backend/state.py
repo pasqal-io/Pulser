@@ -132,12 +132,12 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         """
         pass
 
-    def intrication_entropy(
+    def entanglement_entropy(
         self,
         *,
-        indices: Sequence[int],
+        excluded_indices: Sequence[int],
     ) -> ReturnScalarType:
-        """Compute the intrication entropy between two subparts of the system.
+        """Compute the entanglement entropy between two subparts of the system.
 
         The indices specified in `indices` must contain the indices of the
         qubits which are NOT part of the subparition to compute the entropy

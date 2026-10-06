@@ -217,12 +217,12 @@ class QutipState(State[complex, float]):
         )
 
     @override
-    def intrication_entropy(
+    def entanglement_entropy(
         self,
         *,
-        indices: Collection[int],
+        excluded_indices: Sequence[int],
     ) -> ReturnScalarType:
-        """Compute the intrication entropy between two subparts of the system.
+        """Compute the entanglement entropy between two subparts of the system.
 
         The indices specified in `indices` must contain the indices of the
         qubits which are NOT part of the subparition to compute the entropy
@@ -239,7 +239,7 @@ class QutipState(State[complex, float]):
             returned value will refer to the subpartition made of the indices
             which aren't part of `indices`.
         """
-        return qutip.entropy_vn(self.to_qobj().ptrace(indices))
+        return qutip.entropy_vn(self.to_qobj().ptrace(excluded_indices))
 
     @classmethod
     def _from_state_amplitudes(

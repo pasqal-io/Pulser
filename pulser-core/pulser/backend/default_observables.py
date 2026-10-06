@@ -580,18 +580,18 @@ class EnergySecondMoment(Observable):
         return identity.expect(h_state)
 
 
-class IntricationEntropy(Observable):
-    """Store the intrication entropy between two subparitions of the system.
+class EntanglementEntropy(Observable):
+    """Stores the entanglement entropy between two subpartitions of the system.
 
     The indices specified in `indices` must contain the indices of the qubits
     which are part of the subparition to compute the entropy for.
 
-    When defining an intrication entropy observable using qubit indices, one
+    When defining an entanglement entropy observable using qubit indices, one
     must use qubit indices as they are sorted internally. Qubits are sorted
     from the bottom-right to the upper left of their register space.
 
     Args:
-        indices: The indices of the qubits to remove from the subparition.
+        indices: The indices of the qubits to include in the subparition.
         evaluation_times: The relative times at which to compute the moment.
             If left as `None`, uses the ``default_evaluation_times`` of the
             backend's ``EmulationConfig``.
@@ -619,7 +619,7 @@ class IntricationEntropy(Observable):
         self.indices = indices
 
     def _base_tag(self) -> str:
-        return "intrication_entropy"
+        return "entanglement_entropy"
 
     def apply(self, *, state: State, **kwargs: Any) -> ReturnScalarType:
         """Calculate the observable to store in the Results."""
@@ -628,4 +628,4 @@ class IntricationEntropy(Observable):
             for indice in range(state.n_qudits)
             if indice not in self.indices
         ]
-        return state.intrication_entropy(indices=other_subpartition)
+        return state.entanglement_entropy(excluded_indices=other_subpartition)

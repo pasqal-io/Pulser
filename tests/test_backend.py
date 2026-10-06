@@ -39,7 +39,7 @@ from pulser.backend.default_observables import (
     Energy,
     EnergySecondMoment,
     EnergyVariance,
-    IntricationEntropy,
+    EntanglementEntropy,
     Expectation,
     Fidelity,
     Occupation,
@@ -1641,10 +1641,10 @@ class TestObservables:
         assert np.isclose(fid_ghz.apply(state=ghz_state), 1.0)
 
     def test_entropy(self, ghz_state: QutipState):
-        entropy_01 = IntricationEntropy(indices=[0, 1])
+        entropy_01 = EntanglementEntropy(indices=[0, 1])
         assert np.isclose(entropy_01.apply(state=ghz_state), 0.693147)
 
-        entropy_0 = IntricationEntropy(indices=[0])
+        entropy_0 = EntanglementEntropy(indices=[0])
         ghz_2_state = QutipState.from_state_amplitudes(
             eigenstates=("r", "g"),
             amplitudes={"rr": np.sqrt(0.5), "gg": np.sqrt(0.5)},
@@ -1661,6 +1661,4 @@ class TestObservables:
             eigenstates=("r", "g"),
             amplitudes={"rr": np.sqrt(0.872), "rg": np.sqrt(0.128)},
         )
-        assert np.isclose(
-            entropy_0.apply(state=arbitrary_state_2), 3.91439e-16
-        )
+        assert np.isclose(entropy_0.apply(state=arbitrary_state_2), 0)
