@@ -44,7 +44,7 @@ from pulser.backend.default_observables import (
     Occupation,
     StateResult,
 )
-from pulser.backend.observable import Observable
+from pulser.backend.observable import Observable, _evaluation_time_tolerance
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
     BatchStatus,
@@ -1713,6 +1713,19 @@ class TestObservables:
             ),
         ):
             fid.apply(state=ghz_state)
+
+    @pytest.mark.parametrize(
+        "total_duration, expected", [(1000, 5e-4), (1084, 0.5 / 1084)]
+    )
+    def test_evaluation_time_tolerance(self, total_duration, expected):
+        # Half a nanosecond, expressed in relative time units
+        tol = _evaluation_time_tolerance(total_duration)
+        assert tol == expected
+        assert tol * total_duration == pytest.approx(0.5)
+
+    def test_evaluation_time_tolerance_zero_duration(self):
+        # A zero duration would otherwise divide by zero
+        assert _evaluation_time_tolerance(0) == 1e-6
 
     def test_apply_receives_time(self, config, results, ham, ghz_state):
         seen = []

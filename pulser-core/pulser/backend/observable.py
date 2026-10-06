@@ -40,6 +40,21 @@ def _fuzzy_unique_sorted(sorted: np.ndarray, tolerance: float) -> bool:
     return not np.any(np.abs(sorted[:-1] - sorted[1:]) < tolerance)
 
 
+def _evaluation_time_tolerance(total_duration: int) -> float:
+    """The tolerance within which a time counts as an evaluation time.
+
+    Relative times span [0, 1] over the whole sequence, so this is half a
+    nanosecond, ie half of the sequence's time resolution.
+
+    Args:
+        total_duration: The total duration of the sequence, in ns.
+
+    Returns:
+        The tolerance, in relative time units.
+    """
+    return (0.5 / total_duration) if total_duration else 1e-6
+
+
 @functools.lru_cache(maxsize=None)
 def _takes_time_argument(apply_method: Callable) -> bool:
     """Whether an ``Observable.apply()`` implementation accepts ``t``."""
@@ -188,9 +203,7 @@ class Observable(Callback):
             hamiltonian: The Hamiltonian at this time.
             result: The Results object to store the result in.
         """
-        time_tol = (
-            (0.5 / result.total_duration) if result.total_duration else 1e-6
-        )
+        time_tol = _evaluation_time_tolerance(result.total_duration)
         if (
             self.evaluation_times is not None
             and config.is_time_in_evaluation_times(

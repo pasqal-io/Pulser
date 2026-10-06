@@ -20,6 +20,7 @@ from typing import Any, ClassVar, Literal
 import numpy as np
 
 from pulser.backend.config import EmulationConfig
+from pulser.backend.observable import _evaluation_time_tolerance
 from pulser_simulation.qutip_op import QutipOperator
 from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simulation import Solver
@@ -218,7 +219,7 @@ class QutipConfig(EmulationConfig[QutipState]):
             rel_eval_times = _merge_evaluation_times(
                 np.asarray(rel_eval_times, dtype=float),
                 np.array(sorted(extra_eval_times), dtype=float),
-                tol=0.5 / total_duration_ns,
+                tol=_evaluation_time_tolerance(total_duration_ns),
             )
 
         return (
