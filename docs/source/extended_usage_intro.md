@@ -71,8 +71,6 @@ $$
 
 Contrary to the `ground-rydberg` basis, the detuning $\delta_{DMM}$ applied by such a `DMM` has to be **positive**. Configuring it puts the `Sequence` in XY mode, in the same way as declaring a `Microwave` channel does.
 
-- The {ref}`last section of the notebook on local addressability </tutorials/dmm.nblink#DMM-in-XY-mode>` shows how to combine a `DMM` addressing the `XY` basis with a `Microwave.Global` channel.
-
 ## Digital Quantum Computing
 
 Digital Quantum Computing is a paradigm in which a system's state evolves through a series of discrete manipulation of its qubits' states, known as quantum gates. This is the underlying approach in quantum circuits, and can be replicated in neutral-atom devices at the pulse level.
