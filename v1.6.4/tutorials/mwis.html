@@ -1,0 +1,596 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QAA to solve a MWIS problem &mdash; Pulser 1.6.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8ea99608"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="pulser" href="../apidoc/core.html" />
+    <link rel="prev" title="QAA to solve a QUBO problem" href="qubo.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.6.4" /><meta name="readthedocs-resolver-filename" content="/tutorials/mwis.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">QAA to solve a MWIS problem</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Introduction">Introduction</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Example-of-an-MWIS">Example of an MWIS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Mathematical-representation-of-a-MWIS">Mathematical representation of a MWIS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Solving-the-MWIS-with-Pulser">Solving the MWIS with <code class="docutils literal notranslate"><span class="pre">Pulser</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#1.-Pick-a-Device">1. Pick a Device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.-Create-the-Register">2. Create the Register</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.-Pick-the-channels">3. Pick the channels</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#One-Global-Rydberg-channel">One Global Rydberg channel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#One-Detuning-Map-Modulator">One Detuning Map Modulator</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#4.-Add-the-Pulses">4. Add the Pulses</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">QAA to solve a MWIS problem</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/mwis.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="QAA-to-solve-a-MWIS-problem">
+<h1>QAA to solve a MWIS problem<a class="headerlink" href="#QAA-to-solve-a-MWIS-problem" title="Link to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pulser_simulation</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">minimize</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.spatial.distance</span><span class="w"> </span><span class="kn">import</span> <span class="n">pdist</span><span class="p">,</span> <span class="n">squareform</span><span class="p">,</span> <span class="n">euclidean</span>
+</pre></div>
+</div>
+</div>
+<p><em>Advanced Concepts used in this tutorial:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="dmm.html"><span class="doc">Detuning Map and Detuning Map Modulator</span></a>;</p></li>
+<li><p><a class="reference internal" href="virtual_devices.html"><span class="doc">Virtual Device and the MockDevice</span></a>;</p></li>
+</ul>
+<section id="Introduction">
+<h2>Introduction<a class="headerlink" href="#Introduction" title="Link to this heading"></a></h2>
+<p>In this tutorial, we illustrate how to solve a Maximally Weighted Independent Set (MWIS) problem using an ensemble of Rydberg atoms in analog mode.</p>
+<p>MWIS arise in many applications, including resource allocation, scheduling and staffing problems, error-correcting coding, complex system analysis and optimization, logistics and transportation, communication networks…</p>
+<p>In the MWIS problem, we consider an undirected graph with nodes and edges where each node is associated with a positive weight. The problem is to find a maximum weighted independent set, i.e., select a set of nodes in graph where:</p>
+<ul class="simple">
+<li><p>there is no edge between any pair of selected nodes.</p></li>
+<li><p>the sum of the weights of the nodes for this set is maximised.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Note</strong>:</p>
+<p>If all the weights of the nodes are the same, then this problem is called the Maximally Independent Set (MIS).</p>
+</div>
+<section id="Example-of-an-MWIS">
+<h3>Example of an MWIS<a class="headerlink" href="#Example-of-an-MWIS" title="Link to this heading"></a></h3>
+<p>Suppose we are given the following graph:</p>
+<center><p><img alt="MWIS Graph" class="no-scaled-link" src="../_images/mwis_graph.png" style="width: 300px;" /></p>
+</center><p>It is an undirected graph with:</p>
+<ul class="simple">
+<li><p>4 nodes 0, 1, 2 and 3;</p></li>
+<li><p>edges between nodes 0-1, 0-2, 0-3 and 3-2;</p></li>
+<li><p>a weight of 2 assigned to nodes 1 and 2, and a weight of 0 assigned to nodes 0 and 3.</p></li>
+</ul>
+<p>There are two Maximally Independent Set (sets of nodes with no edge between them):</p>
+<ul class="simple">
+<li><p>{1, 2}: the sum of the weights of the nodes is 4.</p></li>
+<li><p>{1, 3}: the sum of the weights of the nodes is 2.</p></li>
+</ul>
+<p>So <strong>the MWIS of this graph is {1, 2}</strong>.</p>
+</section>
+<section id="Mathematical-representation-of-a-MWIS">
+<h3>Mathematical representation of a MWIS<a class="headerlink" href="#Mathematical-representation-of-a-MWIS" title="Link to this heading"></a></h3>
+<p>Mathematically, a graph is represented by its <a class="reference external" href="https://en.wikipedia.org/wiki/Adjacency_matrix">adjacency matrix</a> <span class="math notranslate nohighlight">\(Q\)</span>, a symmetric matrix <span class="math notranslate nohighlight">\(Q\)</span> of size <span class="math notranslate nohighlight">\((N \times N)\)</span>, with <span class="math notranslate nohighlight">\(N\)</span> the number of nodes in the graph:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">Q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The optimization problem associated with the MWIS is to find the bitstring <span class="math notranslate nohighlight">\(z=(z_1, \dots, z_N) \in \{0, 1 \}^N\)</span> that maximizes the quantity</p>
+<div class="math notranslate nohighlight">
+\[f(z) = \sum_i Q_{ii} z_i\]</div>
+<p>under the constraint, for <span class="math notranslate nohighlight">\(i\ne j\)</span>,</p>
+<div class="math notranslate nohighlight">
+\[Q_{ij}z_i + Q_{ij}z_j \le 1\]</div>
+<p>For the above graph, the optimal solution for the MWIS problem is <code class="docutils literal notranslate"><span class="pre">0110</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Note</strong>:</p>
+<p>Under the constraint <span class="math notranslate nohighlight">\(Q_{ij}\left(z_i + z_j\right) \le 1\)</span> for <span class="math notranslate nohighlight">\(i\ne j\)</span>, the cost function <span class="math notranslate nohighlight">\(g(z) = z^T Q z\)</span> is also a valid cost function, because:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(g(z)= \sum_i \sum_j Q_{ij} z_i z_j\)</span> becomes <span class="math notranslate nohighlight">\(g(z) = \sum_i Q_{ii} z_i^2\)</span>, since the condition yields that for <span class="math notranslate nohighlight">\(i\ne j\)</span>, if <span class="math notranslate nohighlight">\(Q_{ij}\ne0\)</span> then either <span class="math notranslate nohighlight">\(z_i=0\)</span> or <span class="math notranslate nohighlight">\(z_j=0\)</span> (for <span class="math notranslate nohighlight">\(i\ne j\)</span>, <span class="math notranslate nohighlight">\(Q_{ij}\)</span> is either <span class="math notranslate nohighlight">\(0\)</span> or <span class="math notranslate nohighlight">\(1\)</span>);</p></li>
+<li><p><span class="math notranslate nohighlight">\(g(z) = \sum_i Q_{ii} z_i^2 = \sum_i Q_{ii} z_i = f(z)\)</span> because <span class="math notranslate nohighlight">\(z_i\)</span> is either 0 or 1.</p></li>
+</ul>
+<p>This cost function <span class="math notranslate nohighlight">\(g\)</span> is the same as the one used when <a class="reference internal" href="qubo.html"><span class="doc">solving a QUBO</span></a>, except that we want here to maximize it instead of minimizing it in the case of the QUBO.</p>
+</div>
+</section>
+</section>
+<section id="Solving-the-MWIS-with-Pulser">
+<h2>Solving the MWIS with <code class="docutils literal notranslate"><span class="pre">Pulser</span></code><a class="headerlink" href="#Solving-the-MWIS-with-Pulser" title="Link to this heading"></a></h2>
+<p>Let’s recall that Pulser enables you to program a <a class="reference internal" href="../extended_usage_intro.html#weighted-analog-quantum-computing"><span class="std std-ref">Weighted Analog Ising Hamiltonian</span></a> <span class="math notranslate nohighlight">\(H_Q\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[\frac{H_Q}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle\langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - (\delta(t)\mathbf{+\epsilon_k\delta_{DMM}(t)}) |r\rangle\langle r|_k + \sum_{j&lt;k}\frac{C_6}{\hbar R_{kj}^6} \hat{n}_k \hat{n}_j \right)\]</div>
+<p>The first idea is to encode the off-diagonal terms of <span class="math notranslate nohighlight">\(Q\)</span> by using the <a class="reference internal" href="../programming.html#ising-hamiltonian"><span class="std std-ref">Rydberg interaction</span></a> between atoms:</p>
+<div class="math notranslate nohighlight">
+\[\left[\frac{C_6}{\hbar R_{kj}^6}\right]_{1\leq k, j \leq N}\leftrightarrow Q_{off-diagonal}\]</div>
+<p>Since the Rydberg interaction depends on the pairwise distance between atoms <span class="math notranslate nohighlight">\(k\)</span> and <span class="math notranslate nohighlight">\(j\)</span>, <span class="math notranslate nohighlight">\(R_{kj}\)</span>, this will define the <code class="docutils literal notranslate"><span class="pre">Register</span></code> of atoms to use in the computation.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Note</strong>:</p>
+<p>We can make this mapping because our off-diagonal terms are positive as well.</p>
+</div>
+<p>The second idea is to encode the diagonal terms of <span class="math notranslate nohighlight">\(Q\)</span> by using the weights of the <a class="reference internal" href="dmm.html"><span class="doc">Detuning Map</span></a> <span class="math notranslate nohighlight">\(\epsilon_k \leftrightarrow Q_{kk}\)</span> for <span class="math notranslate nohighlight">\(1\le k\le N\)</span>.</p>
+<p>Finally, the third idea is to find the optimal solution of the QUBO by preparing the ground-state of <span class="math notranslate nohighlight">\(H_Q\)</span> and outputing the optimal bitstrings. There are multiple approaches to prepare the ground-state of an Hamiltonian, we will here use the Quantum Adiabatic Algorithm (QAA), that will define <span class="math notranslate nohighlight">\(\Omega(t)\)</span>, <span class="math notranslate nohighlight">\(\delta(t)\)</span>, <span class="math notranslate nohighlight">\(\delta_{DMM}(t)\)</span>.</p>
+<section id="1.-Pick-a-Device">
+<h3>1. Pick a Device<a class="headerlink" href="#1.-Pick-a-Device" title="Link to this heading"></a></h3>
+<p>To implement the Hamiltonian <span class="math notranslate nohighlight">\(H_Q\)</span>, we need a <code class="docutils literal notranslate"><span class="pre">Device</span></code> containing a <code class="docutils literal notranslate"><span class="pre">Rydberg.Global</span></code> channel and a <code class="docutils literal notranslate"><span class="pre">DMM</span></code> object. <code class="docutils literal notranslate"><span class="pre">pulser.DigitalAnalogDevice</span></code> and <code class="docutils literal notranslate"><span class="pre">pulser.MockDevice</span></code> are examples of <code class="docutils literal notranslate"><span class="pre">Devices</span></code> that contain these two channels. For this specific use case, let’s use <code class="docutils literal notranslate"><span class="pre">pulser.MockDevice</span></code> to not be limited in terms of duration.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">MockDevice</span>
+<span class="n">device</span><span class="o">.</span><span class="n">print_specs</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------------
+MockDevice Specifications
+-------------------------
+A virtual device for unconstrained prototyping.
+
+Register parameters:
+ - Dimensions: 3D
+ - Minimum distance between neighbouring atoms: 0.0 μm
+
+Layout parameters:
+ - Requires layout: No
+ - Minimal number of traps: 1
+ - Minimum layout filling fraction: 0.0
+ - Maximum layout filling fraction: 0.5
+
+Device parameters:
+ - Rydberg level: 70
+ - Ising interaction coefficient: 5420158.53
+ - XY interaction coefficient: 3700.0
+ - Channels can be reused: Yes
+ - Supported bases: digital, XY, ground-rydberg
+ - Supported states: u, d, r, g, h
+ - SLM Mask: Yes
+
+Channels:
+ - &#39;rydberg_global&#39;: Rydberg(addressing=&#39;Global&#39;, max_abs_detuning=None, max_amp=None, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=1, min_duration=1, max_duration=None, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None)
+ - &#39;rydberg_local&#39;: Rydberg(addressing=&#39;Local&#39;, max_abs_detuning=None, max_amp=None, min_retarget_interval=0, fixed_retarget_t=0, max_targets=None, clock_period=1, min_duration=1, max_duration=None, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None)
+ - &#39;raman_global&#39;: Raman(addressing=&#39;Global&#39;, max_abs_detuning=None, max_amp=None, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=1, min_duration=1, max_duration=None, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None)
+ - &#39;raman_local&#39;: Raman(addressing=&#39;Local&#39;, max_abs_detuning=None, max_amp=None, min_retarget_interval=0, fixed_retarget_t=0, max_targets=None, clock_period=1, min_duration=1, max_duration=None, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None)
+ - &#39;mw_global&#39;: Microwave(addressing=&#39;Global&#39;, max_abs_detuning=None, max_amp=None, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=1, min_duration=1, max_duration=None, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None)
+ - &#39;dmm_0&#39;: DMM(addressing=&#39;Global&#39;, max_abs_detuning=None, max_amp=0, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=1, min_duration=1, max_duration=100000000, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None, bottom_detuning=None, total_bottom_detuning=None)
+</pre></div></div>
+</div>
+</section>
+<section id="2.-Create-the-Register">
+<h3>2. Create the Register<a class="headerlink" href="#2.-Create-the-Register" title="Link to this heading"></a></h3>
+<p>Let’s attempt a simple minimization procedure to find the optimal positions of the atoms in the Register that replicate best the off-diagonal terms of <span class="math notranslate nohighlight">\(Q\)</span>:</p>
+<div class="admonition warning">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Warning</strong></p>
+<p>This optimizer approach will not work for all the graphs. You can change the optimizer to improve it but it is a simple heuristic and should not be considered as an universal encoder.</p>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">evaluate_mapping</span><span class="p">(</span>
+    <span class="n">new_coords</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Q</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="n">pulser</span><span class="o">.</span><span class="n">devices</span><span class="o">.</span><span class="n">Device</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cost function to minimize. Ideally, the pairwise distances are conserved.&quot;&quot;&quot;</span>
+    <span class="n">new_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">new_coords</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Q</span><span class="p">),</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="c1"># computing the matrix of the distances between all coordinate pairs</span>
+    <span class="n">new_Q</span> <span class="o">=</span> <span class="n">squareform</span><span class="p">(</span><span class="n">device</span><span class="o">.</span><span class="n">interaction_coeff</span> <span class="o">/</span> <span class="n">pdist</span><span class="p">(</span><span class="n">new_coords</span><span class="p">)</span> <span class="o">**</span> <span class="mi">6</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">new_Q</span> <span class="o">-</span> <span class="n">Q</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">costs</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">x0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Q</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span>
+    <span class="n">evaluate_mapping</span><span class="p">,</span>
+    <span class="n">x0</span><span class="p">,</span>
+    <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span> <span class="o">*</span> <span class="n">Q</span><span class="p">,</span> <span class="n">device</span><span class="p">),</span>
+    <span class="n">method</span><span class="o">=</span><span class="s2">&quot;Nelder-Mead&quot;</span><span class="p">,</span>
+    <span class="n">tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span>
+    <span class="n">options</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;maxiter&quot;</span><span class="p">:</span> <span class="mi">200000</span><span class="p">,</span> <span class="s2">&quot;maxfev&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Q</span><span class="p">),</span> <span class="mi">2</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<p>We can then build the <code class="docutils literal notranslate"><span class="pre">Register</span></code> from the obtained coordinates:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">qubits</span> <span class="o">=</span> <span class="p">{</span><span class="sa">f</span><span class="s2">&quot;q</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">coord</span> <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">coord</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">coords</span><span class="p">)}</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Register</span><span class="p">(</span><span class="n">qubits</span><span class="p">)</span>
+<span class="n">reg</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span>
+    <span class="n">blockade_radius</span><span class="o">=</span><span class="n">device</span><span class="o">.</span><span class="n">rydberg_blockade_radius</span><span class="p">(</span><span class="mf">1.0</span><span class="p">),</span>
+    <span class="n">draw_graph</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">draw_half_radius</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mwis_24_0.png" src="../_images/tutorials_mwis_24_0.png" />
+</div>
+</div>
+<p>Let’s check that this register respects the device’s constraints by initializing the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sequence</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="3.-Pick-the-channels">
+<h3>3. Pick the channels<a class="headerlink" href="#3.-Pick-the-channels" title="Link to this heading"></a></h3>
+<section id="One-Global-Rydberg-channel">
+<h4>One Global Rydberg channel<a class="headerlink" href="#One-Global-Rydberg-channel" title="Link to this heading"></a></h4>
+<p>The first channel needed to implement the Ising Hamiltonian <span class="math notranslate nohighlight">\(H_Q\)</span> is the <code class="docutils literal notranslate"><span class="pre">Rydberg.Global</span></code> channel. Let’s declare this channel in the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sequence</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;rydberg_global&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Note</strong>:</p>
+<p>At this point, the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> implements the Ising Hamiltonian:</p>
+<div class="math notranslate nohighlight">
+\[\sum_{k=1}^N \left(\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle \langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - \delta(t) |r\rangle\langle r|_k(t) + \sum_{j&lt;k}\frac{C_6}{\hbar R_{kj}^6} \hat{n}_k \hat{n}_j \right)\]</div>
+</div>
+</section>
+<section id="One-Detuning-Map-Modulator">
+<h4>One Detuning Map Modulator<a class="headerlink" href="#One-Detuning-Map-Modulator" title="Link to this heading"></a></h4>
+<p>The second channel needed to implement the Weighted Analog Ising Hamiltonian <span class="math notranslate nohighlight">\(H_Q\)</span> is the <a class="reference internal" href="dmm.html"><span class="doc">DMM channel</span></a>, that adds the terms <span class="math notranslate nohighlight">\(-\sum_{1\le k\le N}\mathbf{\epsilon_k\delta_{DMM}(t)} |r\rangle\langle r|_k\)</span> to the Ising Hamiltonian.</p>
+<p>When configuring the <code class="docutils literal notranslate"><span class="pre">DMM</span></code> channel, we need to provide it a <code class="docutils literal notranslate"><span class="pre">DetuningMap</span></code>, which assigns to each atom in the Register a weight <span class="math notranslate nohighlight">\(\left[\epsilon_k\right]_{1\le k \le N}\)</span>.</p>
+<p>Using the <strong>diagonal of the matrix :math:`Q`</strong>, we decide that:</p>
+<ul class="simple">
+<li><p>the atoms that have the highest weight will not experience any additionnal detuning <span class="math notranslate nohighlight">\(\delta_{DMM}\)</span> (we want to favor the solution for the maximal weights).</p></li>
+<li><p>each of the other atoms will experience an additionnal detuning, that is proportional to the difference between the highest weight and their weight.</p></li>
+</ul>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">node_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">Q</span><span class="p">)</span>
+<span class="n">norm_node_weights</span> <span class="o">=</span> <span class="n">node_weights</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">node_weights</span><span class="p">)</span>
+<span class="n">det_map_weights</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">norm_node_weights</span>
+<span class="n">det_map</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">define_detuning_map</span><span class="p">(</span>
+    <span class="p">{</span><span class="sa">f</span><span class="s2">&quot;q</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">det_map_weights</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">det_map_weights</span><span class="p">))}</span>
+<span class="p">)</span>
+<span class="n">det_map</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">reg</span><span class="o">.</span><span class="n">qubit_ids</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mwis_34_0.png" src="../_images/tutorials_mwis_34_0.png" />
+</div>
+</div>
+<p>Let’s now configure the <code class="docutils literal notranslate"><span class="pre">DMM</span></code> using this <code class="docutils literal notranslate"><span class="pre">DetuningMap</span></code>:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sequence</span><span class="o">.</span><span class="n">config_detuning_map</span><span class="p">(</span><span class="n">det_map</span><span class="p">,</span> <span class="s2">&quot;dmm_0&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Note</strong>:</p>
+<p>If we wanted to favor the lowest diagonal terms instead of the highest (as in the case of a <a class="reference internal" href="qubo.html"><span class="doc">QUBO</span></a> with diagonal terms), we would have decided that:</p>
+<ul class="simple">
+<li><p>the atoms that have the lowest weight will not experience any additionnal detuning <span class="math notranslate nohighlight">\(\delta_{DMM}\)</span>.</p></li>
+<li><p>each of the other atoms will experience an additionnal detuning, that is proportional to the difference between their weight and the lowest weight.</p></li>
+</ul>
+</div>
+</section>
+</section>
+<section id="4.-Add-the-Pulses">
+<h3>4. Add the Pulses<a class="headerlink" href="#4.-Add-the-Pulses" title="Link to this heading"></a></h3>
+<p>The idea behind the adiabatic algorithm (see <a class="reference external" href="https://arxiv.org/pdf/1611.04471.pdf">Albash, Lidar, 2018</a>) is to slowly evolve the system from an easy-to-prepare groundstate to the groundstate of <span class="math notranslate nohighlight">\(H_Q\)</span>. If done slowly enough, the system of atoms stays in the instantaneous ground-state.</p>
+<p>In our case, we continuously vary the parameters <span class="math notranslate nohighlight">\(\Omega(t), \Delta_k(t)=\delta(t)+\epsilon_k \delta_{DMM}(t)\)</span> (for <span class="math notranslate nohighlight">\(1\le k\le N\)</span>) in time, starting with <span class="math notranslate nohighlight">\(\Omega(0)=0, \Delta_k(0)\le0\)</span> (for all <span class="math notranslate nohighlight">\(k\)</span>) and ending with <span class="math notranslate nohighlight">\(\Omega(0)=0, \Delta_k\ge0\)</span> (for all <span class="math notranslate nohighlight">\(k\)</span>). The ground-state of <span class="math notranslate nohighlight">\(H(0)\)</span> corresponds to the initial state <span class="math notranslate nohighlight">\(|gggg\rangle\)</span> and the ground-state of <span class="math notranslate nohighlight">\(H(t_f)\)</span> corresponds to the ground-state of <span class="math notranslate nohighlight">\(H_Q\)</span>.</p>
+<p>To favor the final ground-state to be in an optimal solution of the MWIS, we will add a penalty detuning to the qubits associated with the lowest weights by adding a constant local detuning <span class="math notranslate nohighlight">\(\delta_{DMM}(t) = - \delta_f\)</span>.</p>
+<p>To ensure that we are not exciting the system to states that are too excited, we keep <span class="math notranslate nohighlight">\(\Omega \in [0, \Omega_{\text{max}}]\)</span>, and choose <span class="math notranslate nohighlight">\(\Omega_{\text{max}}\)</span> as the maximum energy of two non-connected nodes to ensures that the adiabatic path is efficient.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Compute the maximum interaction between two non-connected atoms</span>
+<span class="n">distance_non_connected</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">Q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">Q</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">distance_non_connected</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">euclidean</span><span class="p">(</span><span class="n">reg</span><span class="o">.</span><span class="n">qubits</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;q</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">],</span> <span class="n">reg</span><span class="o">.</span><span class="n">qubits</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;q</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span>
+            <span class="p">)</span>
+<span class="n">Omega</span> <span class="o">=</span> <span class="n">device</span><span class="o">.</span><span class="n">interaction_coeff</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">distance_non_connected</span><span class="p">)</span> <span class="o">**</span> <span class="mi">6</span> <span class="o">*</span> <span class="mi">10</span>
+<span class="n">delta_0</span> <span class="o">=</span> <span class="o">-</span><span class="n">Omega</span>  <span class="c1"># just has to be negative</span>
+<span class="n">delta_f</span> <span class="o">=</span> <span class="o">-</span><span class="n">delta_0</span>  <span class="c1"># just has to be positive</span>
+<span class="n">T</span> <span class="o">=</span> <span class="mi">40000</span>  <span class="c1"># time in ns, we choose a time long enough to ensure the propagation of information in the system</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Adiabatic pulse added to the Rydberg Global</span>
+<span class="n">adiabatic_pulse</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="p">(</span>
+    <span class="n">pulser</span><span class="o">.</span><span class="n">InterpolatedWaveform</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="p">[</span><span class="mf">1e-9</span><span class="p">,</span> <span class="n">Omega</span><span class="p">,</span> <span class="mf">1e-9</span><span class="p">]),</span>
+    <span class="n">pulser</span><span class="o">.</span><span class="n">InterpolatedWaveform</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="p">[</span><span class="n">delta_0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">]),</span>
+    <span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">sequence</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">adiabatic_pulse</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="c1"># Constant pulse added to the DMM</span>
+<span class="n">sequence</span><span class="o">.</span><span class="n">add_dmm_detuning</span><span class="p">(</span><span class="n">pulser</span><span class="o">.</span><span class="n">ConstantWaveform</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="o">-</span><span class="n">delta_f</span><span class="p">),</span> <span class="s2">&quot;dmm_0&quot;</span><span class="p">)</span>
+<span class="n">sequence</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span>
+    <span class="n">draw_detuning_maps</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">draw_qubit_det</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">draw_qubit_amp</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>  <span class="c1"># ,fig_name= &quot;no_final_amplitude.pdf&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mwis_42_0.png" src="../_images/tutorials_mwis_42_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mwis_42_1.png" src="../_images/tutorials_mwis_42_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mwis_42_2.png" src="../_images/tutorials_mwis_42_2.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mwis_42_3.png" src="../_images/tutorials_mwis_42_3.png" />
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">simul</span> <span class="o">=</span> <span class="n">pulser_simulation</span><span class="o">.</span><span class="n">QutipBackendV2</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">count_dict</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">final_bitstrings</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">plot_distribution</span><span class="p">(</span><span class="n">C</span><span class="p">):</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="n">indexes</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;0110&quot;</span><span class="p">]</span>  <span class="c1"># best solution</span>
+    <span class="n">color_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="s2">&quot;r&quot;</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">indexes</span> <span class="k">else</span> <span class="s2">&quot;g&quot;</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">C</span><span class="p">}</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;bitstrings&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;counts&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">C</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span> <span class="n">width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color_dict</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">rotation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plot_distribution</span><span class="p">(</span><span class="n">count_dict</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mwis_45_0.png" src="../_images/tutorials_mwis_45_0.png" />
+</div>
+</div>
+<p>The outcome is effectively <code class="docutils literal notranslate"><span class="pre">0110</span></code>, which is the optimal solution for the MWIS problem on the graph !</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>To go further</strong>:</p>
+<ul class="simple">
+<li><p>The heuristic we are using here to define the values of <span class="math notranslate nohighlight">\(\Omega\)</span>, <span class="math notranslate nohighlight">\(\delta\)</span>, <span class="math notranslate nohighlight">\(\delta_{DMM}\)</span> along time works well in this case. You will surely have to adapt these values if you change the graph (the matrix <span class="math notranslate nohighlight">\(Q\)</span>). To tune them automatically, you can use an optimization procedure to find the sequence maximizing your cost function <span class="math notranslate nohighlight">\(f(z)\)</span>. An example of an optimization procedure is presented in <a class="reference internal" href="optimization.html"><span class="doc">this tutorial</span></a> (for a different cost function).</p></li>
+<li><p>This notebook can be adapted to solve a <a class="reference internal" href="qubo.html"><span class="doc">QUBO</span></a> with diagonal terms, only the definition of the detuning map has to be changed.</p></li>
+</ul>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="qubo.html" class="btn btn-neutral float-left" title="QAA to solve a QUBO problem" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../apidoc/core.html" class="btn btn-neutral float-right" title="pulser" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

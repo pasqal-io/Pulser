@@ -1,0 +1,591 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Microwave &mdash; Pulser 1.5.7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=2b2ec289"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <script src="../../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Raman" href="pulser.channels.Raman.html" />
+    <link rel="prev" title="pulser.channels" href="pulser.channels.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.5.7" /><meta name="readthedocs-resolver-filename" content="/apidoc/_autosummary/pulser.channels.Microwave.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Pulser
+              <img src="../../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Emulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../core.html#classes">Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core.html#device-examples">Device Examples</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../core.html#modules">Modules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="pulser.abstract_repr.html">pulser.abstract_repr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.backend.html">pulser.backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.backends.html">pulser.backends</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="pulser.channels.html">pulser.channels</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">Microwave</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.channels.Raman.html">Raman</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.channels.Rydberg.html">Rydberg</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.channels.DMM.html">DMM</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.channels.BaseEOM.html">BaseEOM</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.channels.RydbergEOM.html">RydbergEOM</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pulser.channels.RydbergBeam.html">RydbergBeam</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.devices.html">pulser.devices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.exceptions.html">pulser.exceptions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.parametrized.html">pulser.parametrized</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.register.html">pulser.register</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.result.html">pulser.result</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.sampler.html">pulser.sampler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.html">pulser.waveforms</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+          <li class="breadcrumb-item"><a href="pulser.channels.html">pulser.channels</a></li>
+      <li class="breadcrumb-item active">Microwave</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/apidoc/_autosummary/pulser.channels.Microwave.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="microwave">
+<h1>Microwave<a class="headerlink" href="#microwave" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser.channels.Microwave">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser.channels.</span></span><span class="sig-name descname"><span class="pre">Microwave</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">addressing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_abs_detuning</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_amp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_retarget_interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_retarget_t</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_targets</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clock_period</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100000000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_avg_amp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mod_bandwidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_phase_jump_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">propagation_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.channels.Microwave" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Channel</span></code></p>
+<p>Microwave adressing channel.</p>
+<p>Channel targeting the transition between two rydberg states, thus encoding
+the ‘XY’ basis. See base class.</p>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.channels.Microwave.basis" title="pulser.channels.Microwave.basis"><code class="xref py py-obj docutils literal notranslate"><span class="pre">basis</span></code></a></p></td>
+<td><p>The addressed basis name.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">clock_period</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">custom_phase_jump_time</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.channels.Microwave.eigenstates" title="pulser.channels.Microwave.eigenstates"><code class="xref py py-obj docutils literal notranslate"><span class="pre">eigenstates</span></code></a></p></td>
+<td><p>The eigenstates associated with the basis.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">eom_config</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fixed_retarget_t</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_duration</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_targets</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">min_avg_amp</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">min_duration</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">min_retarget_interval</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">mod_bandwidth</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.channels.Microwave.name" title="pulser.channels.Microwave.name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">name</span></code></a></p></td>
+<td><p>The name of the channel.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.channels.Microwave.phase_jump_time" title="pulser.channels.Microwave.phase_jump_time"><code class="xref py py-obj docutils literal notranslate"><span class="pre">phase_jump_time</span></code></a></p></td>
+<td><p>Time taken to change the phase between consecutive pulses (in ns).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">propagation_dir</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.channels.Microwave.rise_time" title="pulser.channels.Microwave.rise_time"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rise_time</span></code></a></p></td>
+<td><p>The rise time (in ns).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">addressing</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_abs_detuning</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_amp</span></code></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.channels.Microwave.Global" title="pulser.channels.Microwave.Global"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Global</span></code></a></p></td>
+<td><p>Initializes the channel with global addressing.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.channels.Microwave.Local" title="pulser.channels.Microwave.Local"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Local</span></code></a></p></td>
+<td><p>Initializes the channel with local addressing.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.channels.Microwave.apply_modulation" title="pulser.channels.Microwave.apply_modulation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">apply_modulation</span></code></a></p></td>
+<td><p>Applies the modulation transfer fuction to the input samples.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.channels.Microwave.calc_modulation_buffer" title="pulser.channels.Microwave.calc_modulation_buffer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">calc_modulation_buffer</span></code></a></p></td>
+<td><p>Calculates the minimal buffers needed around a modulated waveform.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.channels.Microwave.default_id" title="pulser.channels.Microwave.default_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_id</span></code></a></p></td>
+<td><p>Generates the default ID for indexing this channel in a Device.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.channels.Microwave.is_virtual" title="pulser.channels.Microwave.is_virtual"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_virtual</span></code></a></p></td>
+<td><p>Whether the channel is virtual (i.e. partially defined).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.channels.Microwave.modulate" title="pulser.channels.Microwave.modulate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">modulate</span></code></a></p></td>
+<td><p>Modulates the input according to the channel's modulation bandwidth.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.channels.Microwave.supports_eom" title="pulser.channels.Microwave.supports_eom"><code class="xref py py-obj docutils literal notranslate"><span class="pre">supports_eom</span></code></a></p></td>
+<td><p>Whether the channel supports EOM mode operation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.channels.Microwave.validate_duration" title="pulser.channels.Microwave.validate_duration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_duration</span></code></a></p></td>
+<td><p>Validates and adapts the duration of an instruction on this channel.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.channels.Microwave.validate_pulse" title="pulser.channels.Microwave.validate_pulse"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_pulse</span></code></a></p></td>
+<td><p>Checks if a pulse can be executed this channel.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Signatures</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.Global">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Global</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_abs_detuning</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_amp</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.channels.Microwave.Global" title="Link to this definition"></a></dt>
+<dd><p>Initializes the channel with global addressing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>max_abs_detuning</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Maximum possible detuning (in rad/µs), in
+absolute value.</p></li>
+<li><p><strong>max_amp</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Maximum pulse amplitude (in rad/µs).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>clock_period</strong> (<em>int</em><em>, </em><em>default=4</em>) – The duration of a clock cycle
+(in ns). The duration of a pulse or delay instruction is
+enforced to be a multiple of the clock cycle.</p></li>
+<li><p><strong>min_duration</strong> (<em>int</em><em>, </em><em>default=1</em>) – The shortest duration an
+instruction can take.</p></li>
+<li><p><strong>max_duration</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em><em>, </em><em>default=10000000</em>) – The longest
+duration an instruction can take.</p></li>
+<li><p><strong>mod_bandwidth</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em><em>, </em><em>default=None</em>) – The modulation
+bandwidth at -3dB (50% reduction), in MHz.</p></li>
+<li><p><strong>min_avg_amp</strong> – The minimum average amplitude of a pulse (when not
+zero).</p></li>
+<li><p><strong>custom_phase_jump_time</strong> – An optional custom value for the phase jump
+time that overrides the default value estimated from the
+modulation bandwidth. It is not enforced in EOM mode.</p></li>
+<li><p><strong>propagation_dir</strong> – The propagation direction of the beam associated
+with the channel, given as a vector in 3D space.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeVar</span></code>(<code class="docutils literal notranslate"><span class="pre">ChannelType</span></code>, bound= Channel)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.Local">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Local</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_abs_detuning</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_amp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_retarget_interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_retarget_t</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_targets</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.channels.Microwave.Local" title="Link to this definition"></a></dt>
+<dd><p>Initializes the channel with local addressing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>max_abs_detuning</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Maximum possible detuning (in rad/µs), in
+absolute value.</p></li>
+<li><p><strong>max_amp</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Maximum pulse amplitude (in rad/µs).</p></li>
+<li><p><strong>min_retarget_interval</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0</span></code>) – Minimum time required between two
+target instructions (in ns).</p></li>
+<li><p><strong>fixed_retarget_t</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0</span></code>) – Time taken to change the target (in ns).</p></li>
+<li><p><strong>max_targets</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Maximum number of atoms the channel can target
+simultaneously.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>clock_period</strong> (<em>int</em><em>, </em><em>default=4</em>) – The duration of a clock cycle
+(in ns). The duration of a pulse or delay instruction is
+enforced to be a multiple of the clock cycle.</p></li>
+<li><p><strong>min_duration</strong> (<em>int</em><em>, </em><em>default=1</em>) – The shortest duration an
+instruction can take.</p></li>
+<li><p><strong>max_duration</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em><em>, </em><em>default=10000000</em>) – The longest
+duration an instruction can take.</p></li>
+<li><p><strong>mod_bandwidth</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em><em>, </em><em>default=None</em>) – The modulation
+bandwidth at -3dB (50% reduction), in MHz.</p></li>
+<li><p><strong>min_avg_amp</strong> – The minimum average amplitude of a pulse (when not
+zero).</p></li>
+<li><p><strong>custom_phase_jump_time</strong> – An optional custom value for the phase jump
+time that overrides the default value estimated from the
+modulation bandwidth. It is not enforced in EOM mode.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeVar</span></code>(<code class="docutils literal notranslate"><span class="pre">ChannelType</span></code>, bound= Channel)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.apply_modulation">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">apply_modulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mod_bandwidth</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.channels.Microwave.apply_modulation" title="Link to this definition"></a></dt>
+<dd><p>Applies the modulation transfer fuction to the input samples.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is strictly the application of the modulation transfer
+function. The samples should be padded beforehand.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_samples</strong> (<span class="sphinx_autodoc_typehints-type">ArrayLike</span>) – The samples to modulate.</p></li>
+<li><p><strong>mod_bandwidth</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – The modulation bandwidth at -3dB (50% reduction),
+in MHz.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractArray</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.calc_modulation_buffer">
+<span class="sig-name descname"><span class="pre">calc_modulation_buffer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mod_samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_allowed_diff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.channels.Microwave.calc_modulation_buffer" title="Link to this definition"></a></dt>
+<dd><p>Calculates the minimal buffers needed around a modulated waveform.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_samples</strong> (<span class="sphinx_autodoc_typehints-type">ArrayLike</span>) – The input samples.</p></li>
+<li><p><strong>mod_samples</strong> (<span class="sphinx_autodoc_typehints-type">ArrayLike</span>) – The modulated samples. Must be of size
+<code class="docutils literal notranslate"><span class="pre">len(input_samples)</span> <span class="pre">+</span> <span class="pre">2</span> <span class="pre">*</span> <span class="pre">self.rise_time</span></code>.</p></li>
+<li><p><strong>max_allowed_diff</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.01</span></code>) – The maximum allowed difference between
+the input and modulated samples at the end points.</p></li>
+<li><p><strong>eom</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether to calculate the modulation buffers with the EOM
+bandwidth.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The minimum buffer times at the start and end of
+the samples, in ns.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.default_id">
+<span class="sig-name descname"><span class="pre">default_id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.channels.Microwave.default_id" title="Link to this definition"></a></dt>
+<dd><p>Generates the default ID for indexing this channel in a Device.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.is_virtual">
+<span class="sig-name descname"><span class="pre">is_virtual</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.channels.Microwave.is_virtual" title="Link to this definition"></a></dt>
+<dd><p>Whether the channel is virtual (i.e. partially defined).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.modulate">
+<span class="sig-name descname"><span class="pre">modulate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_ends</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.channels.Microwave.modulate" title="Link to this definition"></a></dt>
+<dd><p>Modulates the input according to the channel’s modulation bandwidth.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_samples</strong> (<span class="sphinx_autodoc_typehints-type">ArrayLike</span>) – The samples to modulate.</p></li>
+<li><p><strong>keep_ends</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Assume the end values of the samples were kept
+constant (i.e. there is no ramp from zero on the ends).</p></li>
+<li><p><strong>eom</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether to calculate the modulation using the EOM
+bandwidth.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractArray</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The modulated output signal.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.supports_eom">
+<span class="sig-name descname"><span class="pre">supports_eom</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.channels.Microwave.supports_eom" title="Link to this definition"></a></dt>
+<dd><p>Whether the channel supports EOM mode operation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.validate_duration">
+<span class="sig-name descname"><span class="pre">validate_duration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">duration</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.channels.Microwave.validate_duration" title="Link to this definition"></a></dt>
+<dd><p>Validates and adapts the duration of an instruction on this channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>duration</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The duration to validate.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The duration, potentially adapted to the channels specs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.validate_pulse">
+<span class="sig-name descname"><span class="pre">validate_pulse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pulse</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.channels.Microwave.validate_pulse" title="Link to this definition"></a></dt>
+<dd><p>Checks if a pulse can be executed this channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pulse</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser.pulse.Pulse.html#pulser.pulse.Pulse" title="pulser.pulse.Pulse"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pulse</span></code></a></span>) – The pulse to validate.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.basis">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">basis</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'XY'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pulser.channels.Microwave.basis" title="Link to this definition"></a></dt>
+<dd><p>The addressed basis name.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.eigenstates">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">eigenstates</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'u'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'d'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'r'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'g'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'h'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pulser.channels.Microwave.eigenstates" title="Link to this definition"></a></dt>
+<dd><p>The eigenstates associated with the basis.</p>
+<p>Returns a tuple of labels, ranked in decreasing order
+of their associated eigenenergy, as such:</p>
+<table class="docutils align-center">
+<colgroup>
+<col style="width: 41.7%" />
+<col style="width: 29.2%" />
+<col style="width: 29.2%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Eigenstate (see <a class="reference internal" href="../../conventions.html"><span class="doc">Conventions</span></a>)</p></th>
+<th class="head"><p>Associated label</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Up state</p></td>
+<td><p><span class="math notranslate nohighlight">\(|0\rangle\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;u&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Down state</p></td>
+<td><p><span class="math notranslate nohighlight">\(|1\rangle\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;d&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Rydberg state</p></td>
+<td><p><span class="math notranslate nohighlight">\(|r\rangle\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;r&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Ground state</p></td>
+<td><p><span class="math notranslate nohighlight">\(|g\rangle\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;g&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Hyperfine state</p></td>
+<td><p><span class="math notranslate nohighlight">\(|h\rangle\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;h&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Error state</p></td>
+<td><p><span class="math notranslate nohighlight">\(|x\rangle\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;x&quot;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#pulser.channels.Microwave.name" title="Link to this definition"></a></dt>
+<dd><p>The name of the channel.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.phase_jump_time">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">phase_jump_time</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#pulser.channels.Microwave.phase_jump_time" title="Link to this definition"></a></dt>
+<dd><p>Time taken to change the phase between consecutive pulses (in ns).</p>
+<p>Corresponds to two times the rise time when <cite>custom_phase_jump_time</cite>
+is not defined.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.channels.Microwave.rise_time">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">rise_time</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#pulser.channels.Microwave.rise_time" title="Link to this definition"></a></dt>
+<dd><p>The rise time (in ns).</p>
+<p>Defined as the time taken to go from 10% to 90% output in response to
+a step change in the input.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pulser.channels.html" class="btn btn-neutral float-left" title="pulser.channels" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pulser.channels.Raman.html" class="btn btn-neutral float-right" title="Raman" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

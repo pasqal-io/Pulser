@@ -1,0 +1,483 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conventions &mdash; Pulser 1.5.7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=2b2ec289"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <script src="_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Hardware specifications" href="hardware.html" />
+    <link rel="prev" title="Tutorial: Programming with Pulser" href="tutorials/creating.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.5.7" /><meta name="readthedocs-resolver-filename" content="/conventions.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Pulser
+              <img src="_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Conventions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#states-and-bases">States and Bases</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#bases">Bases</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#qutrit-state">Qutrit state</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#qubit-states">Qubit states</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#multi-partite-states">Multi-partite states</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#state-preparation-and-measurement">State Preparation and Measurement</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#measurement-samples-order">Measurement samples order</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#hamiltonians">Hamiltonians</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#driving-hamiltonian">Driving Hamiltonian</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pauli-matrix-form">Pauli matrix form</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#interaction-hamiltonian">Interaction Hamiltonian</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#notation">Notation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#indexed-operator">Indexed Operator</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Emulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Conventions</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/conventions.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="conventions">
+<h1>Conventions<a class="headerlink" href="#conventions" title="Link to this heading"></a></h1>
+<section id="states-and-bases">
+<h2>States and Bases<a class="headerlink" href="#states-and-bases" title="Link to this heading"></a></h2>
+<section id="bases">
+<h3>Bases<a class="headerlink" href="#bases" title="Link to this heading"></a></h3>
+<p>A basis refers to a set of two eigenstates. The transition between
+these two states is said to be addressed by a channel that targets that basis. Namely:</p>
+<table class="docutils align-center">
+<colgroup>
+<col style="width: 41.7%" />
+<col style="width: 29.2%" />
+<col style="width: 29.2%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Basis</p></th>
+<th class="head"><p>Eigenstates</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">Channel</span></code> type</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ground-rydberg</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(|g\rangle,~|r\rangle\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Rydberg</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">digital</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(|g\rangle,~|h\rangle\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Raman</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">XY</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(|0\rangle,~|1\rangle\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Microwave</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="qutrit-state">
+<h3>Qutrit state<a class="headerlink" href="#qutrit-state" title="Link to this heading"></a></h3>
+<p>The qutrit state combines the basis states of the <code class="docutils literal notranslate"><span class="pre">ground-rydberg</span></code> and <code class="docutils literal notranslate"><span class="pre">digital</span></code> bases,
+which share the same ground state, <span class="math notranslate nohighlight">\(|g\rangle\)</span>. This qutrit state comes into play
+in the digital approach, where the qubit state is encoded in <span class="math notranslate nohighlight">\(|g\rangle\)</span> and
+<span class="math notranslate nohighlight">\(|h\rangle\)</span> but then the Rydberg state <span class="math notranslate nohighlight">\(|r\rangle\)</span> is accessed in multi-qubit
+gates.</p>
+<p>The qutrit state’s basis vectors are defined as:</p>
+<div class="math notranslate nohighlight">
+\[
+|r\rangle = (1, 0, 0)^T,~~|g\rangle = (0, 1, 0)^T, ~~|h\rangle = (0, 0, 1)^T.
+\]</div>
+</section>
+<section id="qubit-states">
+<h3>Qubit states<a class="headerlink" href="#qubit-states" title="Link to this heading"></a></h3>
+<div class="admonition caution">
+<p class="admonition-title">Caution</p>
+<p>There is no implicit relationship between a state’s vector representation and its
+associated measurement value. To see the measurement value of a state for each
+measurement basis, see <a class="reference internal" href="#spam-table"><span class="std std-ref">Initial State and Measurement Conventions</span></a> .</p>
+</div>
+<p>When using only the <code class="docutils literal notranslate"><span class="pre">ground-rydberg</span></code> or <code class="docutils literal notranslate"><span class="pre">digital</span></code> basis, the qutrit state is not
+needed and is thus reduced to a qubit state. This reduction is made simply by tracing-out
+the extra basis state, so we obtain</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ground-rydberg</span></code>: <span class="math notranslate nohighlight">\(|r\rangle = (1, 0)^T,~~|g\rangle = (0, 1)^T\)</span></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">digital</span></code>: <span class="math notranslate nohighlight">\(|g\rangle = (1, 0)^T,~~|h\rangle = (0, 1)^T\)</span></p></li>
+</ul>
+<p>On the other hand, the <code class="docutils literal notranslate"><span class="pre">XY</span></code> basis uses an independent set of qubit states that are
+labelled <span class="math notranslate nohighlight">\(|0\rangle\)</span> and <span class="math notranslate nohighlight">\(|1\rangle\)</span> and follow the standard convention:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">XY</span></code>: <span class="math notranslate nohighlight">\(|0\rangle = (1, 0)^T,~~|1\rangle = (0, 1)^T\)</span></p></li>
+</ul>
+</section>
+<section id="multi-partite-states">
+<h3>Multi-partite states<a class="headerlink" href="#multi-partite-states" title="Link to this heading"></a></h3>
+<p>The combined quantum state of multiple atoms respects their order in the <code class="docutils literal notranslate"><span class="pre">Register</span></code>.
+For a register with ordered atoms <code class="docutils literal notranslate"><span class="pre">(q0,</span> <span class="pre">q1,</span> <span class="pre">q2,</span> <span class="pre">...,</span> <span class="pre">qn)</span></code>, the full quantum state will be</p>
+<div class="math notranslate nohighlight">
+\[
+|q_0, q_1, q_2, ...\rangle = |q_0\rangle \otimes |q_1\rangle \otimes |q_2\rangle \otimes ... \otimes |q_n\rangle
+\]</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The atoms may be labelled arbitrarily without any inherent order, it’s only the
+order with which they are stored in the <code class="docutils literal notranslate"><span class="pre">Register</span></code> (as returned by
+<code class="docutils literal notranslate"><span class="pre">Register.qubit_ids</span></code>) that matters .</p>
+</div>
+</section>
+</section>
+<section id="state-preparation-and-measurement">
+<h2>State Preparation and Measurement<a class="headerlink" href="#state-preparation-and-measurement" title="Link to this heading"></a></h2>
+<table class="docutils align-center" id="spam-table">
+<caption><span class="caption-text">Initial State and Measurement Conventions</span><a class="headerlink" href="#spam-table" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 34.3%" />
+<col style="width: 22.9%" />
+<col style="width: 42.9%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Basis</p></th>
+<th class="head"><p>Initial state</p></th>
+<th class="head"><p>Measurement</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ground-rydberg</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(|g\rangle\)</span></p></td>
+<td><div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><span class="math notranslate nohighlight">\(|r\rangle \rightarrow 1\)</span></div>
+<div class="line"><span class="math notranslate nohighlight">\(|g\rangle,|h\rangle \rightarrow 0\)</span></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">digital</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(|g\rangle\)</span></p></td>
+<td><div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><span class="math notranslate nohighlight">\(|h\rangle \rightarrow 1\)</span></div>
+<div class="line"><span class="math notranslate nohighlight">\(|g\rangle,|r\rangle \rightarrow 0\)</span></div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">XY</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(|0\rangle\)</span></p></td>
+<td><div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><span class="math notranslate nohighlight">\(|1\rangle \rightarrow 1\)</span></div>
+<div class="line"><span class="math notranslate nohighlight">\(|0\rangle \rightarrow 0\)</span></div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<section id="measurement-samples-order">
+<h3>Measurement samples order<a class="headerlink" href="#measurement-samples-order" title="Link to this heading"></a></h3>
+<p>Measurement samples are returned as a sequence of 0s and 1s, in
+the same order as the atoms in the <code class="docutils literal notranslate"><span class="pre">Register</span></code> and in the multi-partite state.</p>
+<p>For example, a four-qutrit state <span class="math notranslate nohighlight">\(|q_0, q_1, q_2, q_3\rangle\)</span> that’s
+projected onto <span class="math notranslate nohighlight">\(|g, r, h, r\rangle\)</span> when measured will record a count to
+sample</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">0101</span></code>, if measured in the <code class="docutils literal notranslate"><span class="pre">ground-rydberg</span></code> basis</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">0010</span></code>, if measured in the <code class="docutils literal notranslate"><span class="pre">digital</span></code> basis</p></li>
+</ul>
+</section>
+</section>
+<section id="hamiltonians">
+<h2>Hamiltonians<a class="headerlink" href="#hamiltonians" title="Link to this heading"></a></h2>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>This section uses formulas that rely on the <a class="reference internal" href="#indexed-operator"><span class="std std-ref">Indexed Operator</span></a>
+notation.</p>
+</div>
+<p>Independently of the mode of operation, the Hamiltonian describing the system
+can be written as</p>
+<div class="math notranslate nohighlight">
+\[
+H(t) = \sum_i \left (H^D_i(t) + \sum_{j&lt;i}H^\text{int}_{ij} \right),
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(H^D_i\)</span> is the driving Hamiltonian for atom <span class="math notranslate nohighlight">\(i\)</span> and
+<span class="math notranslate nohighlight">\(H^\text{int}_{ij}\)</span> is the interaction Hamiltonian between atoms <span class="math notranslate nohighlight">\(i\)</span>
+and <span class="math notranslate nohighlight">\(j\)</span>. Note that, if multiple basis are addressed, there will be a
+corresponding driving Hamiltonian for each transition.</p>
+<section id="driving-hamiltonian">
+<h3>Driving Hamiltonian<a class="headerlink" href="#driving-hamiltonian" title="Link to this heading"></a></h3>
+<p>The driving Hamiltonian describes the coherent excitation of an individual atom
+between two energies levels, <span class="math notranslate nohighlight">\(|a\rangle\)</span> and <span class="math notranslate nohighlight">\(|b\rangle\)</span>, with
+Rabi frequency <span class="math notranslate nohighlight">\(\Omega(t)\)</span>, detuning <span class="math notranslate nohighlight">\(\delta(t)\)</span> and phase <span class="math notranslate nohighlight">\(\phi(t)\)</span>.</p>
+<figure class="align-center" id="id1">
+<a class="reference internal image-reference" href="_images/two_level_ab.png"><img alt="The energy levels for the driving Hamiltonian." src="_images/two_level_ab.png" style="width: 200px;" />
+</a>
+<figcaption>
+<p><span class="caption-text">The coherent excitation is driven between a lower energy level, <span class="math notranslate nohighlight">\(|a\rangle\)</span>, and a higher energy level,
+<span class="math notranslate nohighlight">\(|b\rangle\)</span>, with Rabi frequency <span class="math notranslate nohighlight">\(\Omega(t)\)</span> and detuning <span class="math notranslate nohighlight">\(\delta(t)\)</span>.</span><a class="headerlink" href="#id1" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>In this form, the Hamiltonian is <strong>independent of the state vector representation of each basis state</strong>,
+but it still assumes that <span class="math notranslate nohighlight">\(|b\rangle\)</span> <strong>has a higher energy than</strong> <span class="math notranslate nohighlight">\(|a\rangle\)</span>.</p>
+</div>
+<div class="math notranslate nohighlight">
+\[
+H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-i\phi(t)} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{i\phi(t)} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
+\]</div>
+<section id="pauli-matrix-form">
+<h4>Pauli matrix form<a class="headerlink" href="#pauli-matrix-form" title="Link to this heading"></a></h4>
+<p>A more conventional representation of the driving Hamiltonian uses Pauli operators
+instead of projectors. However, this form now <strong>depends on the state vector definition</strong>
+of <span class="math notranslate nohighlight">\(|a\rangle\)</span> and <span class="math notranslate nohighlight">\(|b\rangle\)</span>.</p>
+<section id="pulser-s-state-vector-definition">
+<h5>Pulser’s state-vector definition<a class="headerlink" href="#pulser-s-state-vector-definition" title="Link to this heading"></a></h5>
+<p>In Pulser, we consistently define the state vectors according to their relative energy.
+In this way we have, for any given basis, that</p>
+<div class="math notranslate nohighlight">
+\[
+|b\rangle = (1, 0)^T,~~|a\rangle = (0, 1)^T
+\]</div>
+<p>Thus, the Pauli and excited state occupation operators are defined as</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\hat{\sigma}^x = |a\rangle\langle b| + |b\rangle\langle a|, \\
+\hat{\sigma}^y = i|a\rangle\langle b| - i|b\rangle\langle a|, \\
+\hat{\sigma}^z = |b\rangle\langle b| - |a\rangle\langle a|  \\
+\hat{n} = |b\rangle\langle b| = (1 + \sigma_z) / 2
+\end{split}\]</div>
+<p>and the driving Hamiltonian takes the form</p>
+<div class="math notranslate nohighlight">
+\[
+H^D(t) / \hbar = \frac{\Omega(t)}{2} \cos\phi(t) \hat{\sigma}^x
+- \frac{\Omega(t)}{2} \sin\phi(t) \hat{\sigma}^y
+- \delta(t) \hat{n}
+\]</div>
+</section>
+<section id="alternative-state-vector-definition">
+<h5>Alternative state-vector definition<a class="headerlink" href="#alternative-state-vector-definition" title="Link to this heading"></a></h5>
+<p>Outside of Pulser, the alternative definition for the basis state
+vectors might be taken:</p>
+<div class="math notranslate nohighlight">
+\[
+|a\rangle = (1, 0)^T,~~|b\rangle = (0, 1)^T
+\]</div>
+<p>This changes the operators and Hamiltonian definitions,
+as rewriten below with highlighted differences.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\hat{\sigma}^x = |a\rangle\langle b| + |b\rangle\langle a|, \\
+\hat{\sigma}^y = \textcolor{red}{-}i|a\rangle\langle b| \textcolor{red}{+}i|b\rangle\langle a|, \\
+\hat{\sigma}^z = \textcolor{red}{-}|b\rangle\langle b| \textcolor{red}{+} |a\rangle\langle a|  \\
+\hat{n} = |b\rangle\langle b| = (1 \textcolor{red}{-} \sigma_z) / 2
+\end{split}\]</div>
+<div class="math notranslate nohighlight">
+\[
+H^D(t) / \hbar = \frac{\Omega(t)}{2} \cos\phi(t) \hat{\sigma}^x
+\textcolor{red}{+}\frac{\Omega(t)}{2} \sin\phi(t) \hat{\sigma}^y
+- \delta(t) \hat{n}
+\]</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A common case for the use of this alternative definition arises when
+trying to reconcile the basis states of the <code class="docutils literal notranslate"><span class="pre">ground-rydberg</span></code> basis
+(where <span class="math notranslate nohighlight">\(|r\rangle\)</span> is the higher energy level) with the
+computational-basis state-vector convention, thus ending up with</p>
+<div class="math notranslate nohighlight">
+\[
+|0\rangle = |g\rangle = |a\rangle = (1, 0)^T,~~|1\rangle = |r\rangle = |b\rangle = (0, 1)^T
+\]</div>
+</div>
+</section>
+</section>
+</section>
+<section id="interaction-hamiltonian">
+<h3>Interaction Hamiltonian<a class="headerlink" href="#interaction-hamiltonian" title="Link to this heading"></a></h3>
+<p>The interaction Hamiltonian depends on the states involved in the sequence.
+When working with the <code class="docutils literal notranslate"><span class="pre">ground-rydberg</span></code> and <code class="docutils literal notranslate"><span class="pre">digital</span></code> bases, atoms interact
+when they are in the Rydberg state <span class="math notranslate nohighlight">\(|r\rangle\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[
+H^\text{int}_{ij} = \frac{C_6}{R_{ij}^6} \hat{n}_i \hat{n}_j
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(\hat{n}_i = |r\rangle\langle r|_i\)</span> (the projector of
+atom <span class="math notranslate nohighlight">\(i\)</span> onto the Rydberg state), <span class="math notranslate nohighlight">\(R_{ij}^6\)</span> is the distance
+between atoms <span class="math notranslate nohighlight">\(i\)</span> and <span class="math notranslate nohighlight">\(j\)</span> and <span class="math notranslate nohighlight">\(C_6\)</span> is a coefficient
+depending on the specific Rydberg level of <span class="math notranslate nohighlight">\(|r\rangle\)</span>.</p>
+<p>On the other hand, with the two Rydberg states of the <code class="docutils literal notranslate"><span class="pre">XY</span></code>
+basis, the interaction Hamiltonian takes the form</p>
+<div class="math notranslate nohighlight">
+\[
+H^\text{int}_{ij} =  \frac{C_3}{R_{ij}^3} (\hat{\sigma}_i^{+}\hat{\sigma}_j^{-} + \hat{\sigma}_i^{-}\hat{\sigma}_j^{+})
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(C_3\)</span> is a coefficient that depends on the chosen Ryberg states
+and</p>
+<div class="math notranslate nohighlight">
+\[
+\hat{\sigma}_i^{+} =  |1\rangle\langle 0|_i,~~~\hat{\sigma}_i^{-} =  |0\rangle\langle 1|_i
+\]</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The definitions given for both interaction Hamiltonians are independent of the chosen state vector convention.</p>
+</div>
+</section>
+</section>
+<section id="notation">
+<h2>Notation<a class="headerlink" href="#notation" title="Link to this heading"></a></h2>
+<section id="indexed-operator">
+<h3>Indexed Operator<a class="headerlink" href="#indexed-operator" title="Link to this heading"></a></h3>
+<p>Whenever an arbitrary operator is written with an index (typically <span class="math notranslate nohighlight">\(i\)</span> or <span class="math notranslate nohighlight">\(j\)</span>), e.g. <span class="math notranslate nohighlight">\(\hat{O}_i\)</span>, it is implicit that <span class="math notranslate nohighlight">\(\hat{O}\)</span> is applied <em>only</em> to qudit <span class="math notranslate nohighlight">\(i\)</span> while the rest of the qudits are applied the identity operator, <span class="math notranslate nohighlight">\(\hat{I}\)</span>. Put another way,</p>
+<div class="math notranslate nohighlight">
+\[ \hat{O}_i = \underset{(1)}{\hat{I}} \otimes \underset{(2)}{\hat{I}} \otimes ... \otimes\ \underset{(i)}{\hat{O}}\ \otimes ... \otimes \underset{(N)}{\hat{I}},\]</div>
+<p>where <span class="math notranslate nohighlight">\(1 \leq i \leq N\)</span>.</p>
+<p>This notation is extendable to multiple indices. Take for instance the case with two indices, <span class="math notranslate nohighlight">\(\hat{O}_{ij}\)</span> – here, <span class="math notranslate nohighlight">\(\hat{O}\)</span> is a two-qudit operator. A good example is the <a class="reference internal" href="#interaction-hamiltonian"><span class="std std-ref">interaction Hamiltonian</span></a> in the <code class="docutils literal notranslate"><span class="pre">ground-rydberg</span></code> basis, which we write as</p>
+<div class="math notranslate nohighlight">
+\[H^\text{int}_{ij} = \frac{C_6}{R_{ij}^6} \hat{n}_i \hat{n}_j = \frac{C_6}{R_{ij}^6} \left( \underset{(1)}{\hat{I}} \otimes ... \otimes \ \underset{(j)}{\hat{n}}\ \otimes ... \otimes \ \underset{(i)}{\hat{n}} \ \otimes ... \otimes \underset{(N)}{\hat{I}}\right),\]</div>
+<p>where <span class="math notranslate nohighlight">\(1 \leq j &lt; i \leq N\)</span>.</p>
+<p>Note that, generally, we cannot write <span class="math notranslate nohighlight">\(\hat{O}_{ij}\)</span> in the form used above because <span class="math notranslate nohighlight">\(\hat{O}\)</span> might not be separable in a tensor product of two single-qudit operators, but the operator is valid nonetheless.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="tutorials/creating.html" class="btn btn-neutral float-left" title="Tutorial: Programming with Pulser" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="hardware.html" class="btn btn-neutral float-right" title="Hardware specifications" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

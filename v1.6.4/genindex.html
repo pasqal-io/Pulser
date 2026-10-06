@@ -1,0 +1,2304 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Index &mdash; Pulser 1.6.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8ea99608"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <script src="_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.6.4" /><meta name="readthedocs-resolver-filename" content="/genindex.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Pulser
+              <img src="_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Index</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#H"><strong>H</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#K"><strong>K</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
+ | <a href="#O"><strong>O</strong></a>
+ | <a href="#P"><strong>P</strong></a>
+ | <a href="#Q"><strong>Q</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
+ | <a href="#V"><strong>V</strong></a>
+ | <a href="#W"><strong>W</strong></a>
+ 
+</div>
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.add">add() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.add_config">add_config() (pulser_simulation.QutipEmulator method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.add_dmm_detuning">add_dmm_detuning() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.add_eom_pulse">add_eom_pulse() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Results.html#pulser.backend.Results.aggregate">aggregate() (pulser.backend.Results class method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.aggregate">(pulser.result.Result class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.aggregate">(pulser.result.SampledResult class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.aggregate">(pulser_simulation.qutip_result.QutipResult class method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod">AggregationMethod (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.align">align() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.AnalogDevice.html#pulser.AnalogDevice">AnalogDevice (in module pulser)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.BitStrings.html#pulser.backend.BitStrings.apply">apply() (pulser.backend.BitStrings method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.CorrelationMatrix.html#pulser.backend.CorrelationMatrix.apply">(pulser.backend.CorrelationMatrix method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Energy.html#pulser.backend.Energy.apply">(pulser.backend.Energy method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.EnergySecondMoment.html#pulser.backend.EnergySecondMoment.apply">(pulser.backend.EnergySecondMoment method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.EnergyVariance.html#pulser.backend.EnergyVariance.apply">(pulser.backend.EnergyVariance method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Expectation.html#pulser.backend.Expectation.apply">(pulser.backend.Expectation method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Fidelity.html#pulser.backend.Fidelity.apply">(pulser.backend.Fidelity method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Observable.html#pulser.backend.Observable.apply">(pulser.backend.Observable method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Occupation.html#pulser.backend.Occupation.apply">(pulser.backend.Occupation method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.StateResult.html#pulser.backend.StateResult.apply">(pulser.backend.StateResult method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.apply_modulation">apply_modulation() (pulser.channels.DMM static method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.apply_modulation">(pulser.channels.Microwave static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.apply_modulation">(pulser.channels.Raman static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.apply_modulation">(pulser.channels.Rydberg static method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Operator.html#pulser.backend.Operator.apply_to">apply_to() (pulser.backend.Operator method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.OperatorRepr.html#pulser.backend.OperatorRepr.apply_to">(pulser.backend.OperatorRepr method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_op.QutipOperator.html#pulser_simulation.qutip_op.QutipOperator.apply_to">(pulser_simulation.qutip_op.QutipOperator method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipOperator.html#pulser_simulation.QutipOperator.apply_to">(pulser_simulation.QutipOperator method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.pulse.Pulse.html#pulser.pulse.Pulse.ArbitraryPhase">ArbitraryPhase() (pulser.pulse.Pulse class method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod.as_integer_ratio">as_integer_ratio() (pulser.backend.AggregationMethod method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.available_channels">available_channels (pulser.sequence.Sequence property)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.backend.Backend.html#pulser.backend.Backend">Backend (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.channels.BaseEOM.html#pulser.channels.BaseEOM">BaseEOM (class in pulser.channels)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.basis">basis (pulser.channels.DMM property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.basis">(pulser.channels.Microwave property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.basis">(pulser.channels.Raman property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.basis">(pulser.channels.Rydberg property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.basis">(pulser_simulation.QutipEmulator property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.basis_name">basis_name (pulser_simulation.QutipEmulator property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod.bit_count">bit_count() (pulser.backend.AggregationMethod method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod.bit_length">bit_length() (pulser.backend.AggregationMethod method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.QutipState.html#pulser_simulation.qutip_state.QutipState.bitstring_probabilities">bitstring_probabilities() (pulser_simulation.qutip_state.QutipState method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipState.html#pulser_simulation.QutipState.bitstring_probabilities">(pulser_simulation.QutipState method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.BitStrings.html#pulser.backend.BitStrings">BitStrings (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform">BlackmanWaveform (class in pulser.waveforms)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized.build">build() (pulser.parametrized.Parametrized method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.ParamObj.html#pulser.parametrized.ParamObj.build">(pulser.parametrized.ParamObj method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.Variable.html#pulser.parametrized.Variable.build">(pulser.parametrized.Variable method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.build">(pulser.sequence.Sequence method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.build_operator">build_operator() (pulser_simulation.QutipEmulator method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.calc_modulation_buffer">calc_modulation_buffer() (pulser.channels.DMM method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.calc_modulation_buffer">(pulser.channels.Microwave method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.calc_modulation_buffer">(pulser.channels.Raman method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.calc_modulation_buffer">(pulser.channels.Rydberg method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.channels.RydbergEOM.html#pulser.channels.RydbergEOM.calculate_detuning_off">calculate_detuning_off() (pulser.channels.RydbergEOM method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.calibrated_register_layouts">calibrated_register_layouts (pulser.devices.Device property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Callback.html#pulser.backend.Callback">Callback (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.ChannelSamples.html#pulser.sampler.ChannelSamples.centered_phase">centered_phase (pulser.sampler.ChannelSamples property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.sampler.DMMSamples.html#pulser.sampler.DMMSamples.centered_phase">(pulser.sampler.DMMSamples property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform.change_duration">change_duration() (pulser.waveforms.BlackmanWaveform method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform.change_duration">(pulser.waveforms.CompositeWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform.change_duration">(pulser.waveforms.ConstantWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform.change_duration">(pulser.waveforms.CustomWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform.change_duration">(pulser.waveforms.InterpolatedWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform.change_duration">(pulser.waveforms.KaiserWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform.change_duration">(pulser.waveforms.RampWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.Waveform.html#pulser.waveforms.Waveform.change_duration">(pulser.waveforms.Waveform method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.change_rydberg_level">change_rydberg_level() (pulser.devices.VirtualDevice method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.SequenceSamples.html#pulser.sampler.SequenceSamples.channel_samples">channel_samples (pulser.sampler.SequenceSamples property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.channels">channels (pulser.devices.Device property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.channels">(pulser.devices.VirtualDevice property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.ChannelSamples.html#pulser.sampler.ChannelSamples">ChannelSamples (class in pulser.sampler)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.simresults.CoherentResults.html#pulser_simulation.simresults.CoherentResults">CoherentResults (class in pulser_simulation.simresults)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform">CompositeWaveform (class in pulser.waveforms)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.config">config (pulser_simulation.QutipEmulator property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.config_detuning_map">config_detuning_map() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.config_slm_mask">config_slm_mask() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod.conjugate">conjugate() (pulser.backend.AggregationMethod method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.pulse.Pulse.html#pulser.pulse.Pulse.ConstantAmplitude">ConstantAmplitude() (pulser.pulse.Pulse class method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.pulse.Pulse.html#pulser.pulse.Pulse.ConstantDetuning">ConstantDetuning() (pulser.pulse.Pulse class method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.pulse.Pulse.html#pulser.pulse.Pulse.ConstantPulse">ConstantPulse() (pulser.pulse.Pulse class method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform">ConstantWaveform (class in pulser.waveforms)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.coords">coords (pulser.register.RectangularLatticeLayout property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout.coords">(pulser.register.RegisterLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.coords">(pulser.register.SquareLatticeLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.coords">(pulser.register.TriangularLatticeLayout property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.coords_hex_hash">coords_hex_hash() (pulser.register.Register method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.coords_hex_hash">(pulser.register.Register3D method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.CorrelationMatrix.html#pulser.backend.CorrelationMatrix">CorrelationMatrix (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.ParamObj.html#pulser.parametrized.ParamObj.cos">cos() (pulser.parametrized.ParamObj method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.Variable.html#pulser.parametrized.Variable.cos">(pulser.parametrized.Variable method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.simresults.CoherentResults.html#pulser_simulation.simresults.CoherentResults.count">count() (pulser_simulation.simresults.CoherentResults method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.NoisyResults.html#pulser_simulation.simresults.NoisyResults.count">(pulser_simulation.simresults.NoisyResults method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.SimulationResults.html#pulser_simulation.simresults.SimulationResults.count">(pulser_simulation.simresults.SimulationResults method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.cubic">cubic() (pulser.register.Register3D class method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.cuboid">cuboid() (pulser.register.Register3D class method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.current_phase_ref">current_phase_ref() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform">CustomWaveform (class in pulser.waveforms)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform.data_points">data_points (pulser.waveforms.InterpolatedWaveform property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.declare_channel">declare_channel() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.declare_variable">declare_variable() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.declared_channels">declared_channels (pulser.sequence.Sequence property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.declared_variables">declared_variables (pulser.sequence.Sequence property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.default_id">default_id() (pulser.channels.DMM method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.default_id">(pulser.channels.Microwave method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.default_id">(pulser.channels.Raman method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.default_id">(pulser.channels.Rydberg method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.define_detuning_map">define_detuning_map() (pulser.register.RectangularLatticeLayout method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.define_detuning_map">(pulser.register.Register method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.define_detuning_map">(pulser.register.Register3D method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout.define_detuning_map">(pulser.register.RegisterLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.define_detuning_map">(pulser.register.SquareLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.define_detuning_map">(pulser.register.TriangularLatticeLayout method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.define_register">define_register() (pulser.register.RectangularLatticeLayout method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout.define_register">(pulser.register.RegisterLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.define_register">(pulser.register.SquareLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.define_register">(pulser.register.TriangularLatticeLayout method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.delay">delay() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod.denominator">denominator (pulser.backend.AggregationMethod attribute)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.abstract_repr.deserialize_device.html#pulser.abstract_repr.deserialize_device">deserialize_device() (in module pulser.abstract_repr)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.abstract_repr.deserialize_layout.html#pulser.abstract_repr.deserialize_layout">deserialize_layout() (in module pulser.abstract_repr)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.abstract_repr.deserialize_noise_model.html#pulser.abstract_repr.deserialize_noise_model">deserialize_noise_model() (in module pulser.abstract_repr)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.abstract_repr.deserialize_register.html#pulser.abstract_repr.deserialize_register">deserialize_register() (in module pulser.abstract_repr)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.abstract_repr.deserialize_sequence.html#pulser.abstract_repr.deserialize_sequence">deserialize_sequence() (in module pulser.abstract_repr)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.channels.RydbergEOM.html#pulser.channels.RydbergEOM.detuning_off_options">detuning_off_options() (pulser.channels.RydbergEOM method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.DetuningMap.html#pulser.register.DetuningMap">DetuningMap (class in pulser.register)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device">Device (class in pulser.devices)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.device">device (pulser.sequence.Sequence property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.DigitalAnalogDevice.html#pulser.DigitalAnalogDevice">DigitalAnalogDevice (in module pulser)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.dim">dim (pulser_simulation.QutipEmulator property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.DetuningMap.html#pulser.register.DetuningMap.dimensionality">dimensionality (pulser.register.DetuningMap property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.dimensionality">(pulser.register.RectangularLatticeLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.dimensionality">(pulser.register.Register property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.dimensionality">(pulser.register.Register3D property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout.dimensionality">(pulser.register.RegisterLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.dimensionality">(pulser.register.SquareLatticeLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.dimensionality">(pulser.register.TriangularLatticeLayout property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.disable_eom_mode">disable_eom_mode() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM">DMM (class in pulser.channels)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.dmm_channels">dmm_channels (pulser.devices.Device property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.dmm_channels">(pulser.devices.VirtualDevice property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.DMMSamples.html#pulser.sampler.DMMSamples">DMMSamples (class in pulser.sampler)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.SimConfig.html#pulser_simulation.SimConfig.doppler_sigma">doppler_sigma (pulser_simulation.SimConfig property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.pulse.Pulse.html#pulser.pulse.Pulse.draw">draw() (pulser.pulse.Pulse method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.DetuningMap.html#pulser.register.DetuningMap.draw">(pulser.register.DetuningMap method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.draw">(pulser.register.RectangularLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.draw">(pulser.register.Register method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.draw">(pulser.register.Register3D method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout.draw">(pulser.register.RegisterLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.draw">(pulser.register.SquareLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.draw">(pulser.register.TriangularLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.draw">(pulser.sequence.Sequence method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform.draw">(pulser.waveforms.BlackmanWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform.draw">(pulser.waveforms.CompositeWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform.draw">(pulser.waveforms.ConstantWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform.draw">(pulser.waveforms.CustomWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform.draw">(pulser.waveforms.InterpolatedWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform.draw">(pulser.waveforms.KaiserWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform.draw">(pulser.waveforms.RampWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.Waveform.html#pulser.waveforms.Waveform.draw">(pulser.waveforms.Waveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.draw">(pulser_simulation.QutipEmulator method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.pulse.Pulse.html#pulser.pulse.Pulse.duration">duration (pulser.pulse.Pulse property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform.duration">(pulser.waveforms.BlackmanWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform.duration">(pulser.waveforms.CompositeWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform.duration">(pulser.waveforms.ConstantWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform.duration">(pulser.waveforms.CustomWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform.duration">(pulser.waveforms.InterpolatedWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform.duration">(pulser.waveforms.KaiserWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform.duration">(pulser.waveforms.RampWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.Waveform.html#pulser.waveforms.Waveform.duration">(pulser.waveforms.Waveform property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.sampler.SequenceSamples.html#pulser.sampler.SequenceSamples.eigenbasis">eigenbasis (pulser.sampler.SequenceSamples property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.State.html#pulser.backend.State.eigenstates">eigenstates (pulser.backend.State property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.StateRepr.html#pulser.backend.StateRepr.eigenstates">(pulser.backend.StateRepr property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.eigenstates">(pulser.channels.DMM property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.eigenstates">(pulser.channels.Microwave property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.eigenstates">(pulser.channels.Raman property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.eigenstates">(pulser.channels.Rydberg property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_op.QutipOperator.html#pulser_simulation.qutip_op.QutipOperator.eigenstates">(pulser_simulation.qutip_op.QutipOperator property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.QutipState.html#pulser_simulation.qutip_state.QutipState.eigenstates">(pulser_simulation.qutip_state.QutipState property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipOperator.html#pulser_simulation.QutipOperator.eigenstates">(pulser_simulation.QutipOperator property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipState.html#pulser_simulation.QutipState.eigenstates">(pulser_simulation.QutipState property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_pasqal.EmuFreeBackend.html#pulser_pasqal.EmuFreeBackend">EmuFreeBackend (class in pulser_pasqal)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backends.html#pulser.backends.EmuFreeBackend">(in module pulser.backends)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_pasqal.backends.EmuFreeBackendV2.html#pulser_pasqal.backends.EmuFreeBackendV2">EmuFreeBackendV2 (class in pulser_pasqal.backends)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backends.html#pulser.backends.EmuFreeBackendV2">(in module pulser.backends)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.EmulationConfig.html#pulser.backend.EmulationConfig">EmulationConfig (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.EmulatorBackend.html#pulser.backend.EmulatorBackend">EmulatorBackend (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.EmulatorConfig.html#pulser.backend.EmulatorConfig">EmulatorConfig (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_pasqal.EmuMPSBackend.html#pulser_pasqal.EmuMPSBackend">EmuMPSBackend (class in pulser_pasqal)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backends.html#pulser.backends.EmuMPSBackend">(in module pulser.backends)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser_pasqal.EmuTNBackend.html#pulser_pasqal.EmuTNBackend">EmuTNBackend (class in pulser_pasqal)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backends.html#pulser.backends.EmuTNBackend">(in module pulser.backends)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.enable_eom_mode">enable_eom_mode() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Energy.html#pulser.backend.Energy">Energy (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.EnergySecondMoment.html#pulser.backend.EnergySecondMoment">EnergySecondMoment (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.EnergyVariance.html#pulser.backend.EnergyVariance">EnergyVariance (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.estimate_added_delay">estimate_added_delay() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.evaluation_times">evaluation_times (pulser_simulation.QutipEmulator property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.ParamObj.html#pulser.parametrized.ParamObj.exp">exp() (pulser.parametrized.ParamObj method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.Variable.html#pulser.parametrized.Variable.exp">(pulser.parametrized.Variable method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Operator.html#pulser.backend.Operator.expect">expect() (pulser.backend.Operator method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.OperatorRepr.html#pulser.backend.OperatorRepr.expect">(pulser.backend.OperatorRepr method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_op.QutipOperator.html#pulser_simulation.qutip_op.QutipOperator.expect">(pulser_simulation.qutip_op.QutipOperator method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipOperator.html#pulser_simulation.QutipOperator.expect">(pulser_simulation.QutipOperator method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.CoherentResults.html#pulser_simulation.simresults.CoherentResults.expect">(pulser_simulation.simresults.CoherentResults method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.NoisyResults.html#pulser_simulation.simresults.NoisyResults.expect">(pulser_simulation.simresults.NoisyResults method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.SimulationResults.html#pulser_simulation.simresults.SimulationResults.expect">(pulser_simulation.simresults.SimulationResults method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Expectation.html#pulser.backend.Expectation">Expectation (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.ChannelSamples.html#pulser.sampler.ChannelSamples.extend_duration">extend_duration() (pulser.sampler.ChannelSamples method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.sampler.DMMSamples.html#pulser.sampler.DMMSamples.extend_duration">(pulser.sampler.DMMSamples method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.sampler.SequenceSamples.html#pulser.sampler.SequenceSamples.extend_duration">(pulser.sampler.SequenceSamples method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.pulse.Pulse.html#pulser.pulse.Pulse.fall_time">fall_time() (pulser.pulse.Pulse method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_pasqal.OVHConnection.html#pulser_pasqal.OVHConnection.fetch_available_devices">fetch_available_devices() (pulser_pasqal.OVHConnection method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.PasqalCloud.html#pulser_pasqal.PasqalCloud.fetch_available_devices">(pulser_pasqal.PasqalCloud method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Fidelity.html#pulser.backend.Fidelity">Fidelity (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Results.html#pulser.backend.Results.final_bitstrings">final_bitstrings (pulser.backend.Results property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.final_bitstrings">(pulser.result.Result property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.final_bitstrings">(pulser.result.SampledResult property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.final_bitstrings">(pulser_simulation.qutip_result.QutipResult property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Results.html#pulser.backend.Results.final_state">final_state (pulser.backend.Results property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.final_state">(pulser.result.Result property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.final_state">(pulser.result.SampledResult property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.final_state">(pulser_simulation.qutip_result.QutipResult property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.find_indices">find_indices() (pulser.register.Register method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.find_indices">(pulser.register.Register3D method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform.first_value">first_value (pulser.waveforms.BlackmanWaveform property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform.first_value">(pulser.waveforms.CompositeWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform.first_value">(pulser.waveforms.ConstantWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform.first_value">(pulser.waveforms.CustomWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform.first_value">(pulser.waveforms.InterpolatedWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform.first_value">(pulser.waveforms.KaiserWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform.first_value">(pulser.waveforms.RampWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.Waveform.html#pulser.waveforms.Waveform.first_value">(pulser.waveforms.Waveform property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.EmulationConfig.html#pulser.backend.EmulationConfig.from_abstract_repr">from_abstract_repr() (pulser.backend.EmulationConfig class method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.Results.html#pulser.backend.Results.from_abstract_repr">(pulser.backend.Results class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.from_abstract_repr">(pulser.devices.Device static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.from_abstract_repr">(pulser.devices.VirtualDevice static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.noise_model.NoiseModel.html#pulser.noise_model.NoiseModel.from_abstract_repr">(pulser.noise_model.NoiseModel static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.from_abstract_repr">(pulser.register.RectangularLatticeLayout static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.from_abstract_repr">(pulser.register.Register static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.from_abstract_repr">(pulser.register.Register3D static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout.from_abstract_repr">(pulser.register.RegisterLayout static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.from_abstract_repr">(pulser.register.SquareLatticeLayout static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.from_abstract_repr">(pulser.register.TriangularLatticeLayout static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.from_abstract_repr">(pulser.result.Result class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.from_abstract_repr">(pulser.result.SampledResult class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.from_abstract_repr">(pulser.sequence.Sequence static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_config.QutipConfig.html#pulser_simulation.qutip_config.QutipConfig.from_abstract_repr">(pulser_simulation.qutip_config.QutipConfig class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.from_abstract_repr">(pulser_simulation.qutip_result.QutipResult class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipConfig.html#pulser_simulation.QutipConfig.from_abstract_repr">(pulser_simulation.QutipConfig class method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod.from_bytes">from_bytes() (pulser.backend.AggregationMethod method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.from_coordinates">from_coordinates() (pulser.register.Register class method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.from_coordinates">(pulser.register.Register3D class method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform.from_max_val">from_max_val() (pulser.waveforms.BlackmanWaveform class method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform.from_max_val">(pulser.waveforms.KaiserWaveform class method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.SimConfig.html#pulser_simulation.SimConfig.from_noise_model">from_noise_model() (pulser_simulation.SimConfig class method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Operator.html#pulser.backend.Operator.from_operator_repr">from_operator_repr() (pulser.backend.Operator class method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.OperatorRepr.html#pulser.backend.OperatorRepr.from_operator_repr">(pulser.backend.OperatorRepr class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_op.QutipOperator.html#pulser_simulation.qutip_op.QutipOperator.from_operator_repr">(pulser_simulation.qutip_op.QutipOperator class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipOperator.html#pulser_simulation.QutipOperator.from_operator_repr">(pulser_simulation.QutipOperator class method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.from_sequence">from_sequence() (pulser_simulation.QutipEmulator class method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.State.html#pulser.backend.State.from_state_amplitudes">from_state_amplitudes() (pulser.backend.State class method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.StateRepr.html#pulser.backend.StateRepr.from_state_amplitudes">(pulser.backend.StateRepr class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.QutipState.html#pulser_simulation.qutip_state.QutipState.from_state_amplitudes">(pulser_simulation.qutip_state.QutipState class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipState.html#pulser_simulation.QutipState.from_state_amplitudes">(pulser_simulation.QutipState class method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.get_addressed_bases">get_addressed_bases() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.get_addressed_states">get_addressed_states() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.State.html#pulser.backend.State.get_basis_state_from_index">get_basis_state_from_index() (pulser.backend.State method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.StateRepr.html#pulser.backend.StateRepr.get_basis_state_from_index">(pulser.backend.StateRepr method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.QutipState.html#pulser_simulation.qutip_state.QutipState.get_basis_state_from_index">(pulser_simulation.qutip_state.QutipState method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipState.html#pulser_simulation.QutipState.get_basis_state_from_index">(pulser_simulation.QutipState method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.get_duration">get_duration() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.ChannelSamples.html#pulser.sampler.ChannelSamples.get_eom_mode_intervals">get_eom_mode_intervals() (pulser.sampler.ChannelSamples method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.sampler.DMMSamples.html#pulser.sampler.DMMSamples.get_eom_mode_intervals">(pulser.sampler.DMMSamples method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.simresults.CoherentResults.html#pulser_simulation.simresults.CoherentResults.get_final_state">get_final_state() (pulser_simulation.simresults.CoherentResults method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.NoisyResults.html#pulser_simulation.simresults.NoisyResults.get_final_state">(pulser_simulation.simresults.NoisyResults method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.SimulationResults.html#pulser_simulation.simresults.SimulationResults.get_final_state">(pulser_simulation.simresults.SimulationResults method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.pulse.Pulse.html#pulser.pulse.Pulse.get_full_duration">get_full_duration() (pulser.pulse.Pulse method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.get_hamiltonian">get_hamiltonian() (pulser_simulation.QutipEmulator method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.get_measurement_basis">get_measurement_basis() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.DetuningMap.html#pulser.register.DetuningMap.get_qubit_weight_map">get_qubit_weight_map() (pulser.register.DetuningMap method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.get_register">get_register() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Results.html#pulser.backend.Results.get_result">get_result() (pulser.backend.Results method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.get_result">(pulser.result.Result method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.get_result">(pulser.result.SampledResult method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.get_result">(pulser_simulation.qutip_result.QutipResult method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Results.html#pulser.backend.Results.get_result_tags">get_result_tags() (pulser.backend.Results method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.get_result_tags">(pulser.result.Result method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.get_result_tags">(pulser.result.SampledResult method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.get_result_tags">(pulser_simulation.qutip_result.QutipResult method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.backend.Results.html#pulser.backend.Results.get_result_times">get_result_times() (pulser.backend.Results method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.get_result_times">(pulser.result.Result method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.get_result_times">(pulser.result.SampledResult method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.get_result_times">(pulser_simulation.qutip_result.QutipResult method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.get_samples">get_samples() (pulser.result.Result method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.get_samples">(pulser.result.SampledResult method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.get_samples">(pulser_simulation.qutip_result.QutipResult method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.get_state">get_state() (pulser.result.Result method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.get_state">(pulser.result.SampledResult method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.get_state">(pulser_simulation.qutip_result.QutipResult method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.CoherentResults.html#pulser_simulation.simresults.CoherentResults.get_state">(pulser_simulation.simresults.CoherentResults method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.NoisyResults.html#pulser_simulation.simresults.NoisyResults.get_state">(pulser_simulation.simresults.NoisyResults method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.SimulationResults.html#pulser_simulation.simresults.SimulationResults.get_state">(pulser_simulation.simresults.SimulationResults method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Results.html#pulser.backend.Results.get_tagged_results">get_tagged_results() (pulser.backend.Results method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.get_tagged_results">(pulser.result.Result method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.get_tagged_results">(pulser.result.SampledResult method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.get_tagged_results">(pulser_simulation.qutip_result.QutipResult method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.DetuningMap.html#pulser.register.DetuningMap.get_traps_from_coordinates">get_traps_from_coordinates() (pulser.register.DetuningMap method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.get_traps_from_coordinates">(pulser.register.RectangularLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout.get_traps_from_coordinates">(pulser.register.RegisterLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.get_traps_from_coordinates">(pulser.register.SquareLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.get_traps_from_coordinates">(pulser.register.TriangularLatticeLayout method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.Global">Global() (pulser.channels.DMM class method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.Global">(pulser.channels.Microwave class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.Global">(pulser.channels.Raman class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.Global">(pulser.channels.Rydberg class method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.hexagon">hexagon() (pulser.register.Register class method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.hexagonal_register">hexagonal_register() (pulser.register.TriangularLatticeLayout method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod.imag">imag (pulser.backend.AggregationMethod attribute)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.ChannelSamples.html#pulser.sampler.ChannelSamples.in_eom_mode">in_eom_mode() (pulser.sampler.ChannelSamples method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.sampler.DMMSamples.html#pulser.sampler.DMMSamples.in_eom_mode">(pulser.sampler.DMMSamples method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.simresults.CoherentResults.html#pulser_simulation.simresults.CoherentResults.index">index() (pulser_simulation.simresults.CoherentResults method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.NoisyResults.html#pulser_simulation.simresults.NoisyResults.index">(pulser_simulation.simresults.NoisyResults method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.SimulationResults.html#pulser_simulation.simresults.SimulationResults.index">(pulser_simulation.simresults.SimulationResults method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.State.html#pulser.backend.State.infer_one_state">infer_one_state() (pulser.backend.State method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.StateRepr.html#pulser.backend.StateRepr.infer_one_state">(pulser.backend.StateRepr method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.QutipState.html#pulser_simulation.qutip_state.QutipState.infer_one_state">(pulser_simulation.qutip_state.QutipState method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipState.html#pulser_simulation.QutipState.infer_one_state">(pulser_simulation.QutipState method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.initial_state">initial_state (pulser_simulation.QutipEmulator property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.ChannelSamples.html#pulser.sampler.ChannelSamples.initial_targets">initial_targets (pulser.sampler.ChannelSamples property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.sampler.DMMSamples.html#pulser.sampler.DMMSamples.initial_targets">(pulser.sampler.DMMSamples property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform.integral">integral (pulser.waveforms.BlackmanWaveform property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform.integral">(pulser.waveforms.CompositeWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform.integral">(pulser.waveforms.ConstantWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform.integral">(pulser.waveforms.CustomWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform.integral">(pulser.waveforms.InterpolatedWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform.integral">(pulser.waveforms.KaiserWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform.integral">(pulser.waveforms.RampWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.Waveform.html#pulser.waveforms.Waveform.integral">(pulser.waveforms.Waveform property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.interaction_coeff">interaction_coeff (pulser.devices.Device property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.interaction_coeff">(pulser.devices.VirtualDevice property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform.interp_function">interp_function (pulser.waveforms.InterpolatedWaveform property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform">InterpolatedWaveform (class in pulser.waveforms)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.is_calibrated_layout">is_calibrated_layout() (pulser.devices.Device method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.ChannelSamples.html#pulser.sampler.ChannelSamples.is_empty">is_empty() (pulser.sampler.ChannelSamples method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.sampler.DMMSamples.html#pulser.sampler.DMMSamples.is_empty">(pulser.sampler.DMMSamples method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.is_empty">(pulser.sequence.Sequence method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.EmulationConfig.html#pulser.backend.EmulationConfig.is_evaluation_time">is_evaluation_time() (pulser.backend.EmulationConfig method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_config.QutipConfig.html#pulser_simulation.qutip_config.QutipConfig.is_evaluation_time">(pulser_simulation.qutip_config.QutipConfig method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipConfig.html#pulser_simulation.QutipConfig.is_evaluation_time">(pulser_simulation.QutipConfig method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.is_in_eom_mode">is_in_eom_mode() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod.is_integer">is_integer() (pulser.backend.AggregationMethod method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.is_measured">is_measured() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.is_parametrized">is_parametrized() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.is_register_mappable">is_register_mappable() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.EmulationConfig.html#pulser.backend.EmulationConfig.is_time_in_evaluation_times">is_time_in_evaluation_times() (pulser.backend.EmulationConfig static method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_config.QutipConfig.html#pulser_simulation.qutip_config.QutipConfig.is_time_in_evaluation_times">(pulser_simulation.qutip_config.QutipConfig static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipConfig.html#pulser_simulation.QutipConfig.is_time_in_evaluation_times">(pulser_simulation.QutipConfig static method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.is_virtual">is_virtual() (pulser.channels.DMM method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.is_virtual">(pulser.channels.Microwave method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.is_virtual">(pulser.channels.Raman method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.is_virtual">(pulser.channels.Rydberg method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform">KaiserWaveform (class in pulser.waveforms)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform.last_value">last_value (pulser.waveforms.BlackmanWaveform property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform.last_value">(pulser.waveforms.CompositeWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform.last_value">(pulser.waveforms.ConstantWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform.last_value">(pulser.waveforms.CustomWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform.last_value">(pulser.waveforms.InterpolatedWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform.last_value">(pulser.waveforms.KaiserWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform.last_value">(pulser.waveforms.RampWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.Waveform.html#pulser.waveforms.Waveform.last_value">(pulser.waveforms.Waveform property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.layout">layout (pulser.register.Register property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.layout">(pulser.register.Register3D property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.Local">Local() (pulser.channels.DMM class method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.Local">(pulser.channels.Microwave class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.Local">(pulser.channels.Raman class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.Local">(pulser.channels.Rydberg class method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.ParamObj.html#pulser.parametrized.ParamObj.log">log() (pulser.parametrized.ParamObj method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.Variable.html#pulser.parametrized.Variable.log">(pulser.parametrized.Variable method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.ParamObj.html#pulser.parametrized.ParamObj.log2">log2() (pulser.parametrized.ParamObj method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.Variable.html#pulser.parametrized.Variable.log2">(pulser.parametrized.Variable method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.magnetic_field">magnetic_field (pulser.sequence.Sequence property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.make_mappable_register">make_mappable_register() (pulser.register.RectangularLatticeLayout method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout.make_mappable_register">(pulser.register.RegisterLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.make_mappable_register">(pulser.register.SquareLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.make_mappable_register">(pulser.register.TriangularLatticeLayout method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.max_connectivity">max_connectivity() (pulser.register.Register class method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.SequenceSamples.html#pulser.sampler.SequenceSamples.max_duration">max_duration (pulser.sampler.SequenceSamples property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.measure">measure() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave">Microwave (class in pulser.channels)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.MockDevice.html#pulser.MockDevice">MockDevice (in module pulser)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.modify_eom_setpoint">modify_eom_setpoint() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.modulate">modulate() (pulser.channels.DMM method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.modulate">(pulser.channels.Microwave method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.modulate">(pulser.channels.Raman method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.modulate">(pulser.channels.Rydberg method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.sampler.ChannelSamples.html#pulser.sampler.ChannelSamples.modulate">(pulser.sampler.ChannelSamples method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.sampler.DMMSamples.html#pulser.sampler.DMMSamples.modulate">(pulser.sampler.DMMSamples method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform.modulated_samples">modulated_samples() (pulser.waveforms.BlackmanWaveform method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform.modulated_samples">(pulser.waveforms.CompositeWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform.modulated_samples">(pulser.waveforms.ConstantWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform.modulated_samples">(pulser.waveforms.CustomWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform.modulated_samples">(pulser.waveforms.InterpolatedWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform.modulated_samples">(pulser.waveforms.KaiserWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform.modulated_samples">(pulser.waveforms.RampWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.Waveform.html#pulser.waveforms.Waveform.modulated_samples">(pulser.waveforms.Waveform method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform.modulation_buffers">modulation_buffers() (pulser.waveforms.BlackmanWaveform method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform.modulation_buffers">(pulser.waveforms.CompositeWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform.modulation_buffers">(pulser.waveforms.ConstantWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform.modulation_buffers">(pulser.waveforms.CustomWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform.modulation_buffers">(pulser.waveforms.InterpolatedWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform.modulation_buffers">(pulser.waveforms.KaiserWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform.modulation_buffers">(pulser.waveforms.RampWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.Waveform.html#pulser.waveforms.Waveform.modulation_buffers">(pulser.waveforms.Waveform method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    module
+
+      <ul>
+        <li><a href="apidoc/core.html#module-pulser">pulser</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.abstract_repr.html#module-pulser.abstract_repr">pulser.abstract_repr</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.html#module-pulser.backend">pulser.backend</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backends.html#module-pulser.backends">pulser.backends</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.html#module-pulser.channels">pulser.channels</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.devices.html#module-pulser.devices">pulser.devices</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.exceptions.html#module-pulser.exceptions">pulser.exceptions</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.html#module-pulser.parametrized">pulser.parametrized</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.html#module-pulser.register">pulser.register</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.result.html#module-pulser.result">pulser.result</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.sampler.html#module-pulser.sampler">pulser.sampler</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.html#module-pulser.waveforms">pulser.waveforms</a>
+</li>
+        <li><a href="apidoc/pasqal.html#module-pulser_pasqal">pulser_pasqal</a>
+</li>
+        <li><a href="apidoc/simulation.html#module-pulser_simulation">pulser_simulation</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_backend.html#module-pulser_simulation.qutip_backend">pulser_simulation.qutip_backend</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_config.html#module-pulser_simulation.qutip_config">pulser_simulation.qutip_config</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_op.html#module-pulser_simulation.qutip_op">pulser_simulation.qutip_op</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.html#module-pulser_simulation.qutip_result">pulser_simulation.qutip_result</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.html#module-pulser_simulation.qutip_state">pulser_simulation.qutip_state</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.html#module-pulser_simulation.simresults">pulser_simulation.simresults</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backends.html#pulser.backends.MPSBackend">MPSBackend (in module pulser.backends)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.backend.State.html#pulser.backend.State.n_qudits">n_qudits (pulser.backend.State property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.StateRepr.html#pulser.backend.StateRepr.n_qudits">(pulser.backend.StateRepr property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.QutipState.html#pulser_simulation.qutip_state.QutipState.n_qudits">(pulser_simulation.qutip_state.QutipState property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipState.html#pulser_simulation.QutipState.n_qudits">(pulser_simulation.QutipState property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.name">name (pulser.channels.DMM property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.name">(pulser.channels.Microwave property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.name">(pulser.channels.Raman property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.name">(pulser.channels.Rydberg property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.noise_model">noise_model (pulser_simulation.QutipEmulator property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.noise_model.NoiseModel.html#pulser.noise_model.NoiseModel">NoiseModel (class in pulser.noise_model)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.simresults.NoisyResults.html#pulser_simulation.simresults.NoisyResults">NoisyResults (class in pulser_simulation.simresults)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.DetuningMap.html#pulser.register.DetuningMap.number_of_traps">number_of_traps (pulser.register.DetuningMap property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.number_of_traps">(pulser.register.RectangularLatticeLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout.number_of_traps">(pulser.register.RegisterLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.number_of_traps">(pulser.register.SquareLatticeLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.number_of_traps">(pulser.register.TriangularLatticeLayout property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod.numerator">numerator (pulser.backend.AggregationMethod attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.backend.Observable.html#pulser.backend.Observable">Observable (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Occupation.html#pulser.backend.Occupation">Occupation (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.QPUBackend.html#pulser.backend.QPUBackend.open_batch">open_batch() (pulser.backend.QPUBackend method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.backends.EmuFreeBackendV2.html#pulser_pasqal.backends.EmuFreeBackendV2.open_batch">(pulser_pasqal.backends.EmuFreeBackendV2 method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.EmuFreeBackend.html#pulser_pasqal.EmuFreeBackend.open_batch">(pulser_pasqal.EmuFreeBackend method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.EmuMPSBackend.html#pulser_pasqal.EmuMPSBackend.open_batch">(pulser_pasqal.EmuMPSBackend method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.EmuTNBackend.html#pulser_pasqal.EmuTNBackend.open_batch">(pulser_pasqal.EmuTNBackend method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.backend.Operator.html#pulser.backend.Operator">Operator (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.OperatorRepr.html#pulser.backend.OperatorRepr">OperatorRepr (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.State.html#pulser.backend.State.overlap">overlap() (pulser.backend.State method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.StateRepr.html#pulser.backend.StateRepr.overlap">(pulser.backend.StateRepr method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.QutipState.html#pulser_simulation.qutip_state.QutipState.overlap">(pulser_simulation.qutip_state.QutipState method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipState.html#pulser_simulation.QutipState.overlap">(pulser_simulation.QutipState method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_pasqal.OVHConnection.html#pulser_pasqal.OVHConnection">OVHConnection (class in pulser_pasqal)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized">Parametrized (class in pulser.parametrized)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.ParamObj.html#pulser.parametrized.ParamObj">ParamObj (class in pulser.parametrized)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_pasqal.PasqalCloud.html#pulser_pasqal.PasqalCloud">PasqalCloud (class in pulser_pasqal)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.phase_jump_time">phase_jump_time (pulser.channels.DMM property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.phase_jump_time">(pulser.channels.Microwave property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.phase_jump_time">(pulser.channels.Raman property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.phase_jump_time">(pulser.channels.Rydberg property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.ChannelSamples.html#pulser.sampler.ChannelSamples.phase_modulation">phase_modulation (pulser.sampler.ChannelSamples property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.sampler.DMMSamples.html#pulser.sampler.DMMSamples.phase_modulation">(pulser.sampler.DMMSamples property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.phase_shift">phase_shift() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.phase_shift_index">phase_shift_index() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.simresults.CoherentResults.html#pulser_simulation.simresults.CoherentResults.plot">plot() (pulser_simulation.simresults.CoherentResults method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.NoisyResults.html#pulser_simulation.simresults.NoisyResults.plot">(pulser_simulation.simresults.NoisyResults method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.SimulationResults.html#pulser_simulation.simresults.SimulationResults.plot">(pulser_simulation.simresults.SimulationResults method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.plot_histogram">plot_histogram() (pulser.result.Result method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.plot_histogram">(pulser.result.SampledResult method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.plot_histogram">(pulser_simulation.qutip_result.QutipResult method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.print_specs">print_specs() (pulser.devices.Device method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.print_specs">(pulser.devices.VirtualDevice method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.QutipState.html#pulser_simulation.qutip_state.QutipState.probabilities">probabilities() (pulser_simulation.qutip_state.QutipState method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipState.html#pulser_simulation.QutipState.probabilities">(pulser_simulation.QutipState method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.pulse.Pulse.html#pulser.pulse.Pulse">Pulse (class in pulser.pulse)</a>
+</li>
+      <li>
+    pulser
+
+      <ul>
+        <li><a href="apidoc/core.html#module-pulser">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser.abstract_repr
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.abstract_repr.html#module-pulser.abstract_repr">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser.backend
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.html#module-pulser.backend">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser.backends
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backends.html#module-pulser.backends">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser.channels
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.html#module-pulser.channels">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    pulser.devices
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.devices.html#module-pulser.devices">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser.exceptions
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.exceptions.html#module-pulser.exceptions">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser.parametrized
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.html#module-pulser.parametrized">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser.register
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.html#module-pulser.register">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser.result
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.result.html#module-pulser.result">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser.sampler
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.sampler.html#module-pulser.sampler">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser.waveforms
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.html#module-pulser.waveforms">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser_pasqal
+
+      <ul>
+        <li><a href="apidoc/pasqal.html#module-pulser_pasqal">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser_simulation
+
+      <ul>
+        <li><a href="apidoc/simulation.html#module-pulser_simulation">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser_simulation.qutip_backend
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_backend.html#module-pulser_simulation.qutip_backend">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser_simulation.qutip_config
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_config.html#module-pulser_simulation.qutip_config">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser_simulation.qutip_op
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_op.html#module-pulser_simulation.qutip_op">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser_simulation.qutip_result
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.html#module-pulser_simulation.qutip_result">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser_simulation.qutip_state
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.html#module-pulser_simulation.qutip_state">module</a>
+</li>
+      </ul></li>
+      <li>
+    pulser_simulation.simresults
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.html#module-pulser_simulation.simresults">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Q">Q</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.backend.QPUBackend.html#pulser.backend.QPUBackend">QPUBackend (class in pulser.backend)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backends.html#pulser.backends.QPUBackend">(in module pulser.backends)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.qubit_ids">qubit_ids (pulser.register.Register property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.qubit_ids">(pulser.register.Register3D property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.qubit_info">qubit_info (pulser.sequence.Sequence property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.qubits">qubits (pulser.register.Register property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.qubits">(pulser.register.Register3D property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.State.html#pulser.backend.State.qudit_dim">qudit_dim (pulser.backend.State property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.StateRepr.html#pulser.backend.StateRepr.qudit_dim">(pulser.backend.StateRepr property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.QutipState.html#pulser_simulation.qutip_state.QutipState.qudit_dim">(pulser_simulation.qutip_state.QutipState property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipState.html#pulser_simulation.QutipState.qudit_dim">(pulser_simulation.QutipState property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipBackend.html#pulser_simulation.QutipBackend">QutipBackend (class in pulser_simulation)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_backend.QutipBackend.html#pulser_simulation.qutip_backend.QutipBackend">(class in pulser_simulation.qutip_backend)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backends.html#pulser.backends.QutipBackend">(in module pulser.backends)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipBackendV2.html#pulser_simulation.QutipBackendV2">QutipBackendV2 (class in pulser_simulation)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_backend.QutipBackendV2.html#pulser_simulation.qutip_backend.QutipBackendV2">(class in pulser_simulation.qutip_backend)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backends.html#pulser.backends.QutipBackendV2">(in module pulser.backends)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipConfig.html#pulser_simulation.QutipConfig">QutipConfig (class in pulser_simulation)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_config.QutipConfig.html#pulser_simulation.qutip_config.QutipConfig">(class in pulser_simulation.qutip_config)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator">QutipEmulator (class in pulser_simulation)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipOperator.html#pulser_simulation.QutipOperator">QutipOperator (class in pulser_simulation)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_op.QutipOperator.html#pulser_simulation.qutip_op.QutipOperator">(class in pulser_simulation.qutip_op)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult">QutipResult (class in pulser_simulation.qutip_result)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipState.html#pulser_simulation.QutipState">QutipState (class in pulser_simulation)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.QutipState.html#pulser_simulation.qutip_state.QutipState">(class in pulser_simulation.qutip_state)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.rabi_from_blockade">rabi_from_blockade() (pulser.devices.Device method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.rabi_from_blockade">(pulser.devices.VirtualDevice method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman">Raman (class in pulser.channels)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform">RampWaveform (class in pulser.waveforms)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod.real">real (pulser.backend.AggregationMethod attribute)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.rectangle">rectangle() (pulser.register.Register class method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.rectangular_lattice">rectangular_lattice() (pulser.register.Register class method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.rectangular_register">rectangular_register() (pulser.register.RectangularLatticeLayout method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.rectangular_register">(pulser.register.SquareLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.rectangular_register">(pulser.register.TriangularLatticeLayout method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout">RectangularLatticeLayout (class in pulser.register)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register">Register (class in pulser.register)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.register">register (pulser.sequence.Sequence property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D">Register3D (class in pulser.register)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.register_is_from_calibrated_layout">register_is_from_calibrated_layout() (pulser.devices.Device method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout">RegisterLayout (class in pulser.register)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.reset_config">reset_config() (pulser_simulation.QutipEmulator method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result">Result (class in pulser.result)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Results.html#pulser.backend.Results">Results (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.simresults.NoisyResults.html#pulser_simulation.simresults.NoisyResults.results">results (pulser_simulation.simresults.NoisyResults property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.ParamObj.html#pulser.parametrized.ParamObj.rint">rint() (pulser.parametrized.ParamObj method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.Variable.html#pulser.parametrized.Variable.rint">(pulser.parametrized.Variable method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.channels.BaseEOM.html#pulser.channels.BaseEOM.rise_time">rise_time (pulser.channels.BaseEOM property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.rise_time">(pulser.channels.DMM property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.rise_time">(pulser.channels.Microwave property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.rise_time">(pulser.channels.Raman property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.rise_time">(pulser.channels.Rydberg property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.RydbergEOM.html#pulser.channels.RydbergEOM.rise_time">(pulser.channels.RydbergEOM property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.rotated">rotated() (pulser.register.Register method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Backend.html#pulser.backend.Backend.run">run() (pulser.backend.Backend method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.EmulatorBackend.html#pulser.backend.EmulatorBackend.run">(pulser.backend.EmulatorBackend method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.QPUBackend.html#pulser.backend.QPUBackend.run">(pulser.backend.QPUBackend method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.backends.EmuFreeBackendV2.html#pulser_pasqal.backends.EmuFreeBackendV2.run">(pulser_pasqal.backends.EmuFreeBackendV2 method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.EmuFreeBackend.html#pulser_pasqal.EmuFreeBackend.run">(pulser_pasqal.EmuFreeBackend method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.EmuMPSBackend.html#pulser_pasqal.EmuMPSBackend.run">(pulser_pasqal.EmuMPSBackend method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.EmuTNBackend.html#pulser_pasqal.EmuTNBackend.run">(pulser_pasqal.EmuTNBackend method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_backend.QutipBackend.html#pulser_simulation.qutip_backend.QutipBackend.run">(pulser_simulation.qutip_backend.QutipBackend method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_backend.QutipBackendV2.html#pulser_simulation.qutip_backend.QutipBackendV2.run">(pulser_simulation.qutip_backend.QutipBackendV2 method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipBackend.html#pulser_simulation.QutipBackend.run">(pulser_simulation.QutipBackend method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipBackendV2.html#pulser_simulation.QutipBackendV2.run">(pulser_simulation.QutipBackendV2 method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.run">(pulser_simulation.QutipEmulator method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg">Rydberg (class in pulser.channels)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.rydberg_blockade_radius">rydberg_blockade_radius() (pulser.devices.Device method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.rydberg_blockade_radius">(pulser.devices.VirtualDevice method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.channels.RydbergBeam.html#pulser.channels.RydbergBeam">RydbergBeam (class in pulser.channels)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.channels.RydbergEOM.html#pulser.channels.RydbergEOM">RydbergEOM (class in pulser.channels)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.sampler.sample.html#pulser.sampler.sample">sample() (in module pulser.sampler)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.State.html#pulser.backend.State.sample">(pulser.backend.State method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.StateRepr.html#pulser.backend.StateRepr.sample">(pulser.backend.StateRepr method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.QutipState.html#pulser_simulation.qutip_state.QutipState.sample">(pulser_simulation.qutip_state.QutipState method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipState.html#pulser_simulation.QutipState.sample">(pulser_simulation.QutipState method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.simresults.CoherentResults.html#pulser_simulation.simresults.CoherentResults.sample_final_state">sample_final_state() (pulser_simulation.simresults.CoherentResults method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.NoisyResults.html#pulser_simulation.simresults.NoisyResults.sample_final_state">(pulser_simulation.simresults.NoisyResults method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.SimulationResults.html#pulser_simulation.simresults.SimulationResults.sample_final_state">(pulser_simulation.simresults.SimulationResults method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.simresults.CoherentResults.html#pulser_simulation.simresults.CoherentResults.sample_state">sample_state() (pulser_simulation.simresults.CoherentResults method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.NoisyResults.html#pulser_simulation.simresults.NoisyResults.sample_state">(pulser_simulation.simresults.NoisyResults method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.SimulationResults.html#pulser_simulation.simresults.SimulationResults.sample_state">(pulser_simulation.simresults.SimulationResults method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult">SampledResult (class in pulser.result)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform.samples">samples (pulser.waveforms.BlackmanWaveform property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform.samples">(pulser.waveforms.CompositeWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform.samples">(pulser.waveforms.ConstantWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform.samples">(pulser.waveforms.CustomWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform.samples">(pulser.waveforms.InterpolatedWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform.samples">(pulser.waveforms.KaiserWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform.samples">(pulser.waveforms.RampWaveform property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.Waveform.html#pulser.waveforms.Waveform.samples">(pulser.waveforms.Waveform property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.sampling_dist">sampling_dist (pulser.result.Result property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.sampling_dist">(pulser.result.SampledResult property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.sampling_dist">(pulser_simulation.qutip_result.QutipResult property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.sampling_errors">sampling_errors (pulser.result.Result property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.sampling_errors">(pulser.result.SampledResult property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.sampling_errors">(pulser_simulation.qutip_result.QutipResult property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.sampling_times">sampling_times (pulser_simulation.QutipEmulator property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence">Sequence (class in pulser.sequence)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.SequenceSamples.html#pulser.sampler.SequenceSamples">SequenceSamples (class in pulser.sampler)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.set_config">set_config() (pulser_simulation.QutipEmulator method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.set_evaluation_times">set_evaluation_times() (pulser_simulation.QutipEmulator method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.set_initial_state">set_initial_state() (pulser_simulation.QutipEmulator method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.set_magnetic_field">set_magnetic_field() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.show_config">show_config() (pulser_simulation.QutipEmulator method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.SimConfig.html#pulser_simulation.SimConfig">SimConfig (class in pulser_simulation)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.simresults.SimulationResults.html#pulser_simulation.simresults.SimulationResults">SimulationResults (class in pulser_simulation.simresults)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.ParamObj.html#pulser.parametrized.ParamObj.sin">sin() (pulser.parametrized.ParamObj method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.Variable.html#pulser.parametrized.Variable.sin">(pulser.parametrized.Variable method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform.slope">slope (pulser.waveforms.RampWaveform property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.DetuningMap.html#pulser.register.DetuningMap.sorted_coords">sorted_coords (pulser.register.DetuningMap property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.sorted_coords">(pulser.register.RectangularLatticeLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.sorted_coords">(pulser.register.Register property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.sorted_coords">(pulser.register.Register3D property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout.sorted_coords">(pulser.register.RegisterLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.sorted_coords">(pulser.register.SquareLatticeLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.sorted_coords">(pulser.register.TriangularLatticeLayout property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.register.DetuningMap.html#pulser.register.DetuningMap.sorted_weights">sorted_weights (pulser.register.DetuningMap property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.SimConfig.html#pulser_simulation.SimConfig.spam_dict">spam_dict (pulser_simulation.SimConfig property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.specs">specs (pulser.devices.Device property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.specs">(pulser.devices.VirtualDevice property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.ParamObj.html#pulser.parametrized.ParamObj.sqrt">sqrt() (pulser.parametrized.ParamObj method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.Variable.html#pulser.parametrized.Variable.sqrt">(pulser.parametrized.Variable method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.square">square() (pulser.register.Register class method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.square_register">square_register() (pulser.register.RectangularLatticeLayout method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.square_register">(pulser.register.SquareLatticeLayout method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout">SquareLatticeLayout (class in pulser.register)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.State.html#pulser.backend.State">State (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.StateRepr.html#pulser.backend.StateRepr">StateRepr (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.StateResult.html#pulser.backend.StateResult">StateResult (class in pulser.backend)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.simresults.CoherentResults.html#pulser_simulation.simresults.CoherentResults.states">states (pulser_simulation.simresults.CoherentResults property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.NoisyResults.html#pulser_simulation.simresults.NoisyResults.states">(pulser_simulation.simresults.NoisyResults property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.simresults.SimulationResults.html#pulser_simulation.simresults.SimulationResults.states">(pulser_simulation.simresults.SimulationResults property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.DetuningMap.html#pulser.register.DetuningMap.static_hash">static_hash() (pulser.register.DetuningMap method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.static_hash">(pulser.register.RectangularLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout.static_hash">(pulser.register.RegisterLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.static_hash">(pulser.register.SquareLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.static_hash">(pulser.register.TriangularLatticeLayout method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_pasqal.OVHConnection.html#pulser_pasqal.OVHConnection.submit">submit() (pulser_pasqal.OVHConnection method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.PasqalCloud.html#pulser_pasqal.PasqalCloud.submit">(pulser_pasqal.PasqalCloud method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.supported_bases">supported_bases (pulser.devices.Device property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.supported_bases">(pulser.devices.VirtualDevice property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.SimConfig.html#pulser_simulation.SimConfig.supported_noises">supported_noises (pulser_simulation.SimConfig property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.supported_states">supported_states (pulser.devices.Device property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.supported_states">(pulser.devices.VirtualDevice property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.supports_eom">supports_eom() (pulser.channels.DMM method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.supports_eom">(pulser.channels.Microwave method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.supports_eom">(pulser.channels.Raman method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.supports_eom">(pulser.channels.Rydberg method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser_pasqal.OVHConnection.html#pulser_pasqal.OVHConnection.supports_open_batch">supports_open_batch() (pulser_pasqal.OVHConnection method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.PasqalCloud.html#pulser_pasqal.PasqalCloud.supports_open_batch">(pulser_pasqal.PasqalCloud method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backends.html#pulser.backends.SVBackend">SVBackend (in module pulser.backends)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.switch_device">switch_device() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.switch_register">switch_register() (pulser.sequence.Sequence method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.backend.BitStrings.html#pulser.backend.BitStrings.tag">tag (pulser.backend.BitStrings property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.CorrelationMatrix.html#pulser.backend.CorrelationMatrix.tag">(pulser.backend.CorrelationMatrix property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Energy.html#pulser.backend.Energy.tag">(pulser.backend.Energy property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.EnergySecondMoment.html#pulser.backend.EnergySecondMoment.tag">(pulser.backend.EnergySecondMoment property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.EnergyVariance.html#pulser.backend.EnergyVariance.tag">(pulser.backend.EnergyVariance property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Expectation.html#pulser.backend.Expectation.tag">(pulser.backend.Expectation property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Fidelity.html#pulser.backend.Fidelity.tag">(pulser.backend.Fidelity property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Observable.html#pulser.backend.Observable.tag">(pulser.backend.Observable property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Occupation.html#pulser.backend.Occupation.tag">(pulser.backend.Occupation property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.StateResult.html#pulser.backend.StateResult.tag">(pulser.backend.StateResult property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.ParamObj.html#pulser.parametrized.ParamObj.tan">tan() (pulser.parametrized.ParamObj method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.Variable.html#pulser.parametrized.Variable.tan">(pulser.parametrized.Variable method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.ParamObj.html#pulser.parametrized.ParamObj.tanh">tanh() (pulser.parametrized.ParamObj method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.Variable.html#pulser.parametrized.Variable.tanh">(pulser.parametrized.Variable method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.target">target() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.target_index">target_index() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.to_2D">to_2D() (pulser.register.Register3D method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.EmulationConfig.html#pulser.backend.EmulationConfig.to_abstract_repr">to_abstract_repr() (pulser.backend.EmulationConfig method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.Results.html#pulser.backend.Results.to_abstract_repr">(pulser.backend.Results method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.to_abstract_repr">(pulser.devices.Device method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.to_abstract_repr">(pulser.devices.VirtualDevice method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.noise_model.NoiseModel.html#pulser.noise_model.NoiseModel.to_abstract_repr">(pulser.noise_model.NoiseModel method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.to_abstract_repr">(pulser.register.RectangularLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.to_abstract_repr">(pulser.register.Register method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.Register3D.html#pulser.register.Register3D.to_abstract_repr">(pulser.register.Register3D method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout.to_abstract_repr">(pulser.register.RegisterLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.to_abstract_repr">(pulser.register.SquareLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.to_abstract_repr">(pulser.register.TriangularLatticeLayout method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.result.Result.html#pulser.result.Result.to_abstract_repr">(pulser.result.Result method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.result.SampledResult.html#pulser.result.SampledResult.to_abstract_repr">(pulser.result.SampledResult method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.to_abstract_repr">(pulser.sequence.Sequence method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_config.QutipConfig.html#pulser_simulation.qutip_config.QutipConfig.to_abstract_repr">(pulser_simulation.qutip_config.QutipConfig method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_result.QutipResult.html#pulser_simulation.qutip_result.QutipResult.to_abstract_repr">(pulser_simulation.qutip_result.QutipResult method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipConfig.html#pulser_simulation.QutipConfig.to_abstract_repr">(pulser_simulation.QutipConfig method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.backend.AggregationMethod.html#pulser.backend.AggregationMethod.to_bytes">to_bytes() (pulser.backend.AggregationMethod method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.SequenceSamples.html#pulser.sampler.SequenceSamples.to_nested_dict">to_nested_dict() (pulser.sampler.SequenceSamples method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.SimConfig.html#pulser_simulation.SimConfig.to_noise_model">to_noise_model() (pulser_simulation.SimConfig method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.qutip_op.QutipOperator.html#pulser_simulation.qutip_op.QutipOperator.to_qobj">to_qobj() (pulser_simulation.qutip_op.QutipOperator method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_state.QutipState.html#pulser_simulation.qutip_state.QutipState.to_qobj">(pulser_simulation.qutip_state.QutipState method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipOperator.html#pulser_simulation.QutipOperator.to_qobj">(pulser_simulation.QutipOperator method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipState.html#pulser_simulation.QutipState.to_qobj">(pulser_simulation.QutipState method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.to_virtual">to_virtual() (pulser.devices.Device method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.QutipEmulator.html#pulser_simulation.QutipEmulator.total_duration_ns">total_duration_ns (pulser_simulation.QutipEmulator property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.DetuningMap.html#pulser.register.DetuningMap.trap_coordinates">trap_coordinates (pulser.register.DetuningMap property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.DetuningMap.html#pulser.register.DetuningMap.traps_dict">traps_dict (pulser.register.DetuningMap property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.register.RectangularLatticeLayout.html#pulser.register.RectangularLatticeLayout.traps_dict">(pulser.register.RectangularLatticeLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout.traps_dict">(pulser.register.RegisterLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.SquareLatticeLayout.html#pulser.register.SquareLatticeLayout.traps_dict">(pulser.register.SquareLatticeLayout property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout.traps_dict">(pulser.register.TriangularLatticeLayout property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.triangular_lattice">triangular_lattice() (pulser.register.Register class method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.TriangularLatticeLayout.html#pulser.register.TriangularLatticeLayout">TriangularLatticeLayout (class in pulser.register)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.truncate">truncate() (pulser.sequence.Sequence method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform.truncated">truncated() (pulser.waveforms.BlackmanWaveform method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform.truncated">(pulser.waveforms.CompositeWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform.truncated">(pulser.waveforms.ConstantWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform.truncated">(pulser.waveforms.CustomWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform.truncated">(pulser.waveforms.InterpolatedWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform.truncated">(pulser.waveforms.KaiserWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform.truncated">(pulser.waveforms.RampWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.Waveform.html#pulser.waveforms.Waveform.truncated">(pulser.waveforms.Waveform method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser_pasqal.OVHConnection.html#pulser_pasqal.OVHConnection.update_sequence_device">update_sequence_device() (pulser_pasqal.OVHConnection method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.PasqalCloud.html#pulser_pasqal.PasqalCloud.update_sequence_device">(pulser_pasqal.PasqalCloud method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.sampler.SequenceSamples.html#pulser.sampler.SequenceSamples.used_bases">used_bases (pulser.sampler.SequenceSamples property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.backend.BitStrings.html#pulser.backend.BitStrings.uuid">uuid (pulser.backend.BitStrings property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.Callback.html#pulser.backend.Callback.uuid">(pulser.backend.Callback property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.CorrelationMatrix.html#pulser.backend.CorrelationMatrix.uuid">(pulser.backend.CorrelationMatrix property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Energy.html#pulser.backend.Energy.uuid">(pulser.backend.Energy property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.EnergySecondMoment.html#pulser.backend.EnergySecondMoment.uuid">(pulser.backend.EnergySecondMoment property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.EnergyVariance.html#pulser.backend.EnergyVariance.uuid">(pulser.backend.EnergyVariance property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Expectation.html#pulser.backend.Expectation.uuid">(pulser.backend.Expectation property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Fidelity.html#pulser.backend.Fidelity.uuid">(pulser.backend.Fidelity property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Observable.html#pulser.backend.Observable.uuid">(pulser.backend.Observable property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.Occupation.html#pulser.backend.Occupation.uuid">(pulser.backend.Occupation property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.StateResult.html#pulser.backend.StateResult.uuid">(pulser.backend.StateResult property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.backend.EmulatorBackend.html#pulser.backend.EmulatorBackend.validate_config">validate_config() (pulser.backend.EmulatorBackend class method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.backends.EmuFreeBackendV2.html#pulser_pasqal.backends.EmuFreeBackendV2.validate_config">(pulser_pasqal.backends.EmuFreeBackendV2 class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.EmuMPSBackend.html#pulser_pasqal.EmuMPSBackend.validate_config">(pulser_pasqal.EmuMPSBackend class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_backend.QutipBackendV2.html#pulser_simulation.qutip_backend.QutipBackendV2.validate_config">(pulser_simulation.qutip_backend.QutipBackendV2 class method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipBackendV2.html#pulser_simulation.QutipBackendV2.validate_config">(pulser_simulation.QutipBackendV2 class method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.validate_duration">validate_duration() (pulser.channels.DMM method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.validate_duration">(pulser.channels.Microwave method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.validate_duration">(pulser.channels.Raman method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.validate_duration">(pulser.channels.Rydberg method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.QPUBackend.html#pulser.backend.QPUBackend.validate_job_params">validate_job_params() (pulser.backend.QPUBackend static method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.backends.EmuFreeBackendV2.html#pulser_pasqal.backends.EmuFreeBackendV2.validate_job_params">(pulser_pasqal.backends.EmuFreeBackendV2 static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.EmuFreeBackend.html#pulser_pasqal.EmuFreeBackend.validate_job_params">(pulser_pasqal.EmuFreeBackend static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.EmuMPSBackend.html#pulser_pasqal.EmuMPSBackend.validate_job_params">(pulser_pasqal.EmuMPSBackend static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.EmuTNBackend.html#pulser_pasqal.EmuTNBackend.validate_job_params">(pulser_pasqal.EmuTNBackend static method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.validate_layout">validate_layout() (pulser.devices.Device method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.validate_layout">(pulser.devices.VirtualDevice method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.validate_layout_filling">validate_layout_filling() (pulser.devices.Device method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.validate_layout_filling">(pulser.devices.VirtualDevice method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM.validate_pulse">validate_pulse() (pulser.channels.DMM method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.channels.Microwave.html#pulser.channels.Microwave.validate_pulse">(pulser.channels.Microwave method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Raman.html#pulser.channels.Raman.validate_pulse">(pulser.channels.Raman method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.channels.Rydberg.html#pulser.channels.Rydberg.validate_pulse">(pulser.channels.Rydberg method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device.validate_register">validate_register() (pulser.devices.Device method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice.validate_register">(pulser.devices.VirtualDevice method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.backend.Backend.html#pulser.backend.Backend.validate_sequence">validate_sequence() (pulser.backend.Backend static method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.backend.EmulatorBackend.html#pulser.backend.EmulatorBackend.validate_sequence">(pulser.backend.EmulatorBackend static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.backend.QPUBackend.html#pulser.backend.QPUBackend.validate_sequence">(pulser.backend.QPUBackend static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.backends.EmuFreeBackendV2.html#pulser_pasqal.backends.EmuFreeBackendV2.validate_sequence">(pulser_pasqal.backends.EmuFreeBackendV2 static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.EmuFreeBackend.html#pulser_pasqal.EmuFreeBackend.validate_sequence">(pulser_pasqal.EmuFreeBackend static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.EmuMPSBackend.html#pulser_pasqal.EmuMPSBackend.validate_sequence">(pulser_pasqal.EmuMPSBackend static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_pasqal.EmuTNBackend.html#pulser_pasqal.EmuTNBackend.validate_sequence">(pulser_pasqal.EmuTNBackend static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_backend.QutipBackend.html#pulser_simulation.qutip_backend.QutipBackend.validate_sequence">(pulser_simulation.qutip_backend.QutipBackend static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.qutip_backend.QutipBackendV2.html#pulser_simulation.qutip_backend.QutipBackendV2.validate_sequence">(pulser_simulation.qutip_backend.QutipBackendV2 static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipBackend.html#pulser_simulation.QutipBackend.validate_sequence">(pulser_simulation.QutipBackend static method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser_simulation.QutipBackendV2.html#pulser_simulation.QutipBackendV2.validate_sequence">(pulser_simulation.QutipBackendV2 static method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.Variable.html#pulser.parametrized.Variable">Variable (class in pulser.parametrized)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized.variables">variables (pulser.parametrized.Parametrized property)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.ParamObj.html#pulser.parametrized.ParamObj.variables">(pulser.parametrized.ParamObj property)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.parametrized.Variable.html#pulser.parametrized.Variable.variables">(pulser.parametrized.Variable property)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice">VirtualDevice (class in pulser.devices)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.Waveform.html#pulser.waveforms.Waveform">Waveform (class in pulser.waveforms)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform.waveforms">waveforms (pulser.waveforms.CompositeWaveform property)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser.register.Register.html#pulser.register.Register.with_automatic_layout">with_automatic_layout() (pulser.register.Register method)</a>
+</li>
+      <li><a href="apidoc/_autosummary/pulser_simulation.SimConfig.html#pulser_simulation.SimConfig.with_leakage">with_leakage (pulser_simulation.SimConfig property)</a>
+</li>
+      <li><a href="sequence.html#pulser.Sequence.with_new_device">with_new_device() (in module pulser.Sequence)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.with_new_device">(pulser.sequence.Sequence method)</a>
+</li>
+      </ul></li>
+      <li><a href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform.with_new_duration">with_new_duration() (pulser.waveforms.BlackmanWaveform method)</a>
+
+      <ul>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform.with_new_duration">(pulser.waveforms.CompositeWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform.with_new_duration">(pulser.waveforms.ConstantWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform.with_new_duration">(pulser.waveforms.CustomWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform.with_new_duration">(pulser.waveforms.InterpolatedWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform.with_new_duration">(pulser.waveforms.KaiserWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform.with_new_duration">(pulser.waveforms.RampWaveform method)</a>
+</li>
+        <li><a href="apidoc/_autosummary/pulser.waveforms.Waveform.html#pulser.waveforms.Waveform.with_new_duration">(pulser.waveforms.Waveform method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.with_new_register">with_new_register() (pulser.sequence.Sequence method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

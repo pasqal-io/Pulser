@@ -1,0 +1,318 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QutipConfig &mdash; Pulser 1.6.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8ea99608"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <script src="../../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="pulser_simulation.qutip_state" href="pulser_simulation.qutip_state.html" />
+    <link rel="prev" title="pulser_simulation.qutip_config" href="pulser_simulation.qutip_config.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.6.4" /><meta name="readthedocs-resolver-filename" content="/apidoc/_autosummary/pulser_simulation.qutip_config.QutipConfig.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Pulser
+              <img src="../../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../simulation.html#classes">Classes</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../simulation.html#modules">Modules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="pulser_simulation.qutip_backend.html">pulser_simulation.qutip_backend</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="pulser_simulation.qutip_config.html">pulser_simulation.qutip_config</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">QutipConfig</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pulser_simulation.qutip_state.html">pulser_simulation.qutip_state</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser_simulation.qutip_op.html">pulser_simulation.qutip_op</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser_simulation.qutip_result.html">pulser_simulation.qutip_result</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser_simulation.simresults.html">pulser_simulation.simresults</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+          <li class="breadcrumb-item"><a href="pulser_simulation.qutip_config.html">pulser_simulation.qutip_config</a></li>
+      <li class="breadcrumb-item active">QutipConfig</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/apidoc/_autosummary/pulser_simulation.qutip_config.QutipConfig.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="qutipconfig">
+<h1>QutipConfig<a class="headerlink" href="#qutipconfig" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser_simulation.qutip_config.QutipConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser_simulation.qutip_config.</span></span><span class="sig-name descname"><span class="pre">QutipConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">backend_options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.qutip_config.QutipConfig" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="pulser.backend.EmulationConfig.html#pulser.backend.EmulationConfig" title="pulser.backend.config.EmulationConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmulationConfig</span></code></a>[<a class="reference internal" href="pulser_simulation.qutip_state.QutipState.html#pulser_simulation.qutip_state.QutipState" title="pulser_simulation.qutip_state.QutipState"><code class="xref py py-class docutils literal notranslate"><span class="pre">QutipState</span></code></a>]</p>
+<p>The configuration of a QutipBackendV2.</p>
+<ul class="simple">
+<li><p>Dedicated <code class="docutils literal notranslate"><span class="pre">State</span></code> class: <a class="reference internal" href="pulser_simulation.QutipState.html#pulser_simulation.QutipState" title="pulser_simulation.QutipState"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulser_simulation.QutipState</span></code></a></p></li>
+<li><p>Dedicated <code class="docutils literal notranslate"><span class="pre">Operator</span></code> class: <a class="reference internal" href="pulser_simulation.QutipOperator.html#pulser_simulation.QutipOperator" title="pulser_simulation.QutipOperator"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulser_simulation.QutipOperator</span></code></a></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>observables</strong> – A sequence of observables to compute at specific
+evaluation times. The observables without specified evaluation
+times will use this configuration’s ‘default_evaluation_times’.</p></li>
+<li><p><strong>sampling_rate</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">1.0</span></code>) – The fraction of samples to extract from the pulse
+sequence for emulation.</p></li>
+<li><p><strong>default_evaluation_times</strong> – The default times at which observables
+are computed. Can be a sequence of relative times between 0
+(the start of the sequence) and 1 (the end of the sequence).
+Can also be specified as “Full”, in which case every step in the
+emulation will also be an evaluation time.</p></li>
+<li><p><strong>initial_state</strong> – The initial state from which emulation starts. If
+specified, the state type needs to be compatible with the emulator
+backend. If left undefined, defaults to starting with all qudits
+in the ground state.</p></li>
+<li><p><strong>with_modulation</strong> – Whether to emulate the sequence with the programmed
+input or the expected output.</p></li>
+<li><p><strong>prefer_device_noise_model</strong> – If the sequence’s device has a default noise
+model, this option signals the backend to prefer it over the noise
+model given with this configuration.</p></li>
+<li><p><strong>noise_model</strong> – An optional noise model to emulate the sequence with.
+Ignored if the sequence’s device has default noise model and
+<cite>prefer_device_noise_model=True</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>EmulationConfig: The base configuration class for an EmulatorBackend.</p>
+</div>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling_rate</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">callbacks</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">observables</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_evaluation_times</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">initial_state</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">with_modulation</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">interaction_matrix</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">prefer_device_noise_model</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">noise_model</span></code></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser_simulation.qutip_config.QutipConfig.from_abstract_repr" title="pulser_simulation.qutip_config.QutipConfig.from_abstract_repr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_abstract_repr</span></code></a></p></td>
+<td><p>Deserialize an EmulationConfig from an abstract JSON object.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser_simulation.qutip_config.QutipConfig.is_evaluation_time" title="pulser_simulation.qutip_config.QutipConfig.is_evaluation_time"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_evaluation_time</span></code></a></p></td>
+<td><p>Assesses whether a relative time is an evaluation time.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser_simulation.qutip_config.QutipConfig.is_time_in_evaluation_times" title="pulser_simulation.qutip_config.QutipConfig.is_time_in_evaluation_times"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_time_in_evaluation_times</span></code></a></p></td>
+<td><p>Checks if a time is within a collection of evaluation times.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser_simulation.qutip_config.QutipConfig.to_abstract_repr" title="pulser_simulation.qutip_config.QutipConfig.to_abstract_repr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_abstract_repr</span></code></a></p></td>
+<td><p>Serialize <cite>EmulationConfig</cite> to a JSON formatted str.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Signatures</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.qutip_config.QutipConfig.from_abstract_repr">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_abstract_repr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj_str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.qutip_config.QutipConfig.from_abstract_repr" title="Link to this definition"></a></dt>
+<dd><p>Deserialize an EmulationConfig from an abstract JSON object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obj_str</strong> (<em>str</em>) – the JSON string representing the sequence encoded
+in the abstract JSON format.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The EmulationConfig instance.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="pulser.backend.EmulationConfig.html#pulser.backend.EmulationConfig" title="pulser.backend.EmulationConfig">EmulationConfig</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.qutip_config.QutipConfig.is_evaluation_time">
+<span class="sig-name descname"><span class="pre">is_evaluation_time</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.qutip_config.QutipConfig.is_evaluation_time" title="Link to this definition"></a></dt>
+<dd><p>Assesses whether a relative time is an evaluation time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.qutip_config.QutipConfig.is_time_in_evaluation_times">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">is_time_in_evaluation_times</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluation_times</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.qutip_config.QutipConfig.is_time_in_evaluation_times" title="Link to this definition"></a></dt>
+<dd><p>Checks if a time is within a collection of evaluation times.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.qutip_config.QutipConfig.to_abstract_repr">
+<span class="sig-name descname"><span class="pre">to_abstract_repr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">skip_validation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.qutip_config.QutipConfig.to_abstract_repr" title="Link to this definition"></a></dt>
+<dd><p>Serialize <cite>EmulationConfig</cite> to a JSON formatted str.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pulser_simulation.qutip_config.html" class="btn btn-neutral float-left" title="pulser_simulation.qutip_config" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pulser_simulation.qutip_state.html" class="btn btn-neutral float-right" title="pulser_simulation.qutip_state" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

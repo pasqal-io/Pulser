@@ -1,0 +1,313 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pulser &mdash; Pulser 1.6.5 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=2ad11211"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="CompositeWaveform" href="_autosummary/pulser.waveforms.CompositeWaveform.html" />
+    <link rel="prev" title="QAA to solve a MWIS problem" href="../tutorials/mwis.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.6.5" /><meta name="readthedocs-resolver-filename" content="/apidoc/core.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#classes">Classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.waveforms.CompositeWaveform.html">CompositeWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.waveforms.CustomWaveform.html">CustomWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.waveforms.ConstantWaveform.html">ConstantWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.waveforms.RampWaveform.html">RampWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.waveforms.BlackmanWaveform.html">BlackmanWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.waveforms.InterpolatedWaveform.html">InterpolatedWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.waveforms.KaiserWaveform.html">KaiserWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.pulse.Pulse.html">Pulse</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.register.Register.html">Register</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.register.Register3D.html">Register3D</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.sequence.Sequence.html">Sequence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.noise_model.NoiseModel.html">NoiseModel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.backend.EmulatorConfig.html">EmulatorConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.backend.QPUBackend.html">QPUBackend</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#device-examples">Device Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.AnalogDevice.html">pulser.AnalogDevice</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.DigitalAnalogDevice.html">pulser.DigitalAnalogDevice</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.MockDevice.html">pulser.MockDevice</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#modules">Modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.abstract_repr.html">pulser.abstract_repr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.backend.html">pulser.backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.backends.html">pulser.backends</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.channels.html">pulser.channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.devices.html">pulser.devices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.exceptions.html">pulser.exceptions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.parametrized.html">pulser.parametrized</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.register.html">pulser.register</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.result.html">pulser.result</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.sampler.html">pulser.sampler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/pulser.waveforms.html">pulser.waveforms</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/apidoc/core.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-pulser">
+<span id="pulser"></span><h1><code class="docutils literal notranslate"><span class="pre">pulser</span></code><a class="headerlink" href="#module-pulser" title="Link to this heading"></a></h1>
+<p>A pulse-level composer for neutral-atom quantum devices.</p>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h2>
+<p>These are classes that can be imported directly from <code class="docutils literal notranslate"><span class="pre">pulser</span></code>. They should cover the fundamental
+needs for sequence creation.</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform" title="pulser.waveforms.CompositeWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CompositeWaveform</span></code></a>(*waveforms)</p></td>
+<td><p>A waveform combining multiple smaller waveforms.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform" title="pulser.waveforms.CustomWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CustomWaveform</span></code></a>(samples)</p></td>
+<td><p>A custom waveform.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform" title="pulser.waveforms.ConstantWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ConstantWaveform</span></code></a>(duration, value)</p></td>
+<td><p>A waveform of constant value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform" title="pulser.waveforms.RampWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RampWaveform</span></code></a>(duration, start, stop)</p></td>
+<td><p>A linear ramp waveform.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform" title="pulser.waveforms.BlackmanWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BlackmanWaveform</span></code></a>(duration, area)</p></td>
+<td><p>A Blackman window of a specified duration and area.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform" title="pulser.waveforms.InterpolatedWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">InterpolatedWaveform</span></code></a>(duration, values[, ...])</p></td>
+<td><p>A waveform created from interpolation of a set of data points.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform" title="pulser.waveforms.KaiserWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KaiserWaveform</span></code></a>(duration, area[, beta])</p></td>
+<td><p>A Kaiser window of a specified duration and beta parameter.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pulser.pulse.Pulse.html#pulser.pulse.Pulse" title="pulser.pulse.Pulse"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Pulse</span></code></a>(amplitude, detuning, phase[, ...])</p></td>
+<td><p>A generic pulse.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.register.Register.html#pulser.register.Register" title="pulser.register.Register"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Register</span></code></a>(qubits, **kwargs)</p></td>
+<td><p>A 2D quantum register containing a set of qubits.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pulser.register.Register3D.html#pulser.register.Register3D" title="pulser.register.Register3D"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Register3D</span></code></a>(qubits, **kwargs)</p></td>
+<td><p>A 3D quantum register containing a set of qubits.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence" title="pulser.sequence.Sequence"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence</span></code></a>(register, device)</p></td>
+<td><p>A sequence of operations on a device.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pulser.noise_model.NoiseModel.html#pulser.noise_model.NoiseModel" title="pulser.noise_model.NoiseModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NoiseModel</span></code></a>([runs, samples_per_run, ...])</p></td>
+<td><p>Specifies the noise model parameters for emulation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.backend.EmulatorConfig.html#pulser.backend.EmulatorConfig" title="pulser.backend.EmulatorConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EmulatorConfig</span></code></a>([backend_options, ...])</p></td>
+<td><p>The configuration for emulator backends.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pulser.backend.QPUBackend.html#pulser.backend.QPUBackend" title="pulser.backend.QPUBackend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QPUBackend</span></code></a>(sequence, connection)</p></td>
+<td><p>Backend for sequence execution on a QPU.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="device-examples">
+<h2>Device Examples<a class="headerlink" href="#device-examples" title="Link to this heading"></a></h2>
+<p>These are built-in <a class="reference internal" href="_autosummary/pulser.devices.Device.html#pulser.devices.Device" title="pulser.devices.Device"><code class="xref py py-class docutils literal notranslate"><span class="pre">Device</span></code></a> and <a class="reference internal" href="_autosummary/pulser.devices.VirtualDevice.html#pulser.devices.VirtualDevice" title="pulser.devices.VirtualDevice"><code class="xref py py-class docutils literal notranslate"><span class="pre">VirtualDevice</span></code></a> instances that can be
+imported directly from <code class="docutils literal notranslate"><span class="pre">pulser</span></code>.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>These instances are <strong>not</strong> descriptions of actual devices. They are just examples that
+can be used to enforce different sets of constraints during <code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code> creation.</p>
+</div>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.AnalogDevice.html#pulser.AnalogDevice" title="pulser.AnalogDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AnalogDevice</span></code></a></p></td>
+<td><p>A realistic device for analog sequence execution.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pulser.DigitalAnalogDevice.html#pulser.DigitalAnalogDevice" title="pulser.DigitalAnalogDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DigitalAnalogDevice</span></code></a></p></td>
+<td><p>A device with digital and analog capabilites.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.MockDevice.html#pulser.MockDevice" title="pulser.MockDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MockDevice</span></code></a></p></td>
+<td><p>A virtual device for unconstrained prototyping.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="modules">
+<h2>Modules<a class="headerlink" href="#modules" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.abstract_repr.html#module-pulser.abstract_repr" title="pulser.abstract_repr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pulser.abstract_repr</span></code></a></p></td>
+<td><p>Convenience functions for deserialization from the abstract sequence.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pulser.backend.html#module-pulser.backend" title="pulser.backend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pulser.backend</span></code></a></p></td>
+<td><p>Classes for backend execution.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.backends.html#module-pulser.backends" title="pulser.backends"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pulser.backends</span></code></a></p></td>
+<td><p>A module gathering all available backends.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pulser.channels.html#module-pulser.channels" title="pulser.channels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pulser.channels</span></code></a></p></td>
+<td><p>The various hardware channel types.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.devices.html#module-pulser.devices" title="pulser.devices"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pulser.devices</span></code></a></p></td>
+<td><p>Classes for specification of neutral-atom devices.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pulser.exceptions.html#module-pulser.exceptions" title="pulser.exceptions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pulser.exceptions</span></code></a></p></td>
+<td><p>Errors raised by Pulser.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.parametrized.html#module-pulser.parametrized" title="pulser.parametrized"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pulser.parametrized</span></code></a></p></td>
+<td><p>Classes for parametrized pulse-sequence building.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pulser.register.html#module-pulser.register" title="pulser.register"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pulser.register</span></code></a></p></td>
+<td><p>Classes for qubit register definition.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.result.html#module-pulser.result" title="pulser.result"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pulser.result</span></code></a></p></td>
+<td><p>Classes to store measurement results.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pulser.sampler.html#module-pulser.sampler" title="pulser.sampler"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pulser.sampler</span></code></a></p></td>
+<td><p>The sampler module enables the sampling of pulser sequences.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pulser.waveforms.html#module-pulser.waveforms" title="pulser.waveforms"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pulser.waveforms</span></code></a></p></td>
+<td><p>All built-in types of waveforms and their Waveform parent class.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../tutorials/mwis.html" class="btn btn-neutral float-left" title="QAA to solve a MWIS problem" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="_autosummary/pulser.waveforms.CompositeWaveform.html" class="btn btn-neutral float-right" title="CompositeWaveform" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

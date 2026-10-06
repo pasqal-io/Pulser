@@ -1,0 +1,1404 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sequence &mdash; Pulser 1.5.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8f564690"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <script src="../../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="NoiseModel" href="pulser.noise_model.NoiseModel.html" />
+    <link rel="prev" title="Register3D" href="pulser.register.Register3D.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.5.6" /><meta name="readthedocs-resolver-filename" content="/apidoc/_autosummary/pulser.sequence.Sequence.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Pulser
+              <img src="../../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Emulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../core.html#classes">Classes</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.CompositeWaveform.html">CompositeWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.CustomWaveform.html">CustomWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.ConstantWaveform.html">ConstantWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.RampWaveform.html">RampWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.BlackmanWaveform.html">BlackmanWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.InterpolatedWaveform.html">InterpolatedWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.KaiserWaveform.html">KaiserWaveform</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.pulse.Pulse.html">Pulse</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.register.Register.html">Register</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.register.Register3D.html">Register3D</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Sequence</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pulser.sequence.Sequence"><code class="docutils literal notranslate"><span class="pre">Sequence</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.noise_model.NoiseModel.html">NoiseModel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.backend.EmulatorConfig.html">EmulatorConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.backend.QPUBackend.html">QPUBackend</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../core.html#device-examples">Device Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core.html#modules">Modules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+      <li class="breadcrumb-item active">Sequence</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/apidoc/_autosummary/pulser.sequence.Sequence.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="sequence">
+<h1>Sequence<a class="headerlink" href="#sequence" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser.sequence.</span></span><span class="sig-name descname"><span class="pre">Sequence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">register</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">DeviceType</span></code>]</p>
+<p>A sequence of operations on a device.</p>
+<p>A sequence is composed by</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>The device constraints it must respect</p></li>
+<li><p>The register of qubits on which to act</p></li>
+<li><p>The device’s channels that are used</p></li>
+<li><p>The schedule of operations on each channel</p></li>
+</ul>
+</div></blockquote>
+<p>A Sequence also supports variable parameters, which have to be obtained
+through <code class="docutils literal notranslate"><span class="pre">Sequence.declare_variable()</span></code>. From the moment a variable is
+declared, a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> becomes <strong>parametrized</strong> and stops being built on
+the fly, instead storing the sequence building calls for later execution.
+This forgoes some specific functionalities of a “regular” <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>,
+like the ability to validate a <code class="docutils literal notranslate"><span class="pre">Pulse</span></code> or to draw the sequence as it is
+being built. Instead, all validation happens upon building (through
+<code class="docutils literal notranslate"><span class="pre">Sequence.build()</span></code>), where values for all declared variables have to be
+specified and a “regular” <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> is created and returned. By
+changing the values given to the variables, multiple sequences can be
+generated from a single “parametrized” <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>register</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseRegister</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">MappableRegister</span></code></span>) – The atom register on which to apply the pulses. If given as
+a MappableRegister instance, the traps corrresponding to each
+qubit ID must be given when building the sequence.</p></li>
+<li><p><strong>device</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeVar</span></code>(<code class="docutils literal notranslate"><span class="pre">DeviceType</span></code>, bound= <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseDevice</span></code>)</span>) – A valid device in which to execute the Sequence.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The register and device do not support variable parameters. As such,
+they are the same for all Sequences built from a parametrized Sequence.</p>
+</div>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.available_channels" title="pulser.sequence.Sequence.available_channels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">available_channels</span></code></a></p></td>
+<td><p>Channels still available for declaration.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.declared_channels" title="pulser.sequence.Sequence.declared_channels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">declared_channels</span></code></a></p></td>
+<td><p>Channels declared in this Sequence.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.declared_variables" title="pulser.sequence.Sequence.declared_variables"><code class="xref py py-obj docutils literal notranslate"><span class="pre">declared_variables</span></code></a></p></td>
+<td><p>Variables declared in this Sequence.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.device" title="pulser.sequence.Sequence.device"><code class="xref py py-obj docutils literal notranslate"><span class="pre">device</span></code></a></p></td>
+<td><p>Device that the sequence is using.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.magnetic_field" title="pulser.sequence.Sequence.magnetic_field"><code class="xref py py-obj docutils literal notranslate"><span class="pre">magnetic_field</span></code></a></p></td>
+<td><p>The magnetic field acting on the array of atoms.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.qubit_info" title="pulser.sequence.Sequence.qubit_info"><code class="xref py py-obj docutils literal notranslate"><span class="pre">qubit_info</span></code></a></p></td>
+<td><p>Dictionary with the qubit's IDs and positions.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.register" title="pulser.sequence.Sequence.register"><code class="xref py py-obj docutils literal notranslate"><span class="pre">register</span></code></a></p></td>
+<td><p>Register with the qubit's IDs and positions.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.add" title="pulser.sequence.Sequence.add"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add</span></code></a></p></td>
+<td><p>Adds a pulse to a channel.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.add_dmm_detuning" title="pulser.sequence.Sequence.add_dmm_detuning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_dmm_detuning</span></code></a></p></td>
+<td><p>Add a waveform to the detuning of a DMM.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.add_eom_pulse" title="pulser.sequence.Sequence.add_eom_pulse"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_eom_pulse</span></code></a></p></td>
+<td><p>Adds a square pulse to a channel in EOM mode.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.align" title="pulser.sequence.Sequence.align"><code class="xref py py-obj docutils literal notranslate"><span class="pre">align</span></code></a></p></td>
+<td><p>Aligns multiple channels in time.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.build" title="pulser.sequence.Sequence.build"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build</span></code></a></p></td>
+<td><p>Builds a sequence from the programmed instructions.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.config_detuning_map" title="pulser.sequence.Sequence.config_detuning_map"><code class="xref py py-obj docutils literal notranslate"><span class="pre">config_detuning_map</span></code></a></p></td>
+<td><p>Declares a new DMM channel to the Sequence.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.config_slm_mask" title="pulser.sequence.Sequence.config_slm_mask"><code class="xref py py-obj docutils literal notranslate"><span class="pre">config_slm_mask</span></code></a></p></td>
+<td><p>Setup an SLM mask by specifying the qubits it targets.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.current_phase_ref" title="pulser.sequence.Sequence.current_phase_ref"><code class="xref py py-obj docutils literal notranslate"><span class="pre">current_phase_ref</span></code></a></p></td>
+<td><p>Current phase reference of a specific qubit for a given basis.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.declare_channel" title="pulser.sequence.Sequence.declare_channel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">declare_channel</span></code></a></p></td>
+<td><p>Declares a new channel in the Sequence.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.declare_variable" title="pulser.sequence.Sequence.declare_variable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">declare_variable</span></code></a></p></td>
+<td><p>Declare a new variable within this Sequence.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.delay" title="pulser.sequence.Sequence.delay"><code class="xref py py-obj docutils literal notranslate"><span class="pre">delay</span></code></a></p></td>
+<td><p>Idles a given channel for a specific duration.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.disable_eom_mode" title="pulser.sequence.Sequence.disable_eom_mode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">disable_eom_mode</span></code></a></p></td>
+<td><p>Takes a channel out of EOM mode operation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.draw" title="pulser.sequence.Sequence.draw"><code class="xref py py-obj docutils literal notranslate"><span class="pre">draw</span></code></a></p></td>
+<td><p>Draws the sequence in its current state.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.enable_eom_mode" title="pulser.sequence.Sequence.enable_eom_mode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">enable_eom_mode</span></code></a></p></td>
+<td><p>Puts a channel in EOM mode operation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.estimate_added_delay" title="pulser.sequence.Sequence.estimate_added_delay"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_added_delay</span></code></a></p></td>
+<td><p>Delay that will be added before the pulse when added to a channel.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.from_abstract_repr" title="pulser.sequence.Sequence.from_abstract_repr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_abstract_repr</span></code></a></p></td>
+<td><p>Deserialize a sequence from an abstract JSON object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.get_addressed_bases" title="pulser.sequence.Sequence.get_addressed_bases"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_addressed_bases</span></code></a></p></td>
+<td><p>Returns the bases addressed by the declared channels.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.get_addressed_states" title="pulser.sequence.Sequence.get_addressed_states"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_addressed_states</span></code></a></p></td>
+<td><p>Returns the states addressed by the declared channels.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.get_duration" title="pulser.sequence.Sequence.get_duration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_duration</span></code></a></p></td>
+<td><p>Returns the current duration of a channel or the whole sequence.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.get_measurement_basis" title="pulser.sequence.Sequence.get_measurement_basis"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_measurement_basis</span></code></a></p></td>
+<td><p>Gets the sequence's measurement basis.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.get_register" title="pulser.sequence.Sequence.get_register"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_register</span></code></a></p></td>
+<td><p>The atom register on which to apply the pulses.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.is_empty" title="pulser.sequence.Sequence.is_empty"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_empty</span></code></a></p></td>
+<td><p>States whether the sequence is empty.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.is_in_eom_mode" title="pulser.sequence.Sequence.is_in_eom_mode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_in_eom_mode</span></code></a></p></td>
+<td><p>States whether a channel is currently in EOM mode.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.is_measured" title="pulser.sequence.Sequence.is_measured"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_measured</span></code></a></p></td>
+<td><p>States whether the sequence has been measured.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.is_parametrized" title="pulser.sequence.Sequence.is_parametrized"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_parametrized</span></code></a></p></td>
+<td><p>States whether the sequence is parametrized.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.is_register_mappable" title="pulser.sequence.Sequence.is_register_mappable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_register_mappable</span></code></a></p></td>
+<td><p>States whether the sequence's register is mappable.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.measure" title="pulser.sequence.Sequence.measure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">measure</span></code></a></p></td>
+<td><p>Measures in a valid basis.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.modify_eom_setpoint" title="pulser.sequence.Sequence.modify_eom_setpoint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">modify_eom_setpoint</span></code></a></p></td>
+<td><p>Modifies the setpoint of an ongoing EOM mode operation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.phase_shift" title="pulser.sequence.Sequence.phase_shift"><code class="xref py py-obj docutils literal notranslate"><span class="pre">phase_shift</span></code></a></p></td>
+<td><p>Shifts the phase of a qubit's reference by 'phi', on a given basis.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.phase_shift_index" title="pulser.sequence.Sequence.phase_shift_index"><code class="xref py py-obj docutils literal notranslate"><span class="pre">phase_shift_index</span></code></a></p></td>
+<td><p>Shifts the phase of a qubit's reference by 'phi', on a given basis.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.set_magnetic_field" title="pulser.sequence.Sequence.set_magnetic_field"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_magnetic_field</span></code></a></p></td>
+<td><p>Sets the magnetic field acting on the entire array.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.switch_device" title="pulser.sequence.Sequence.switch_device"><code class="xref py py-obj docutils literal notranslate"><span class="pre">switch_device</span></code></a></p></td>
+<td><p>Replicate the sequence with a different device.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.switch_register" title="pulser.sequence.Sequence.switch_register"><code class="xref py py-obj docutils literal notranslate"><span class="pre">switch_register</span></code></a></p></td>
+<td><p>Replicate the sequence with a different register.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.target" title="pulser.sequence.Sequence.target"><code class="xref py py-obj docutils literal notranslate"><span class="pre">target</span></code></a></p></td>
+<td><p>Changes the target qubit of a 'Local' channel.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.target_index" title="pulser.sequence.Sequence.target_index"><code class="xref py py-obj docutils literal notranslate"><span class="pre">target_index</span></code></a></p></td>
+<td><p>Changes the target qubit of a 'Local' channel.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.sequence.Sequence.to_abstract_repr" title="pulser.sequence.Sequence.to_abstract_repr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_abstract_repr</span></code></a></p></td>
+<td><p>Serializes the Sequence into an abstract JSON object.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Signatures</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.add">
+<span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pulse</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protocol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'min-delay'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.add" title="Link to this definition"></a></dt>
+<dd><p>Adds a pulse to a channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pulse</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser.pulse.Pulse.html#pulser.pulse.Pulse" title="pulser.pulse.Pulse"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pulse</span></code></a> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – The pulse object to add to the channel.</p></li>
+<li><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The channel’s name provided when declared.</p></li>
+<li><p><strong>protocol</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">'min-delay'</span></code>, <code class="docutils literal notranslate"><span class="pre">'no-delay'</span></code>, <code class="docutils literal notranslate"><span class="pre">'wait-for-all'</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">'min-delay'</span></code>) – <p>Stipulates how to deal with
+eventual conflicts with other channels, specifically in terms
+of having multiple channels act on the same target
+simultaneously.</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">'min-delay'</span></code>: Before adding the pulse, introduces the
+smallest possible delay that avoids all exisiting conflicts.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'no-delay'</span></code>: Adds the pulse to the channel, regardless of
+existing conflicts.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'wait-for-all'</span></code>: Before adding the pulse, adds a delay
+that idles the channel until the end of the other channels’
+latest pulse.</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When the phase of the pulse to add is different than the phase of
+the previous pulse on the channel, a delay between the two pulses
+might be automatically added to ensure the channel’s
+<cite>phase_jump_time</cite> is respected. To override this behaviour, use
+the <code class="docutils literal notranslate"><span class="pre">'no-delay'</span></code> protocol.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.add_dmm_detuning">
+<span class="sig-name descname"><span class="pre">add_dmm_detuning</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">waveform</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dmm_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protocol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'no-delay'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.add_dmm_detuning" title="Link to this definition"></a></dt>
+<dd><p>Add a waveform to the detuning of a DMM.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>waveform</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser.waveforms.Waveform.html#pulser.waveforms.Waveform" title="pulser.waveforms.Waveform"><code class="xref py py-class docutils literal notranslate"><span class="pre">Waveform</span></code></a> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – The waveform to add to the detuning of the DMM.</p></li>
+<li><p><strong>dmm_name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The name of the DMM channel to modulate.</p></li>
+<li><p><strong>protocol</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">'min-delay'</span></code>, <code class="docutils literal notranslate"><span class="pre">'no-delay'</span></code>, <code class="docutils literal notranslate"><span class="pre">'wait-for-all'</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">'no-delay'</span></code>) – <p>Stipulates how to deal with
+eventual conflicts with other channels, specifically in terms
+of having multiple channels act on the same target
+simultaneously (defaults to “no-delay”).</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">'min-delay'</span></code>: Before adding the pulse, introduces the
+smallest possible delay that avoids all exisiting conflicts.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'no-delay'</span></code>: Adds the pulse to the channel, regardless of
+existing conflicts.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'wait-for-all'</span></code>: Before adding the pulse, adds a delay
+that idles the channel until the end of the other channels’
+latest pulse.</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.add_eom_pulse">
+<span class="sig-name descname"><span class="pre">add_eom_pulse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phase</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">post_phase_shift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protocol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'min-delay'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_phase_drift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.add_eom_pulse" title="Link to this definition"></a></dt>
+<dd><p>Adds a square pulse to a channel in EOM mode.</p>
+<p>For channels with a finite modulation bandwidth and an EOM, operation
+in EOM mode allows for the execution of square pulses with a higher
+bandwidth than that which is tipically available. It can be turned on
+and off through the <cite>Sequence.enable_eom_mode()</cite> and
+<cite>Sequence.disable_eom_mode()</cite> methods.
+A channel in EOM mode can only execute square pulses with a given
+amplitude (<cite>amp_on</cite>) and detuning (<cite>detuning_on</cite>), which are
+chosen at the moment the EOM mode is enabled. Furthermore, the
+detuning when there is no pulse being played (<cite>detuning_off</cite>) is
+restricted to a set of values that depends on <cite>amp_on</cite> and
+<cite>detuning_on</cite>.
+While in EOM mode, one can only add pulses of variable duration
+(through <cite>Sequence.add_eom_pulse()</cite>) or delays.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When the phase between pulses is changed, the necessary buffer
+time for a phase jump will still be enforced (unless
+<code class="docutils literal notranslate"><span class="pre">protocol='no-delay'</span></code>).</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The name of the channel to add the pulse to.</p></li>
+<li><p><strong>duration</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – The duration of the pulse (in ns).</p></li>
+<li><p><strong>phase</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">TensorLike</span></code> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – The pulse phase (in radians).</p></li>
+<li><p><strong>post_phase_shift</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – Optionally lets you add a phase shift (in rad)
+immediately after the end of the pulse.</p></li>
+<li><p><strong>protocol</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">'min-delay'</span></code>, <code class="docutils literal notranslate"><span class="pre">'no-delay'</span></code>, <code class="docutils literal notranslate"><span class="pre">'wait-for-all'</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">'min-delay'</span></code>) – Stipulates how to deal with eventual conflicts with
+other channels (see <cite>Sequence.add()</cite> for more details).</p></li>
+<li><p><strong>correct_phase_drift</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Adjusts the phase to correct for the phase
+drift that occured since the last pulse (or the start of the
+EOM mode, if adding the first pulse). This effectively
+changes the phase of the EOM pulse, so an extra delay might
+be added to enforce the phase jump time.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.align">
+<span class="sig-name descname"><span class="pre">align</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">at_rest</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.align" title="Link to this definition"></a></dt>
+<dd><p>Aligns multiple channels in time.</p>
+<p>Introduces delays that align the provided channels with the one that
+finished the latest, such that the next action added to any of them
+will start right after the latest channel has finished.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>channels</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The names of the channels to align, as given upon
+declaration.</p></li>
+<li><p><strong>at_rest</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Whether to consider the output modulation of a channel’s
+contents when determining that it has finished.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.build">
+<span class="sig-name descname"><span class="pre">build</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qubits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">vars</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.build" title="Link to this definition"></a></dt>
+<dd><p>Builds a sequence from the programmed instructions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>qubits</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – A mapping between qubit IDs and trap IDs used to define
+the register. Must only be provided when the sequence is
+initialized with a MappableRegister.</p></li>
+<li><p><strong>vars</strong> (<span class="sphinx_autodoc_typehints-type">ArrayLike | <code class="xref py py-class docutils literal notranslate"><span class="pre">TensorLike</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The values for all the variables declared in this Sequence
+instance, indexed by the name given upon declaration. Check
+<code class="docutils literal notranslate"><span class="pre">Sequence.declared_variables</span></code> to see all the variables.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#pulser.sequence.Sequence" title="pulser.sequence.sequence.Sequence"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The Sequence built with the given variable values.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span># Check which variables are declared
+&gt;&gt;&gt; print(seq.declared_variables)
+{&#39;x&#39;: Variable(name=&#39;x&#39;, dtype=&lt;class &#39;float&#39;&gt;, size=1),
+ &#39;y&#39;: Variable(name=&#39;y&#39;, dtype=&lt;class &#39;int&#39;&gt;, size=3)}
+# Build a sequence with specific values for both variables
+&gt;&gt;&gt; seq1 = seq.build(x=0.5, y=[1, 2, 3])
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.config_detuning_map">
+<span class="sig-name descname"><span class="pre">config_detuning_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">detuning_map</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dmm_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.config_detuning_map" title="Link to this definition"></a></dt>
+<dd><p>Declares a new DMM channel to the Sequence.</p>
+<p>Associates a DetuningMap to a DMM channel of the Device.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Regular devices only allow a DMM to be declared once, but
+<code class="docutils literal notranslate"><span class="pre">MockDevice</span></code> DMM can be repeatedly declared if needed.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>detuning_map</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser.register.DetuningMap.html#pulser.register.DetuningMap" title="pulser.register.weight_maps.DetuningMap"><code class="xref py py-class docutils literal notranslate"><span class="pre">DetuningMap</span></code></a></span>) – A DetuningMap defining the amount of detuning each
+atom receives.</p></li>
+<li><p><strong>dmm_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – How the channel is identified in the device.
+See in <code class="docutils literal notranslate"><span class="pre">Sequence.available_channels</span></code> which DMM IDs are still
+available (start by “dmm” ) and the associated description.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.config_slm_mask">
+<span class="sig-name descname"><span class="pre">config_slm_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qubits</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dmm_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dmm_0'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.config_slm_mask" title="Link to this definition"></a></dt>
+<dd><p>Setup an SLM mask by specifying the qubits it targets.</p>
+<p>If the sequence is in XY mode, masked qubits don’t interact with
+the incoming pulses until the end of the first pulse of the global
+channel starting the earliest in the schedule.</p>
+<p>If the sequence is in Ising, the SLM Mask is a DetuningMap where
+the detuning of each masked qubit is 1.0. DMM “dmm_id” is
+configured using this Detuning Map, and modulated by a pulse having
+a large negative detuning and either a duration defined from pulses
+already present in the sequence (same as in XY mode) or by the first
+pulse added after this operation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>qubits</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Collection</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – Collection of qubit ID’s to mask during the first global
+pulse of the sequence.</p></li>
+<li><p><strong>dmm_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">'dmm_0'</span></code>) – Id of the DMM channel to use in the device.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.current_phase_ref">
+<span class="sig-name descname"><span class="pre">current_phase_ref</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qubit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'digital'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.current_phase_ref" title="Link to this definition"></a></dt>
+<dd><p>Current phase reference of a specific qubit for a given basis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>qubit</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The id of the qubit whose phase shift is desired.</p></li>
+<li><p><strong>basis</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">'digital'</span></code>) – The basis (i.e. electronic transition) the phase
+reference is associated with. Must correspond to the basis of a
+declared channel.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Current phase reference of ‘qubit’ in ‘basis’.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.declare_channel">
+<span class="sig-name descname"><span class="pre">declare_channel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_target</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.declare_channel" title="Link to this definition"></a></dt>
+<dd><p>Declares a new channel in the Sequence.</p>
+<p>The first declared channel implicitly defines the sequence’s mode of
+operation (i.e. the underlying Hamiltonian). In particular, if the
+first declared channel is of type <code class="docutils literal notranslate"><span class="pre">Microwave</span></code>, the sequence will work
+in “XY Mode” and will not allow declaration of channels that do not
+address the ‘XY’ basis. Inversely, declaration of a channel of another
+type will block the declaration of <code class="docutils literal notranslate"><span class="pre">Microwave</span></code> channels.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Regular devices only allow a channel to be declared once, but
+channels in <code class="docutils literal notranslate"><span class="pre">VirtualDevice</span></code> with <code class="docutils literal notranslate"><span class="pre">reusable_channels=True</span></code>
+can be repeatedly declared if needed.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Unique name for the channel in the sequence.</p></li>
+<li><p><strong>channel_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – How the channel is identified in the device.
+Consult <code class="docutils literal notranslate"><span class="pre">Sequence.available_channels</span></code> to see which channel
+ID’s are still available and the associated channel’s
+description.</p></li>
+<li><p><strong>initial_target</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">Collection</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – For ‘Local’ addressing channels only. Declares the
+initial target of the channel. If left as None, the initial
+target will have to be set manually as the first addition
+to this channel.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.declare_variable">
+<span class="sig-name descname"><span class="pre">declare_variable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype=&lt;class</span> <span class="pre">'float'&gt;</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.declare_variable" title="Link to this definition"></a></dt>
+<dd><p>Declare a new variable within this Sequence.</p>
+<p>The declared variables can be used to create parametrized versions of
+<code class="docutils literal notranslate"><span class="pre">Waveform</span></code> and <code class="docutils literal notranslate"><span class="pre">Pulse</span></code> objects, which in turn can be added to the
+<code class="docutils literal notranslate"><span class="pre">Sequence</span></code>. Additionally, simple arithmetic operations involving
+variables are also supported and will return parametrized objects that
+are dependent on the involved variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The name for the variable. Must be unique within a
+Sequence.</p></li>
+<li><p><strong>size</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The number of entries stored in the variable. If defined,
+returns an array of variables with the given size. If left
+as <code class="docutils literal notranslate"><span class="pre">None</span></code>, returns a single variable.</p></li>
+<li><p><strong>dtype</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">type</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>] | <code class="xref py py-class docutils literal notranslate"><span class="pre">type</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">&lt;class</span> <span class="pre">'float'&gt;</span></code>) – The type of the data that will be assigned
+to the variable. Must be <code class="docutils literal notranslate"><span class="pre">float</span></code> or <code class="docutils literal notranslate"><span class="pre">int</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser.parametrized.Variable.html#pulser.parametrized.Variable" title="pulser.parametrized.variable.Variable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Variable</span></code></a> | <code class="xref py py-class docutils literal notranslate"><span class="pre">VariableItem</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The declared Variable instance.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>To avoid confusion, it is recommended to store the returned
+Variable instance in a Python variable with the same name.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.delay">
+<span class="sig-name descname"><span class="pre">delay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">at_rest</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.delay" title="Link to this definition"></a></dt>
+<dd><p>Idles a given channel for a specific duration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>duration</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – Time to delay (in ns).</p></li>
+<li><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The channel’s name provided when declared.</p></li>
+<li><p><strong>at_rest</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether to wait until the previous pulse on the
+channel has finished (including output modulation) before
+starting the delay.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Delays added automatically by other instructions will generally
+take into account the output modulation.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.disable_eom_mode">
+<span class="sig-name descname"><span class="pre">disable_eom_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_phase_drift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.disable_eom_mode" title="Link to this definition"></a></dt>
+<dd><p>Takes a channel out of EOM mode operation.</p>
+<p>For channels with a finite modulation bandwidth and an EOM, operation
+in EOM mode allows for the execution of square pulses with a higher
+bandwidth than that which is tipically available. It can be turned on
+and off through the <cite>Sequence.enable_eom_mode()</cite> and
+<cite>Sequence.disable_eom_mode()</cite> methods.
+A channel in EOM mode can only execute square pulses with a given
+amplitude (<cite>amp_on</cite>) and detuning (<cite>detuning_on</cite>), which are
+chosen at the moment the EOM mode is enabled. Furthermore, the
+detuning when there is no pulse being played (<cite>detuning_off</cite>) is
+restricted to a set of values that depends on <cite>amp_on</cite> and
+<cite>detuning_on</cite>.
+While in EOM mode, one can only add pulses of variable duration
+(through <cite>Sequence.add_eom_pulse()</cite>) or delays.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Disabling the EOM mode will automatically enforce a buffer time
+from the moment it is turned off.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The name of the channel to take out of EOM mode.</p></li>
+<li><p><strong>correct_phase_drift</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Performs a phase shift to correct for the
+phase drift that occured since the last pulse (or the start of
+the EOM mode, if no pulse was added).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.draw">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'input+output'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_phase_modulated</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_phase_area</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_interp_pts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_phase_shifts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_register</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_phase_curve</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_detuning_maps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_qubit_amp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_qubit_det</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fig_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kwargs_savefig</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.draw" title="Link to this definition"></a></dt>
+<dd><p>Draws the sequence in its current state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mode</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">'input+output'</span></code>) – The curves to draw. ‘input’
+draws only the programmed curves, ‘output’ the expected curves
+after modulation. ‘input+output’ will draw both curves except
+for channels without a defined modulation bandwidth, in which
+case only the input is drawn.</p></li>
+<li><p><strong>as_phase_modulated</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Instead of displaying the detuning and phase
+offsets, displays the equivalent phase modulation.</p></li>
+<li><p><strong>draw_phase_area</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether phase and area values need to be
+shown as text on the plot, defaults to False. Doesn’t work in
+‘output’ mode.</p></li>
+<li><p><strong>draw_interp_pts</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – When the sequence has pulses with waveforms
+of type InterpolatedWaveform, draws the points of interpolation
+on top of the respective input waveforms (defaults to True).
+Doesn’t work in ‘output’ mode.</p></li>
+<li><p><strong>draw_phase_shifts</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether phase shift and reference
+information should be added to the plot, defaults to False.</p></li>
+<li><p><strong>draw_register</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether to draw the register before the pulse
+sequence, with a visual indication (square halo) around the
+qubits masked by the SLM, defaults to False. Can’t be set to
+True if the sequence is defined with a mappable register.</p></li>
+<li><p><strong>draw_phase_curve</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Draws the changes in phase in its own curve
+(ignored if the phase doesn’t change throughout the channel).</p></li>
+<li><p><strong>draw_detuning_maps</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether to draw the detuning maps applied on
+the qubits of the register of the sequence. Shown before the
+pulse sequence, defaults to False.</p></li>
+<li><p><strong>draw_qubit_amp</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Draws the amplitude seen by the qubits locally
+after the drawing of the sequence.</p></li>
+<li><p><strong>draw_qubit_det</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Draws the detuning seen by the qubits locally after
+the drawing of the sequence.</p></li>
+<li><p><strong>fig_name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The name on which to save the figures. Figures are saved
+if <cite>fig_name</cite> is not None. If <cite>draw_register</cite>, <cite>draw_qubit_amp</cite>
+and <cite>draw_qubit_det</cite> are False, only the pulses are saved, with
+no suffix. If one of them is True, the pulses will be saved
+with a suffix <code class="docutils literal notranslate"><span class="pre">_pulses</span></code>. If draw_register is True, the
+register is saved in another figure, with a suffix
+<code class="docutils literal notranslate"><span class="pre">_register</span></code> in the file name. If <cite>draw_qubit_amp</cite> or
+<cite>draw_qubit_det</cite> is True, the evolution of the quantities along
+time for group of qubits is saved in another figure with the
+prefix ‘_per_qubit’, and the group of qubits having same
+evolution of quantities along time are saved in a figure with
+suffix ‘_per_qubit_legend’.</p></li>
+<li><p><strong>kwargs_savefig</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">{}</span></code>) – Keywords arguments for
+<code class="docutils literal notranslate"><span class="pre">matplotlib.pyplot.savefig</span></code>. Not applicable if <cite>fig_name</cite>
+is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>show</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Whether or not to call <cite>plt.show()</cite> before returning. When
+combining this plot with other ones in a single figure, one may
+need to set this flag to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>QutipEmulator.draw(): Draws the provided sequence and the one used
+by the solver.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.enable_eom_mode">
+<span class="sig-name descname"><span class="pre">enable_eom_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amp_on</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detuning_on</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimal_detuning_off</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_phase_drift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.enable_eom_mode" title="Link to this definition"></a></dt>
+<dd><p>Puts a channel in EOM mode operation.</p>
+<p>For channels with a finite modulation bandwidth and an EOM, operation
+in EOM mode allows for the execution of square pulses with a higher
+bandwidth than that which is tipically available. It can be turned on
+and off through the <cite>Sequence.enable_eom_mode()</cite> and
+<cite>Sequence.disable_eom_mode()</cite> methods.
+A channel in EOM mode can only execute square pulses with a given
+amplitude (<cite>amp_on</cite>) and detuning (<cite>detuning_on</cite>), which are
+chosen at the moment the EOM mode is enabled. Furthermore, the
+detuning when there is no pulse being played (<cite>detuning_off</cite>) is
+restricted to a set of values that depends on <cite>amp_on</cite> and
+<cite>detuning_on</cite>.
+While in EOM mode, one can only add pulses of variable duration
+(through <cite>Sequence.add_eom_pulse()</cite>) or delays.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Enabling the EOM mode will automatically enforce a buffer unless
+the channel is empty. The detuning will go to the <cite>detuning_off</cite>
+value during this buffer. This buffer will not wait for pulses
+on other channels to finish, so calling <cite>Sequence.align()</cite> or
+<cite>Sequence.delay()</cite> before enabling the EOM mode is necessary to
+avoid eventual conflicts.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The name of the channel to put in EOM mode.</p></li>
+<li><p><strong>amp_on</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">TensorLike</span></code> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – The amplitude of the EOM pulses (in rad/µs).</p></li>
+<li><p><strong>detuning_on</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">TensorLike</span></code> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – The detuning of the EOM pulses (in rad/µs).</p></li>
+<li><p><strong>optimal_detuning_off</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – The optimal value of detuning (in rad/µs)
+when there is no pulse being played. It will choose the closest
+value among the existing options.</p></li>
+<li><p><strong>correct_phase_drift</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Performs a phase shift to correct for the
+phase drift incurred while turning on the EOM mode.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.estimate_added_delay">
+<span class="sig-name descname"><span class="pre">estimate_added_delay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pulse</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protocol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'min-delay'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.estimate_added_delay" title="Link to this definition"></a></dt>
+<dd><p>Delay that will be added before the pulse when added to a channel.</p>
+<p>When adding a pulse to a channel of the Sequence, a delay can be added
+to account for the modulation bandwidth of the channel or the protocol
+chosen. This method estimates the delay that will be added before the
+pulse if this pulse was added to this channel with this protocol. It
+works even if the channel is in EOM mode, but to be appropriate, the
+Pulse should be a ConstantPulse with amplitude and detuning
+respectively the rabi_freq and detuning_on of the EOM block.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pulse</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser.pulse.Pulse.html#pulser.pulse.Pulse" title="pulser.pulse.Pulse"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pulse</span></code></a> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – The pulse object to add to the channel.</p></li>
+<li><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The channel’s name provided when declared.</p></li>
+<li><p><strong>protocol</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">'min-delay'</span></code>, <code class="docutils literal notranslate"><span class="pre">'no-delay'</span></code>, <code class="docutils literal notranslate"><span class="pre">'wait-for-all'</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">'min-delay'</span></code>) – <p>Stipulates how to deal with
+eventual conflicts with other channels, specifically in terms
+of having multiple channels act on the same target
+simultaneously.</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">'min-delay'</span></code>: Before adding the pulse, introduces the
+smallest possible delay that avoids all exisiting conflicts.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'no-delay'</span></code>: Adds the pulse to the channel, regardless of
+existing conflicts.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'wait-for-all'</span></code>: Before adding the pulse, adds a delay
+that idles the channel until the end of the other channels’
+latest pulse.</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The delay that would be added before the pulse.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.from_abstract_repr">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_abstract_repr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj_str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.from_abstract_repr" title="Link to this definition"></a></dt>
+<dd><p>Deserialize a sequence from an abstract JSON object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obj_str</strong> (<em>str</em>) – the JSON string representing the sequence encoded
+in the abstract JSON format.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The Pulser sequence.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pulser.sequence.Sequence" title="pulser.sequence.Sequence">Sequence</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.get_addressed_bases">
+<span class="sig-name descname"><span class="pre">get_addressed_bases</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.get_addressed_bases" title="Link to this definition"></a></dt>
+<dd><p>Returns the bases addressed by the declared channels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.get_addressed_states">
+<span class="sig-name descname"><span class="pre">get_addressed_states</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.get_addressed_states" title="Link to this definition"></a></dt>
+<dd><p>Returns the states addressed by the declared channels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">'u'</span></code>, <code class="docutils literal notranslate"><span class="pre">'d'</span></code>, <code class="docutils literal notranslate"><span class="pre">'r'</span></code>, <code class="docutils literal notranslate"><span class="pre">'g'</span></code>, <code class="docutils literal notranslate"><span class="pre">'h'</span></code>, <code class="docutils literal notranslate"><span class="pre">'x'</span></code>]]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.get_duration">
+<span class="sig-name descname"><span class="pre">get_duration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_fall_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.get_duration" title="Link to this definition"></a></dt>
+<dd><p>Returns the current duration of a channel or the whole sequence.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – A specific channel to return the duration of. If left as
+None, it will return the duration of the whole sequence.</p></li>
+<li><p><strong>include_fall_time</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether to include in the duration the
+extra time needed by the last pulse to finish, if there is
+modulation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The duration of the channel or sequence, in ns.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.get_measurement_basis">
+<span class="sig-name descname"><span class="pre">get_measurement_basis</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.get_measurement_basis" title="Link to this definition"></a></dt>
+<dd><p>Gets the sequence’s measurement basis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>RuntimeError</strong> – When the sequence has not been measured.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.get_register">
+<span class="sig-name descname"><span class="pre">get_register</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">include_mappable</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.get_register" title="Link to this definition"></a></dt>
+<dd><p>The atom register on which to apply the pulses.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseRegister</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">MappableRegister</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.is_empty">
+<span class="sig-name descname"><span class="pre">is_empty</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.is_empty" title="Link to this definition"></a></dt>
+<dd><p>States whether the sequence is empty.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.is_in_eom_mode">
+<span class="sig-name descname"><span class="pre">is_in_eom_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.is_in_eom_mode" title="Link to this definition"></a></dt>
+<dd><p>States whether a channel is currently in EOM mode.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The name of the declared channel to inspect.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Whether the channel is in EOM mode.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.is_measured">
+<span class="sig-name descname"><span class="pre">is_measured</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.is_measured" title="Link to this definition"></a></dt>
+<dd><p>States whether the sequence has been measured.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.is_parametrized">
+<span class="sig-name descname"><span class="pre">is_parametrized</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.is_parametrized" title="Link to this definition"></a></dt>
+<dd><p>States whether the sequence is parametrized.</p>
+<p>A parametrized sequence is one that depends on the values assigned to
+variables declared within it. Sequence-building calls are not executed
+right away, but rather stored for deferred execution when all variables
+are given a value (when <code class="docutils literal notranslate"><span class="pre">Sequence.build()</span></code> is called).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Whether the sequence is parametrized.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.is_register_mappable">
+<span class="sig-name descname"><span class="pre">is_register_mappable</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.is_register_mappable" title="Link to this definition"></a></dt>
+<dd><p>States whether the sequence’s register is mappable.</p>
+<p>A sequence with a mappable register will require its qubit Id’s to be
+mapped to trap Ids of its associated RegisterLayout through the
+<cite>Sequence.build()</cite> call.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Whether the register is a MappableRegister.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.measure">
+<span class="sig-name descname"><span class="pre">measure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">basis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ground-rydberg'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.measure" title="Link to this definition"></a></dt>
+<dd><p>Measures in a valid basis.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In addition to the supported bases of the selected device, allowed
+measurement bases will depend on the mode of operation. In
+particular, if using <code class="docutils literal notranslate"><span class="pre">Microwave</span></code> channels (XY mode), only
+measuring in the ‘XY’ basis is allowed. Inversely, it is not
+possible to measure in the ‘XY’ basis outside of XY mode.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>basis</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">'ground-rydberg'</span></code>) – Valid basis for measurement (consult the
+<code class="docutils literal notranslate"><span class="pre">supported_bases</span></code> attribute of the selected device for
+the available options).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.modify_eom_setpoint">
+<span class="sig-name descname"><span class="pre">modify_eom_setpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amp_on</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detuning_on</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimal_detuning_off</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_phase_drift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.modify_eom_setpoint" title="Link to this definition"></a></dt>
+<dd><p>Modifies the setpoint of an ongoing EOM mode operation.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Modifying the EOM setpoint will automatically enforce a buffer.
+The detuning will go to the <cite>detuning_off</cite> value during
+this buffer. This buffer will not wait for pulses on other
+channels to finish, so calling <cite>Sequence.align()</cite> or
+<cite>Sequence.delay()</cite> beforehand is necessary to avoid eventual
+conflicts.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The name of the channel currently in EOM mode.</p></li>
+<li><p><strong>amp_on</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">TensorLike</span></code> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – The new amplitude of the EOM pulses (in rad/µs).</p></li>
+<li><p><strong>detuning_on</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">TensorLike</span></code> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – The new detuning of the EOM pulses (in rad/µs).</p></li>
+<li><p><strong>optimal_detuning_off</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – The new optimal value of detuning (in rad/µs)
+when there is no pulse being played. It will choose the closest
+value among the existing options.</p></li>
+<li><p><strong>correct_phase_drift</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Performs a phase shift to correct for the
+phase drift incurred while modifying the EOM setpoint.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.phase_shift">
+<span class="sig-name descname"><span class="pre">phase_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phi</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">specific_targets</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'digital'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.phase_shift" title="Link to this definition"></a></dt>
+<dd><p>Shifts the phase of a qubit’s reference by ‘phi’, on a given basis.</p>
+<p>This is equivalent to an <span class="math notranslate nohighlight">\(R_z(\phi)\)</span> gate (i.e. a rotation of the
+target qubit’s state by an angle <span class="math notranslate nohighlight">\(\phi\)</span> around the z-axis of the
+Bloch sphere).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>phi</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – The intended phase shift (in rad).</p></li>
+<li><p><strong>specific_targets</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The ids of the qubits to apply the phase shift
+to. If no specific targets are given, the phase shift will be
+applied to all qubits in the <code class="docutils literal notranslate"><span class="pre">Register</span></code> or
+<code class="docutils literal notranslate"><span class="pre">MappableRegister</span></code>.</p></li>
+<li><p><strong>basis</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">'digital'</span></code>) – The basis (i.e. electronic transition) to associate
+the phase shift to. Must correspond to the basis of a declared
+channel.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.phase_shift_index">
+<span class="sig-name descname"><span class="pre">phase_shift_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phi</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">specific_targets</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'digital'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.phase_shift_index" title="Link to this definition"></a></dt>
+<dd><p>Shifts the phase of a qubit’s reference by ‘phi’, on a given basis.</p>
+<p>This is equivalent to an <span class="math notranslate nohighlight">\(R_z(\phi)\)</span> gate (i.e. a rotation of the
+target qubit’s state by an angle <span class="math notranslate nohighlight">\(\phi\)</span> around the z-axis of the
+Bloch sphere).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>phi</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – The intended phase shift (in rad).</p></li>
+<li><p><strong>specific_targets</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – The indices of the qubits to apply the phase
+shift to. A qubit index is a number between 0 and the number
+of qubits. It is then converted to a Qubit ID using the order
+in which they were declared when instantiating the <code class="docutils literal notranslate"><span class="pre">Register</span></code>
+or <code class="docutils literal notranslate"><span class="pre">MappableRegister</span></code>. If no specific targets are given, the
+phase shift will be applied to all qubits in the <code class="docutils literal notranslate"><span class="pre">Register</span></code>
+or <code class="docutils literal notranslate"><span class="pre">MappableRegister</span></code>.</p></li>
+<li><p><strong>basis</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">'digital'</span></code>) – The basis (i.e. electronic transition) to associate
+the phase shift to. Must correspond to the basis of a declared
+channel.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Cannot be used on non-parametrized sequences using a mappable
+register.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.set_magnetic_field">
+<span class="sig-name descname"><span class="pre">set_magnetic_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">by</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.set_magnetic_field" title="Link to this definition"></a></dt>
+<dd><p>Sets the magnetic field acting on the entire array.</p>
+<p>The magnetic field vector is defined on the reference frame of the
+atoms in the Register (with the z-axis coming outside of the plane).
+Can only be defined before there are pulses added to the sequence.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The magnetic field only work in the “XY Mode”. If not already
+defined through the declaration of a Microwave channel, calling
+this function will enable the “XY Mode”.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bx</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – The magnetic field in the x direction (in Gauss).</p></li>
+<li><p><strong>by</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – The magnetic field in the y direction (in Gauss).</p></li>
+<li><p><strong>bz</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">30.0</span></code>) – The magnetic field in the z direction (in Gauss).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.switch_device">
+<span class="sig-name descname"><span class="pre">switch_device</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_device</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.switch_device" title="Link to this definition"></a></dt>
+<dd><p>Replicate the sequence with a different device.</p>
+<p>This method is designed to replicate the sequence with as few changes
+to the original contents as possible.
+If the <cite>strict</cite> option is chosen, the device switch will fail whenever
+it cannot guarantee that the new sequence’s contents will not be
+modified in the process.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>new_device</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeVar</span></code>(<code class="docutils literal notranslate"><span class="pre">DeviceType</span></code>, bound= <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseDevice</span></code>)</span>) – The target device instance.</p></li>
+<li><p><strong>strict</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Enforce a strict match between devices and channels to
+guarantee the pulse sequence is left unchanged.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#pulser.sequence.Sequence" title="pulser.sequence.sequence.Sequence"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The sequence on the new device.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.switch_register">
+<span class="sig-name descname"><span class="pre">switch_register</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_register</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.switch_register" title="Link to this definition"></a></dt>
+<dd><p>Replicate the sequence with a different register.</p>
+<p>The new sequence is reconstructed with the provided register by
+replicating all the instructions used to build the original sequence.
+This means that operations referecing specific qubits IDs
+(eg. <cite>Sequence.target()</cite>) expect to find the same qubit IDs in the new
+register. By the same token, switching from a register to a mappable
+register might fail if one of the instructions does not work with
+mappable registers (e.g. <cite>Sequence.configure_slm_mask()</cite>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Warns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>UserWarning</strong> – If the sequence is configuring a detuning map, a
+warning is raised to remind the user that the detuning map is
+unchanged and might no longer be aligned with the qubits in
+the new register.</p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>new_register</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseRegister</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">MappableRegister</span></code></span>) – The new register to give the sequence.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#pulser.sequence.Sequence" title="pulser.sequence.sequence.Sequence"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a></span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The sequence with the new register.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.target">
+<span class="sig-name descname"><span class="pre">target</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qubits</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.target" title="Link to this definition"></a></dt>
+<dd><p>Changes the target qubit of a ‘Local’ channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>qubits</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">Collection</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – The new target for this channel. Must correspond to a
+qubit ID in device or a collection of qubit IDs, when
+multi-qubit addressing is possible.</p></li>
+<li><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The channel’s name provided when declared. Must be
+a channel with ‘Local’ addressing.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.target_index">
+<span class="sig-name descname"><span class="pre">target_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qubits</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.target_index" title="Link to this definition"></a></dt>
+<dd><p>Changes the target qubit of a ‘Local’ channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>qubits</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">Collection</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>] | <a class="reference internal" href="pulser.parametrized.Parametrized.html#pulser.parametrized.Parametrized" title="pulser.parametrized.paramabc.Parametrized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parametrized</span></code></a></span>) – The new target for this channel. Must correspond to a
+qubit index or a collection of qubit indices, when multi-qubit
+addressing is possible.
+A qubit index is a number between 0 and the number of qubits.
+It is then converted to a Qubit ID using the order in which
+they were declared when instantiating the <code class="docutils literal notranslate"><span class="pre">Register</span></code>
+or <code class="docutils literal notranslate"><span class="pre">MappableRegister</span></code>.</p></li>
+<li><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The channel’s name provided when declared. Must be
+a channel with ‘Local’ addressing.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Cannot be used on non-parametrized sequences using a mappable
+register.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.to_abstract_repr">
+<span class="sig-name descname"><span class="pre">to_abstract_repr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pulser-exported'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">json_dumps_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_validation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">defaults</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.sequence.Sequence.to_abstract_repr" title="Link to this definition"></a></dt>
+<dd><p>Serializes the Sequence into an abstract JSON object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seq_name</strong> (<em>str</em>) – A name for the sequence. If not defined, defaults
+to “pulser-exported”.</p></li>
+<li><p><strong>json_dumps_options</strong> – A mapping between optional parameters of
+<code class="docutils literal notranslate"><span class="pre">json.dumps()</span></code> (as string) and their value (parameter cannot
+be “cls”).</p></li>
+<li><p><strong>skip_validation</strong> – Whether to skip the validation of the serialized
+sequence against the abstract representation’s JSON schema.
+Skipping the validation is useful to cut down on execution
+time, as this step takes significantly longer than the
+serialization itself; it is also low risk, as the validation
+is only defensively checking that there are no bugs in the
+serialized sequence.</p></li>
+<li><p><strong>defaults</strong> – The default values for all the variables declared in this
+Sequence instance, indexed by the name given upon declaration.
+Check <code class="docutils literal notranslate"><span class="pre">Sequence.declared_variables</span></code> to see all the variables.
+When using a MappableRegister, the Qubit IDs to trap IDs
+mapping must also be provided under the <cite>qubits</cite> keyword.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Providing the <cite>defaults</cite> is optional but, when done, it is
+mandatory to give default values for all the expected parameters.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The sequence encoded as an abstract JSON object.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.available_channels">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">available_channels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Channel</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pulser.sequence.Sequence.available_channels" title="Link to this definition"></a></dt>
+<dd><p>Channels still available for declaration.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.declared_channels">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">declared_channels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Channel</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pulser.sequence.Sequence.declared_channels" title="Link to this definition"></a></dt>
+<dd><p>Channels declared in this Sequence.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.declared_variables">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">declared_variables</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="pulser.parametrized.Variable.html#pulser.parametrized.Variable" title="pulser.parametrized.variable.Variable"><span class="pre">Variable</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pulser.sequence.Sequence.declared_variables" title="Link to this definition"></a></dt>
+<dd><p>Variables declared in this Sequence.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.device">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">device</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">DeviceType</span></em><a class="headerlink" href="#pulser.sequence.Sequence.device" title="Link to this definition"></a></dt>
+<dd><p>Device that the sequence is using.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.magnetic_field">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">magnetic_field</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></em><a class="headerlink" href="#pulser.sequence.Sequence.magnetic_field" title="Link to this definition"></a></dt>
+<dd><p>The magnetic field acting on the array of atoms.</p>
+<p>The magnetic field vector is defined on the reference frame of the
+atoms in the Register (with the z-axis coming outside of the plane).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Only defined in “XY Mode”, the default value being (0, 0, 30) G.</p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.qubit_info">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">qubit_info</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">AbstractArray</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pulser.sequence.Sequence.qubit_info" title="Link to this definition"></a></dt>
+<dd><p>Dictionary with the qubit’s IDs and positions.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.sequence.Sequence.register">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">register</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">BaseRegister</span></em><a class="headerlink" href="#pulser.sequence.Sequence.register" title="Link to this definition"></a></dt>
+<dd><p>Register with the qubit’s IDs and positions.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pulser.register.Register3D.html" class="btn btn-neutral float-left" title="Register3D" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pulser.noise_model.NoiseModel.html" class="btn btn-neutral float-right" title="NoiseModel" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

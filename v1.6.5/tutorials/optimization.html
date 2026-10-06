@@ -1,0 +1,657 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Optimal Control for AFM State Preparation &mdash; Pulser 1.6.5 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=2ad11211"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="QAA to solve a QUBO problem" href="qubo.html" />
+    <link rel="prev" title="Phase Shifts and Virtual Z gates" href="phase_shifts_vz_gates.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.6.5" /><meta name="readthedocs-resolver-filename" content="/tutorials/optimization.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Optimal Control for AFM State Preparation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#1.-Introduction">1. Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#2.-System-and-Parameters">2. System and Parameters</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#2.1-Pick-a-Device">2.1 Pick a Device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.2-Create-a-Register">2.2 Create a Register</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.3-Pick-the-channels">2.3 Pick the channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.4-Add-the-Pulses">2.4 Add the Pulses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.5-Measurement-and-score-function">2.5 Measurement and score function</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#3.-Optimisation">3. Optimisation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Bayesian-search">Bayesian search</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Parameters">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Performance">Performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Optimised-pulse">Optimised pulse</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Optimal Control for AFM State Preparation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/optimization.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Optimal-Control-for-AFM-State-Preparation">
+<h1>Optimal Control for AFM State Preparation<a class="headerlink" href="#Optimal-Control-for-AFM-State-Preparation" title="Link to this heading"></a></h1>
+<p><em>Advanced Concepts used in this tutorial:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="interpolated_wfs.html"><span class="doc">The Pulses are defined using Interpolated waveforms</span></a>;</p></li>
+</ul>
+<section id="1.-Introduction">
+<h2>1. Introduction<a class="headerlink" href="#1.-Introduction" title="Link to this heading"></a></h2>
+<p>The following notebook gives an overview of the application of an optimal control method using Pulser. The announced objective is to achieve the preparation of the well-known antiferromagnetic state - see the section <em>Adiabatic preparation of an Anti-Ferromagnetic State</em> in <a class="reference internal" href="creating.html#Adiabatic-preparation-of-an-Anti-Ferromagnetic-State"><span class="std std-ref">the introductory tutorial</span></a> - on a squared configuration of neutral atoms using optimised pulses smoother than the usual ramps. We define by
+Anti-Ferromagnetic (AFM) state an equal mixture of the two “checkerboard” spin states.</p>
+<center><p><img alt="deb520139f304d2982d0c6e264a4367e" class="no-scaled-link" src="../_images/Optimization_checkerboard.png" style="width: 500px;" /></p>
+</center><p>We begin by importing some basic modules as well as an optimisation function based on Gaussian processes <code class="docutils literal notranslate"><span class="pre">gp_minimize</span></code>. This notebook uses the <code class="docutils literal notranslate"><span class="pre">scikit-optimize</span></code> package, which has to be installed beforehand.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">qutip</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">skopt</span><span class="w"> </span><span class="kn">import</span> <span class="n">gp_minimize</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pulse</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Register</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser_simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">QutipBackendV2</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.waveforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">InterpolatedWaveform</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnalogDevice</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="2.-System-and-Parameters">
+<h2>2. System and Parameters<a class="headerlink" href="#2.-System-and-Parameters" title="Link to this heading"></a></h2>
+<section id="2.1-Pick-a-Device">
+<h3>2.1 Pick a Device<a class="headerlink" href="#2.1-Pick-a-Device" title="Link to this heading"></a></h3>
+<p>As in <em>Adiabatic preparation of an Anti-Ferromagnetic State</em>, we will use an <code class="docutils literal notranslate"><span class="pre">AnalogDevice</span></code>, since we only need a <code class="docutils literal notranslate"><span class="pre">Rydberg.Global</span></code> channel.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">AnalogDevice</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="2.2-Create-a-Register">
+<h3>2.2 Create a Register<a class="headerlink" href="#2.2-Create-a-Register" title="Link to this heading"></a></h3>
+<p>Let’s generate an AFM state on a chain of <span class="math notranslate nohighlight">\(12\)</span> atoms. We will use a square register of <span class="math notranslate nohighlight">\(4\times 4\)</span> atoms, each spaced by <span class="math notranslate nohighlight">\(5 \mu m\)</span>, with a central <span class="math notranslate nohighlight">\(2\times 2\)</span> square of atoms missing. This avoids edge effects which alter the system dynamics.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">R_interatomic</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1"># µm</span>
+
+<span class="n">N_side</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">coords</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="p">[</span><span class="n">R_interatomic</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_side</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span>
+    <span class="o">+</span> <span class="p">[</span><span class="n">R_interatomic</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">N_side</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_side</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span>
+    <span class="o">+</span> <span class="p">[</span>
+        <span class="n">R_interatomic</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">N_side</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">x</span><span class="p">,</span> <span class="n">N_side</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_side</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="o">+</span> <span class="p">[</span><span class="n">R_interatomic</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">N_side</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">y</span><span class="p">]</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_side</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span>
+<span class="p">)</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+<span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+<span class="n">reg</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_optimization_10_0.png" src="../_images/tutorials_optimization_10_0.png" />
+</div>
+</div>
+<p>Let’s check that this register matches with the device’s constraints by initializing the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="2.3-Pick-the-channels">
+<h3>2.3 Pick the channels<a class="headerlink" href="#2.3-Pick-the-channels" title="Link to this heading"></a></h3>
+<p>The channel needed to prepare an AFM state is the <code class="docutils literal notranslate"><span class="pre">Rydberg.Global</span></code> channel. Let’s declare this channel in the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ising&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="2.4-Add-the-Pulses">
+<h3>2.4 Add the Pulses<a class="headerlink" href="#2.4-Add-the-Pulses" title="Link to this heading"></a></h3>
+<p>We are going to use a Pulse composed of Interpolated Waveforms to define the evolution of <span class="math notranslate nohighlight">\(\Omega\)</span> and <span class="math notranslate nohighlight">\(\delta\)</span> along time. The first parameter to define is the duration of the pulse, <span class="math notranslate nohighlight">\(T\)</span>:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">T</span> <span class="o">=</span> <span class="mi">1000</span>  <span class="c1"># in µs</span>
+</pre></div>
+</div>
+</div>
+<p>Then, we are going to describe <span class="math notranslate nohighlight">\(\Omega\)</span> and <span class="math notranslate nohighlight">\(\delta\)</span> by <span class="math notranslate nohighlight">\(2m\)</span> parameters, that are <span class="math notranslate nohighlight">\(\{\Omega(t_i),\delta(t_i), i\in[1,m]\}\)</span> with <span class="math notranslate nohighlight">\(t_i=T\times i/(m+1)\)</span>. These parameters are going to be tuned by the optimization algorithm. Therefore, the larger <span class="math notranslate nohighlight">\(m\)</span> is, the more complex the pulse behaviour could be, but also the more resources are needed since the parameters space is expanding.</p>
+<p>Let’s start by initializing randomly the values for these <span class="math notranslate nohighlight">\(2m\)</span> parameters, within the specifications of the declared <code class="docutils literal notranslate"><span class="pre">Rydberg.Global</span></code> channel.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Size of the parameter space</span>
+<span class="n">m</span> <span class="o">=</span> <span class="mi">3</span>
+
+<span class="c1"># Amp and detuning must respect the channel&#39;s specifications</span>
+<span class="n">tol</span> <span class="o">=</span> <span class="mf">1e-6</span>  <span class="c1"># within a certain tolerance</span>
+
+<span class="n">max_amp</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">declared_channels</span><span class="p">[</span><span class="s2">&quot;ising&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max_amp</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">tol</span><span class="p">)</span>
+<span class="n">Omega_max</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_amp</span><span class="p">,</span> <span class="n">device</span><span class="o">.</span><span class="n">rabi_from_blockade</span><span class="p">(</span><span class="mf">1.2</span> <span class="o">*</span> <span class="n">R_interatomic</span><span class="p">))</span>
+
+<span class="n">U</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">Omega_max</span>
+<span class="n">max_det</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">declared_channels</span><span class="p">[</span><span class="s2">&quot;ising&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max_abs_detuning</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">tol</span><span class="p">)</span>
+<span class="n">delta_0</span> <span class="o">=</span> <span class="o">-</span><span class="nb">min</span><span class="p">(</span><span class="n">max_det</span><span class="p">,</span> <span class="n">U</span><span class="p">)</span>
+<span class="n">delta_f</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_det</span><span class="p">,</span> <span class="n">U</span><span class="p">)</span>
+
+<span class="c1"># Random instance of the parameter space</span>
+<span class="n">amp_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">Omega_max</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+<span class="n">det_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">delta_0</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We define an interpolation function which takes as argument a set of parameters and returns the interpolated pulse associated. The interpolation is done through the <code class="docutils literal notranslate"><span class="pre">InterpolatedWaveform</span></code> class, which does monotonic cubic splines using <code class="docutils literal notranslate"><span class="pre">PchipInterpolator</span></code> by default.</p>
+<center><p><img alt="94b14a0e9b0741d588fd9d29350a86b7" class="no-scaled-link" src="../_images/Optimization_interpolated.png" style="width: 800px;" /></p>
+</center><p>Here, the starting and ending values of <span class="math notranslate nohighlight">\(\Omega\)</span> and <span class="math notranslate nohighlight">\(\delta\)</span> are fixed such that <span class="math notranslate nohighlight">\(\Omega (0) = \Omega(T) = 0\)</span>, <span class="math notranslate nohighlight">\(\delta(0) = \delta_0\)</span> and <span class="math notranslate nohighlight">\(\delta(T) = \delta_f\)</span>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">create_interp_pulse</span><span class="p">(</span><span class="n">amp_params</span><span class="p">,</span> <span class="n">det_params</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Pulse</span><span class="p">(</span>
+        <span class="n">InterpolatedWaveform</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="p">[</span><span class="mf">1e-9</span><span class="p">,</span> <span class="o">*</span><span class="n">amp_params</span><span class="p">,</span> <span class="mf">1e-9</span><span class="p">]),</span>
+        <span class="n">InterpolatedWaveform</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="p">[</span><span class="n">delta_0</span><span class="p">,</span> <span class="o">*</span><span class="n">det_params</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">]),</span>
+        <span class="mi">0</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Let’s use this function to add a pulse interpolating the randomly generated <span class="math notranslate nohighlight">\(2m\)</span> parameters to the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">create_interp_pulse</span><span class="p">(</span><span class="n">amp_params</span><span class="p">,</span> <span class="n">det_params</span><span class="p">),</span> <span class="s2">&quot;ising&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_optimization_24_0.png" src="../_images/tutorials_optimization_24_0.png" />
+</div>
+</div>
+</section>
+<section id="2.5-Measurement-and-score-function">
+<h3>2.5 Measurement and score function<a class="headerlink" href="#2.5-Measurement-and-score-function" title="Link to this heading"></a></h3>
+<p>Each Sequence generated with the <span class="math notranslate nohighlight">\(2m\)</span> parameters has an associated result, obtained by measuring the state of the atoms at the end of the Sequence <span class="math notranslate nohighlight">\(N\_samples\)</span> times:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">N_samples</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">simul</span> <span class="o">=</span> <span class="n">QutipBackendV2</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">final_state</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">final_state</span>
+<span class="n">counts</span> <span class="o">=</span> <span class="n">final_state</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">num_shots</span><span class="o">=</span><span class="n">N_samples</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">counts</span><span class="p">)</span>
+<span class="c1"># Let&#39;s plot the histogram associated to the measurements</span>
+<span class="c1"># Let&#39;s select only the states that are measured more than 10 times</span>
+<span class="n">most_freq</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">counts</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">}</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">most_freq</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="nb">list</span><span class="p">(</span><span class="n">most_freq</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">rotation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Counter({&#39;000000000000&#39;: 107, &#39;000000000001&#39;: 24, &#39;000000001000&#39;: 23, &#39;010000000000&#39;: 22, &#39;001000000000&#39;: 22, &#39;000001000000&#39;: 19, &#39;001000100010&#39;: 18, &#39;000100010001&#39;: 17, &#39;000010000010&#39;: 17, &#39;000010000000&#39;: 16, &#39;001000001000&#39;: 16, &#39;001010000000&#39;: 15, &#39;100010001000&#39;: 15, &#39;010000010000&#39;: 15, &#39;010000100000&#39;: 14, &#39;000001000001&#39;: 14, &#39;000001010000&#39;: 13, &#39;000010000001&#39;: 13, &#39;000100000010&#39;: 13, &#39;000000000010&#39;: 13, &#39;000000100001&#39;: 13, &#39;100000000010&#39;: 12, &#39;001000000100&#39;: 12, &#39;001000010000&#39;: 12, &#39;010101000100&#39;: 11, &#39;000010000100&#39;: 11, &#39;010000000001&#39;: 11, &#39;000000001010&#39;: 11, &#39;000000000101&#39;: 11, &#39;000001000010&#39;: 11, &#39;000100000100&#39;: 11, &#39;010001010000&#39;: 11, &#39;000000010100&#39;: 10, &#39;010100000000&#39;: 10, &#39;010001000100&#39;: 10, &#39;000010001000&#39;: 9, &#39;000000010000&#39;: 9, &#39;000100001000&#39;: 9, &#39;101000000000&#39;: 9, &#39;001000000010&#39;: 9, &#39;100000100000&#39;: 8, &#39;100001000000&#39;: 8, &#39;000100010101&#39;: 8, &#39;000010100000&#39;: 7, &#39;000001001000&#39;: 7, &#39;000000101000&#39;: 7, &#39;001000001010&#39;: 7, &#39;000010100010&#39;: 7, &#39;010100010101&#39;: 6, &#39;000100101010&#39;: 6, &#39;000000010010&#39;: 6, &#39;101010101000&#39;: 5, &#39;010010000000&#39;: 5, &#39;101010001000&#39;: 5, &#39;010001000001&#39;: 5, &#39;000101000000&#39;: 5, &#39;010100010001&#39;: 5, &#39;100000010000&#39;: 5, &#39;010000000010&#39;: 5, &#39;001010000010&#39;: 5, &#39;100001010000&#39;: 5, &#39;010000100001&#39;: 5, &#39;010000010100&#39;: 4, &#39;001010001010&#39;: 4, &#39;000101010001&#39;: 4, &#39;010001000000&#39;: 4, &#39;101000101010&#39;: 4, &#39;000010000101&#39;: 4, &#39;100010000010&#39;: 4, &#39;000100001010&#39;: 4, &#39;010101010000&#39;: 4, &#39;010000001000&#39;: 4, &#39;100010101000&#39;: 4, &#39;010101010001&#39;: 4, &#39;000001000101&#39;: 4, &#39;100000001010&#39;: 4, &#39;010000010101&#39;: 4, &#39;101000101000&#39;: 3, &#39;001000000001&#39;: 3, &#39;000101000101&#39;: 3, &#39;000000010001&#39;: 3, &#39;001001000000&#39;: 3, &#39;100010101010&#39;: 3, &#39;101000000100&#39;: 3, &#39;010001000101&#39;: 3, &#39;000010101010&#39;: 3, &#39;000010001010&#39;: 3, &#39;101000010000&#39;: 3, &#39;001000101010&#39;: 3, &#39;001010101010&#39;: 3, &#39;101010001010&#39;: 3, &#39;001010100000&#39;: 3, &#39;000001010101&#39;: 3, &#39;101000100010&#39;: 3, &#39;101000001000&#39;: 3, &#39;100100101000&#39;: 2, &#39;001010100100&#39;: 2, &#39;100000000100&#39;: 2, &#39;100001000100&#39;: 2, &#39;000010010001&#39;: 2, &#39;001010100010&#39;: 2, &#39;000101010101&#39;: 2, &#39;010000010001&#39;: 2, &#39;101000001010&#39;: 2, &#39;000101000001&#39;: 2, &#39;010010000010&#39;: 2, &#39;010100100100&#39;: 2, &#39;101010100010&#39;: 2, &#39;010000101000&#39;: 2, &#39;010101010100&#39;: 2, &#39;100101010000&#39;: 2, &#39;000100100101&#39;: 2, &#39;000010010000&#39;: 2, &#39;000000001001&#39;: 2, &#39;000000100000&#39;: 2, &#39;010001010001&#39;: 2, &#39;100101000000&#39;: 2, &#39;100000000000&#39;: 2, &#39;001000101000&#39;: 2, &#39;010100010100&#39;: 2, &#39;000001010001&#39;: 2, &#39;000000000100&#39;: 2, &#39;001010001000&#39;: 2, &#39;010100100001&#39;: 2, &#39;100010000100&#39;: 2, &#39;010100001000&#39;: 1, &#39;000100000000&#39;: 1, &#39;010101000000&#39;: 1, &#39;000000110010&#39;: 1, &#39;000100010000&#39;: 1, &#39;100100100010&#39;: 1, &#39;010001010101&#39;: 1, &#39;100010100100&#39;: 1, &#39;000100011001&#39;: 1, &#39;100101000100&#39;: 1, &#39;000101001001&#39;: 1, &#39;100000101000&#39;: 1, &#39;000000101010&#39;: 1, &#39;100010001010&#39;: 1, &#39;101001000000&#39;: 1, &#39;000100101000&#39;: 1, &#39;000010010010&#39;: 1, &#39;001000000011&#39;: 1, &#39;101010000010&#39;: 1, &#39;000000101001&#39;: 1, &#39;100100101010&#39;: 1, &#39;100010100010&#39;: 1, &#39;000000010101&#39;: 1, &#39;000100010100&#39;: 1, &#39;010010010100&#39;: 1, &#39;101010101010&#39;: 1, &#39;001001000001&#39;: 1, &#39;100100001010&#39;: 1, &#39;010100010010&#39;: 1, &#39;010101001000&#39;: 1, &#39;000101001010&#39;: 1, &#39;100010000000&#39;: 1, &#39;001000001001&#39;: 1, &#39;010000100101&#39;: 1, &#39;010101000101&#39;: 1, &#39;010101001001&#39;: 1, &#39;010100010000&#39;: 1, &#39;101000000010&#39;: 1, &#39;000010100100&#39;: 1, &#39;000010101000&#39;: 1, &#39;100100010100&#39;: 1, &#39;001000100100&#39;: 1, &#39;010001001001&#39;: 1, &#39;100100001000&#39;: 1, &#39;000010100001&#39;: 1, &#39;100100000010&#39;: 1, &#39;100001000010&#39;: 1, &#39;101000100100&#39;: 1, &#39;100000010100&#39;: 1, &#39;001010000100&#39;: 1, &#39;001000010010&#39;: 1, &#39;001000010001&#39;: 1, &#39;000100100000&#39;: 1, &#39;010101010101&#39;: 1, &#39;100000001000&#39;: 1, &#39;000100000001&#39;: 1})
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_optimization_27_1.png" src="../_images/tutorials_optimization_27_1.png" />
+</div>
+</div>
+<p>The optimisation algorithm will browse the parameter space in search of an optimal shape of the pulse. In order to do so, we need to assign a score to each set of parameters based on the results we obtain at the end of the Sequence.</p>
+<p>With the optimization algorithm set to look for minimum, the AFM state should have a score of 0 and all other states strictly positive score. The score will be defined based on the <a class="reference external" href="https://journals.aps.org/prx/abstract/10.1103/PhysRevX.8.021070">Néel Structure Factor</a>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}S_{\text{Néel}}=4 \times \sum_{\substack{1\le k, l\le N\\ (k,l) \neq (0,0)}} (-1)^{|k|+|l|} g^{(2)}(k,l)\end{split}\]</div>
+<p>Where <span class="math notranslate nohighlight">\(g^{(2)}\)</span> is the <strong>spin-spin correlation function</strong>:</p>
+<div class="math notranslate nohighlight">
+\[g^{(2)}(k,l)= \frac{1}{N_{k,l}}\sum_{(i,j) = (kR,lR)} \left[ \langle n_i n_j \rangle - \langle n_i \rangle \langle n_j \rangle \right]\]</div>
+<p>The sum is over all the pairs of atoms <span class="math notranslate nohighlight">\((i,j)\)</span> whose distance is <span class="math notranslate nohighlight">\({\bf r}_i - {\bf r}_j = (k R,l R)\)</span> in the atomic array coordinate (<span class="math notranslate nohighlight">\(k\)</span> and <span class="math notranslate nohighlight">\(l\)</span> are integers, such that <span class="math notranslate nohighlight">\(-N\le k, l\le N\)</span>, and <span class="math notranslate nohighlight">\(R\)</span> is the minimum interatomic distance between the atoms).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">occupation</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">N</span><span class="p">):</span>
+    <span class="n">up</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;CSR&quot;</span><span class="p">)</span>
+    <span class="n">prod</span> <span class="o">=</span> <span class="p">[</span><span class="n">qutip</span><span class="o">.</span><span class="n">qeye</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;CSR&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">)]</span>
+    <span class="n">prod</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">up</span> <span class="o">*</span> <span class="n">up</span><span class="o">.</span><span class="n">dag</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">prod</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_corr_pairs</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">N</span><span class="p">):</span>
+    <span class="n">corr_pairs</span> <span class="o">=</span> <span class="p">[[</span><span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">k</span><span class="p">)</span> <span class="o">%</span> <span class="n">N</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">corr_pairs</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_corr_function</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+    <span class="n">corr_pairs</span> <span class="o">=</span> <span class="n">get_corr_pairs</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+    <span class="n">operators</span> <span class="o">=</span> <span class="p">[</span><span class="n">occupation</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">)]</span>
+    <span class="n">covariance</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">qi</span><span class="p">,</span> <span class="n">qj</span> <span class="ow">in</span> <span class="n">corr_pairs</span><span class="p">:</span>
+        <span class="n">covariance</span> <span class="o">+=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="n">operators</span><span class="p">[</span><span class="n">qi</span><span class="p">]</span> <span class="o">*</span> <span class="n">operators</span><span class="p">[</span><span class="n">qj</span><span class="p">],</span> <span class="n">state</span><span class="p">)</span>
+        <span class="n">covariance</span> <span class="o">-=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="n">operators</span><span class="p">[</span><span class="n">qi</span><span class="p">],</span> <span class="n">state</span><span class="p">)</span> <span class="o">*</span> <span class="n">qutip</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span>
+            <span class="n">operators</span><span class="p">[</span><span class="n">qj</span><span class="p">],</span> <span class="n">state</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">covariance</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">corr_pairs</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_neel_structure_factor</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">reg</span><span class="o">.</span><span class="n">qubits</span><span class="p">)</span>
+    <span class="n">st_fac</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">N</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">N</span> <span class="o">//</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">kk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">st_fac</span> <span class="o">+=</span> <span class="mi">4</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="n">kk</span> <span class="o">*</span> <span class="n">get_corr_function</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">st_fac</span>
+</pre></div>
+</div>
+</div>
+<p><span class="math notranslate nohighlight">\(S_{Néel}\)</span> should reach its maximum for the AFM state. Let’s check with the superposition of two checkerboard patterns:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create antiferromagnetic state as the superposition of the two checkerboard patterns:</span>
+<span class="n">AFM1</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">k</span> <span class="o">%</span> <span class="mi">2</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">)])</span>
+<span class="n">AFM2</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">)])</span>
+<span class="n">AFM_state</span> <span class="o">=</span> <span class="p">(</span><span class="n">AFM1</span> <span class="o">+</span> <span class="n">AFM2</span><span class="p">)</span><span class="o">.</span><span class="n">unit</span><span class="p">()</span>
+
+<span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">process_time</span><span class="p">()</span>
+<span class="n">S_max</span> <span class="o">=</span> <span class="n">get_neel_structure_factor</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">AFM_state</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;S_Neel(AFM state) =&quot;</span><span class="p">,</span> <span class="n">S_max</span><span class="p">)</span>
+<span class="n">t2</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">process_time</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;computed in&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">t2</span> <span class="o">-</span> <span class="n">t1</span><span class="p">),</span> <span class="s2">&quot;sec&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+S_Neel(AFM state) = 13.0
+computed in 0.16362778000000056 sec
+</pre></div></div>
+</div>
+<p>Since our optimizer will minimize the score function, we take <span class="math notranslate nohighlight">\(1-S_{Néel}\)</span> for the score. The score function is then a function that:</p>
+<ul class="simple">
+<li><p>takes as input the <span class="math notranslate nohighlight">\(2m\)</span> parameters describing <span class="math notranslate nohighlight">\(\Omega\)</span> and <span class="math notranslate nohighlight">\(\delta\)</span>;</p></li>
+<li><p>generates the Sequence associated with these <span class="math notranslate nohighlight">\(2m\)</span> parameters;</p></li>
+<li><p>submits this Sequence to a backend (here, we take <code class="docutils literal notranslate"><span class="pre">QutipBackendV2</span></code>);</p></li>
+<li><p>computes <span class="math notranslate nohighlight">\(1-S_{Néel}\)</span> from the obtained results.</p></li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">score</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes the score associated with a set of parameters.&quot;&quot;&quot;</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">AnalogDevice</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ising&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">create_interp_pulse</span><span class="p">(</span><span class="n">params</span><span class="p">[:</span><span class="n">m</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="n">m</span><span class="p">:]),</span> <span class="s2">&quot;ising&quot;</span><span class="p">)</span>
+
+    <span class="n">simul</span> <span class="o">=</span> <span class="n">QutipBackendV2</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+    <span class="n">sampling</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">final_state</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">num_shots</span><span class="o">=</span><span class="n">N_samples</span><span class="p">)</span>
+    <span class="n">sampled_state</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">sampling</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">/</span> <span class="n">N_samples</span><span class="p">)</span> <span class="o">*</span> <span class="n">qutip</span><span class="o">.</span><span class="n">ket</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;CSR&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">sampling</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+
+    <span class="n">F</span> <span class="o">=</span> <span class="n">get_neel_structure_factor</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">sampled_state</span><span class="p">)</span> <span class="o">/</span> <span class="n">S_max</span>
+
+    <span class="k">return</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">F</span>
+</pre></div>
+</div>
+</div>
+<p>For the Sequence with random parameters, the score is:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">score</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">amp_params</span><span class="p">,</span> <span class="n">det_params</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.8673750769230769
+</pre></div></div>
+</div>
+</section>
+</section>
+<section id="3.-Optimisation">
+<h2>3. Optimisation<a class="headerlink" href="#3.-Optimisation" title="Link to this heading"></a></h2>
+<section id="Bayesian-search">
+<h3>Bayesian search<a class="headerlink" href="#Bayesian-search" title="Link to this heading"></a></h3>
+<p>Bayesian optimisation method has two keywords: model and decide.</p>
+<p>It consists of both a statistical model that simulates the unknown landscape function <span class="math notranslate nohighlight">\(F\)</span> and a decision maker, the acquisition function <span class="math notranslate nohighlight">\(a\)</span>, which indicates where the next evaluation will be most likely to enhance optimization. Two distinct stages are carried out. In the supervised training, <span class="math notranslate nohighlight">\(F\)</span> is surveyed according to an initial space-filling pattern. For small-sized spaces, the probing points <span class="math notranslate nohighlight">\(\{x_i\}\)</span> can be formed into a discrete grid efficiently covering the entire
+search space. However, as the number of dimensions grows, it becomes less resource-consuming to conduct a uniformly random sample of <span class="math notranslate nohighlight">\(n\)</span> points.</p>
+<p>A prior surrogate model of <span class="math notranslate nohighlight">\(F\)</span> is established knowing only its values <span class="math notranslate nohighlight">\(\{F(x_i)\}_{1:n}\)</span> at those <span class="math notranslate nohighlight">\(n\)</span> points. Then, in the research part, each new point of a remaining budget <span class="math notranslate nohighlight">\(M-n\)</span> is iteratively selected and used to update the model. That model provides a posterior probability distribution <span class="math notranslate nohighlight">\(f\)</span>, which approximates <span class="math notranslate nohighlight">\(F\)</span> at every <span class="math notranslate nohighlight">\(x\)</span>. Using Gaussian processes for the modelling enables to get normally distributed <span class="math notranslate nohighlight">\(f(x)\)</span>, fully described by only two
+parameters: a mean and a variance.</p>
+<p>At each step of the algorithm, once the landscape has been approximated over the search space, the acquisition function <span class="math notranslate nohighlight">\(a(x)\)</span> can be updated, being completely determined by the current distribution <span class="math notranslate nohighlight">\(f(x)\)</span>. <span class="math notranslate nohighlight">\(a\)</span> relates to how desirable evaluating <span class="math notranslate nohighlight">\(F\)</span> at <span class="math notranslate nohighlight">\(x\)</span> is expected to be and its straightforward construction makes it a relatively inexpensive function to evaluate and thus to optimise. By focusing alternatively on exploration and exploitation, <span class="math notranslate nohighlight">\(a\)</span> helps to
+locate the next optimal point to query, <span class="math notranslate nohighlight">\(x^{*}\)</span>. It might seem that we just traded one optimization problem for another, but the call cost of <span class="math notranslate nohighlight">\(a\)</span> is usually derisory compared to the black box one. <span class="math notranslate nohighlight">\(F(x^{*})\)</span> is then added to the known values of <span class="math notranslate nohighlight">\(F\)</span> in order to refine the next model.</p>
+<p>After <span class="math notranslate nohighlight">\(M\)</span> calls to <span class="math notranslate nohighlight">\(F\)</span>, the Bayesian algorithm outputs <span class="math notranslate nohighlight">\(x_{opt}\)</span>, the most “useful” point for the experiment, i.e. the supposed global minimum of <span class="math notranslate nohighlight">\(F\)</span> or the point with the smallest mean in case of strong noise for instance.</p>
+<center><p><img alt="4166073d17c846c28d6b6ee19618c153" class="no-scaled-link" src="../_images/Optimization_schema.png" style="width: 700px;" /></p>
+</center></section>
+<section id="Parameters">
+<h3>Parameters<a class="headerlink" href="#Parameters" title="Link to this heading"></a></h3>
+<p>We are probing the parameter space cons a <span class="math notranslate nohighlight">\(2m\)</span>-dimensional hyper-rectangle <span class="math notranslate nohighlight">\([0,\Omega_{max}]^m\times[\delta_0,\delta_f]^m\)</span> with <span class="math notranslate nohighlight">\(n_r\)</span> training points and a total of <span class="math notranslate nohighlight">\(n_c\)</span> probing points. The optimisation is achieved using <code class="docutils literal notranslate"><span class="pre">gp_minimize</span></code> from the module <code class="docutils literal notranslate"><span class="pre">scikit-optimize</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">bounds</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">Omega_max</span><span class="p">)]</span> <span class="o">*</span> <span class="n">m</span> <span class="o">+</span> <span class="p">[(</span><span class="n">delta_0</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">)]</span> <span class="o">*</span> <span class="n">m</span>
+
+<span class="n">n_r</span> <span class="o">=</span> <span class="mi">30</span>
+<span class="n">n_c</span> <span class="o">=</span> <span class="mi">120</span>
+
+<span class="n">RESULT</span> <span class="o">=</span> <span class="n">gp_minimize</span><span class="p">(</span>
+    <span class="n">score</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">n_random_starts</span><span class="o">=</span><span class="n">n_r</span><span class="p">,</span> <span class="n">n_calls</span><span class="o">=</span><span class="n">n_c</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Performance">
+<h3>Performance<a class="headerlink" href="#Performance" title="Link to this heading"></a></h3>
+<p>To ensure that the optimisation is well-designed, i.e. enough but not too many steps, we plot its performance in terms of the minimum score found after <span class="math notranslate nohighlight">\(n_{c}\)</span> to the score function.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">sort_improv</span><span class="p">(</span><span class="n">RESULT</span><span class="p">):</span>
+    <span class="n">score_vals</span> <span class="o">=</span> <span class="n">RESULT</span><span class="o">.</span><span class="n">func_vals</span>
+    <span class="nb">min</span> <span class="o">=</span> <span class="n">score_vals</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">score_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">score_vals</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">&lt;</span> <span class="nb">min</span><span class="p">:</span>
+            <span class="nb">min</span> <span class="o">=</span> <span class="n">s</span>
+            <span class="n">score_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">min</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">score_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">min</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">score_list</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">semilogy</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_c</span><span class="p">),</span> <span class="n">sort_improv</span><span class="p">(</span><span class="n">RESULT</span><span class="p">),</span> <span class="s2">&quot;r-&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$n_</span><span class="si">{calls}</span><span class="s2">$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Score reached&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">([</span><span class="s2">&quot;1 run&quot;</span><span class="p">],</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_c</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_optimization_43_0.png" src="../_images/tutorials_optimization_43_0.png" />
+</div>
+</div>
+<p>Since Bayesian optimisation is a stochastic algorithm, its results may vary between different runs. A 5-run average convergence of the algorithm for the same parameters is shown below. The scores achieved after the total number of calls all remain within an appreciable range.</p>
+<center><p><img alt="650966471ef240ec956bbe80de4cdb9c" class="no-scaled-link" src="../_images/Optimization_Average_Conv.png" style="width: 550px;" /></p>
+</center></section>
+<section id="Optimised-pulse">
+<h3>Optimised pulse<a class="headerlink" href="#Optimised-pulse" title="Link to this heading"></a></h3>
+<p>An interpolated pulse is produced based on the optimised parameters RESULT.x and then added to a new sequence.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">AnalogDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ising&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">P</span> <span class="o">=</span> <span class="n">create_interp_pulse</span><span class="p">(</span><span class="n">RESULT</span><span class="o">.</span><span class="n">x</span><span class="p">[:</span><span class="n">m</span><span class="p">],</span> <span class="n">RESULT</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">m</span><span class="p">:])</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s2">&quot;ising&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_optimization_46_0.png" src="../_images/tutorials_optimization_46_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">simul</span> <span class="o">=</span> <span class="n">QutipBackendV2</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">sampling</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">final_state</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">num_shots</span><span class="o">=</span><span class="n">N_samples</span><span class="p">)</span>
+<span class="n">sampled_state</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">sampling</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">*</span> <span class="n">qutip</span><span class="o">.</span><span class="n">ket</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">sampling</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+<span class="p">)</span>
+
+<span class="n">s_neel_sampled</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">get_neel_structure_factor</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">sampled_state</span><span class="p">),</span> <span class="mi">3</span><span class="p">)</span>
+<span class="n">most_freq</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sampling</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">}</span>
+
+<span class="nb">print</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">&quot;Most frequent bitstrings measured (</span><span class="si">{</span><span class="n">N_samples</span><span class="si">}</span><span class="s2"> measurements)&quot;</span><span class="p">,</span> <span class="n">most_freq</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;S_Neel (final_sampled) = </span><span class="si">{</span><span class="n">s_neel_sampled</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">most_freq</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="nb">list</span><span class="p">(</span><span class="n">most_freq</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">rotation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Most frequent bitstrings measured (1000 measurements) {&#39;101010101010&#39;: 297, &#39;010101010101&#39;: 325, &#39;010001010101&#39;: 11, &#39;010010101010&#39;: 21, &#39;100010101010&#39;: 17, &#39;100100101010&#39;: 13, &#39;010100010101&#39;: 13, &#39;001010101001&#39;: 13, &#39;010100100101&#39;: 17, &#39;010101000101&#39;: 11, &#39;010101010010&#39;: 22, &#39;001001010101&#39;: 11, &#39;010010010101&#39;: 15, &#39;101010100100&#39;: 15, &#39;101010100010&#39;: 11, &#39;101000101010&#39;: 12, &#39;001010101010&#39;: 11}
+S_Neel (final_sampled) = 9.713
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_optimization_47_1.png" src="../_images/tutorials_optimization_47_1.png" />
+</div>
+</div>
+<p>The final state is an Anti-Ferromagnetic state, as a superposition of the two checkerboard states, <span class="math notranslate nohighlight">\(\left|010101010101\right&gt;\)</span> and <span class="math notranslate nohighlight">\(\left|101010101010\right&gt;\)</span> !</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>To go further</strong>:</p>
+<p>The optimization procedure presented here can be used to minimize other score functions. For instance, it can be used to find the solution of a <a class="reference internal" href="qubo.html"><span class="doc">QUBO problem</span></a> or the <a class="reference internal" href="mwis.html"><span class="doc">Maximally Weighted Independent Set of a graph</span></a>.</p>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="phase_shifts_vz_gates.html" class="btn btn-neutral float-left" title="Phase Shifts and Virtual Z gates" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="qubo.html" class="btn btn-neutral float-right" title="QAA to solve a QUBO problem" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

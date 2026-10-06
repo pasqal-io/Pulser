@@ -1,0 +1,408 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Programming a neutral-atom QPU &mdash; Pulser 1.6.3 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=452006c5"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <script src="_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Tutorial: Programming with Pulser" href="tutorials/creating.html" />
+    <link rel="prev" title="Installation" href="installation.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.6.3" /><meta name="readthedocs-resolver-filename" content="/programming.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Pulser
+              <img src="_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Programming a neutral-atom QPU</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#atoms-encode-the-state">1. Atoms encode the state</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#hamiltonian-evolves-the-state">2. Hamiltonian evolves the state</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#driving-hamiltonian">2.1. Driving Hamiltonian</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#interaction-hamiltonian">2.2. Interaction Hamiltonian</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#writing-a-pulser-program">Writing a Pulser program</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pick-a-device">1. Pick a Device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#create-the-register">2. Create the Register</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pick-the-channels">3. Pick the Channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#add-the-pulses">4. Add the Pulses</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Programming a neutral-atom QPU</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/programming.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="programming-a-neutral-atom-qpu">
+<h1>Programming a neutral-atom QPU<a class="headerlink" href="#programming-a-neutral-atom-qpu" title="Link to this heading"></a></h1>
+<p>Pulser establishes a framework for programming Quantum Processing Units (QPUs) based on neutral atoms (also named <em>cold-atom Quantum Processing Units</em>). In this page, you will learn:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#introduction"><span class="std std-ref"><strong>What mathematical objects are you programming with Pulser?</strong></span></a> In quantum computing, the evolution of a quantum state is defined by an Hamiltonian. What is a quantum state in Pulser? What are the Hamiltonians that can be defined in Pulser?</p></li>
+<li><p><a class="reference internal" href="#writing-a-pulser-program"><span class="std std-ref"><strong>How to program these mathematical objects with Pulser?</strong></span></a> How do you define the quantum state in Pulser? How do you define the Hamiltonian? We give you a step-by-step guide on how to create a quantum program using Pulser.</p></li>
+</ul>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading"></a></h2>
+<section id="atoms-encode-the-state">
+<h3>1. Atoms encode the state<a class="headerlink" href="#atoms-encode-the-state" title="Link to this heading"></a></h3>
+<p>Neutral atoms store the quantum information in their energy levels (also known as <a class="reference internal" href="conventions.html"><span class="std std-doc"><em>eigenstates</em></span></a>). When only two eigenstates are used to encode information, each atom is a qubit. If these eigenstates are <span class="math notranslate nohighlight">\(\left|a\right&gt;\)</span> and <span class="math notranslate nohighlight">\(\left|b\right&gt;\)</span>, then the state of an atom is described by <span class="math notranslate nohighlight">\(\left|\psi\right&gt; = \alpha \left|a\right&gt; + \beta \left|b\right&gt;\)</span>, with <span class="math notranslate nohighlight">\(|\alpha|^2 + |\beta|^2 = 1\)</span>.</p>
+<details>
+  <summary>Definition of a quantum state with multiple atoms</summary>
+<p>When multiple atoms are used, the state of the system is described by a linear combination of the <em>eigenstates</em> of the multi-atom system, whose set is obtained by making the cross product of the set of eigenstate of each atom. If each atom is described by <span class="math notranslate nohighlight">\(d\)</span> eigenstates labelled <span class="math notranslate nohighlight">\({\left|a_1\right&gt;, \left|a_2\right&gt;...\left|a_d\right&gt;}\)</span> (each atom is a <em>qudit</em>), and if there are <span class="math notranslate nohighlight">\(N\)</span> atoms in the system, then the state of the whole system is provided by</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\begin{align}
+\left|\Psi\right&gt; &amp;= \sum_{i_1, ..., i_N \in [1, ..., d]} c_{i_1, ..., i_N} \left|a_{i_1}...a_{i_N}\right&gt; \\
+&amp;= c_{1, 1, ..., 1}\left|a_{1}a_{1}...a_{1}\right&gt; + ... + c_{1, 1, ..., d}\left|a_{1}a_{1}...a_{d}\right&gt; + ... + c_{d, d, ..., d}\left|a_{d}a_{d}...a_{d}\right&gt;
+\end{align}
+\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\sum_{i_1, ..., i_N \in [1, ..., d]} |c_{i_1, ..., i_N}|^2 = 1\)</span>. If <span class="math notranslate nohighlight">\(d=2\)</span>, then this becomes</p>
+<div class="math notranslate nohighlight">
+\[
+\left|\Psi\right&gt; = c_{1, 1, ..., 1}\left|a_{1}a_{1}...a_{1}\right&gt; + c_{1, 1, ..., 2}\left|a_{1}a_{1}...a_{2}\right&gt; + ... + c_{2, 2, ..., 2}\left|a_{2}a_{2}...a_{2}\right&gt;
+\]</div>
+<p>If <span class="math notranslate nohighlight">\(d=2\)</span> and <span class="math notranslate nohighlight">\(N=1\)</span>, you have the state of a qubit as above <span class="math notranslate nohighlight">\(\left|\Psi\right&gt; = c_{1}\left|a_{1}\right&gt; + c_{2}\left|a_{2}\right&gt;\)</span>.</p>
+</details>
+<br>
+</section>
+<section id="hamiltonian-evolves-the-state">
+<h3>2. Hamiltonian evolves the state<a class="headerlink" href="#hamiltonian-evolves-the-state" title="Link to this heading"></a></h3>
+<p>In quantum physics, the state of a quantum system evolves along time following the Schrödinger equation:</p>
+<div class="math notranslate nohighlight">
+\[i\frac{d\left|\Psi\right&gt;(t)}{dt} = \frac{H(t)}{\hbar} \left|\Psi\right&gt;(t)\]</div>
+<p>Here <span class="math notranslate nohighlight">\(H(t)\)</span> is the Hamiltonian describing the evolution of the system. For a system of atoms in the initial state <span class="math notranslate nohighlight">\(\left|\Psi_0\right&gt;\)</span>, the final state of the system after a time <span class="math notranslate nohighlight">\(\Delta t\)</span> is:</p>
+<div class="math notranslate nohighlight">
+\[ \left|\Psi_f\right&gt; = \mathcal{T}\exp\left(-\frac{i}{\hbar}\int_0^{\Delta t} H(t) dt\right)\left|\Psi_0\right&gt;\]</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The equation below uses the <a class="reference internal" href="conventions.html#indexed-operator"><span class="std std-ref">Indexed Operator</span></a> notation.</p>
+</div>
+<p>The Hamiltonian describing the evolution of the system can be written as</p>
+<div class="math notranslate nohighlight">
+\[
+H(t) = \sum_i \left (H^D_i(t) + \sum_{j&lt;i}H^\text{int}_{ij} \right),
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(H^D_i\)</span> is the driving Hamiltonian for atom <span class="math notranslate nohighlight">\(i\)</span> and
+<span class="math notranslate nohighlight">\(H^\text{int}_{ij}\)</span> is the interaction Hamiltonian between atoms <span class="math notranslate nohighlight">\(i\)</span>
+and <span class="math notranslate nohighlight">\(j\)</span>.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p><strong>Pulser provides you the tools to program this Hamiltonian</strong>.</p>
+</div>
+<section id="driving-hamiltonian">
+<h4>2.1. Driving Hamiltonian<a class="headerlink" href="#driving-hamiltonian" title="Link to this heading"></a></h4>
+<p>The driving Hamiltonian describes the effect of a pulse on two energy levels of an individual atom, <span class="math notranslate nohighlight">\(|a\rangle\)</span> and <span class="math notranslate nohighlight">\(|b\rangle\)</span>. A pulse is determined by its duration <span class="math notranslate nohighlight">\(\Delta t\)</span>, its Rabi frequency <span class="math notranslate nohighlight">\(\Omega(t)\)</span>, its detuning <span class="math notranslate nohighlight">\(\delta(t)\)</span> and its phase <span class="math notranslate nohighlight">\(\phi\)</span> (constant along the duration of the pulse). Between <span class="math notranslate nohighlight">\(0\)</span> and <span class="math notranslate nohighlight">\(\Delta t\)</span>, the driving Hamiltonian is:</p>
+<div class="math notranslate nohighlight">
+\[
+H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-i\phi} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{i\phi} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
+\]</div>
+<details>
+  <summary>Rotations on the Bloch sphere</summary>
+<p>In the Bloch sphere representation, this Hamiltonian describes a rotation around the axis <span class="math notranslate nohighlight">\(\overrightarrow{\Omega}(t) = (\Omega(t)\cos(\phi), -\Omega(t)\sin(\phi), -\delta(t))^T\)</span>, with angular velocity <span class="math notranslate nohighlight">\(\Omega_{eff}(t) = |\overrightarrow{\Omega}(t)| = \sqrt{\Omega^2(t) + \delta^2(t)}\)</span>.</p>
+<p>For a resonant pulse (<span class="math notranslate nohighlight">\(\delta(t)=0\)</span>) of duration <span class="math notranslate nohighlight">\(\Delta t\)</span>, we rotate of an angle <span class="math notranslate nohighlight">\(\int_0^{\Delta t} \Omega (t) dt\)</span> around the fixed axis <span class="math notranslate nohighlight">\((\cos(\phi), -\sin(\phi), 0)\)</span> (on the equator of the Bloch sphere).</p>
+<figure class="align-center" id="id1">
+<a class="reference internal image-reference" href="_images/bloch_rotation_a_b.png"><img alt="Representation of the drive Hamiltonian's dynamics as a rotation in the Bloch sphere." src="_images/bloch_rotation_a_b.png" style="width: 300px;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Representation of the drive Hamiltonian’s dynamics as a rotation in the Bloch sphere. The coherent excitation is driven between a lower energy level, <span class="math notranslate nohighlight">\(|a\rangle\)</span>, and a higher energy level,
+<span class="math notranslate nohighlight">\(|b\rangle\)</span>, with Rabi frequency <span class="math notranslate nohighlight">\(\Omega(t)\)</span>, detuning <span class="math notranslate nohighlight">\(\delta(t)\)</span> and phase <span class="math notranslate nohighlight">\(\phi\)</span>.</span><a class="headerlink" href="#id1" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+</details>
+<br>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>With Pulser, you program the driving Hamiltonian by setting <span class="math notranslate nohighlight">\(\Omega(t)\)</span>, <span class="math notranslate nohighlight">\(\delta(t)\)</span> and <span class="math notranslate nohighlight">\(\phi(t)\)</span>, all the while Pulser ensures that you respect the constraints of your chosen device.</p>
+</div>
+</section>
+<section id="interaction-hamiltonian">
+<h4>2.2. Interaction Hamiltonian<a class="headerlink" href="#interaction-hamiltonian" title="Link to this heading"></a></h4>
+<p>The interaction Hamiltonian depends on the distance between the atoms <span class="math notranslate nohighlight">\(i\)</span> and <span class="math notranslate nohighlight">\(j\)</span>, <span class="math notranslate nohighlight">\(R_{ij}\)</span>, and the energy levels in which the information is encoded in these atoms, that define the interaction between the atoms <span class="math notranslate nohighlight">\(\hat{U}_{ij}\)</span></p>
+<div class="math notranslate nohighlight">
+\[
+H^\text{int}_{ij} = \hat{U}_{ij}(R_{ij})
+\]</div>
+<p>The interaction operator <span class="math notranslate nohighlight">\(\hat{U}_{ij}\)</span> is composed of an entangling operator and an interaction strength.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The interaction Hamiltonian is constant over time. It is always on, no matter the values of the drive Hamiltonian (even if the values of the parameters <span class="math notranslate nohighlight">\(\Omega\)</span>, <span class="math notranslate nohighlight">\(\delta\)</span>, <span class="math notranslate nohighlight">\(\phi\)</span> are equal to <span class="math notranslate nohighlight">\(0\)</span> over a time <span class="math notranslate nohighlight">\(\Delta t\)</span>).</p>
+</div>
+<section id="ising-hamiltonian">
+<h5>Ising Hamiltonian<a class="headerlink" href="#ising-hamiltonian" title="Link to this heading"></a></h5>
+<p>If the Rydberg state <span class="math notranslate nohighlight">\(\left|r\right&gt;\)</span> is involved in the computation, then</p>
+<div class="math notranslate nohighlight">
+\[
+\hat{U}_{ij}(R_{ij}) = \frac{C_6}{R_{ij}^6} \hat{n}_i \hat{n}_j
+\]</div>
+<details>
+  <summary>Interaction strength and entangling operator</summary>
+<ul class="simple">
+<li><p>The interaction strength is <span class="math notranslate nohighlight">\(\frac{C_6}{R_{ij}^6}\)</span>, with <span class="math notranslate nohighlight">\(C_6\)</span> the Ising interaction coefficient that depends on the principal quantum number of the Rydberg state.</p></li>
+<li><p>The entangling operator between atom <span class="math notranslate nohighlight">\(i\)</span> and <span class="math notranslate nohighlight">\(j\)</span> is <span class="math notranslate nohighlight">\(\hat{n}_i\hat{n}_j = |r\rangle\langle r|_i |r\rangle\langle r|_j\)</span>.</p></li>
+</ul>
+</details>
+<p>Together with the driving Hamiltonian, this interaction encodes the <em>Ising Hamiltonian</em> and is the <strong>most common choice in neutral-atom devices.</strong></p>
+</section>
+<section id="xy-hamiltonian">
+<h5>XY Hamiltonian<a class="headerlink" href="#xy-hamiltonian" title="Link to this heading"></a></h5>
+<p>If the information is stored in the Rydberg states <span class="math notranslate nohighlight">\(\left|0\right&gt;\)</span> and <span class="math notranslate nohighlight">\(\left|1\right&gt;\)</span> (the so-called <code class="docutils literal notranslate"><span class="pre">XY</span></code> basis), then</p>
+<div class="math notranslate nohighlight">
+\[
+\hat{U}_{ij}(R_{ij}) =\frac{C_3}{R_{ij}^3} (|1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j)
+\]</div>
+<details>
+  <summary>Interaction strength and entangling operator</summary>
+<ul class="simple">
+<li><p>The interaction strength is <span class="math notranslate nohighlight">\(\frac{C_3}{R_{ij}^3}\)</span>, with <span class="math notranslate nohighlight">\(C_3\)</span> a coefficient that depends on the energy levels used to encode <span class="math notranslate nohighlight">\(\left|0\right&gt;\)</span> and <span class="math notranslate nohighlight">\(\left|1\right&gt;\)</span>.</p></li>
+<li><p>The entangling operator between atom <span class="math notranslate nohighlight">\(i\)</span> and <span class="math notranslate nohighlight">\(j\)</span> is <span class="math notranslate nohighlight">\(\hat{\sigma}_i^{+}\hat{\sigma}_j^{-} + \hat{\sigma}_i^{-}\hat{\sigma}_j^{+} = |1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j\)</span>.</p></li>
+</ul>
+</details>
+<p>This interaction hamiltonian is associated with the <em>XY Hamiltonian</em> and is a less common mode of operation, usually accessible only in select neutral-atom devices.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>With Pulser, you program the interaction Hamiltonian by setting the distance between atoms, <span class="math notranslate nohighlight">\(R_{ij}\)</span>. Additionally, the choice of eigenstates used in the computation and the Rydberg level(s) targeted by the device fully determine the interaction strength. Most commonly, the ground and Rydberg states (<span class="math notranslate nohighlight">\(\left|g\right&gt;\)</span> and <span class="math notranslate nohighlight">\(\left|r\right&gt;\)</span>) are used, such that</p>
+<div class="math notranslate nohighlight">
+\[H^\text{int}_{ij} = \frac{C_6}{R_{ij}^6} \hat{n}_i\hat{n}_j\]</div>
+<p>When providing the distance between atoms, Pulser ensures that you respect the constraints of your chosen device.</p>
+</div>
+</section>
+</section>
+</section>
+</section>
+<section id="writing-a-pulser-program">
+<h2>Writing a Pulser program<a class="headerlink" href="#writing-a-pulser-program" title="Link to this heading"></a></h2>
+<p>As outlined above, Pulser lets you program an Hamiltonian (<a class="reference internal" href="#hamiltonian-evolves-the-state"><span class="std std-ref">the Hamiltonian <span class="math notranslate nohighlight">\(H\)</span></span></a>) so that you can manipulate the quantum state of a system of atoms. The series of necessary instructions is encapsulated in the so-called Pulser <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>. Here is a step-by-step guide to create your own Pulser <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>.</p>
+<section id="pick-a-device">
+<h3>1. Pick a Device<a class="headerlink" href="#pick-a-device" title="Link to this heading"></a></h3>
+<figure class="align-center">
+<a class="reference internal image-reference" href="_images/decision_diagram_device.png"><img alt="Decision Diagram to select a Device for the computation" src="_images/decision_diagram_device.png" style="width: 600px;" />
+</a>
+</figure>
+<p>The <code class="docutils literal notranslate"><span class="pre">Device</span></code> you select will dictate some parameters and constrain others. For instance, the value of the <span class="math notranslate nohighlight">\(C_6\)</span> and <span class="math notranslate nohighlight">\(C_3\)</span> coefficients of the <a class="reference internal" href="#interaction-hamiltonian"><span class="std std-ref">interaction Hamiltonian</span></a> are defined by the device. Notably, the <code class="docutils literal notranslate"><span class="pre">Device</span></code> defines the list of <code class="docutils literal notranslate"><span class="pre">Channels</span></code> that can be used in the computation, which have a direct impact on the Hamiltonian that can be implemented.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>For a complete view of the constraints introduced by the device, <a class="reference internal" href="hardware.html"><span class="std std-doc">check its description</span></a>.</p>
+</div>
+</section>
+<section id="create-the-register">
+<h3>2. Create the Register<a class="headerlink" href="#create-the-register" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">Register</span></code> defines the position of the atoms. This determines:</p>
+<ul class="simple">
+<li><p>the number of atoms to use in the quantum computation, i.e, the size of the system (let’s note it <span class="math notranslate nohighlight">\(N\)</span>).</p></li>
+<li><p>the distance between the atoms, the <span class="math notranslate nohighlight">\(R_{ij}\ (1\le i, j\le N)\)</span> parameters in the <a class="reference internal" href="#interaction-hamiltonian"><span class="std std-ref">interaction Hamiltonian</span></a>.</p></li>
+</ul>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>For an in-depth view on Register creation, check out <a class="reference internal" href="register.html"><span class="std std-doc">this page</span></a>.</p>
+</div>
+</section>
+<section id="pick-the-channels">
+<h3>3. Pick the Channels<a class="headerlink" href="#pick-the-channels" title="Link to this heading"></a></h3>
+<p>A <code class="docutils literal notranslate"><span class="pre">Channel</span></code> targets the transition between two energy levels. Therefore, picking channels defines the energy levels that will be used in the computation. The channels must be picked from the <code class="docutils literal notranslate"><span class="pre">Device.channels</span></code>, so your device selection should take into account the channels it supports.</p>
+<p>Picking the channel will initialize the state of the system, and fully determine the <a class="reference internal" href="#interaction-hamiltonian"><span class="std std-ref">interaction Hamiltonian</span></a>:</p>
+<ul class="simple">
+<li><p>If the selected Channel is the <code class="docutils literal notranslate"><span class="pre">Rydberg</span></code> or the <code class="docutils literal notranslate"><span class="pre">Raman</span></code> channel, the system is initialized in <span class="math notranslate nohighlight">\(\left|gg...g\right&gt;\)</span> and the interaction Hamiltonian is the <a class="reference internal" href="#ising-hamiltonian"><span class="std std-ref">Ising Hamiltonian</span></a></p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[H^\text{int}_{ij} =\frac{C_6}{R_{ij}^6}|r\rangle\langle r|_i |r\rangle\langle r|_j\]</div>
+<ul class="simple">
+<li><p>If the selected Channel is the <code class="docutils literal notranslate"><span class="pre">Microwave</span></code> channel, the system is initialized in <span class="math notranslate nohighlight">\(\left|00...0\right&gt;\)</span> and the interaction Hamiltonian is the <a class="reference internal" href="#xy-hamiltonian"><span class="std std-ref">XY Hamiltonian</span></a></p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[H^\text{int}_{ij} =\frac{C_3}{R_{ij}^3}|1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j\]</div>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>At this stage, the <a class="reference internal" href="#interaction-hamiltonian"><span class="std std-ref">interaction Hamiltonian</span></a> is fully determined.</p>
+</div>
+<p>A <code class="docutils literal notranslate"><span class="pre">Channel</span></code> is also characterized by its addressing, which defines the number of atoms that are going to be targeted by a pulse. If the addressing of a <code class="docutils literal notranslate"><span class="pre">Channel</span></code> is <code class="docutils literal notranslate"><span class="pre">Global</span></code>, all the atoms will experience the same pulse targetting the same transition. In the <a class="reference internal" href="#hamiltonian-evolves-the-state"><span class="std std-ref">Hamiltonian <span class="math notranslate nohighlight">\(H\)</span></span></a>, all the driving Hamiltonians <span class="math notranslate nohighlight">\(H^D_i\)</span> are expressed as</p>
+<div class="math notranslate nohighlight">
+\[
+H^D_i(t) / \hbar = \frac{\Omega(t)}{2} e^{-j\phi(t)} |a\rangle_i \langle b|_i + \frac{\Omega(t)}{2} e^{j\phi(t)} |b\rangle_i\langle a|_i - \delta(t) |b\rangle_i\langle b|_i
+\]</div>
+<p>If the addressing of a <code class="docutils literal notranslate"><span class="pre">Channel</span></code> is <code class="docutils literal notranslate"><span class="pre">Local</span></code>, then only certain atoms (the “targets”) will experience the pulse and have their evolution follow <span class="math notranslate nohighlight">\(H^D_i\)</span>. The driving Hamiltonian of the other atoms is <span class="math notranslate nohighlight">\(H^D_i = \hat{0}_i\)</span>. The Hamiltonian <span class="math notranslate nohighlight">\(H\)</span> can also be rewritten:</p>
+<div class="math notranslate nohighlight">
+\[
+H(t) = \sum_{i \in targets} H^D_i(t) + \sum_i \sum_{j&lt;i}H^\text{int}_{ij},
+\]</div>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>The addressing of a <code class="docutils literal notranslate"><span class="pre">Channel</span></code> defines the number of atoms whose transition will be targeted by a pulse.</p>
+<p>The most common addressing for a <code class="docutils literal notranslate"><span class="pre">Channel</span></code> is the <code class="docutils literal notranslate"><span class="pre">Global</span></code> one: all the atoms evolve under the same <a class="reference internal" href="#driving-hamiltonian"><span class="std std-ref">driving Hamiltonian</span></a>.</p>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>For a thorough description of what a Channel is and some tips on how to select a Channel, <a class="reference internal" href="hardware.html"><span class="std std-doc">check this page</span></a>.</p>
+</div>
+</section>
+<section id="add-the-pulses">
+<h3>4. Add the Pulses<a class="headerlink" href="#add-the-pulses" title="Link to this heading"></a></h3>
+<p>By adding pulses to a channel, we incrementally construct the <a class="reference internal" href="#driving-hamiltonian"><span class="std std-ref">driving Hamiltonian</span></a>:</p>
+<ul class="simple">
+<li><p>Each <code class="docutils literal notranslate"><span class="pre">Pulse</span></code> defines the Rabi frequency <span class="math notranslate nohighlight">\(\Omega(t)\)</span>, the detuning <span class="math notranslate nohighlight">\(\delta(t)\)</span> and the phase <span class="math notranslate nohighlight">\(\phi\)</span> of the driving Hamiltonian over a duration <span class="math notranslate nohighlight">\(\Delta t\)</span>. Similarly, a delay sets all these parameters to zero for a given amount of time.</p></li>
+<li><p>The channel dictates the states <span class="math notranslate nohighlight">\(\left|a\right&gt;\)</span> and <span class="math notranslate nohighlight">\(\left|b\right&gt;\)</span> of the driving Hamiltonian.</p></li>
+</ul>
+<p>By applying a series of pulses and delays, one defines the entire driving Hamiltonian of each atom over time.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>For an in-depth view on Pulse creation, check out <a class="reference internal" href="pulses.html"><span class="std std-doc">this page</span></a>.</p>
+</div>
+</section>
+</section>
+<section id="conclusion">
+<h2>Conclusion<a class="headerlink" href="#conclusion" title="Link to this heading"></a></h2>
+<p>We have successfully defined the <a class="reference internal" href="#hamiltonian-evolves-the-state"><span class="std std-ref">Hamiltonian</span></a> <span class="math notranslate nohighlight">\(H\)</span> describing the evolution of the system over time, by:</p>
+<ul class="simple">
+<li><p>Picking a <code class="docutils literal notranslate"><span class="pre">Device</span></code>, which defines the value of the <span class="math notranslate nohighlight">\(C_6\)</span> or <span class="math notranslate nohighlight">\(C_3\)</span> coefficients.</p></li>
+<li><p>Creating a <code class="docutils literal notranslate"><span class="pre">Register</span></code> of atoms, which defines the number of atoms used and the distance between them, <span class="math notranslate nohighlight">\(R_{ij}\)</span>.</p></li>
+<li><p>Selecting the <code class="docutils literal notranslate"><span class="pre">Channels</span></code> of the <code class="docutils literal notranslate"><span class="pre">Device</span></code> to use, which define the energy levels of the atoms to use - this step completely defines the <a class="reference internal" href="#interaction-hamiltonian"><span class="std std-ref">interaction Hamiltonian</span></a>. The addressing property of each <code class="docutils literal notranslate"><span class="pre">Channel</span></code> also dictates the atoms that will be targeted by the <code class="docutils literal notranslate"><span class="pre">Pulse</span></code>.</p></li>
+<li><p>Adding <code class="docutils literal notranslate"><span class="pre">Pulse</span></code> and delays to the <code class="docutils literal notranslate"><span class="pre">Channel</span></code>s defines the <a class="reference internal" href="#driving-hamiltonian"><span class="std std-ref">driving Hamiltonian</span></a> of each atom along time.</p></li>
+</ul>
+<p>You can now simulate your first Hamiltonian by programming your first <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>! <a class="reference internal" href="tutorials/creating.html"><span class="std std-doc">In this tutorial</span></a>, you will simulate the evolution of the state of an atom initialized in <span class="math notranslate nohighlight">\(\left|g\right&gt;\)</span> under a Hamiltonian <span class="math notranslate nohighlight">\(H(t)=\frac{\Omega(t)}{2} |g\rangle \langle r|+\frac{\Omega(t)}{2} |r\rangle\langle g|\)</span>, with <span class="math notranslate nohighlight">\(\Omega\)</span> chosen such that the final state of the atom is the excited state <span class="math notranslate nohighlight">\(\left|r\right&gt;\)</span>.</p>
+<p>Many concepts have been introduced here and you might want further explanations.</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Device</span></code> object contains all the constraints and physical quantities that are defined in a QPU. <a class="reference internal" href="hardware.html"><span class="std std-doc">This section in the fundamentals</span></a> details these and provides examples of <code class="docutils literal notranslate"><span class="pre">Devices</span></code>. The <code class="docutils literal notranslate"><span class="pre">VirtualDevices</span></code> were also mentioned in this document (<a class="reference internal" href="#pick-a-device"><span class="std std-ref">here</span></a>), which is a more advanced feature described <a class="reference internal" href="tutorials/virtual_devices.html"><span class="std std-doc">here</span></a>.</p></li>
+<li><p>There are multiple ways of defining a <code class="docutils literal notranslate"><span class="pre">Register</span></code>, as is further detailed <a class="reference internal" href="tutorials/reg_layouts.html"><span class="std std-doc">in this section</span></a>.</p></li>
+<li><p>The energy levels associated with each <code class="docutils literal notranslate"><span class="pre">Channel</span></code> and the interaction Hamiltonian they implement are summed up in <a class="reference internal" href="conventions.html"><span class="std std-doc">the conventions page</span></a>. The channels contain lots of constraints and physical informations, they are detailed in <a class="reference internal" href="hardware.html"><span class="std std-doc">the same section as the <code class="docutils literal notranslate"><span class="pre">Device</span></code></span></a>.</p></li>
+<li><p>The quantities in a <code class="docutils literal notranslate"><span class="pre">Pulse</span></code> are defined using <code class="docutils literal notranslate"><span class="pre">Waveform</span></code>s, you can read more about these <a class="reference internal" href="tutorials/composite_wfs.html"><span class="std std-doc">on this page</span></a>.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tutorials/creating.html" class="btn btn-neutral float-right" title="Tutorial: Programming with Pulser" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

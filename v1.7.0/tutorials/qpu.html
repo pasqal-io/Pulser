@@ -1,0 +1,608 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QPU Execution &mdash; Pulser 1.7.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=030dc6f6"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Results and Observables" href="../results.html" />
+    <link rel="prev" title="Execution on an Emulator" href="backends.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.7.0" /><meta name="readthedocs-resolver-filename" content="/tutorials/qpu.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Execution on an Emulator</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">QPU Execution</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#1.-Preparation-for-execution-on-QPUBackend">1. Preparation for execution on <code class="docutils literal notranslate"><span class="pre">QPUBackend</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#2.-Creating-the-Pulse-Sequence">2. Creating the Pulse Sequence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#3.-Running-on-a-QPU">3. Running on a QPU</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#3.1.-Executing-on-QPUBackend">3.1. Executing on QPUBackend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.2.-Restoring-RemoteResults">3.2. Restoring RemoteResults</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.3-Retrieving-the-Results">3.3 Retrieving the Results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#4.-Batch-execution-with-parametrized-Sequences">4. Batch execution with parametrized Sequences</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../results.html">Results and Observables</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">QPU Execution</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/qpu.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="QPU-Execution">
+<h1>QPU Execution<a class="headerlink" href="#QPU-Execution" title="Link to this heading"></a></h1>
+<p><em>What you will learn:</em></p>
+<ul class="simple">
+<li><p>how the execution of a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> on a QPU differs from executing it on an emulator;</p></li>
+<li><p>how to execute a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> on a QPU;</p></li>
+<li><p>how to submit multiple jobs using a parametrized <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>s.</p></li>
+</ul>
+<section id="Introduction">
+<h2>Introduction<a class="headerlink" href="#Introduction" title="Link to this heading"></a></h2>
+<p>When the time comes to execute a Pulser <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, there are many options: one can choose to execute it on a QPU or on an emulator, which might happen locally or remotely. All these options are accessible through a unified interface we call a <code class="docutils literal notranslate"><span class="pre">Backend</span></code>.</p>
+<p><strong>This tutorial is a step-by-step guide on how to use a QPU backend for Sequence execution.</strong></p>
+<p>Since we recommend always testing on an emulator beforehand, please make sure you’ve followed the tutorial <a class="reference internal" href="backends.html"><span class="doc">Execution on an Emulator</span></a> first.</p>
+</section>
+<section id="1.-Preparation-for-execution-on-QPUBackend">
+<h2>1. Preparation for execution on <code class="docutils literal notranslate"><span class="pre">QPUBackend</span></code><a class="headerlink" href="#1.-Preparation-for-execution-on-QPUBackend" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Sequence</span></code> execution on a QPU is done through the <code class="docutils literal notranslate"><span class="pre">QPUBackend</span></code>, which is a remote backend. Therefore, it requires a remote backend connection which should be created at the start due to two additional QPU constraints:</p>
+<ol class="arabic simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Device</span></code> must be compatible with the connection. Available devices can be found through <code class="docutils literal notranslate"><span class="pre">connection.fetch_available_devices()</span></code>.</p></li>
+<li><p>If in the chosen device <code class="docutils literal notranslate"><span class="pre">Device.requires_layout</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, the <code class="docutils literal notranslate"><span class="pre">Register</span></code> must be defined from a register layout:</p>
+<ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">Device.accepts_new_layouts</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>, use one of the register layouts calibrated for the chosen <code class="docutils literal notranslate"><span class="pre">Device</span></code> (found under <code class="docutils literal notranslate"><span class="pre">Device.calibrated_register_layouts</span></code>). Check out <a class="reference internal" href="reg_layouts.html"><span class="doc">this tutorial</span></a> for more information on how to define a <code class="docutils literal notranslate"><span class="pre">Register</span></code> from a <code class="docutils literal notranslate"><span class="pre">RegisterLayout</span></code>.</p></li>
+<li><p>Otherwise, we may choose to define our own custom layout or rely on <code class="docutils literal notranslate"><span class="pre">Register.with_automatic_layout()</span></code> to give us a register from an automatically generated register layout that fits our desired register while obeying the device constraints.</p></li>
+</ul>
+</li>
+</ol>
+<p>Let us first create the <code class="docutils literal notranslate"><span class="pre">PasqalCloud</span></code> connection and use it to fetch the <code class="docutils literal notranslate"><span class="pre">FRESNEL_CAN1</span></code> <code class="docutils literal notranslate"><span class="pre">Device</span></code>.</p>
+<div class="admonition note">
+<p>Note that other connections than <code class="docutils literal notranslate"><span class="pre">PasqalCloud</span></code> exist. Some of the connections maintained by Pasqal are documented as part of the <code class="docutils literal notranslate"><span class="pre">pulser-pasqal</span></code> package <a class="reference internal" href="../apidoc/pasqal.html"><span class="doc">here</span></a>.</p>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser_pasqal</span><span class="w"> </span><span class="kn">import</span> <span class="n">PasqalCloud</span>
+
+<span class="n">connection</span> <span class="o">=</span> <span class="n">PasqalCloud</span><span class="p">(</span>
+    <span class="n">username</span><span class="o">=</span><span class="n">USERNAME</span><span class="p">,</span>  <span class="c1"># Your username or email address for the Pasqal Cloud Platform</span>
+    <span class="n">project_id</span><span class="o">=</span><span class="n">PROJECT_ID</span><span class="p">,</span>  <span class="c1"># The ID of the project associated to your account</span>
+    <span class="n">password</span><span class="o">=</span><span class="n">PASSWORD</span><span class="p">,</span>  <span class="c1"># The password for your Pasqal Cloud Platform account</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">fetch_available_devices</span><span class="p">())</span>
+<span class="n">device</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">fetch_available_devices</span><span class="p">()[</span><span class="s2">&quot;FRESNEL_CAN1&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;FRESNEL_CAN1&#39;: FRESNEL_CAN1, &#39;FRESNEL&#39;: FRESNEL}
+</pre></div></div>
+</div>
+<p>Now we can check what options we have for working with layouts. As documented in the tutorial on <a class="reference internal" href="../hardware.html"><span class="doc">hardware specifications</span></a>, we can print the specs for the device. Doing this for <code class="docutils literal notranslate"><span class="pre">FRESNEL_CAN1</span></code> shows that it requires a layout, but it also allows us to define new layouts, which will allow us to just create the desired register from an automatic layout.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">device</span><span class="o">.</span><span class="n">specs</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Register parameters:
+ - Dimensions: 2D
+ - Maximum number of atoms: 100
+ - Maximum distance from origin: 46 µm
+ - Minimum distance between neighbouring atoms: 5 μm
+
+Layout parameters:
+ - Requires layout: Yes
+ - Accepts new layout: Yes
+ - Minimal number of traps: 60
+ - Maximal number of traps: 217
+ - Minimum layout filling fraction: 0.35
+ - Maximum layout filling fraction: 0.55
+
+Device parameters:
+ - Rydberg level: 60
+ - Ising interaction coefficient: 865723.02
+ - Channels can be reused: No
+ - Supported bases: ground-rydberg
+ - Supported states: r, g
+ - SLM Mask: No
+ - Maximum sequence duration: 6000 ns
+ - Maximum number of runs: 1000
+ - Default noise model: NoiseModel(noise_types=(&#39;SPAM&#39;, &#39;dephasing&#39;, &#39;relaxation&#39;), state_prep_error=0.0, p_false_pos=0.025, p_false_neg=0.1, relaxation_rate=0.01, dephasing_rate=0.2222222222222222, hyperfine_dephasing_rate=0.0)
+
+Channels:
+ - &#39;rydberg_global&#39;: Rydberg(addressing=&#39;Global&#39;,
+        max_abs_detuning=62.83185307179586,
+        max_amp=12.566370614359172,
+        min_retarget_interval=None,
+        fixed_retarget_t=None,
+        max_targets=None,
+        clock_period=4,
+        min_duration=16,
+        max_duration=6000,
+        min_avg_amp=0.3141592653589793,
+        mod_bandwidth=5,
+        custom_phase_jump_time=0,
+        eom_config=RydbergEOM(limiting_beam=&lt;RydbergBeam.RED: 2&gt;,
+                              max_limiting_amp=175.92918860102841,
+                              intermediate_detuning=2827.4333882308138,
+                              controlled_beams=(&lt;RydbergBeam.BLUE: 1&gt;,),
+                              mod_bandwidth=26,
+                              custom_buffer_time=240,
+                              multiple_beam_control=False,
+                              blue_shift_coeff=1.0,
+                              red_shift_coeff=2.0),
+        propagation_dir=(0, 1, 0))
+</pre></div></div>
+</div>
+</section>
+<section id="2.-Creating-the-Pulse-Sequence">
+<h2>2. Creating the Pulse Sequence<a class="headerlink" href="#2.-Creating-the-Pulse-Sequence" title="Link to this heading"></a></h2>
+<p>Let’s create the same sequence as in <a class="reference internal" href="backends.html"><span class="doc">Execution on an Emulator</span></a>. The one difference with before is the call to <code class="docutils literal notranslate"><span class="pre">Register.with_automatic_layout</span></code>. To show the effect of this, let’s also draw the register, including the trap sites generated by the automatic layout. <code class="docutils literal notranslate"><span class="pre">FRESNEL_CAN1</span></code> also contains a precalibrated triangular lattice layout with a spacing of <code class="docutils literal notranslate"><span class="pre">5µm</span></code> which we equally could have used for our chosen register. Notice that the automatically generated layout is not the
+same as the precalibrated one: it is not quite triangular.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+
+<span class="c1"># 1. Picking a `Device`</span>
+<span class="c1"># device = connection.fetch_available_devices()[&quot;FRESNEL_CAN1&quot;]</span>
+<span class="c1"># 2. Creating the Register</span>
+<span class="n">R_interatomic</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1"># um</span>
+<span class="n">bare_register</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Register</span><span class="o">.</span><span class="n">hexagon</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">R_interatomic</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+<span class="c1"># Associating a layout to the Register</span>
+<span class="n">register</span> <span class="o">=</span> <span class="n">bare_register</span><span class="o">.</span><span class="n">with_automatic_layout</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+<span class="n">seq</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">register</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+
+<span class="c1"># 3. Picking the channels</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;rydberg_global&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+
+<span class="c1"># 4. Adding the pulses</span>
+
+<span class="c1"># Parameters in rad/µs</span>
+<span class="n">U</span> <span class="o">=</span> <span class="n">device</span><span class="o">.</span><span class="n">interaction_coeff</span> <span class="o">/</span> <span class="n">R_interatomic</span><span class="o">**</span><span class="mi">6</span>
+
+<span class="c1"># Time parameters</span>
+<span class="n">total_duration</span> <span class="o">=</span> <span class="mi">4000</span>  <span class="c1"># in ns</span>
+<span class="n">interp_pts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>  <span class="c1"># between 0 and 1</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="p">(</span>
+        <span class="n">pulser</span><span class="o">.</span><span class="n">InterpolatedWaveform</span><span class="p">(</span>
+            <span class="n">total_duration</span><span class="p">,</span>
+            <span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1e-9</span><span class="p">,</span> <span class="mf">0.22</span><span class="p">,</span> <span class="mf">0.2181</span><span class="p">,</span> <span class="mf">1e-9</span><span class="p">]),</span>
+            <span class="n">times</span><span class="o">=</span><span class="n">interp_pts</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">pulser</span><span class="o">.</span><span class="n">InterpolatedWaveform</span><span class="p">(</span>
+            <span class="n">total_duration</span><span class="p">,</span>
+            <span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.0556</span><span class="p">,</span> <span class="mf">0.332</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span>
+            <span class="n">times</span><span class="o">=</span><span class="n">interp_pts</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="mi">0</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;rydberg_global&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">draw_register</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_qpu_5_0.png" src="../_images/tutorials_qpu_5_0.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_qpu_5_1.png" src="../_images/tutorials_qpu_5_1.png" />
+</div>
+</div>
+</section>
+<section id="3.-Running-on-a-QPU">
+<h2>3. Running on a QPU<a class="headerlink" href="#3.-Running-on-a-QPU" title="Link to this heading"></a></h2>
+<section id="3.1.-Executing-on-QPUBackend">
+<h3>3.1. Executing on QPUBackend<a class="headerlink" href="#3.1.-Executing-on-QPUBackend" title="Link to this heading"></a></h3>
+<p>Running the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> on a <code class="docutils literal notranslate"><span class="pre">QPU</span></code> is very similar to having an emulator run it. The <code class="docutils literal notranslate"><span class="pre">QPUBackend</span></code> automatically determines which QPU to run on from the <code class="docutils literal notranslate"><span class="pre">Device</span></code> specified in the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>. Consequently, we create a <code class="docutils literal notranslate"><span class="pre">QPUBackend</span></code> which, being a remote backend, will require the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> and the <code class="docutils literal notranslate"><span class="pre">Connection</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">QPUBackend</span></code> can take a configuration object to define the default number of shots to take for each job. Note that this value has an upper bound as specified by the <code class="docutils literal notranslate"><span class="pre">Device</span></code>. From the printed device specs above, we can see that the largest possible value is <code class="docutils literal notranslate"><span class="pre">1000</span></code> for <code class="docutils literal notranslate"><span class="pre">FRESNEL_CAN1</span></code>.</p>
+<p>A single bitstring will be measured at the end of each run. More measurements per run are not possible since measuring bitstrings destroys the quantum state, and the sequence will have to be run again.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Note</strong>:</p>
+<p>The number of times that the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> is run on the QPU can also be defined in the <code class="docutils literal notranslate"><span class="pre">run</span></code> method of <code class="docutils literal notranslate"><span class="pre">QPUBackend</span></code>, by providing <code class="docutils literal notranslate"><span class="pre">job_params</span></code>, a list of dictionnaries where the number of runs is defined under the key <code class="docutils literal notranslate"><span class="pre">runs</span></code>. See an example of a <code class="docutils literal notranslate"><span class="pre">run</span></code> exeuction with <code class="docutils literal notranslate"><span class="pre">job_params</span></code> <a class="reference internal" href="#4.-Batch-execution-with-parametrized-Sequences"><span class="std std-ref">below</span></a>.</p>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">config</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">BackendConfig</span><span class="p">(</span><span class="n">default_num_shots</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">backend</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">QPUBackend</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">backend</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Submitted batch </span><span class="si">{</span><span class="n">results</span><span class="o">.</span><span class="n">batch_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">BATCH_ID</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">batch_id</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Submitted batch: b86a95be-e42c-4d36-b53f-0f09cd892abf
+</pre></div></div>
+</div>
+</section>
+<section id="3.2.-Restoring-RemoteResults">
+<h3>3.2. Restoring RemoteResults<a class="headerlink" href="#3.2.-Restoring-RemoteResults" title="Link to this heading"></a></h3>
+<p>It is quite frequent that one has to wait for the results to be available and interrupt the notebook in the mean time. This is not an issue! You can recreate the <code class="docutils literal notranslate"><span class="pre">RemoteResults</span></code> object associated to a batch at any time with the batch ID (see <code class="docutils literal notranslate"><span class="pre">results.batch_id</span></code> above), by doing</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">results</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">RemoteResults</span><span class="p">(</span>
+    <span class="n">BATCH_ID</span><span class="p">,</span> <span class="n">connection</span>  <span class="c1"># ID of the submitted batch</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="3.3-Retrieving-the-Results">
+<h3>3.3 Retrieving the Results<a class="headerlink" href="#3.3-Retrieving-the-Results" title="Link to this heading"></a></h3>
+<p>We can now print the results as they come in, just as for emulator backends.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">get_batch_status</span><span class="p">())</span>
+
+<span class="n">results</span><span class="o">.</span><span class="n">get_available_results</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+BatchStatus.DONE
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;798b18bd-5fab-4d7a-9d1c-4ae27201e36e&#39;: SampledResult(atom_order=(&#39;q0&#39;, &#39;q1&#39;, &#39;q2&#39;, &#39;q3&#39;, &#39;q4&#39;, &#39;q5&#39;, &#39;q6&#39;), meas_basis=&#39;ground-rydberg&#39;, bitstring_counts={&#39;0010101&#39;: 321, &#39;0101010&#39;: 310, &#39;0010100&#39;: 22, &#39;0100010&#39;: 21, &#39;0101000&#39;: 20, &#39;0000101&#39;: 19, &#39;0111010&#39;: 16, &#39;0010001&#39;: 14, &#39;0100100&#39;: 13, &#39;0011101&#39;: 13, &#39;0010111&#39;: 13, &#39;0001010&#39;: 12, &#39;0101011&#39;: 12, &#39;0110101&#39;: 10, &#39;0010011&#39;: 10, &#39;0110010&#39;: 9, &#39;0101001&#39;: 9, &#39;0011010&#39;: 8, &#39;0010010&#39;: 8, &#39;1010101&#39;: 7, &#39;0011001&#39;: 6, &#39;0101110&#39;: 6, &#39;0100110&#39;: 6, &#39;0010110&#39;: 6, &#39;0001001&#39;: 6, &#39;0110100&#39;: 6, &#39;0001101&#39;: 5, &#39;0100101&#39;: 5, &#39;0110110&#39;: 4, &#39;0001000&#39;: 4, &#39;0101100&#39;: 4, &#39;1101010&#39;: 4, &#39;0111000&#39;: 3, &#39;1100100&#39;: 3, &#39;1000001&#39;: 3, &#39;0000001&#39;: 2, &#39;1100010&#39;: 2, &#39;1100000&#39;: 2, &#39;1010100&#39;: 2, &#39;1001111&#39;: 2, &#39;1000100&#39;: 2, &#39;0111110&#39;: 2, &#39;0111101&#39;: 2, &#39;0110111&#39;: 2, &#39;0110011&#39;: 2, &#39;0101111&#39;: 2, &#39;0101101&#39;: 2, &#39;0100001&#39;: 2, &#39;0011000&#39;: 2, &#39;0010000&#39;: 2, &#39;0001011&#39;: 2, &#39;0000100&#39;: 2, &#39;0011111&#39;: 1, &#39;0011110&#39;: 1, &#39;0111100&#39;: 1, &#39;0011100&#39;: 1, &#39;0011011&#39;: 1, &#39;0111111&#39;: 1, &#39;1000000&#39;: 1, &#39;1111011&#39;: 1, &#39;1000111&#39;: 1, &#39;1001000&#39;: 1, &#39;1001001&#39;: 1, &#39;1001011&#39;: 1, &#39;1010001&#39;: 1, &#39;1010010&#39;: 1, &#39;1010111&#39;: 1, &#39;0000011&#39;: 1, &#39;0001110&#39;: 1, &#39;1011101&#39;: 1, &#39;0000010&#39;: 1, &#39;1101000&#39;: 1, &#39;1101011&#39;: 1, &#39;1101100&#39;: 1, &#39;0000110&#39;: 1, &#39;0110001&#39;: 1, &#39;0100011&#39;: 1, &#39;0111011&#39;: 1, &#39;1111010&#39;: 1, &#39;0100000&#39;: 1}, evaluation_time=1.0)}
+</pre></div></div>
+</div>
+<p>The QPU only returns bitstrings at the final time, and as for emulator backends, there is a dedicated method for accessing them.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">final_bitstrings</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Counter({&#39;0010101&#39;: 321, &#39;0101010&#39;: 310, &#39;0010100&#39;: 22, &#39;0100010&#39;: 21, &#39;0101000&#39;: 20, &#39;0000101&#39;: 19, &#39;0111010&#39;: 16, &#39;0010001&#39;: 14, &#39;0100100&#39;: 13, &#39;0011101&#39;: 13, &#39;0010111&#39;: 13, &#39;0001010&#39;: 12, &#39;0101011&#39;: 12, &#39;0110101&#39;: 10, &#39;0010011&#39;: 10, &#39;0110010&#39;: 9, &#39;0101001&#39;: 9, &#39;0011010&#39;: 8, &#39;0010010&#39;: 8, &#39;1010101&#39;: 7, &#39;0011001&#39;: 6, &#39;0101110&#39;: 6, &#39;0100110&#39;: 6, &#39;0010110&#39;: 6, &#39;0001001&#39;: 6, &#39;0110100&#39;: 6, &#39;0001101&#39;: 5, &#39;0100101&#39;: 5, &#39;0110110&#39;: 4, &#39;0001000&#39;: 4, &#39;0101100&#39;: 4, &#39;1101010&#39;: 4, &#39;0111000&#39;: 3, &#39;1100100&#39;: 3, &#39;1000001&#39;: 3, &#39;0000001&#39;: 2, &#39;1100010&#39;: 2, &#39;1100000&#39;: 2, &#39;1010100&#39;: 2, &#39;1001111&#39;: 2, &#39;1000100&#39;: 2, &#39;0111110&#39;: 2, &#39;0111101&#39;: 2, &#39;0110111&#39;: 2, &#39;0110011&#39;: 2, &#39;0101111&#39;: 2, &#39;0101101&#39;: 2, &#39;0100001&#39;: 2, &#39;0011000&#39;: 2, &#39;0010000&#39;: 2, &#39;0001011&#39;: 2, &#39;0000100&#39;: 2, &#39;0011111&#39;: 1, &#39;0011110&#39;: 1, &#39;0111100&#39;: 1, &#39;0011100&#39;: 1, &#39;0011011&#39;: 1, &#39;0111111&#39;: 1, &#39;1000000&#39;: 1, &#39;1111011&#39;: 1, &#39;1000111&#39;: 1, &#39;1001000&#39;: 1, &#39;1001001&#39;: 1, &#39;1001011&#39;: 1, &#39;1010001&#39;: 1, &#39;1010010&#39;: 1, &#39;1010111&#39;: 1, &#39;0000011&#39;: 1, &#39;0001110&#39;: 1, &#39;1011101&#39;: 1, &#39;0000010&#39;: 1, &#39;1101000&#39;: 1, &#39;1101011&#39;: 1, &#39;1101100&#39;: 1, &#39;0000110&#39;: 1, &#39;0110001&#39;: 1, &#39;0100011&#39;: 1, &#39;0111011&#39;: 1, &#39;1111010&#39;: 1, &#39;0100000&#39;: 1})
+</pre></div></div>
+</div>
+</section>
+</section>
+<section id="4.-Batch-execution-with-parametrized-Sequences">
+<h2>4. Batch execution with parametrized Sequences<a class="headerlink" href="#4.-Batch-execution-with-parametrized-Sequences" title="Link to this heading"></a></h2>
+<div class="admonition warning">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Note</strong>:</p>
+<p>Parametrized Sequences are an extended usage feature. Read more about them <a class="reference internal" href="paramseqs.html"><span class="doc">here</span></a>.</p>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> we just executed on the QPU is composed of a single <code class="docutils literal notranslate"><span class="pre">Pulse</span></code> whose amplitude and detuning are each defined with an <a class="reference internal" href="interpolated_wfs.html"><span class="doc">InterpolatedWaveform</span></a>. This makes it very easy to play with the duration of the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>. Let’s see how to do this in practice.</p>
+<p><code class="docutils literal notranslate"><span class="pre">QPUBackend</span></code> is instantiated with a Sequence. If you want to run an experiment in which you vary a parameter in your Sequence (like in this tutorial), you don’t need to create a <code class="docutils literal notranslate"><span class="pre">QPUBackend</span></code> for each of the created Sequence: you can use a <a class="reference internal" href="paramseqs.html"><span class="doc">parametrized Sequence</span></a> to submit a batch of Sequences to the QPU. This will have the advantage to conveniently group the outcomes together. Specifically, this is possible for sequences composed of the same series of <code class="docutils literal notranslate"><span class="pre">Pulse</span></code>s,
+with the same <code class="docutils literal notranslate"><span class="pre">RegisterLayout</span></code> (a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> can be defined with a <a class="reference internal" href="reg_layouts.html"><span class="doc">MappableRegister</span></a> to define multiple <code class="docutils literal notranslate"><span class="pre">Sequences</span></code> from the same layout).</p>
+<p>Let us demonstrate how this works by taking the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> defined in section 2, and making the duration <code class="docutils literal notranslate"><span class="pre">t</span></code> a parameter. We will then submit two jobs in a single batch, using different values for <code class="docutils literal notranslate"><span class="pre">t</span></code>. The <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> under study being an “adiabatic” state preparation, the quality of the preparation of the AFM state <span class="math notranslate nohighlight">\(\frac{1}{\sqrt{2}}\left(\left|grgrgrg\right&gt; + \left|ggrgrgr\right&gt;\right)\)</span> should increase with the duration of the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> (you can see this by playing with the
+<code class="docutils literal notranslate"><span class="pre">total_duration</span></code> in the <a class="reference internal" href="backends.html"><span class="doc">tutorial on the execution on emulators</span></a>).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param_seq</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">register</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+
+<span class="c1"># 3. Picking the channels</span>
+<span class="n">param_seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;rydberg_global&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+
+<span class="c1"># 4. Adding the pulses</span>
+
+<span class="n">t</span> <span class="o">=</span> <span class="n">param_seq</span><span class="o">.</span><span class="n">declare_variable</span><span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+<span class="n">param_seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="p">(</span>
+        <span class="n">pulser</span><span class="o">.</span><span class="n">InterpolatedWaveform</span><span class="p">(</span>
+            <span class="n">t</span><span class="p">,</span> <span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1e-9</span><span class="p">,</span> <span class="mf">0.22</span><span class="p">,</span> <span class="mf">0.2181</span><span class="p">,</span> <span class="mf">1e-9</span><span class="p">]),</span> <span class="n">times</span><span class="o">=</span><span class="n">interp_pts</span>
+        <span class="p">),</span>
+        <span class="n">pulser</span><span class="o">.</span><span class="n">InterpolatedWaveform</span><span class="p">(</span>
+            <span class="n">t</span><span class="p">,</span> <span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.0556</span><span class="p">,</span> <span class="mf">0.332</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">times</span><span class="o">=</span><span class="n">interp_pts</span>
+        <span class="p">),</span>
+        <span class="mi">0</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;rydberg_global&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">param_seq</span><span class="p">)</span>  <span class="c1"># A parametrized Sequence cannot be drawn</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Prelude
+-------
+Channel: rydberg_global
+t: 0 | Initial targets: q0, q1, q2, q3, q4, q5, q6 | Phase Reference: 0.0
+
+Stored calls
+------------
+
+1. add(Pulse(InterpolatedWaveform(t[0], [5.54062733e-08 1.21893801e+01 1.20841082e+01 5.54062733e-08], times=[0.         0.33333333 0.66666667 1.        ]), InterpolatedWaveform(t[0], [-55.40627328   3.08058879  18.39488273  55.40627328], times=[0.         0.33333333 0.66666667 1.        ]), 0), rydberg_global)
+</pre></div></div>
+</div>
+<p>We can now plot the sequence only after we specify a value for <code class="docutils literal notranslate"><span class="pre">t</span></code>. Let us put <code class="docutils literal notranslate"><span class="pre">t=4000</span></code> and show that the sequence is identical to that in section 2.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq_4000</span> <span class="o">=</span> <span class="n">param_seq</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="mi">4000</span><span class="p">)</span>
+<span class="n">seq_4000</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_qpu_19_0.png" src="../_images/tutorials_qpu_19_0.png" />
+</div>
+</div>
+<p>We can now submit jobs with different values of <code class="docutils literal notranslate"><span class="pre">t</span></code> by leveraging the <code class="docutils literal notranslate"><span class="pre">job_params</span></code> argument of <code class="docutils literal notranslate"><span class="pre">QPUBackend.run</span></code>. However, to do that we must first create a new <code class="docutils literal notranslate"><span class="pre">QPUBackend</span></code> with the parameterized sequence.</p>
+<p>A job will be created for each dictionnary provided in <code class="docutils literal notranslate"><span class="pre">job_params</span></code>. For each of these jobs:</p>
+<ul class="simple">
+<li><p>the value of each parameter in the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> must be provided under the <code class="docutils literal notranslate"><span class="pre">variables</span></code> key.</p></li>
+<li><p>the number of <code class="docutils literal notranslate"><span class="pre">runs</span></code> is by default <code class="docutils literal notranslate"><span class="pre">config.default_num_shots</span></code>, but it can be specified under the <code class="docutils literal notranslate"><span class="pre">runs</span></code> key.</p></li>
+</ul>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">config</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">BackendConfig</span><span class="p">(</span><span class="n">default_num_shots</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">param_backend</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">QPUBackend</span><span class="p">(</span>
+    <span class="n">param_seq</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span>
+<span class="p">)</span>
+<span class="n">param_job_params</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span><span class="s2">&quot;variables&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;t&quot;</span><span class="p">:</span> <span class="mi">300</span><span class="p">}},</span>  <span class="c1"># uses config.default_num_shots</span>
+    <span class="p">{</span><span class="s2">&quot;runs&quot;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span> <span class="s2">&quot;variables&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;t&quot;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">}},</span>  <span class="c1"># uses 1000 shots</span>
+    <span class="p">{</span><span class="s2">&quot;variables&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;t&quot;</span><span class="p">:</span> <span class="mi">4000</span><span class="p">}},</span>  <span class="c1"># uses config.default_num_shots</span>
+<span class="p">]</span>
+<span class="n">param_results</span> <span class="o">=</span> <span class="n">param_backend</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">job_params</span><span class="o">=</span><span class="n">param_job_params</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Submitted batch </span><span class="si">{</span><span class="n">param_results</span><span class="o">.</span><span class="n">batch_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;With job IDs </span><span class="si">{</span><span class="n">param_results</span><span class="o">.</span><span class="n">job_ids</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Submitted batch f2a752b3-87ef-4ee4-ac75-eee04f32eb5b
+With job IDs [&#39;ce8a5be0-2565-463a-885b-54ade900be26&#39;, &#39;f3c78b1d-e3f3-4bfb-b2f7-7db30e3441e4&#39;, &#39;4e754800-1c3c-4f68-b943-47a65ab913be&#39;]
+</pre></div></div>
+</div>
+<p>Once again, we can see the results as they come in. Note that since we now specify 3 jobs in the <code class="docutils literal notranslate"><span class="pre">job_params</span></code> we expect 3 results in total.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param_results</span><span class="o">.</span><span class="n">get_available_results</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;ce8a5be0-2565-463a-885b-54ade900be26&#39;: SampledResult(atom_order=(&#39;q0&#39;, &#39;q1&#39;, &#39;q2&#39;, &#39;q3&#39;, &#39;q4&#39;, &#39;q5&#39;, &#39;q6&#39;), meas_basis=&#39;ground-rydberg&#39;, bitstring_counts=Counter({&#39;0000000&#39;: 827, &#39;0000100&#39;: 35, &#39;0000001&#39;: 28, &#39;0010000&#39;: 22, &#39;0100000&#39;: 21, &#39;0001000&#39;: 19, &#39;0000010&#39;: 16, &#39;1000000&#39;: 9, &#39;1000100&#39;: 3, &#39;0000101&#39;: 2, &#39;0011000&#39;: 2, &#39;0001101&#39;: 1, &#39;0001010&#39;: 1, &#39;0001001&#39;: 1, &#39;0000110&#39;: 1, &#39;0000011&#39;: 1, &#39;0010010&#39;: 1, &#39;1001110&#39;: 1, &#39;1001000&#39;: 1, &#39;0110000&#39;: 1, &#39;0101000&#39;: 1, &#39;0100100&#39;: 1, &#39;0100010&#39;: 1, &#39;0100001&#39;: 1, &#39;0010100&#39;: 1, &#39;1010000&#39;: 1, &#39;0010001&#39;: 1}), evaluation_time=1.0), &#39;f3c78b1d-e3f3-4bfb-b2f7-7db30e3441e4&#39;: SampledResult(atom_order=(&#39;q0&#39;, &#39;q1&#39;, &#39;q2&#39;, &#39;q3&#39;, &#39;q4&#39;, &#39;q5&#39;, &#39;q6&#39;), meas_basis=&#39;ground-rydberg&#39;, bitstring_counts=Counter({&#39;0101010&#39;: 161, &#39;0010101&#39;: 158, &#39;0000101&#39;: 67, &#39;0010100&#39;: 61, &#39;0100010&#39;: 60, &#39;0101000&#39;: 50, &#39;0010001&#39;: 50, &#39;0001010&#39;: 44, &#39;0000010&#39;: 31, &#39;0001000&#39;: 29, &#39;0000100&#39;: 26, &#39;0010010&#39;: 22, &#39;0000001&#39;: 22, &#39;0001001&#39;: 22, &#39;0100100&#39;: 22, &#39;0100000&#39;: 20, &#39;0010000&#39;: 19, &#39;1000000&#39;: 13, &#39;0111010&#39;: 10, &#39;0101011&#39;: 8, &#39;0011101&#39;: 6, &#39;0000000&#39;: 6, &#39;0001101&#39;: 6, &#39;0010011&#39;: 5, &#39;0011010&#39;: 4, &#39;0010111&#39;: 4, &#39;0001100&#39;: 4, &#39;0110000&#39;: 3, &#39;0110010&#39;: 3, &#39;0100110&#39;: 3, &#39;0100101&#39;: 3, &#39;0110100&#39;: 3, &#39;0111000&#39;: 3, &#39;0010110&#39;: 3, &#39;1000100&#39;: 3, &#39;0000011&#39;: 3, &#39;0101100&#39;: 3, &#39;1010101&#39;: 2, &#39;0110001&#39;: 2, &#39;0011100&#39;: 2, &#39;1010111&#39;: 2, &#39;0011001&#39;: 2, &#39;0000110&#39;: 2, &#39;1010100&#39;: 2, &#39;1101010&#39;: 2, &#39;0101110&#39;: 2, &#39;0110101&#39;: 2, &#39;1010000&#39;: 1, &#39;1010001&#39;: 1, &#39;0001111&#39;: 1, &#39;0001110&#39;: 1, &#39;0001011&#39;: 1, &#39;0101001&#39;: 1, &#39;1011101&#39;: 1, &#39;0110011&#39;: 1, &#39;0100011&#39;: 1, &#39;1100000&#39;: 1, &#39;0100001&#39;: 1, &#39;0011111&#39;: 1, &#39;1100010&#39;: 1, &#39;1101110&#39;: 1, &#39;0011000&#39;: 1, &#39;1101000&#39;: 1, &#39;0111100&#39;: 1, &#39;0111101&#39;: 1, &#39;1100100&#39;: 1, &#39;1001101&#39;: 1}), evaluation_time=1.0), &#39;4e754800-1c3c-4f68-b943-47a65ab913be&#39;: SampledResult(atom_order=(&#39;q0&#39;, &#39;q1&#39;, &#39;q2&#39;, &#39;q3&#39;, &#39;q4&#39;, &#39;q5&#39;, &#39;q6&#39;), meas_basis=&#39;ground-rydberg&#39;, bitstring_counts=Counter({&#39;0010101&#39;: 359, &#39;0101010&#39;: 261, &#39;0010001&#39;: 33, &#39;0001010&#39;: 27, &#39;0101000&#39;: 23, &#39;0100010&#39;: 22, &#39;0010100&#39;: 20, &#39;0111010&#39;: 20, &#39;0000101&#39;: 19, &#39;0101110&#39;: 17, &#39;0001001&#39;: 15, &#39;0110010&#39;: 14, &#39;1010101&#39;: 13, &#39;0010010&#39;: 12, &#39;0100100&#39;: 12, &#39;0011101&#39;: 11, &#39;0110101&#39;: 11, &#39;0010111&#39;: 9, &#39;1101010&#39;: 8, &#39;0110100&#39;: 8, &#39;0011010&#39;: 7, &#39;0110110&#39;: 6, &#39;0101100&#39;: 6, &#39;0100110&#39;: 4, &#39;0101011&#39;: 4, &#39;0001011&#39;: 4, &#39;0101101&#39;: 3, &#39;0100101&#39;: 3, &#39;0100000&#39;: 3, &#39;0000010&#39;: 3, &#39;0001101&#39;: 3, &#39;0011001&#39;: 3, &#39;0010011&#39;: 2, &#39;0101001&#39;: 2, &#39;0111011&#39;: 2, &#39;0100011&#39;: 2, &#39;0111100&#39;: 2, &#39;1000001&#39;: 2, &#39;0001110&#39;: 2, &#39;1101000&#39;: 2, &#39;0000111&#39;: 2, &#39;0000100&#39;: 2, &#39;0110000&#39;: 1, &#39;1100101&#39;: 1, &#39;1100110&#39;: 1, &#39;0010000&#39;: 1, &#39;0001111&#39;: 1, &#39;0110001&#39;: 1, &#39;0011011&#39;: 1, &#39;0000001&#39;: 1, &#39;0000011&#39;: 1, &#39;1101100&#39;: 1, &#39;0001000&#39;: 1, &#39;1111000&#39;: 1, &#39;1110111&#39;: 1, &#39;1010100&#39;: 1, &#39;1011010&#39;: 1, &#39;1011100&#39;: 1, &#39;1100000&#39;: 1}), evaluation_time=1.0)}
+</pre></div></div>
+</div>
+<p>We can now print the final bitstrings for each job:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;t=300:&quot;</span><span class="p">,</span> <span class="n">param_results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">final_bitstrings</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;t=1000:&quot;</span><span class="p">,</span> <span class="n">param_results</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">final_bitstrings</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;t=4000:&quot;</span><span class="p">,</span> <span class="n">param_results</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">final_bitstrings</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+t=300ns: Counter({&#39;0000000&#39;: 827, &#39;0000100&#39;: 35, &#39;0000001&#39;: 28, &#39;0010000&#39;: 22, &#39;0100000&#39;: 21, &#39;0001000&#39;: 19, &#39;0000010&#39;: 16, &#39;1000000&#39;: 9, &#39;1000100&#39;: 3, &#39;0000101&#39;: 2, &#39;0011000&#39;: 2, &#39;0001101&#39;: 1, &#39;0001010&#39;: 1, &#39;0001001&#39;: 1, &#39;0000110&#39;: 1, &#39;0000011&#39;: 1, &#39;0010010&#39;: 1, &#39;1001110&#39;: 1, &#39;1001000&#39;: 1, &#39;0110000&#39;: 1, &#39;0101000&#39;: 1, &#39;0100100&#39;: 1, &#39;0100010&#39;: 1, &#39;0100001&#39;: 1, &#39;0010100&#39;: 1, &#39;1010000&#39;: 1, &#39;0010001&#39;: 1})
+t=1000ns: Counter({&#39;0101010&#39;: 161, &#39;0010101&#39;: 158, &#39;0000101&#39;: 67, &#39;0010100&#39;: 61, &#39;0100010&#39;: 60, &#39;0101000&#39;: 50, &#39;0010001&#39;: 50, &#39;0001010&#39;: 44, &#39;0000010&#39;: 31, &#39;0001000&#39;: 29, &#39;0000100&#39;: 26, &#39;0010010&#39;: 22, &#39;0000001&#39;: 22, &#39;0001001&#39;: 22, &#39;0100100&#39;: 22, &#39;0100000&#39;: 20, &#39;0010000&#39;: 19, &#39;1000000&#39;: 13, &#39;0111010&#39;: 10, &#39;0101011&#39;: 8, &#39;0011101&#39;: 6, &#39;0000000&#39;: 6, &#39;0001101&#39;: 6, &#39;0010011&#39;: 5, &#39;0011010&#39;: 4, &#39;0010111&#39;: 4, &#39;0001100&#39;: 4, &#39;0110000&#39;: 3, &#39;0110010&#39;: 3, &#39;0100110&#39;: 3, &#39;0100101&#39;: 3, &#39;0110100&#39;: 3, &#39;0111000&#39;: 3, &#39;0010110&#39;: 3, &#39;1000100&#39;: 3, &#39;0000011&#39;: 3, &#39;0101100&#39;: 3, &#39;1010101&#39;: 2, &#39;0110001&#39;: 2, &#39;0011100&#39;: 2, &#39;1010111&#39;: 2, &#39;0011001&#39;: 2, &#39;0000110&#39;: 2, &#39;1010100&#39;: 2, &#39;1101010&#39;: 2, &#39;0101110&#39;: 2, &#39;0110101&#39;: 2, &#39;1010000&#39;: 1, &#39;1010001&#39;: 1, &#39;0001111&#39;: 1, &#39;0001110&#39;: 1, &#39;0001011&#39;: 1, &#39;0101001&#39;: 1, &#39;1011101&#39;: 1, &#39;0110011&#39;: 1, &#39;0100011&#39;: 1, &#39;1100000&#39;: 1, &#39;0100001&#39;: 1, &#39;0011111&#39;: 1, &#39;1100010&#39;: 1, &#39;1101110&#39;: 1, &#39;0011000&#39;: 1, &#39;1101000&#39;: 1, &#39;0111100&#39;: 1, &#39;0111101&#39;: 1, &#39;1100100&#39;: 1, &#39;1001101&#39;: 1})
+t=4000ns: Counter({&#39;0010101&#39;: 359, &#39;0101010&#39;: 261, &#39;0010001&#39;: 33, &#39;0001010&#39;: 27, &#39;0101000&#39;: 23, &#39;0100010&#39;: 22, &#39;0010100&#39;: 20, &#39;0111010&#39;: 20, &#39;0000101&#39;: 19, &#39;0101110&#39;: 17, &#39;0001001&#39;: 15, &#39;0110010&#39;: 14, &#39;1010101&#39;: 13, &#39;0010010&#39;: 12, &#39;0100100&#39;: 12, &#39;0011101&#39;: 11, &#39;0110101&#39;: 11, &#39;0010111&#39;: 9, &#39;1101010&#39;: 8, &#39;0110100&#39;: 8, &#39;0011010&#39;: 7, &#39;0110110&#39;: 6, &#39;0101100&#39;: 6, &#39;0100110&#39;: 4, &#39;0101011&#39;: 4, &#39;0001011&#39;: 4, &#39;0101101&#39;: 3, &#39;0100101&#39;: 3, &#39;0100000&#39;: 3, &#39;0000010&#39;: 3, &#39;0001101&#39;: 3, &#39;0011001&#39;: 3, &#39;0010011&#39;: 2, &#39;0101001&#39;: 2, &#39;0111011&#39;: 2, &#39;0100011&#39;: 2, &#39;0111100&#39;: 2, &#39;1000001&#39;: 2, &#39;0001110&#39;: 2, &#39;1101000&#39;: 2, &#39;0000111&#39;: 2, &#39;0000100&#39;: 2, &#39;0110000&#39;: 1, &#39;1100101&#39;: 1, &#39;1100110&#39;: 1, &#39;0010000&#39;: 1, &#39;0001111&#39;: 1, &#39;0110001&#39;: 1, &#39;0011011&#39;: 1, &#39;0000001&#39;: 1, &#39;0000011&#39;: 1, &#39;1101100&#39;: 1, &#39;0001000&#39;: 1, &#39;1111000&#39;: 1, &#39;1110111&#39;: 1, &#39;1010100&#39;: 1, &#39;1011010&#39;: 1, &#39;1011100&#39;: 1, &#39;1100000&#39;: 1})
+</pre></div></div>
+</div>
+<p>We see that the longer the Sequence the closer the final state is to the antiferromagnetic state <span class="math notranslate nohighlight">\(\frac{1}{\sqrt{2}}\left(\left|ggrgrgr\right&gt;+\left|grgrgrg\right&gt;\right)\)</span> (<span class="math notranslate nohighlight">\(\left|ggrgrgr\right&gt;\)</span> is measured as <span class="math notranslate nohighlight">\(\left|0010101\right&gt;\)</span>, <span class="math notranslate nohighlight">\(\left|grgrgrg\right&gt;\)</span> is measured as <span class="math notranslate nohighlight">\(\left|0101010\right&gt;\)</span>, <a class="reference internal" href="../conventions.html"><span class="doc">see the Convention page</span></a>), as expected of an adiabatic state preparation.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>To go further</strong>:</p>
+<p>The pulse used in this <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> with two <code class="docutils literal notranslate"><span class="pre">InterpolatedWaveform</span></code>s for the amplitude and detuning was optimized to prepare AFM states. To get more information about how to use parameters to design a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> that best fits a certain criterion, please see the tutorial on <a class="reference internal" href="optimization.html"><span class="doc">optimal control</span></a>.</p>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="backends.html" class="btn btn-neutral float-left" title="Execution on an Emulator" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../results.html" class="btn btn-neutral float-right" title="Results and Observables" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,540 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VirtualDevice &mdash; Pulser 1.6.5 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=2ad11211"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <script src="../../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="pulser.exceptions" href="pulser.exceptions.html" />
+    <link rel="prev" title="Device" href="pulser.devices.Device.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.6.5" /><meta name="readthedocs-resolver-filename" content="/apidoc/_autosummary/pulser.devices.VirtualDevice.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Pulser
+              <img src="../../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../core.html#classes">Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core.html#device-examples">Device Examples</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../core.html#modules">Modules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="pulser.abstract_repr.html">pulser.abstract_repr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.backend.html">pulser.backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.backends.html">pulser.backends</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.channels.html">pulser.channels</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="pulser.devices.html">pulser.devices</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="pulser.devices.Device.html">Device</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">VirtualDevice</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.exceptions.html">pulser.exceptions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.parametrized.html">pulser.parametrized</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.register.html">pulser.register</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.result.html">pulser.result</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.sampler.html">pulser.sampler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulser.waveforms.html">pulser.waveforms</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+          <li class="breadcrumb-item"><a href="pulser.devices.html">pulser.devices</a></li>
+      <li class="breadcrumb-item active">VirtualDevice</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/apidoc/_autosummary/pulser.devices.VirtualDevice.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="virtualdevice">
+<h1>VirtualDevice<a class="headerlink" href="#virtualdevice" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser.devices.</span></span><span class="sig-name descname"><span class="pre">VirtualDevice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dimensions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rydberg_level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_atom_distance=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_atom_num=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_radial_distance=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interaction_coeff_xy=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supports_slm_mask=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_layout_filling=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_layout_filling=0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimal_layout_filling=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_layout_traps=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_layout_traps=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_sequence_duration=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_runs=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requires_layout=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reusable_channels=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_ids=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_objects=&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dmm_objects=(DMM(addressing='Global'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_abs_detuning=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_amp=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_retarget_interval=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_retarget_t=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_targets=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clock_period=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_duration=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_duration=100000000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_avg_amp=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mod_bandwidth=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_phase_jump_time=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eom_config=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">propagation_dir=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bottom_detuning=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_bottom_detuning=None)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_noise_model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">short_description=''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.devices.VirtualDevice" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseDevice</span></code></p>
+<p>Specifications of a virtual neutral-atom device.</p>
+<p>A VirtualDevice can only be used for emulation and allows some parameters
+to be left undefined. Furthermore, it optionally allows the same channel
+to be declared multiple times in the same Sequence (when
+<cite>reusable_channels=True</cite>) and allows the Rydberg level to be changed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The name of the device.</p></li>
+<li><p><strong>dimensions</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">2</span></code>, <code class="docutils literal notranslate"><span class="pre">3</span></code>]</span>) – Whether it supports 2D or 3D arrays.</p></li>
+<li><p><strong>max_atom_num</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Maximum number of atoms supported in an array.</p></li>
+<li><p><strong>max_radial_distance</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The furthest away an atom can be from the center
+of the array (in μm).</p></li>
+<li><p><strong>min_atom_distance</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0</span></code>) – The closest together two atoms can be (in μm).</p></li>
+<li><p><strong>requires_layout</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether the register used in the sequence must be
+created from a register layout. Only enforced in QPU execution.</p></li>
+<li><p><strong>min_layout_filling</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code>) – The smallest fraction of a layout that must be
+filled with atoms. Only enforced when the layout has more traps
+than ‘min_layout_traps’.</p></li>
+<li><p><strong>max_layout_filling</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.5</span></code>) – The largest fraction of a layout that can be filled
+with atoms.</p></li>
+<li><p><strong>optimal_layout_filling</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An optional value for the fraction of a layout
+that should be filled with atoms.</p></li>
+<li><p><strong>min_layout_traps</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">1</span></code>) – The minimum number of traps a layout can have.</p></li>
+<li><p><strong>max_layout_traps</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An optional value for the maximum number of traps a
+layout can have.</p></li>
+<li><p><strong>rydberg_level</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The value of the principal quantum number <span class="math notranslate nohighlight">\(n\)</span>
+when the Rydberg level used is of the form
+<span class="math notranslate nohighlight">\(|nS_{1/2}, m_j = +1/2\rangle\)</span>.</p></li>
+<li><p><strong>interaction_coeff_xy</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – <span class="math notranslate nohighlight">\(C_3/\hbar\)</span>
+(in <span class="math notranslate nohighlight">\(rad \cdot \mu s^{-1} \cdot \mu m^3\)</span>),
+which sets the van der Waals interaction strength between atoms in
+different Rydberg states. Needed only if there is a Microwave
+channel in the device. If unsure, 3700.0 is a good default value.</p></li>
+<li><p><strong>reusable_channels</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Whether each channel can be declared multiple times
+on the same pulse sequence.</p></li>
+<li><p><strong>channel_objects</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Channel</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">&lt;factory&gt;</span></code>) – The Channel subclass instances specifying each
+channel in the device.</p></li>
+<li><p><strong>channel_ids</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Custom IDs for each channel object. When defined,
+an ID must be given for each channel. If not defined, the IDs are
+generated internally based on the channels’ names and addressing.</p></li>
+<li><p><strong>dmm_objects</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<a class="reference internal" href="pulser.channels.DMM.html#pulser.channels.DMM" title="pulser.channels.dmm.DMM"><code class="xref py py-class docutils literal notranslate"><span class="pre">DMM</span></code></a>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">(DMM(addressing='Global',</span> <span class="pre">max_abs_detuning=None,</span> <span class="pre">max_amp=0,</span> <span class="pre">min_retarget_interval=None,</span> <span class="pre">fixed_retarget_t=None,</span> <span class="pre">max_targets=None,</span> <span class="pre">clock_period=1,</span> <span class="pre">min_duration=1,</span> <span class="pre">max_duration=100000000,</span> <span class="pre">min_avg_amp=0,</span> <span class="pre">mod_bandwidth=None,</span> <span class="pre">custom_phase_jump_time=None,</span> <span class="pre">eom_config=None,</span> <span class="pre">propagation_dir=None,</span> <span class="pre">bottom_detuning=None,</span> <span class="pre">total_bottom_detuning=None),)</span></code>) – The DMM subclass instances specifying each channel in the
+device. They are referenced by their order in the list, with the ID
+“dmm_[index in dmm_objects]”.</p></li>
+<li><p><strong>supports_slm_mask</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Whether the device supports the SLM mask feature.</p></li>
+<li><p><strong>max_sequence_duration</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The maximum allowed duration for a sequence
+(in ns).</p></li>
+<li><p><strong>max_runs</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The maximum number of runs allowed on the device. Only used
+for backend execution.</p></li>
+<li><p><strong>default_noise_model</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser.noise_model.NoiseModel.html#pulser.noise_model.NoiseModel" title="pulser.noise_model.NoiseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">NoiseModel</span></code></a> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An optional noise model characterizing the default
+noise of the device. Can be used by emulator backends that support
+noise.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">channel_ids</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.channels" title="pulser.devices.VirtualDevice.channels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">channels</span></code></a></p></td>
+<td><p>Dictionary of available channels on this device.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_noise_model</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.dmm_channels" title="pulser.devices.VirtualDevice.dmm_channels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dmm_channels</span></code></a></p></td>
+<td><p>Dictionary of available DMM channels on this device.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">dmm_objects</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.interaction_coeff" title="pulser.devices.VirtualDevice.interaction_coeff"><code class="xref py py-obj docutils literal notranslate"><span class="pre">interaction_coeff</span></code></a></p></td>
+<td><p>The interaction coefficient for the chosen Rydberg level.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">interaction_coeff_xy</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_atom_num</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_layout_filling</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_layout_traps</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_radial_distance</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_runs</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_sequence_duration</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">min_atom_distance</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">min_layout_filling</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">min_layout_traps</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">optimal_layout_filling</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">requires_layout</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">reusable_channels</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">short_description</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.specs" title="pulser.devices.VirtualDevice.specs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">specs</span></code></a></p></td>
+<td><p>Text summarizing the specifications of the device.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.supported_bases" title="pulser.devices.VirtualDevice.supported_bases"><code class="xref py py-obj docutils literal notranslate"><span class="pre">supported_bases</span></code></a></p></td>
+<td><p>Available electronic transitions for control and measurement.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.supported_states" title="pulser.devices.VirtualDevice.supported_states"><code class="xref py py-obj docutils literal notranslate"><span class="pre">supported_states</span></code></a></p></td>
+<td><p>Available states ranked by their energy levels (highest first).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">supports_slm_mask</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">dimensions</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">rydberg_level</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">channel_objects</span></code></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.change_rydberg_level" title="pulser.devices.VirtualDevice.change_rydberg_level"><code class="xref py py-obj docutils literal notranslate"><span class="pre">change_rydberg_level</span></code></a></p></td>
+<td><p>Changes the Rydberg level used in the Device.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.from_abstract_repr" title="pulser.devices.VirtualDevice.from_abstract_repr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_abstract_repr</span></code></a></p></td>
+<td><p>Deserialize a VirtualDevice from an abstract JSON object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.print_specs" title="pulser.devices.VirtualDevice.print_specs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">print_specs</span></code></a></p></td>
+<td><p>Prints the device specifications.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.rabi_from_blockade" title="pulser.devices.VirtualDevice.rabi_from_blockade"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rabi_from_blockade</span></code></a></p></td>
+<td><p>The maximum Rabi frequency value to enforce a given blockade radius.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.rydberg_blockade_radius" title="pulser.devices.VirtualDevice.rydberg_blockade_radius"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rydberg_blockade_radius</span></code></a></p></td>
+<td><p>Calculates the Rydberg blockade radius for a given Rabi frequency.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.to_abstract_repr" title="pulser.devices.VirtualDevice.to_abstract_repr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_abstract_repr</span></code></a></p></td>
+<td><p>Serializes the device into an abstract JSON object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.validate_layout" title="pulser.devices.VirtualDevice.validate_layout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_layout</span></code></a></p></td>
+<td><p>Checks if a register layout is compatible with this device.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.validate_layout_filling" title="pulser.devices.VirtualDevice.validate_layout_filling"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_layout_filling</span></code></a></p></td>
+<td><p>Checks if a register properly fills its layout.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser.devices.VirtualDevice.validate_register" title="pulser.devices.VirtualDevice.validate_register"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_register</span></code></a></p></td>
+<td><p>Checks if 'register' is compatible with this device.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Signatures</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.change_rydberg_level">
+<span class="sig-name descname"><span class="pre">change_rydberg_level</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ryd_lvl</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.devices.VirtualDevice.change_rydberg_level" title="Link to this definition"></a></dt>
+<dd><p>Changes the Rydberg level used in the Device.</p>
+<p>Find the <span class="math notranslate nohighlight">\(C_6/\hbar\)</span> coefficient matching the Rydberg level on
+<a class="reference external" href="https://github.com/pasqal-io/Pulser/blob/develop/pulser-core/pulser/devices/interaction_coefficients/C6_coeffs.json">this page</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ryd_lvl</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – the Rydberg level to use (between 50 and 100).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.from_abstract_repr">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_abstract_repr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj_str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.devices.VirtualDevice.from_abstract_repr" title="Link to this definition"></a></dt>
+<dd><p>Deserialize a VirtualDevice from an abstract JSON object.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If the JSON string represents a Device, the Device is converted
+into a VirtualDevice using the <cite>Device.to_virtual</cite> method.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obj_str</strong> (<em>str</em>) – the JSON string representing the noise model
+encoded in the abstract JSON format.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#pulser.devices.VirtualDevice" title="pulser.devices._device_datacls.VirtualDevice"><code class="xref py py-class docutils literal notranslate"><span class="pre">VirtualDevice</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.print_specs">
+<span class="sig-name descname"><span class="pre">print_specs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.devices.VirtualDevice.print_specs" title="Link to this definition"></a></dt>
+<dd><p>Prints the device specifications.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.rabi_from_blockade">
+<span class="sig-name descname"><span class="pre">rabi_from_blockade</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">blockade_radius</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.devices.VirtualDevice.rabi_from_blockade" title="Link to this definition"></a></dt>
+<dd><p>The maximum Rabi frequency value to enforce a given blockade radius.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>blockade_radius</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – The Rydberg blockade radius, in µm.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The maximum rabi frequency value, in rad/µs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.rydberg_blockade_radius">
+<span class="sig-name descname"><span class="pre">rydberg_blockade_radius</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rabi_frequency</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.devices.VirtualDevice.rydberg_blockade_radius" title="Link to this definition"></a></dt>
+<dd><p>Calculates the Rydberg blockade radius for a given Rabi frequency.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>rabi_frequency</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – The Rabi frequency, in rad/µs.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The rydberg blockade radius, in μm.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.to_abstract_repr">
+<span class="sig-name descname"><span class="pre">to_abstract_repr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser.devices.VirtualDevice.to_abstract_repr" title="Link to this definition"></a></dt>
+<dd><p>Serializes the device into an abstract JSON object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.validate_layout">
+<span class="sig-name descname"><span class="pre">validate_layout</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layout</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.devices.VirtualDevice.validate_layout" title="Link to this definition"></a></dt>
+<dd><p>Checks if a register layout is compatible with this device.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>layout</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser.register.RegisterLayout.html#pulser.register.RegisterLayout" title="pulser.register.register_layout.RegisterLayout"><code class="xref py py-class docutils literal notranslate"><span class="pre">RegisterLayout</span></code></a></span>) – The RegisterLayout to validate.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.validate_layout_filling">
+<span class="sig-name descname"><span class="pre">validate_layout_filling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">register</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.devices.VirtualDevice.validate_layout_filling" title="Link to this definition"></a></dt>
+<dd><p>Checks if a register properly fills its layout.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>register</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseRegister</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">MappableRegister</span></code></span>) – The register to validate. Must be created from a register
+layout.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.validate_register">
+<span class="sig-name descname"><span class="pre">validate_register</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">register</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.devices.VirtualDevice.validate_register" title="Link to this definition"></a></dt>
+<dd><p>Checks if ‘register’ is compatible with this device.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>register</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseRegister</span></code></span>) – The Register to validate.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.channels">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">channels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Channel</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pulser.devices.VirtualDevice.channels" title="Link to this definition"></a></dt>
+<dd><p>Dictionary of available channels on this device.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.dmm_channels">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dmm_channels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="pulser.channels.DMM.html#pulser.channels.DMM" title="pulser.channels.dmm.DMM"><span class="pre">DMM</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pulser.devices.VirtualDevice.dmm_channels" title="Link to this definition"></a></dt>
+<dd><p>Dictionary of available DMM channels on this device.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.interaction_coeff">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">interaction_coeff</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#pulser.devices.VirtualDevice.interaction_coeff" title="Link to this definition"></a></dt>
+<dd><p>The interaction coefficient for the chosen Rydberg level.</p>
+<p>Corresponds to <span class="math notranslate nohighlight">\(C_6/\hbar\)</span> (in units of
+<span class="math notranslate nohighlight">\(rad \cdot \mu s^{-1} \cdot \mu m^6\)</span>)
+for the interaction term of the Ising hamiltonian.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.specs">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">specs</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#pulser.devices.VirtualDevice.specs" title="Link to this definition"></a></dt>
+<dd><p>Text summarizing the specifications of the device.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.supported_bases">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">supported_bases</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pulser.devices.VirtualDevice.supported_bases" title="Link to this definition"></a></dt>
+<dd><p>Available electronic transitions for control and measurement.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser.devices.VirtualDevice.supported_states">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">supported_states</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'u'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'d'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'r'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'g'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'h'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pulser.devices.VirtualDevice.supported_states" title="Link to this definition"></a></dt>
+<dd><p>Available states ranked by their energy levels (highest first).</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pulser.devices.Device.html" class="btn btn-neutral float-left" title="Device" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pulser.exceptions.html" class="btn btn-neutral float-right" title="pulser.exceptions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

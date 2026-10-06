@@ -1,0 +1,1194 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Effective noise channels &mdash; Pulser 1.5.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=1cd648e3"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Optimal Control for AFM State Preparation" href="optimization.html" />
+    <link rel="prev" title="Laser noise" href="laser_noise.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.5.4" /><meta name="readthedocs-resolver-filename" content="/tutorials/effective_noise.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Emulation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Effective noise channels</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Introduction">Introduction</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#The-dephasing-channel">The dephasing channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#The-depolarizing-channel">The depolarizing channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Bloch-sphere-representation">Bloch sphere representation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Dephasing-channel">Dephasing channel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Depolarizing-channel">Depolarizing channel</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Single-atom-noisy-simulations">Single atom noisy simulations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Dephasing-Channel">Dephasing Channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Depolarizing-Channel">Depolarizing Channel</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Two-atom-noisy-simulations">Two-atom noisy simulations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Nearby-atoms">Nearby atoms</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id3">Dephasing Channel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id4">Depolarizing Channel</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#Distant-atoms">Distant atoms</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id5">Dephasing Channel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6">Depolarizing Channel</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Effective noise channels</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/effective_noise.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Effective-noise-channels">
+<h1>Effective noise channels<a class="headerlink" href="#Effective-noise-channels" title="Link to this heading"></a></h1>
+<section id="Introduction">
+<h2>Introduction<a class="headerlink" href="#Introduction" title="Link to this heading"></a></h2>
+<p>Effective noise channels were introduced in the introductory tutorial <a class="reference internal" href="noisy_sim.html"><span class="doc">Simulating sequences with errors and noises</span></a>. They will be further detailed in this notebook. We recommend you to check the introductory tutorial before going through this one.</p>
+<p>The effective noise channels implemented here are based on the concept of collapse operators which are actors in the Lindblad equation. If you’re not familiar with Lindblad equations or want to go further, please check the resource <a class="reference external" href="https://ocw.mit.edu/courses/22-51-quantum-theory-of-radiation-interactions-fall-2012/resources/mit22_51f12_ch8/">here</a>.</p>
+<p>Recall the Lindblad equation:</p>
+<div class="math notranslate nohighlight">
+\[\frac{d \rho}{dt} = -i[\mathcal{H}, \rho] + \sum_{k&gt;0} \left( L_k \rho L_k^\dagger - \frac{1}{2} \left\{ L_k^\dagger L_k, \rho \right\} \right)\]</div>
+<p>The operators <span class="math notranslate nohighlight">\(L_k\)</span> are often called <em>collapse operators</em>. Each set of <span class="math notranslate nohighlight">\(L_k\)</span> gives birth to a different effective noise channel. We will discuss in this tutorial two specific ones, whose expressions are developed <a class="reference external" href="https://profmcruz.files.wordpress.com/2017/08/quantum-computation-and-quantum-information-nielsen-chuang.pdf">in this resource (see chapter 8.3)</a>:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#The-dephasing-channel"><span class="std std-ref">The dephasing channel</span></a></p></li>
+<li><p><a class="reference internal" href="#The-depolarizing-channel"><span class="std std-ref">The depolarizing channel</span></a></p></li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">qutip</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pulse</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Register</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser_simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">QutipEmulator</span><span class="p">,</span> <span class="n">SimConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser_simulation.simresults</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimulationResults</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnalogDevice</span>
+</pre></div>
+</div>
+</div>
+<section id="The-dephasing-channel">
+<h3>The dephasing channel<a class="headerlink" href="#The-dephasing-channel" title="Link to this heading"></a></h3>
+<p><em>Dephasing channel</em> models noises that modify the system into a mixture of states such that the phase cannot be accurately predicted.</p>
+<p>The dephasing noise can be thought of as arising from random additional phases being added on some components of the state at a rate <span class="math notranslate nohighlight">\(\gamma_{ph, state}\)</span>. For instance, if a system is addressed by a <code class="docutils literal notranslate"><span class="pre">Rydberg</span></code> and a <code class="docutils literal notranslate"><span class="pre">Raman</span></code> channel, it is described by three states (<span class="math notranslate nohighlight">\(\left |r\right &gt;, \left |g\right &gt;, \left |h\right &gt;\)</span>) and the associated collapse operators are:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}L_1 = \sqrt{2\gamma_{ph, r}} \left|r \right&gt; \left &lt;r \right |, \\
+L_2 = \sqrt{2\gamma_{ph, h}} \left|h \right&gt; \left &lt;h \right |\end{split}\]</div>
+</section>
+<section id="The-depolarizing-channel">
+<h3>The depolarizing channel<a class="headerlink" href="#The-depolarizing-channel" title="Link to this heading"></a></h3>
+<p>Under the depolarizing noise, a system in any state evolves to the maximally mixed state at a rate <span class="math notranslate nohighlight">\(\gamma_{pol}\)</span>. This noise channel can only describe 2-level systems (system addressed by one channel). The corresponding collapse operators are:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}L_1 = \sqrt{\frac{\gamma_{pol}}{4}} \sigma_x, \\
+L_2 = \sqrt{\frac{\gamma_{pol}}{4}}\sigma_y, \\
+L_3 = \sqrt{\frac{\gamma_{pol}}{4}} \sigma_z\end{split}\]</div>
+</section>
+<section id="Bloch-sphere-representation">
+<h3>Bloch sphere representation<a class="headerlink" href="#Bloch-sphere-representation" title="Link to this heading"></a></h3>
+<p>To better understand the effect of each channel on a single-qubit density matrix, let us represent it on the Bloch sphere.</p>
+<p>Any density matrix of a mixed state may be written as <span class="math notranslate nohighlight">\(\rho = \frac{\mathbb{I} + \vec{r}.\vec{\sigma}}{2}\)</span>, where <span class="math notranslate nohighlight">\(\vec{r}\)</span> is the vector representing the mixed state on the Bloch sphere.</p>
+<p>The effect of a channel on a density matrix is modeled using Kraus operators, such that <span class="math notranslate nohighlight">\(\rho(t) = \sum_i M_i \rho(0) M^\dagger_i\)</span>. These Kraus operators <span class="math notranslate nohighlight">\(M_i\)</span> are:</p>
+<ul class="simple">
+<li><p>for the dephasing channel: <span class="math notranslate nohighlight">\(M_0 = \sqrt{1- \frac{p_{ph}}{2}} \,\, \mathbb{I}\)</span>, <span class="math notranslate nohighlight">\(M_1 = \sqrt{\frac{p_{ph}}{2}} \,\, \sigma_z\)</span>.</p></li>
+<li><p>for the depolarizing channel: <span class="math notranslate nohighlight">\(M_0 = \sqrt{1- \frac{3p_{pol}}{4}} \,\, \mathbb{I}\)</span>, <span class="math notranslate nohighlight">\(M_1 = \sqrt{\frac{p_{pol}}{4}} \sigma_x\)</span>, <span class="math notranslate nohighlight">\(M_2 = \sqrt{\frac{p_{pol}}{4}} \sigma_y\)</span> and <span class="math notranslate nohighlight">\(M_3 = \sqrt{\frac{p_{pol}}{4}} \sigma_z\)</span></p></li>
+</ul>
+<p>It can be noted that the Kraus operators fulfill the completion relation <span class="math notranslate nohighlight">\(\sum_{i} M_i = \mathbb{I}\)</span>, and that they use the probability over the whole experiment <span class="math notranslate nohighlight">\(p\)</span> instead of the rate <span class="math notranslate nohighlight">\(\gamma\)</span> used in collapse operators. The link between Kraus operators and collapse operators is developed <a class="reference external" href="https://ocw.mit.edu/courses/22-51-quantum-theory-of-radiation-interactions-fall-2012/resources/mit22_51f12_ch8/">in the first reference</a>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">vector_to_dm</span><span class="p">(</span><span class="n">r_x</span><span class="p">,</span> <span class="n">r_y</span><span class="p">,</span> <span class="n">r_z</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Transforms a vector on the Bloch sphere into a density matrix.&quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="n">qutip</span><span class="o">.</span><span class="n">qeye</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="o">+</span> <span class="n">r_x</span> <span class="o">*</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmax</span><span class="p">()</span>
+        <span class="o">+</span> <span class="n">r_y</span> <span class="o">*</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmay</span><span class="p">()</span>
+        <span class="o">+</span> <span class="n">r_z</span> <span class="o">*</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmaz</span><span class="p">()</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">dm_to_vector</span><span class="p">(</span><span class="n">rho</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Transforms a density matrix rho to vector on the Bloch sphere.&quot;&quot;&quot;</span>
+
+    <span class="n">I</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">rho</span> <span class="o">-</span> <span class="n">qutip</span><span class="o">.</span><span class="n">qeye</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">r_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">((</span><span class="n">I</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">I</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">r_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">((</span><span class="n">I</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">I</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">r_z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">I</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">r_x</span><span class="p">,</span> <span class="n">r_y</span><span class="p">,</span> <span class="n">r_z</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">depolarizing_channel</span><span class="p">(</span><span class="n">rho</span><span class="p">,</span> <span class="n">prob</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Depolarizing channel, using Kraus operators.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">prob</span> <span class="o">/</span> <span class="mi">4</span><span class="p">)</span> <span class="o">*</span> <span class="n">rho</span> <span class="o">+</span> <span class="n">prob</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="n">qutip</span><span class="o">.</span><span class="n">sigmax</span><span class="p">()</span> <span class="o">*</span> <span class="n">rho</span> <span class="o">*</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmax</span><span class="p">()</span>
+        <span class="o">+</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmay</span><span class="p">()</span> <span class="o">*</span> <span class="n">rho</span> <span class="o">*</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmay</span><span class="p">()</span>
+        <span class="o">+</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmaz</span><span class="p">()</span> <span class="o">*</span> <span class="n">rho</span> <span class="o">*</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmaz</span><span class="p">()</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">dephasing_channel</span><span class="p">(</span><span class="n">rho</span><span class="p">,</span> <span class="n">prob</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Dephasing channel, using Kraus operators.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="mi">1</span> <span class="o">-</span> <span class="n">prob</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="p">)</span> <span class="o">*</span> <span class="n">rho</span> <span class="o">+</span> <span class="n">prob</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmaz</span><span class="p">()</span> <span class="o">*</span> <span class="n">rho</span> <span class="o">*</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmaz</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>First, we generate uniformly distributed points on the surface of the Bloch sphere.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+<span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+<span class="n">r</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+<span class="c1"># x, y, z coordinates with fixed radius r from center X0, Y0, Z0</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">u</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">u</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">u</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># Then we build the bloch with the above points</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">Bloch</span><span class="p">()</span>
+<span class="n">points</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">]</span>
+<span class="n">b</span><span class="o">.</span><span class="n">add_points</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+<span class="n">b</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_effective_noise_11_0.svg" src="../_images/tutorials_effective_noise_11_0.svg" />
+</div>
+</div>
+<p>To observe the effect of the depolarizing and dephasing channels, we apply each channel separately to the points on the Bloch sphere and plot the resulting vectors.</p>
+<section id="Dephasing-channel">
+<h4>Dephasing channel<a class="headerlink" href="#Dephasing-channel" title="Link to this heading"></a></h4>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dephasing_prob</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="n">x_dp</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">y_dp</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">z_dp</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="p">(</span><span class="n">n</span><span class="p">,)</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="n">dm</span> <span class="o">=</span> <span class="n">vector_to_dm</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">z</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="n">dm_n</span> <span class="o">=</span> <span class="n">dephasing_channel</span><span class="p">(</span><span class="n">dm</span><span class="p">,</span> <span class="n">dephasing_prob</span><span class="p">)</span>
+    <span class="n">r_x</span><span class="p">,</span> <span class="n">r_y</span><span class="p">,</span> <span class="n">r_z</span> <span class="o">=</span> <span class="n">dm_to_vector</span><span class="p">(</span><span class="n">dm_n</span><span class="p">)</span>
+    <span class="n">x_dp</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">r_x</span>
+    <span class="n">y_dp</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">r_y</span>
+    <span class="n">z_dp</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">r_z</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">Bloch</span><span class="p">()</span>
+<span class="n">points</span> <span class="o">=</span> <span class="p">[</span><span class="n">x_dp</span><span class="p">,</span> <span class="n">y_dp</span><span class="p">,</span> <span class="n">z_dp</span><span class="p">]</span>
+<span class="n">b</span><span class="o">.</span><span class="n">add_points</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+<span class="n">b</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_effective_noise_15_0.svg" src="../_images/tutorials_effective_noise_15_0.svg" />
+</div>
+</div>
+<p>For the dephasing channel, the <span class="math notranslate nohighlight">\(z\)</span>-coordinate of the Bloch vector is conserved while the others are contracted.</p>
+</section>
+<section id="Depolarizing-channel">
+<h4>Depolarizing channel<a class="headerlink" href="#Depolarizing-channel" title="Link to this heading"></a></h4>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">depolarizing_prob</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="n">x_dp</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">y_dp</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">z_dp</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="p">(</span><span class="n">n</span><span class="p">,)</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="n">dm</span> <span class="o">=</span> <span class="n">vector_to_dm</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">z</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="n">dm_n</span> <span class="o">=</span> <span class="n">dephasing_channel</span><span class="p">(</span><span class="n">dm</span><span class="p">,</span> <span class="n">dephasing_prob</span><span class="p">)</span>
+    <span class="n">r_x</span><span class="p">,</span> <span class="n">r_y</span><span class="p">,</span> <span class="n">r_z</span> <span class="o">=</span> <span class="n">dm_to_vector</span><span class="p">(</span><span class="n">dm_n</span><span class="p">)</span>
+    <span class="n">x_dp</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">r_x</span>
+    <span class="n">y_dp</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">r_y</span>
+    <span class="n">z_dp</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">r_z</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">Bloch</span><span class="p">()</span>
+<span class="n">points</span> <span class="o">=</span> <span class="p">[</span><span class="n">x_dp</span><span class="p">,</span> <span class="n">y_dp</span><span class="p">,</span> <span class="n">z_dp</span><span class="p">]</span>
+<span class="n">b</span><span class="o">.</span><span class="n">add_points</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+<span class="n">b</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_effective_noise_19_0.svg" src="../_images/tutorials_effective_noise_19_0.svg" />
+</div>
+</div>
+<p>The depolarizing channel contracts the Bloch sphere across all directions. We could try to come up with an inflation channel that would revert the state’s depolarization. However, such a channel would not be positive and thus not a valid superoperator, confirming that the coherence lost cannot be recovered.</p>
+</section>
+</section>
+</section>
+<section id="Single-atom-noisy-simulations">
+<h2>Single atom noisy simulations<a class="headerlink" href="#Single-atom-noisy-simulations" title="Link to this heading"></a></h2>
+<p>In this section we will study the impact of effective noise channels on a single qubit under a resonant pulse. We start by preparing a single atom:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)],</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Then we act on this atom with a Constant Pulse, such that it oscillates between the ground state and excited Rydberg state (Rabi oscillations):</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">AnalogDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;channel 0&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">duration</span> <span class="o">=</span> <span class="mi">2500</span>
+<span class="n">pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse</span><span class="p">,</span> <span class="s2">&quot;channel 0&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_effective_noise_25_0.png" src="../_images/tutorials_effective_noise_25_0.png" />
+</div>
+</div>
+<p>Let’s first run the simulation without noise.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">clean_simu</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="n">clean_res</span> <span class="o">=</span> <span class="n">clean_simu</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>We can observe the ground state population using its projector and then the <code class="docutils literal notranslate"><span class="pre">plot()</span></code> method from the <code class="docutils literal notranslate"><span class="pre">Results</span></code> object:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">obs</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">clean_simu</span><span class="o">.</span><span class="n">initial_state</span><span class="o">.</span><span class="n">proj</span><span class="p">()</span>
+<span class="p">)</span>  <span class="c1"># Make projector from initial state of the QutipEmulator object (uses QuTiP)</span>
+<span class="n">clean_res</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>  <span class="c1"># Plot the expectation value of the observable</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Ground state population&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_effective_noise_29_0.png" src="../_images/tutorials_effective_noise_29_0.png" />
+</div>
+</div>
+<p>The are two ways to define the dephasing and depolarizing channels. The first way is to create a <code class="docutils literal notranslate"><span class="pre">SimConfig</span></code> object, specifying the noise type as <code class="docutils literal notranslate"><span class="pre">&quot;dephasing&quot;</span></code> and choosing the dephasing rate <code class="docutils literal notranslate"><span class="pre">dephasing_rate</span></code>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">config_dephasing</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="s2">&quot;dephasing&quot;</span><span class="p">,</span> <span class="n">dephasing_rate</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+<span class="n">clean_simu</span><span class="o">.</span><span class="n">set_config</span><span class="p">(</span><span class="n">config_dephasing</span><span class="p">)</span>
+<span class="n">clean_simu</span><span class="o">.</span><span class="n">show_config</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Options:
+----------
+Number of runs:        15
+Samples per run:       5
+Noise types:           dephasing
+Dephasing rate: 0.1 (Rydberg), 0.001 (Hyperfine)
+</pre></div></div>
+</div>
+<p>Likewise we can create a SimConfig object for the depolarizing noise. Notice how we reset the configuration using the <code class="docutils literal notranslate"><span class="pre">reset_config()</span></code> method:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">clean_simu</span><span class="o">.</span><span class="n">reset_config</span><span class="p">()</span>
+<span class="n">config_depolarizing</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="s2">&quot;depolarizing&quot;</span><span class="p">,</span> <span class="n">depolarizing_rate</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+<span class="n">clean_simu</span><span class="o">.</span><span class="n">set_config</span><span class="p">(</span><span class="n">config_depolarizing</span><span class="p">)</span>
+<span class="n">clean_simu</span><span class="o">.</span><span class="n">show_config</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Options:
+----------
+Number of runs:        15
+Samples per run:       5
+Noise types:           depolarizing
+Depolarizing rate: 0.1
+</pre></div></div>
+</div>
+<p>The second way, which is more general, allows the user to define any Lindblad operators to describe effective noise.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">clean_simu</span><span class="o">.</span><span class="n">reset_config</span><span class="p">()</span>
+<span class="n">config_dephasing</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span>
+    <span class="n">noise</span><span class="o">=</span><span class="s2">&quot;eff_noise&quot;</span><span class="p">,</span>
+    <span class="n">eff_noise_opers</span><span class="o">=</span><span class="p">[</span><span class="n">qutip</span><span class="o">.</span><span class="n">sigmaz</span><span class="p">()],</span>
+    <span class="n">eff_noise_rates</span><span class="o">=</span><span class="p">[</span><span class="mf">0.05</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="n">clean_simu</span><span class="o">.</span><span class="n">add_config</span><span class="p">(</span><span class="n">config_dephasing</span><span class="p">)</span>
+<span class="n">clean_simu</span><span class="o">.</span><span class="n">show_config</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Options:
+----------
+Number of runs:        15
+Samples per run:       5
+Noise types:           eff_noise
+Effective noise rates:       (0.05,)
+Effective noise operators:       (Quantum object: dims = [[2], [2]], shape = (2, 2), type = oper, isherm = True
+Qobj data =
+[[ 1.  0.]
+ [ 0. -1.]],)
+</pre></div></div>
+</div>
+<p>This allows you to design other effective noise channels by inputting the respective collapse operators.</p>
+<p>Let us now simulate the entire sequence with our two effective noise channels. First, we define some useful functions for our simulations:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">noisy_dynamics</span><span class="p">(</span><span class="n">clean_simu</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Gives the result of a noisy simulation.&quot;&quot;&quot;</span>
+    <span class="n">simu</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">clean_simu</span><span class="p">)</span>
+    <span class="c1"># Adding noise</span>
+    <span class="n">simu</span><span class="o">.</span><span class="n">add_config</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">simu</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_basis_population</span><span class="p">(</span>
+    <span class="n">psi</span><span class="p">:</span> <span class="n">qutip</span><span class="o">.</span><span class="n">Qobj</span><span class="p">,</span>
+    <span class="n">noise_results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SimulationResults</span><span class="p">],</span>
+    <span class="n">noise_rates</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+    <span class="n">decay_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">axis</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">,</span>
+    <span class="n">convergence_line</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">label</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plots the evolution of the population in state &#39;psi&#39;.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        psi: The state against which the population is measured.</span>
+<span class="sd">        noise_results: A list of QutipEmulator.from_sequenceResults.</span>
+<span class="sd">        noise_rates: The noise rate associated with each element in</span>
+<span class="sd">            &#39;noise_results&#39;.</span>
+<span class="sd">        decay_rate: The decay rate relative to the noise probability.</span>
+<span class="sd">            If defined, add the exponential decay curves in the plot.</span>
+<span class="sd">        axis: The Axes to plot the curves on.</span>
+<span class="sd">        convergence_line: The stationary value for the population of</span>
+<span class="sd">            &#39;psi&#39;.</span>
+<span class="sd">        label: Whether to add a label or not.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">noise_pops</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">noise_result</span> <span class="ow">in</span> <span class="n">noise_results</span><span class="p">:</span>
+        <span class="n">population</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">noise_result</span><span class="o">.</span><span class="n">states</span><span class="p">:</span>
+            <span class="n">population</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">qutip</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="n">psi</span><span class="o">.</span><span class="n">proj</span><span class="p">(),</span> <span class="n">state</span><span class="p">)))</span>
+        <span class="n">noise_pops</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">population</span><span class="p">)</span>
+
+    <span class="n">times</span> <span class="o">=</span> <span class="n">noise_results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">_sim_times</span>
+
+    <span class="k">for</span> <span class="n">noise_rate</span><span class="p">,</span> <span class="n">noise_pop</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">noise_rates</span><span class="p">,</span> <span class="n">noise_pops</span><span class="p">):</span>
+        <span class="n">axis</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">times</span><span class="p">,</span>
+            <span class="n">noise_pop</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="sa">rf</span><span class="s2">&quot;$\gamma$ = </span><span class="si">{</span><span class="n">noise_rate</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="mf">0.9</span> <span class="o">-</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">noise_rate</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">N_realizations</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">noise_rates</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">decay_rate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">noise_rate</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">noise_rates</span><span class="p">):</span>
+            <span class="n">axis</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+                <span class="n">times</span><span class="p">,</span>
+                <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">decay_rate</span> <span class="o">*</span> <span class="n">noise_rate</span> <span class="o">*</span> <span class="n">times</span><span class="p">)),</span>
+                <span class="n">color</span><span class="o">=</span><span class="s2">&quot;firebrick&quot;</span><span class="p">,</span>
+                <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+                <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Damping&quot;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">N_realizations</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="p">)</span>
+
+    <span class="n">axis</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span>
+        <span class="n">convergence_line</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+        <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Final mixed state&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Put labels outside of the plot</span>
+    <span class="k">if</span> <span class="n">label</span><span class="p">:</span>
+        <span class="n">axis</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span>
+            <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.05</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span> <span class="n">borderaxespad</span><span class="o">=</span><span class="mf">0.0</span>
+        <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Using the above functions we are ready to run our noisy simulations. We will study the effects of dephasing and depolarizing noise for different noise rate realizations.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">clean_simu</span><span class="o">.</span><span class="n">reset_config</span><span class="p">()</span>
+
+<span class="n">noise_rates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">depolarizing_results</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">dephasing_results</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">noise_rate</span> <span class="ow">in</span> <span class="n">noise_rates</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Noise rate = &quot;</span><span class="p">,</span> <span class="n">noise_rate</span><span class="p">)</span>
+
+    <span class="c1"># We configure the dephasing and depolarizing noises</span>
+    <span class="n">config_dephasing</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="s2">&quot;dephasing&quot;</span><span class="p">,</span> <span class="n">dephasing_rate</span><span class="o">=</span><span class="n">noise_rate</span><span class="p">)</span>
+    <span class="n">config_depolarizing</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span>
+        <span class="n">noise</span><span class="o">=</span><span class="s2">&quot;depolarizing&quot;</span><span class="p">,</span> <span class="n">depolarizing_rate</span><span class="o">=</span><span class="n">noise_rate</span>
+    <span class="p">)</span>
+
+    <span class="c1"># We run the simulations</span>
+    <span class="n">dephasing_result</span> <span class="o">=</span> <span class="n">noisy_dynamics</span><span class="p">(</span><span class="n">clean_simu</span><span class="p">,</span> <span class="n">config_dephasing</span><span class="p">)</span>
+    <span class="n">depolarizing_result</span> <span class="o">=</span> <span class="n">noisy_dynamics</span><span class="p">(</span><span class="n">clean_simu</span><span class="p">,</span> <span class="n">config_depolarizing</span><span class="p">)</span>
+
+    <span class="c1"># Storage</span>
+    <span class="n">depolarizing_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">depolarizing_result</span><span class="p">)</span>
+    <span class="n">dephasing_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dephasing_result</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Noise rate =  0.0
+Noise rate =  0.5
+Noise rate =  1.0
+Noise rate =  1.5
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Basis states definition</span>
+<span class="n">r_state</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">g_state</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">basis</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;g&quot;</span><span class="p">:</span> <span class="n">g_state</span><span class="p">,</span>
+    <span class="s2">&quot;r&quot;</span><span class="p">:</span> <span class="n">r_state</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<section id="Dephasing-Channel">
+<h3>Dephasing Channel<a class="headerlink" href="#Dephasing-Channel" title="Link to this heading"></a></h3>
+<p>In the following we illustrate the results of the single qubit dephasing channel.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># We plot the population evolution</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Population evolution with dephasing noise&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Ground state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Excited state&quot;</span><span class="p">)</span>
+
+<span class="c1"># Hide x labels and tick labels for top plots and y ticks for right plots.</span>
+<span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">:</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">label_outer</span><span class="p">()</span>
+
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;g&quot;</span><span class="p">],</span>
+    <span class="n">dephasing_results</span><span class="p">,</span>
+    <span class="n">noise_rates</span><span class="p">,</span>
+    <span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;r&quot;</span><span class="p">],</span>
+    <span class="n">dephasing_results</span><span class="p">,</span>
+    <span class="n">noise_rates</span><span class="p">,</span>
+    <span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_effective_noise_43_0.png" src="../_images/tutorials_effective_noise_43_0.png" />
+</div>
+</div>
+<p>This plot shows the Rabi oscillations over time. You can see the effects of the dephasing channel on the populations of the excited and ground states. When we increase the noise of the dephasing channel, the Rabi oscillations are increasingly damped.</p>
+<p>The dephasing channel destroys off-diagonal elements of the density matrix, and tends towards a stationary state with zero off-diagonals. The mixed state obtained is the maximally mixed state.</p>
+<p>In other words the density matrix converges to <span class="math notranslate nohighlight">\(\rho = \frac{1}{2} \mathbb I = \frac{1}{2}(|0\rangle\langle 0| + |1\rangle\langle 1|)\)</span>.</p>
+<p>Notice that the ground state and excited state populations oscillate in phase opposition.</p>
+</section>
+<section id="Depolarizing-Channel">
+<h3>Depolarizing Channel<a class="headerlink" href="#Depolarizing-Channel" title="Link to this heading"></a></h3>
+<p>In the following we illustrate the results of the single qubit depolarizing channel.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Basis population evolution with the depolarizing noise&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Ground state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Excited state&quot;</span><span class="p">)</span>
+
+<span class="c1"># Hide x labels and tick labels for top plots and y ticks for right plots.</span>
+<span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">:</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">label_outer</span><span class="p">()</span>
+
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;g&quot;</span><span class="p">],</span>
+    <span class="n">depolarizing_results</span><span class="p">,</span>
+    <span class="n">noise_rates</span><span class="p">,</span>
+    <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;r&quot;</span><span class="p">],</span>
+    <span class="n">depolarizing_results</span><span class="p">,</span>
+    <span class="n">noise_rates</span><span class="p">,</span>
+    <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_effective_noise_49_0.png" src="../_images/tutorials_effective_noise_49_0.png" />
+</div>
+</div>
+<p>As was the case for the dephasing channel, we observe a damping of the population of both basis states, indicating a convergence torwards the maximally mixed state. However, for matching rate values, the depolarizing channel results in a faster decoherence than the dephasing channel.</p>
+<p>If we recall the effect of both channels on the Bloch sphere, we see that the depolarizing channel acts uniformly for any state, while the dephasing channel’s effect is maximized for Bloch vectors lying on the equator. Therefore, as the Bloch vector oscillates between <span class="math notranslate nohighlight">\(\ket{0}\)</span> and <span class="math notranslate nohighlight">\(\ket{1}\)</span>, it still gets progressively smaller. However, its decoherence rate only matches that of the depolarizing channel when crossing the equator, resulting in a compartively longer coherence time.</p>
+</section>
+</section>
+<section id="Two-atom-noisy-simulations">
+<h2>Two-atom noisy simulations<a class="headerlink" href="#Two-atom-noisy-simulations" title="Link to this heading"></a></h2>
+<p>We already know what happens in a single qubit configuration, but we would like to study the multi-qubit case. To do so we start with two qubits.</p>
+<p>We will analyze two configurations. One with nearby atoms and another with distant atoms and see how effective noise channels interact with the system.</p>
+<p>The concepts of <em>far</em> and <em>nearby</em> are defined with respect to the Rydberg blockade radius. Two atoms are <em>nearby</em> when they are within a blockade radius of one another and <em>far</em> otherwise.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Rydberg blockade radius</span>
+<span class="n">omega</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">r_interatomic</span> <span class="o">=</span> <span class="n">AnalogDevice</span><span class="o">.</span><span class="n">rydberg_blockade_radius</span><span class="p">(</span><span class="n">omega</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Rydberg radius (</span><span class="si">{</span><span class="n">r_interatomic</span><span class="si">}</span><span class="s2">) &gt; 5 &quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Rydberg radius (7.186760677748386) &gt; 5
+</pre></div></div>
+</div>
+<section id="Nearby-atoms">
+<h3>Nearby atoms<a class="headerlink" href="#Nearby-atoms" title="Link to this heading"></a></h3>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># We create two nearby atoms</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">)],</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+
+<span class="n">reg</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_effective_noise_58_0.png" src="../_images/tutorials_effective_noise_58_0.png" />
+</div>
+</div>
+<p>We will use the same pulse as before.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">AnalogDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;channel 0&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">duration</span> <span class="o">=</span> <span class="mi">2500</span>
+<span class="n">pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">omega</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse</span><span class="p">,</span> <span class="s2">&quot;channel 0&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_effective_noise_60_0.png" src="../_images/tutorials_effective_noise_60_0.png" />
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">clean_simu</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="n">clean_res</span> <span class="o">=</span> <span class="n">clean_simu</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">clean_simu</span><span class="o">.</span><span class="n">reset_config</span><span class="p">()</span>
+
+<span class="n">noise_rates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">depolarizing_results</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">dephasing_results</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">noise_rate</span> <span class="ow">in</span> <span class="n">noise_rates</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Noise rate = &quot;</span><span class="p">,</span> <span class="n">noise_rate</span><span class="p">)</span>
+
+    <span class="c1"># We configure the dephasing and depolarizing noises</span>
+    <span class="n">config_dephasing</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="s2">&quot;dephasing&quot;</span><span class="p">,</span> <span class="n">dephasing_rate</span><span class="o">=</span><span class="n">noise_rate</span><span class="p">)</span>
+    <span class="n">config_depolarizing</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span>
+        <span class="n">noise</span><span class="o">=</span><span class="s2">&quot;depolarizing&quot;</span><span class="p">,</span> <span class="n">depolarizing_rate</span><span class="o">=</span><span class="n">noise_rate</span>
+    <span class="p">)</span>
+
+    <span class="c1"># We run the simulations</span>
+    <span class="n">dephasing_result</span> <span class="o">=</span> <span class="n">noisy_dynamics</span><span class="p">(</span><span class="n">clean_simu</span><span class="p">,</span> <span class="n">config_dephasing</span><span class="p">)</span>
+    <span class="n">depolarizing_result</span> <span class="o">=</span> <span class="n">noisy_dynamics</span><span class="p">(</span><span class="n">clean_simu</span><span class="p">,</span> <span class="n">config_depolarizing</span><span class="p">)</span>
+
+    <span class="c1"># Storage</span>
+    <span class="n">depolarizing_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">depolarizing_result</span><span class="p">)</span>
+    <span class="n">dephasing_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dephasing_result</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Noise rate =  0.0
+Noise rate =  0.5
+Noise rate =  1.0
+Noise rate =  1.5
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Basis states definition</span>
+<span class="n">r_state</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">g_state</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">basis</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;gg&quot;</span><span class="p">:</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">g_state</span><span class="p">,</span> <span class="n">g_state</span><span class="p">),</span>
+    <span class="s2">&quot;rg&quot;</span><span class="p">:</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">r_state</span><span class="p">,</span> <span class="n">g_state</span><span class="p">),</span>
+    <span class="s2">&quot;gr&quot;</span><span class="p">:</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">g_state</span><span class="p">,</span> <span class="n">r_state</span><span class="p">),</span>
+    <span class="s2">&quot;rr&quot;</span><span class="p">:</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">r_state</span><span class="p">,</span> <span class="n">r_state</span><span class="p">),</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<section id="id3">
+<h4>Dephasing Channel<a class="headerlink" href="#id3" title="Link to this heading"></a></h4>
+<p>In the following we illustrate the results of the two-qubit dephasing channel.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Basis population evolution with dephasing noise&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|gg&gt; state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|rg&gt; state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|gr&gt; state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|rr&gt; state&quot;</span><span class="p">)</span>
+
+<span class="c1"># Hide x labels and tick labels for top plots and y ticks for right plots.</span>
+<span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">:</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">label_outer</span><span class="p">()</span>
+
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;gg&quot;</span><span class="p">],</span>
+    <span class="n">dephasing_results</span><span class="p">,</span>
+    <span class="n">noise_rates</span><span class="p">,</span>
+    <span class="kc">None</span><span class="p">,</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;rg&quot;</span><span class="p">],</span> <span class="n">dephasing_results</span><span class="p">,</span> <span class="n">noise_rates</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;gr&quot;</span><span class="p">],</span> <span class="n">dephasing_results</span><span class="p">,</span> <span class="n">noise_rates</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">axs</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;rr&quot;</span><span class="p">],</span> <span class="n">dephasing_results</span><span class="p">,</span> <span class="n">noise_rates</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">axs</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_effective_noise_65_0.png" src="../_images/tutorials_effective_noise_65_0.png" />
+</div>
+</div>
+<p>We can easily notice that: <span class="math notranslate nohighlight">\(\braket{gg|\rho(t)|gg}, \braket{gr|\rho(t)|gr}\)</span> and <span class="math notranslate nohighlight">\(\braket{rg|\rho(t)|rg}\)</span> converge to <span class="math notranslate nohighlight">\(\frac{1}{3}\)</span> when <span class="math notranslate nohighlight">\(\braket{rg|\rho(t)|rg}\)</span> stays at zero.</p>
+<p>Atom 2 is inside the Rydberg radius, so the <span class="math notranslate nohighlight">\(\ket{rr}\)</span> state is forbidden.</p>
+<p>The final mixed state is then:</p>
+<div class="math notranslate nohighlight">
+\[\rho = \frac{1}{3} (\ket{gg}\bra{gg} + \ket{gr}\bra{gr} + \ket{rg}\bra{rg} )\]</div>
+<p>Let’s see whether the same happens with the depolarizing channel.</p>
+</section>
+<section id="id4">
+<h4>Depolarizing Channel<a class="headerlink" href="#id4" title="Link to this heading"></a></h4>
+<p>In the following we illustrate the results of the two-qubit depolarizing channel.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Basis population evolution with depolarizing noise&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|gg&gt; state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|rg&gt; state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|gr&gt; state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|rr&gt; state&quot;</span><span class="p">)</span>
+
+<span class="c1"># Hide x labels and tick labels for top plots and y ticks for right plots.</span>
+<span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">:</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">label_outer</span><span class="p">()</span>
+
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;gg&quot;</span><span class="p">],</span>
+    <span class="n">depolarizing_results</span><span class="p">,</span>
+    <span class="n">noise_rates</span><span class="p">,</span>
+    <span class="kc">None</span><span class="p">,</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="mi">1</span> <span class="o">/</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;rg&quot;</span><span class="p">],</span> <span class="n">depolarizing_results</span><span class="p">,</span> <span class="n">noise_rates</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">4</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;gr&quot;</span><span class="p">],</span> <span class="n">depolarizing_results</span><span class="p">,</span> <span class="n">noise_rates</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">axs</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">4</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;rr&quot;</span><span class="p">],</span> <span class="n">depolarizing_results</span><span class="p">,</span> <span class="n">noise_rates</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">axs</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">4</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_effective_noise_70_0.png" src="../_images/tutorials_effective_noise_70_0.png" />
+</div>
+</div>
+<p>Although the Rydberg blockade should make the state <span class="math notranslate nohighlight">\(\ket{rr}\)</span> state unreacheble, we observe its population gradually increase over time. This is explained by the fact that the depolarizing noise is making each state vector evolve independently towards the maximally mixed state. Therefore, as coherence is lost, the <span class="math notranslate nohighlight">\(\ket{rr}\)</span> becomes just as likely as any other eigenstate, since both qubits turn into classical mixtures with no correlation between them.</p>
+<p>Thus, the final output mixed state is:</p>
+<div class="math notranslate nohighlight">
+\[\rho = \frac{1}{4} (\ket{gg}\bra{gg} + \ket{gr}\bra{gr} + \ket{rg}\bra{rg} + \ket{rr}\bra{rr})\]</div>
+</section>
+</section>
+<section id="Distant-atoms">
+<h3>Distant atoms<a class="headerlink" href="#Distant-atoms" title="Link to this heading"></a></h3>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">)],</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;20 = R &gt; Rydberg radius = </span><span class="si">{</span><span class="n">r_interatomic</span><span class="si">}</span><span class="s2"> &quot;</span><span class="p">)</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">AnalogDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;channel 0&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">duration</span> <span class="o">=</span> <span class="mi">2500</span>
+<span class="n">pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse</span><span class="p">,</span> <span class="s2">&quot;channel 0&quot;</span><span class="p">)</span>
+
+<span class="n">clean_simu</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="n">clean_res</span> <span class="o">=</span> <span class="n">clean_simu</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+20 = R &gt; Rydberg radius = 7.186760677748386
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">depolarizing_results</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">dephasing_results</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">noise_rate</span> <span class="ow">in</span> <span class="n">noise_rates</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Noise rate = &quot;</span><span class="p">,</span> <span class="n">noise_rate</span><span class="p">)</span>
+
+    <span class="c1"># We configure the dephasing and depolarizing noises</span>
+    <span class="n">config_dephasing</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="s2">&quot;dephasing&quot;</span><span class="p">,</span> <span class="n">dephasing_rate</span><span class="o">=</span><span class="n">noise_rate</span><span class="p">)</span>
+    <span class="n">config_depolarizing</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span>
+        <span class="n">noise</span><span class="o">=</span><span class="s2">&quot;depolarizing&quot;</span><span class="p">,</span> <span class="n">depolarizing_rate</span><span class="o">=</span><span class="n">noise_rate</span>
+    <span class="p">)</span>
+
+    <span class="c1"># We run the simulations</span>
+    <span class="n">dephasing_result</span> <span class="o">=</span> <span class="n">noisy_dynamics</span><span class="p">(</span><span class="n">clean_simu</span><span class="p">,</span> <span class="n">config_dephasing</span><span class="p">)</span>
+    <span class="n">depolarizing_result</span> <span class="o">=</span> <span class="n">noisy_dynamics</span><span class="p">(</span><span class="n">clean_simu</span><span class="p">,</span> <span class="n">config_depolarizing</span><span class="p">)</span>
+
+    <span class="c1"># Storage</span>
+    <span class="n">depolarizing_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">depolarizing_result</span><span class="p">)</span>
+    <span class="n">dephasing_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dephasing_result</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Noise rate =  0.0
+Noise rate =  0.5
+Noise rate =  1.0
+Noise rate =  1.5
+</pre></div></div>
+</div>
+<section id="id5">
+<h4>Dephasing Channel<a class="headerlink" href="#id5" title="Link to this heading"></a></h4>
+<p>In the following we illustrate the results of the two-qubit dephasing channel.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Basis population evolution with dephasing noise&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|gg&gt; state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|rg&gt; state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|gr&gt; state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|rr&gt; state&quot;</span><span class="p">)</span>
+
+<span class="c1"># Hide x labels and tick labels for top plots and y ticks for right plots.</span>
+<span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">:</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">label_outer</span><span class="p">()</span>
+
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;gg&quot;</span><span class="p">],</span>
+    <span class="n">dephasing_results</span><span class="p">,</span>
+    <span class="n">noise_rates</span><span class="p">,</span>
+    <span class="kc">None</span><span class="p">,</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="mi">1</span> <span class="o">/</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;rg&quot;</span><span class="p">],</span> <span class="n">dephasing_results</span><span class="p">,</span> <span class="n">noise_rates</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">4</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;gr&quot;</span><span class="p">],</span> <span class="n">dephasing_results</span><span class="p">,</span> <span class="n">noise_rates</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">axs</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">4</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;rr&quot;</span><span class="p">],</span> <span class="n">dephasing_results</span><span class="p">,</span> <span class="n">noise_rates</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">axs</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">4</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_effective_noise_76_0.png" src="../_images/tutorials_effective_noise_76_0.png" />
+</div>
+</div>
+<p>Without the interaction, both qubits now evolve independently towards the maximally mixed state, resulting in</p>
+<div class="math notranslate nohighlight">
+\[\rho = \frac{1}{4} (\ket{gg}\bra{gg} + \ket{gr}\bra{gr} + \ket{rg}\bra{rg} + \ket{rr}\bra{rr})\]</div>
+</section>
+<section id="id6">
+<h4>Depolarizing Channel<a class="headerlink" href="#id6" title="Link to this heading"></a></h4>
+<p>In the following we illustrate the results of the two-qubit depolarizing channel.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[31]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Basis population evolution with depolarizing noise&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|gg&gt; state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|rg&gt; state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|gr&gt; state&quot;</span><span class="p">)</span>
+<span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;|rr&gt; state&quot;</span><span class="p">)</span>
+
+<span class="c1"># Hide x labels and tick labels for top plots and y ticks for right plots.</span>
+<span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axs</span><span class="o">.</span><span class="n">flat</span><span class="p">:</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">label_outer</span><span class="p">()</span>
+
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;gg&quot;</span><span class="p">],</span>
+    <span class="n">depolarizing_results</span><span class="p">,</span>
+    <span class="n">noise_rates</span><span class="p">,</span>
+    <span class="kc">None</span><span class="p">,</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="mi">1</span> <span class="o">/</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;rg&quot;</span><span class="p">],</span> <span class="n">depolarizing_results</span><span class="p">,</span> <span class="n">noise_rates</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">4</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;gr&quot;</span><span class="p">],</span> <span class="n">depolarizing_results</span><span class="p">,</span> <span class="n">noise_rates</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">axs</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">4</span>
+<span class="p">)</span>
+<span class="n">plot_basis_population</span><span class="p">(</span>
+    <span class="n">basis</span><span class="p">[</span><span class="s2">&quot;rr&quot;</span><span class="p">],</span> <span class="n">depolarizing_results</span><span class="p">,</span> <span class="n">noise_rates</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">axs</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">4</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_effective_noise_79_0.png" src="../_images/tutorials_effective_noise_79_0.png" />
+</div>
+</div>
+<p>Although the output state remains the same as before, we observe a different behaviour in the evolution towards it. In fact, without the interaction, we now see that the <span class="math notranslate nohighlight">\(\ket{rr}\)</span> population oscillates freely, which did not occur in the presence of a Rydberg blockade.</p>
+</section>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="laser_noise.html" class="btn btn-neutral float-left" title="Laser noise" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="optimization.html" class="btn btn-neutral float-right" title="Optimal Control for AFM State Preparation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

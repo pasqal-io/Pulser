@@ -1,0 +1,721 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pulse Sequence Creation &mdash; Pulser 1.2.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/max_width.css" />
+
+  
+      <script src="../_static/jquery.js"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+      <script src="../_static/doctools.js"></script>
+      <script src="../_static/sphinx_highlight.js"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Simulation of Sequences" href="simulating.html" />
+    <link rel="prev" title="Quickstart: The Rydberg Blockade" href="../intro_rydberg_blockade.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.2.1" /><meta name="readthedocs-resolver-filename" content="/tutorials/creating.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installation and First Steps</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../intro_rydberg_blockade.html">Quickstart: The Rydberg Blockade</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Pulse Sequence Creation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#1.-Creating-the-Register">1. Creating the <code class="docutils literal notranslate"><span class="pre">Register</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#2.-Initializing-the-Sequence">2. Initializing the Sequence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#3.-Declaring-the-channels-that-will-be-used">3. Declaring the channels that will be used</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#4.-Composing-the-Sequence">4. Composing the Sequence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#5.-Measurement">5. Measurement</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="simulating.html">Simulation of Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamental Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../review.html">Quantum Computing with Neutral Atoms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Backend Execution</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution of Pulser Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Classical Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Quantum Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="afm_prep.html">Preparing a state with antiferromagnetic order in the Ising model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Spin Chain</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mw_engineering.html">Simulation of XYZ spin models using Floquet engineering in XY mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shadow_est.html">Efficient estimation techniques for Variational Quantum Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1D_crystals.html">Building 1D Rydberg Crystals</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cz_gate.html">Control-Z Gate Sequence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pulser.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Pulse Sequence Creation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/creating.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Pulse-Sequence-Creation">
+<h1>Pulse Sequence Creation<a class="headerlink" href="#Pulse-Sequence-Creation" title="Permalink to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pprint</span><span class="w"> </span><span class="kn">import</span> <span class="n">pprint</span>
+</pre></div>
+</div>
+</div>
+<section id="1.-Creating-the-Register">
+<h2>1. Creating the <code class="docutils literal notranslate"><span class="pre">Register</span></code><a class="headerlink" href="#1.-Creating-the-Register" title="Permalink to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">Register</span></code> defines the positions of the atoms and their names of each one. There are multiple ways of defining a <code class="docutils literal notranslate"><span class="pre">Register</span></code>, the most customizable one being to create a dictionary that associates a name (the key) to a cooordinate (the value).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">L</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">square</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">L</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">L</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="n">square</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">square</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">square</span> <span class="o">*=</span> <span class="mi">5</span>
+
+<span class="n">qubits</span> <span class="o">=</span> <span class="p">{</span><span class="sa">f</span><span class="s2">&quot;q</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">point</span> <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">point</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">square</span><span class="p">)}</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Register</span><span class="p">(</span><span class="n">qubits</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">Register</span></code> class provides some useful features, like the ability to visualise the array and to make a rotated copy.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The original array:&quot;</span><span class="p">)</span>
+<span class="n">reg</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+<span class="n">reg1</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">rotated</span><span class="p">(</span><span class="mi">45</span><span class="p">)</span>  <span class="c1"># Rotate by 45 degrees</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The rotated array:&quot;</span><span class="p">)</span>
+<span class="n">reg1</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+The original array:
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_6_1.png" src="../_images/tutorials_creating_6_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+The rotated array:
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_6_3.png" src="../_images/tutorials_creating_6_3.png" />
+</div>
+</div>
+<p>If one doesn’t particularly care about the name given to the qubits, one can also create a <code class="docutils literal notranslate"><span class="pre">Register</span></code> just from a list of coordinates (using the <code class="docutils literal notranslate"><span class="pre">Register.from_coordinates</span></code> class method). In this case, the qubit ID’s are just numbered, starting from 0, in the order they are provided in, with the option of adding a common prefix before each number. Also, it automatically centers the entire array around the origin, an option that can be disabled if desired.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">reg2</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">(</span>
+    <span class="n">square</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span>
+<span class="p">)</span>  <span class="c1"># All qubit IDs will start with &#39;q&#39;</span>
+<span class="n">reg2</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_8_0.png" src="../_images/tutorials_creating_8_0.png" />
+</div>
+</div>
+<p>Furthermore, there are also built-in class methods from creation of common array patterns, namely:</p>
+<ul class="simple">
+<li><p>Square lattices in rectangular or square shapes</p></li>
+<li><p>Triangular lattices</p></li>
+</ul>
+<p>We could, thus, create the same square array as before by doing:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">reg3</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Register</span><span class="o">.</span><span class="n">square</span><span class="p">(</span>
+    <span class="mi">4</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span>
+<span class="p">)</span>  <span class="c1"># 4x4 array with atoms 5 um apart</span>
+<span class="n">reg3</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_10_0.png" src="../_images/tutorials_creating_10_0.png" />
+</div>
+</div>
+</section>
+<section id="2.-Initializing-the-Sequence">
+<h2>2. Initializing the Sequence<a class="headerlink" href="#2.-Initializing-the-Sequence" title="Permalink to this heading"></a></h2>
+<p>To create a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, one has to provide it with the <code class="docutils literal notranslate"><span class="pre">Register</span></code> instance and the device in which the sequence will be executed. The chosen device will dictate whether the register is valid or not.</p>
+<p>We import the device (in this case, <code class="docutils literal notranslate"><span class="pre">DigitalAnalogDevice</span></code>) from <code class="docutils literal notranslate"><span class="pre">pulser.devices</span></code> and initialize our sequence with the freshly created register:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">DigitalAnalogDevice</span>
+
+<span class="n">seq</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">DigitalAnalogDevice</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="3.-Declaring-the-channels-that-will-be-used">
+<h2>3. Declaring the channels that will be used<a class="headerlink" href="#3.-Declaring-the-channels-that-will-be-used" title="Permalink to this heading"></a></h2>
+<p>Inspecting what channels are available on this device:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">available_channels</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;rydberg_global&#39;: Rydberg(addressing=&#39;Global&#39;, max_abs_detuning=125.66370614359172, max_amp=15.707963267948966, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=4, min_duration=16, max_duration=67108864, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None),
+ &#39;rydberg_local&#39;: Rydberg(addressing=&#39;Local&#39;, max_abs_detuning=125.66370614359172, max_amp=62.83185307179586, min_retarget_interval=220, fixed_retarget_t=0, max_targets=1, clock_period=4, min_duration=16, max_duration=67108864, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None),
+ &#39;raman_local&#39;: Raman(addressing=&#39;Local&#39;, max_abs_detuning=125.66370614359172, max_amp=62.83185307179586, min_retarget_interval=220, fixed_retarget_t=0, max_targets=1, clock_period=4, min_duration=16, max_duration=67108864, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None),
+ &#39;dmm_0&#39;: DMM(addressing=&#39;Global&#39;, max_abs_detuning=None, max_amp=0, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=4, min_duration=16, max_duration=67108864, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None, bottom_detuning=-125.66370614359172, total_bottom_detuning=-12566.370614359172)}
+</pre></div></div>
+</div>
+<p>We’re going to choose the <code class="docutils literal notranslate"><span class="pre">'rydberg_local'</span></code> and <code class="docutils literal notranslate"><span class="pre">'raman_local'</span></code> channels. Note how a declared channel is no longer reported as available.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ch0&quot;</span><span class="p">,</span> <span class="s2">&quot;raman_local&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Available channels after declaring &#39;ch0&#39;:&quot;</span><span class="p">)</span>
+<span class="n">pprint</span><span class="p">(</span><span class="n">seq</span><span class="o">.</span><span class="n">available_channels</span><span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ch1&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_local&quot;</span><span class="p">,</span> <span class="n">initial_target</span><span class="o">=</span><span class="s2">&quot;q4&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Available channels after declaring &#39;ch1&#39;:&quot;</span><span class="p">)</span>
+<span class="n">pprint</span><span class="p">(</span><span class="n">seq</span><span class="o">.</span><span class="n">available_channels</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Available channels after declaring &#39;ch0&#39;:
+{&#39;dmm_0&#39;: DMM(addressing=&#39;Global&#39;, max_abs_detuning=None, max_amp=0, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=4, min_duration=16, max_duration=67108864, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None, bottom_detuning=-125.66370614359172, total_bottom_detuning=-12566.370614359172),
+ &#39;rydberg_global&#39;: Rydberg(addressing=&#39;Global&#39;, max_abs_detuning=125.66370614359172, max_amp=15.707963267948966, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=4, min_duration=16, max_duration=67108864, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None),
+ &#39;rydberg_local&#39;: Rydberg(addressing=&#39;Local&#39;, max_abs_detuning=125.66370614359172, max_amp=62.83185307179586, min_retarget_interval=220, fixed_retarget_t=0, max_targets=1, clock_period=4, min_duration=16, max_duration=67108864, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None)}
+
+Available channels after declaring &#39;ch1&#39;:
+{&#39;dmm_0&#39;: DMM(addressing=&#39;Global&#39;, max_abs_detuning=None, max_amp=0, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=4, min_duration=16, max_duration=67108864, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None, bottom_detuning=-125.66370614359172, total_bottom_detuning=-12566.370614359172),
+ &#39;rydberg_global&#39;: Rydberg(addressing=&#39;Global&#39;, max_abs_detuning=125.66370614359172, max_amp=15.707963267948966, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=4, min_duration=16, max_duration=67108864, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None)}
+</pre></div></div>
+</div>
+<p>At any time, we can also consult which channels were declared, their specifications and the name they were given by calling:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">declared_channels</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;ch0&#39;: Raman(addressing=&#39;Local&#39;, max_abs_detuning=125.66370614359172, max_amp=62.83185307179586, min_retarget_interval=220, fixed_retarget_t=0, max_targets=1, clock_period=4, min_duration=16, max_duration=67108864, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None),
+ &#39;ch1&#39;: Rydberg(addressing=&#39;Local&#39;, max_abs_detuning=125.66370614359172, max_amp=62.83185307179586, min_retarget_interval=220, fixed_retarget_t=0, max_targets=1, clock_period=4, min_duration=16, max_duration=67108864, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None)}
+</pre></div></div>
+</div>
+</section>
+<section id="4.-Composing-the-Sequence">
+<h2>4. Composing the Sequence<a class="headerlink" href="#4.-Composing-the-Sequence" title="Permalink to this heading"></a></h2>
+<p>Every channel needs to start with a target. For <code class="docutils literal notranslate"><span class="pre">Global</span></code> channels this is predefined to be all qubits in the device, but for <code class="docutils literal notranslate"><span class="pre">Local</span></code> channels this has to be defined. This initial target can be set through at channel declaration (see how <code class="docutils literal notranslate"><span class="pre">'ch1'</span></code> was set to target qubit <code class="docutils literal notranslate"><span class="pre">4</span></code>), or it can be done through the standard <code class="docutils literal notranslate"><span class="pre">target</span></code> instruction.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">target</span><span class="p">(</span><span class="s2">&quot;q1&quot;</span><span class="p">,</span> <span class="s2">&quot;ch0&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Now both channels have an initial target, so we can start building the sequence. Let’s start by creating a simple pulse with a constant Rabi frequency of 2 rad/µs and a constant detuning of -10 rad/µs that lasts 200 ns.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">simple_pulse</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Let’s add this pulse to <code class="docutils literal notranslate"><span class="pre">'ch0'</span></code>:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">simple_pulse</span><span class="p">,</span> <span class="s2">&quot;ch0&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Now, say we want to idle <code class="docutils literal notranslate"><span class="pre">'ch1'</span></code> for 100 ns while <code class="docutils literal notranslate"><span class="pre">'ch0'</span></code> is doing its pulse. We do that by calling:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;ch1&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Next, we want to create a more complex pulse to add to <code class="docutils literal notranslate"><span class="pre">'ch1'</span></code>, where the amplitude and the detuning are not constant. To do that, we use <code class="docutils literal notranslate"><span class="pre">Waveform</span></code>s:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">duration</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">amp_wf</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">BlackmanWaveform</span><span class="p">(</span>
+    <span class="n">duration</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span>
+<span class="p">)</span>  <span class="c1"># Duration: 1000 ns, Area: pi/2</span>
+<span class="n">detuning_wf</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">RampWaveform</span><span class="p">(</span>
+    <span class="n">duration</span><span class="p">,</span> <span class="o">-</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span>
+<span class="p">)</span>  <span class="c1"># Duration: 1000ns, linear sweep from -20 to 20 rad/µs</span>
+</pre></div>
+</div>
+</div>
+<p>We can visualize a waveform by calling:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">amp_wf</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_33_0.png" src="../_images/tutorials_creating_33_0.png" />
+</div>
+</div>
+<p>Also, it is often convenient to find the integral of a waveform, which can be obtain by calling:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">amp_wf</span><span class="o">.</span><span class="n">integral</span>  <span class="c1"># dimensionless</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+1.5707963267948968
+</pre></div></div>
+</div>
+<p>We then create the pulse with the waveforms instead of fixed values and we can also visualize it:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">complex_pulse</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="p">(</span><span class="n">amp_wf</span><span class="p">,</span> <span class="n">detuning_wf</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">complex_pulse</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_37_0.png" src="../_images/tutorials_creating_37_0.png" />
+</div>
+</div>
+<p>When we’re satisfied, we can then add it to a channel:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">complex_pulse</span><span class="p">,</span> <span class="s2">&quot;ch1&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Let’s check the schedule to see how this is looking:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Channel: ch0
+t: 0 | Initial targets: q1 | Phase Reference: 0.0
+t: 0-&gt;200 | Pulse(Amp=2 rad/µs, Detuning=-10 rad/µs, Phase=0) | Targets: q1
+
+Channel: ch1
+t: 0 | Initial targets: q4 | Phase Reference: 0.0
+t: 0-&gt;100 | Delay
+t: 100-&gt;1100 | Pulse(Amp=Blackman(Area: 1.57) rad/µs, Detuning=Ramp(-20-&gt;20) rad/µs, Phase=0) | Targets: q4
+
+
+</pre></div></div>
+</div>
+<p>We can also draw the sequence, for a more visual representation:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_43_0.png" src="../_images/tutorials_creating_43_0.png" />
+</div>
+</div>
+<p>Now, let’s see how the Sequence builder handles conflicts (i.e. two channels acting on the same qubit at once). We’re going to add a <code class="docutils literal notranslate"><span class="pre">complex_pulse</span></code>to <code class="docutils literal notranslate"><span class="pre">'ch0'</span></code>, but now we want to target it to qubit <code class="docutils literal notranslate"><span class="pre">4</span></code>, which is the same target of <code class="docutils literal notranslate"><span class="pre">'ch1'</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">target</span><span class="p">(</span><span class="s2">&quot;q4&quot;</span><span class="p">,</span> <span class="s2">&quot;ch0&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">complex_pulse</span><span class="p">,</span> <span class="s2">&quot;ch0&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Current Schedule:&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current Schedule:
+Channel: ch0
+t: 0 | Initial targets: q1 | Phase Reference: 0.0
+t: 0-&gt;200 | Pulse(Amp=2 rad/µs, Detuning=-10 rad/µs, Phase=0) | Targets: q1
+t: 200-&gt;220 | Target: q4 | Phase Reference: 0.0
+t: 220-&gt;1100 | Delay
+t: 1100-&gt;2100 | Pulse(Amp=Blackman(Area: 1.57) rad/µs, Detuning=Ramp(-20-&gt;20) rad/µs, Phase=0) | Targets: q4
+
+Channel: ch1
+t: 0 | Initial targets: q4 | Phase Reference: 0.0
+t: 0-&gt;100 | Delay
+t: 100-&gt;1100 | Pulse(Amp=Blackman(Area: 1.57) rad/µs, Detuning=Ramp(-20-&gt;20) rad/µs, Phase=0) | Targets: q4
+
+
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_45_1.png" src="../_images/tutorials_creating_45_1.png" />
+</div>
+</div>
+<p>By looking at the current schedule, we can see that <code class="docutils literal notranslate"><span class="pre">'ch0'</span></code> was delayed from <code class="docutils literal notranslate"><span class="pre">ti=220</span></code> to <code class="docutils literal notranslate"><span class="pre">tf=1100</span></code>, and only then was the <code class="docutils literal notranslate"><span class="pre">complex_pulse</span></code> added. The reason for this is simple: it had to wait for the pulse on <code class="docutils literal notranslate"><span class="pre">ch1</span></code>, also targeted to qubit <code class="docutils literal notranslate"><span class="pre">4</span></code>, to finish before it could apply its own. It behaved this way because, in <code class="docutils literal notranslate"><span class="pre">Sequence.add</span></code> there is a default argument <code class="docutils literal notranslate"><span class="pre">protocol='min-delay</span></code>.</p>
+<p>Another protocol for pulse addition is <code class="docutils literal notranslate"><span class="pre">wait-for-all</span></code>, which makes the new pulse wait even if there is no conflict. Let’s remove the conflict and add two <code class="docutils literal notranslate"><span class="pre">simple_pulse</span></code>s to <code class="docutils literal notranslate"><span class="pre">ch1</span></code> with the different protocols to see how the compare.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">target</span><span class="p">(</span><span class="s2">&quot;q0&quot;</span><span class="p">,</span> <span class="s2">&quot;ch1&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">simple_pulse</span><span class="p">,</span> <span class="s2">&quot;ch1&quot;</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="s2">&quot;min-delay&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">simple_pulse</span><span class="p">,</span> <span class="s2">&quot;ch1&quot;</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="s2">&quot;wait-for-all&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Current Schedule:&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current Schedule:
+Channel: ch0
+t: 0 | Initial targets: q1 | Phase Reference: 0.0
+t: 0-&gt;200 | Pulse(Amp=2 rad/µs, Detuning=-10 rad/µs, Phase=0) | Targets: q1
+t: 200-&gt;220 | Target: q4 | Phase Reference: 0.0
+t: 220-&gt;1100 | Delay
+t: 1100-&gt;2100 | Pulse(Amp=Blackman(Area: 1.57) rad/µs, Detuning=Ramp(-20-&gt;20) rad/µs, Phase=0) | Targets: q4
+
+Channel: ch1
+t: 0 | Initial targets: q4 | Phase Reference: 0.0
+t: 0-&gt;100 | Delay
+t: 100-&gt;1100 | Pulse(Amp=Blackman(Area: 1.57) rad/µs, Detuning=Ramp(-20-&gt;20) rad/µs, Phase=0) | Targets: q4
+t: 1100-&gt;1100 | Target: q0 | Phase Reference: 0.0
+t: 1100-&gt;1300 | Pulse(Amp=2 rad/µs, Detuning=-10 rad/µs, Phase=0) | Targets: q0
+t: 1300-&gt;2100 | Delay
+t: 2100-&gt;2300 | Pulse(Amp=2 rad/µs, Detuning=-10 rad/µs, Phase=0) | Targets: q0
+
+
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_48_1.png" src="../_images/tutorials_creating_48_1.png" />
+</div>
+</div>
+<p>Because we removed the conflict by changing the target of <code class="docutils literal notranslate"><span class="pre">ch1</span></code> to qubit <code class="docutils literal notranslate"><span class="pre">0</span></code>, we see that the first pulse was added without delay from <code class="docutils literal notranslate"><span class="pre">ti=1100</span></code> to <code class="docutils literal notranslate"><span class="pre">tf=1300</span></code> (i.e. while <code class="docutils literal notranslate"><span class="pre">complex_pulse</span></code> is still running in <code class="docutils literal notranslate"><span class="pre">ch0</span></code>). However, once we changed to <code class="docutils literal notranslate"><span class="pre">protocol='wait-for-all'</span></code>, there is now a delay (from <code class="docutils literal notranslate"><span class="pre">ti=1300</span></code> to <code class="docutils literal notranslate"><span class="pre">tf=2100</span></code>) that idles <code class="docutils literal notranslate"><span class="pre">ch1</span></code> until <code class="docutils literal notranslate"><span class="pre">ch0</span></code>is finished with its pulse, even though there was no conflict.</p>
+<p>The third protocol is called <code class="docutils literal notranslate"><span class="pre">'no-delay'</span></code> which, as the name implies, never delays the channel where the pulse is being added, even if that means introducing a conflict.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">target</span><span class="p">(</span><span class="s2">&quot;q0&quot;</span><span class="p">,</span> <span class="s2">&quot;ch0&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">complex_pulse</span><span class="p">,</span> <span class="s2">&quot;ch0&quot;</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="s2">&quot;no-delay&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Current Schedule:&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current Schedule:
+Channel: ch0
+t: 0 | Initial targets: q1 | Phase Reference: 0.0
+t: 0-&gt;200 | Pulse(Amp=2 rad/µs, Detuning=-10 rad/µs, Phase=0) | Targets: q1
+t: 200-&gt;220 | Target: q4 | Phase Reference: 0.0
+t: 220-&gt;1100 | Delay
+t: 1100-&gt;2100 | Pulse(Amp=Blackman(Area: 1.57) rad/µs, Detuning=Ramp(-20-&gt;20) rad/µs, Phase=0) | Targets: q4
+t: 2100-&gt;2100 | Target: q0 | Phase Reference: 0.0
+t: 2100-&gt;3100 | Pulse(Amp=Blackman(Area: 1.57) rad/µs, Detuning=Ramp(-20-&gt;20) rad/µs, Phase=0) | Targets: q0
+
+Channel: ch1
+t: 0 | Initial targets: q4 | Phase Reference: 0.0
+t: 0-&gt;100 | Delay
+t: 100-&gt;1100 | Pulse(Amp=Blackman(Area: 1.57) rad/µs, Detuning=Ramp(-20-&gt;20) rad/µs, Phase=0) | Targets: q4
+t: 1100-&gt;1100 | Target: q0 | Phase Reference: 0.0
+t: 1100-&gt;1300 | Pulse(Amp=2 rad/µs, Detuning=-10 rad/µs, Phase=0) | Targets: q0
+t: 1300-&gt;2100 | Delay
+t: 2100-&gt;2300 | Pulse(Amp=2 rad/µs, Detuning=-10 rad/µs, Phase=0) | Targets: q0
+
+
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_51_1.png" src="../_images/tutorials_creating_51_1.png" />
+</div>
+</div>
+<p>With this protocol, it is possible (though not advised), to create an overlap where multiple channels can be acting on the same qubit at the same time. Here, we can see that both act on qubit <code class="docutils literal notranslate"><span class="pre">0</span></code> from <code class="docutils literal notranslate"><span class="pre">ti=2100</span></code> to <code class="docutils literal notranslate"><span class="pre">tf=2300</span></code>.</p>
+</section>
+<section id="5.-Measurement">
+<h2>5. Measurement<a class="headerlink" href="#5.-Measurement" title="Permalink to this heading"></a></h2>
+<p>To finish a sequence, we measure it. A measurement signals the end of a sequence, so after it no more changes are possible. We can measure a sequence by calling:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">measure</span><span class="p">(</span><span class="n">basis</span><span class="o">=</span><span class="s2">&quot;ground-rydberg&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>When measuring, one has to select the desired measurement basis. The availabe options depend on the device and can be consulted by calling:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">DigitalAnalogDevice</span><span class="o">.</span><span class="n">supported_bases</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;digital&#39;, &#39;ground-rydberg&#39;}
+</pre></div></div>
+</div>
+<p>And so, we’ve obtained the final sequence!</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_creating_59_0.png" src="../_images/tutorials_creating_59_0.png" />
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../intro_rydberg_blockade.html" class="btn btn-neutral float-left" title="Quickstart: The Rydberg Blockade" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="simulating.html" class="btn btn-neutral float-right" title="Simulation of Sequences" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

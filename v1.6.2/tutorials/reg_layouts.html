@@ -1,0 +1,647 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register Layouts &amp; Mappable Registers &mdash; Pulser 1.6.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e15882dc"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Output Modulation &amp; EOM Mode" href="output_mod_eom.html" />
+    <link rel="prev" title="Introduction to Extended Usage" href="../extended_usage_intro.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.6.2" /><meta name="readthedocs-resolver-filename" content="/tutorials/reg_layouts.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Register Layouts &amp; Mappable Registers</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Arbitrary-Layouts">Arbitrary Layouts</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Useful-properties">Useful properties</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Register-definition">Register definition</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Special-Layouts">Special Layouts</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#SquareLatticeLayout"><code class="docutils literal notranslate"><span class="pre">SquareLatticeLayout</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#TriangularLatticeLayout"><code class="docutils literal notranslate"><span class="pre">TriangularLatticeLayout</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Devices-with-pre-calibrated-layouts">Devices with pre-calibrated layouts</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Maximum-Layout-Filling-Fraction">Maximum Layout Filling Fraction</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Mappable-Registers">Mappable Registers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Register Layouts &amp; Mappable Registers</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/reg_layouts.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Register-Layouts-&amp;-Mappable-Registers">
+<h1>Register Layouts &amp; Mappable Registers<a class="headerlink" href="#Register-Layouts-&-Mappable-Registers" title="Link to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.register.register_layout</span><span class="w"> </span><span class="kn">import</span> <span class="n">RegisterLayout</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Pulse</span>
+</pre></div>
+</div>
+</div>
+<p>One of the strengths of neutral-atom QPUs is their ability to arrange the atoms in arbitrary configurations. Experimentally, this is realized by creating a layout of optical traps where individual atoms can be placed to create the desired Register.</p>
+<p>Given an arbitrary register, a neutral-atom QPU will generate an associated layout that will then have to be calibrated. Each new calibration takes some time, so it is often prefered to reuse an existing layout that has already been calibrated, whenever possible.</p>
+<p>Therefore, it can be of interest to the QPU provider to specify which layouts are already calibrated in their QPU, such that the user can reuse them to specify their <code class="docutils literal notranslate"><span class="pre">Register</span></code>. In Pulser, these layouts are provided as instances of the <code class="docutils literal notranslate"><span class="pre">RegisterLayout</span></code> class.</p>
+<section id="Arbitrary-Layouts">
+<h2>Arbitrary Layouts<a class="headerlink" href="#Arbitrary-Layouts" title="Link to this heading"></a></h2>
+<p>A <code class="docutils literal notranslate"><span class="pre">RegisterLayout</span></code> layout is defined by a set of trap coordinates. These coordinates are systematically ordered in the same way, making two layouts with the same set of trap coordinates identical.</p>
+<p>Below, we create an arbitrary layout of 20 traps randomly placed in a 2D plane. Optionally, a layout may also have an associated <code class="docutils literal notranslate"><span class="pre">slug</span></code> to help identifying it.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Generating random coordinates</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">301122</span><span class="p">)</span>  <span class="c1"># Keeps results consistent between runs</span>
+<span class="n">traps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="n">traps</span> <span class="o">=</span> <span class="n">traps</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">traps</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># Creating the layout</span>
+<span class="n">layout</span> <span class="o">=</span> <span class="n">RegisterLayout</span><span class="p">(</span><span class="n">traps</span><span class="p">,</span> <span class="n">slug</span><span class="o">=</span><span class="s2">&quot;random_20&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Given a <code class="docutils literal notranslate"><span class="pre">RegisterLayout</span></code> instance, the best way to inspect it is through <code class="docutils literal notranslate"><span class="pre">RegisterLayout.draw()</span></code>. Notice the default ordering of the atoms (ascending order in x, if tied then in y, if tied then in z):</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">layout</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_reg_layouts_7_0.png" src="../_images/tutorials_reg_layouts_7_0.png" />
+</div>
+</div>
+<section id="Useful-properties">
+<h3>Useful properties<a class="headerlink" href="#Useful-properties" title="Link to this heading"></a></h3>
+<p>To access the trap coordinates:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">RegisterLayout.traps_dict</span></code> gives a mapping between trap IDs and coordinates</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">RegisterLayout.coords</span></code> provides the ordered list of trap coordinates</p></li>
+</ul>
+<p>To identify a layout, one can use its <code class="docutils literal notranslate"><span class="pre">repr()</span></code> for a unique identifier or its <code class="docutils literal notranslate"><span class="pre">str()</span></code> for the <code class="docutils literal notranslate"><span class="pre">slug</span></code> (if specified).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The layout slug:&quot;</span><span class="p">,</span> <span class="n">layout</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The unique ID layout:&quot;</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">layout</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+The layout slug: random_20
+The unique ID layout: RegisterLayout_0119932f3fc4d0cf580fff471f18baad23e982084be676487841b8a4be41c978
+</pre></div></div>
+</div>
+</section>
+<section id="Register-definition">
+<h3>Register definition<a class="headerlink" href="#Register-definition" title="Link to this heading"></a></h3>
+<p>More often than not, a <code class="docutils literal notranslate"><span class="pre">RegisterLayout</span></code> will be created by the hardware provider and given to the user. From there, the user must define the desired <code class="docutils literal notranslate"><span class="pre">Register</span></code> to initialize the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>. This can be done in multiple ways:</p>
+<p><strong>1. Defined by the trap IDs:</strong></p>
+<p>You can find the ID of each trap from its drawing or from the <code class="docutils literal notranslate"><span class="pre">RegisterLayout.traps_dict</span></code>. With those, you can define your register (optionally providing a list of qubit IDs):</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">trap_ids</span> <span class="o">=</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">reg1</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">define_register</span><span class="p">(</span><span class="o">*</span><span class="n">trap_ids</span><span class="p">,</span> <span class="n">qubit_ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="s2">&quot;d&quot;</span><span class="p">])</span>
+<span class="n">reg1</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">draw_empty_sites</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_reg_layouts_16_0.png" src="../_images/tutorials_reg_layouts_16_0.png" />
+</div>
+</div>
+<p>Note that the information of the layout is stored internally in the Register:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">reg1</span><span class="o">.</span><span class="n">layout</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+RegisterLayout_0119932f3fc4d0cf580fff471f18baad23e982084be676487841b8a4be41c978
+</pre></div></div>
+</div>
+<p><strong>2. Defined from the trap coordinates:</strong></p>
+<p>Alternatively, you can find the trap IDs from the trap coordinates using the <code class="docutils literal notranslate"><span class="pre">RegisterLayout.get_traps_from_coordinates()</span></code> method, which compares the provided coordinates with those on the layout with 6 decimal places of precision.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">some_coords</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">layout</span><span class="o">.</span><span class="n">number_of_traps</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="p">]</span>
+<span class="n">trap_ids</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">get_traps_from_coordinates</span><span class="p">(</span><span class="o">*</span><span class="n">some_coords</span><span class="p">)</span>
+<span class="n">reg2</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">define_register</span><span class="p">(</span><span class="o">*</span><span class="n">trap_ids</span><span class="p">)</span>
+<span class="n">reg2</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">draw_empty_sites</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_reg_layouts_21_0.png" src="../_images/tutorials_reg_layouts_21_0.png" />
+</div>
+</div>
+</section>
+</section>
+<section id="Special-Layouts">
+<h2>Special Layouts<a class="headerlink" href="#Special-Layouts" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser.register.special_layouts</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">SquareLatticeLayout</span><span class="p">,</span>
+    <span class="n">TriangularLatticeLayout</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>On top of the generic <code class="docutils literal notranslate"><span class="pre">RegisterLayout</span></code> class, there are special classes for common layouts that include convenience methods to more easily define a <code class="docutils literal notranslate"><span class="pre">Register</span></code>. These are subclasses of <code class="docutils literal notranslate"><span class="pre">RegisterLayout</span></code>, so all the methods specified above will still work.</p>
+<section id="SquareLatticeLayout">
+<h3><code class="docutils literal notranslate"><span class="pre">SquareLatticeLayout</span></code><a class="headerlink" href="#SquareLatticeLayout" title="Link to this heading"></a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">SquareLatticeLayout</span></code> specifies a layout from an underlying square lattice.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">square_layout</span> <span class="o">=</span> <span class="n">SquareLatticeLayout</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">square_layout</span><span class="p">)</span>
+<span class="n">square_layout</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+SquareLatticeLayout(7x4, 5.0µm)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_reg_layouts_27_1.png" src="../_images/tutorials_reg_layouts_27_1.png" />
+</div>
+</div>
+<p>With <code class="docutils literal notranslate"><span class="pre">SquareLatticeLayout.rectangular_register()</span></code> and <code class="docutils literal notranslate"><span class="pre">SquareLatticeLayout.square_register()</span></code>, one can conveniently define a new <code class="docutils literal notranslate"><span class="pre">Register</span></code>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">square_layout</span><span class="o">.</span><span class="n">rectangular_register</span><span class="p">(</span><span class="n">rows</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;a&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_reg_layouts_29_0.png" src="../_images/tutorials_reg_layouts_29_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">square_layout</span><span class="o">.</span><span class="n">square_register</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_reg_layouts_30_0.png" src="../_images/tutorials_reg_layouts_30_0.png" />
+</div>
+</div>
+</section>
+<section id="TriangularLatticeLayout">
+<h3><code class="docutils literal notranslate"><span class="pre">TriangularLatticeLayout</span></code><a class="headerlink" href="#TriangularLatticeLayout" title="Link to this heading"></a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">TriangularLatticeLayout</span></code> specifies a layout from an underlying triangular lattice.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tri_layout</span> <span class="o">=</span> <span class="n">TriangularLatticeLayout</span><span class="p">(</span><span class="n">n_traps</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">tri_layout</span><span class="p">)</span>
+<span class="n">tri_layout</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+TriangularLatticeLayout(100, 5.0µm)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_reg_layouts_33_1.png" src="../_images/tutorials_reg_layouts_33_1.png" />
+</div>
+</div>
+<p>With <code class="docutils literal notranslate"><span class="pre">TriangularLatticeLayout.hexagonal_register()</span></code> or <code class="docutils literal notranslate"><span class="pre">TriangularLatticeLayout.rectangular_register()</span></code>, one can easily define a <code class="docutils literal notranslate"><span class="pre">Register</span></code> from a subset of existing traps.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tri_layout</span><span class="o">.</span><span class="n">hexagonal_register</span><span class="p">(</span><span class="n">n_atoms</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_reg_layouts_35_0.png" src="../_images/tutorials_reg_layouts_35_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tri_layout</span><span class="o">.</span><span class="n">rectangular_register</span><span class="p">(</span><span class="n">rows</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">atoms_per_row</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_reg_layouts_36_0.png" src="../_images/tutorials_reg_layouts_36_0.png" />
+</div>
+</div>
+</section>
+</section>
+<section id="Devices-with-pre-calibrated-layouts">
+<h2>Devices with pre-calibrated layouts<a class="headerlink" href="#Devices-with-pre-calibrated-layouts" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">Device</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.channels</span><span class="w"> </span><span class="kn">import</span> <span class="n">Rydberg</span><span class="p">,</span> <span class="n">Raman</span>
+
+<span class="n">TestDevice</span> <span class="o">=</span> <span class="n">Device</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;TestDevice&quot;</span><span class="p">,</span>
+    <span class="n">dimensions</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">rydberg_level</span><span class="o">=</span><span class="mi">70</span><span class="p">,</span>
+    <span class="n">max_atom_num</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">max_radial_distance</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">max_layout_filling</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>
+    <span class="n">min_atom_distance</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">channel_objects</span><span class="o">=</span><span class="p">(</span><span class="n">Rydberg</span><span class="o">.</span><span class="n">Global</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mf">2.5</span><span class="p">),),</span>
+    <span class="n">pre_calibrated_layouts</span><span class="o">=</span><span class="p">(</span>
+        <span class="n">SquareLatticeLayout</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+        <span class="n">TriangularLatticeLayout</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>When receiving a <code class="docutils literal notranslate"><span class="pre">Device</span></code> instance, it may include the layouts that are already calibrated and available to be used. To access them, simply run:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">TestDevice</span><span class="o">.</span><span class="n">calibrated_register_layouts</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;SquareLatticeLayout(10x10, 4.0µm)&#39;: RegisterLayout_e0a40bea81ea9f3ef63dfbb16ee1fa85138e50a9402b1fa04822994b055c0b4f,
+ &#39;TriangularLatticeLayout(100, 5.0µm)&#39;: RegisterLayout_46d398a85ffbed2af2918ecfc59fe0ab265ee3ffdea3d734774bee2fc5c90145}
+</pre></div></div>
+</div>
+<p>You can then choose one of these layouts to define your <code class="docutils literal notranslate"><span class="pre">Register</span></code> and start creating a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">layout</span> <span class="o">=</span> <span class="n">TestDevice</span><span class="o">.</span><span class="n">calibrated_register_layouts</span><span class="p">[</span>
+    <span class="s2">&quot;SquareLatticeLayout(10x10, 4.0µm)&quot;</span>
+<span class="p">]</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">square_register</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">TestDevice</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>In general, when a device comes with <code class="docutils literal notranslate"><span class="pre">pre_calibrated_layouts</span></code>, using them is encouraged. However, nothing prevents a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> to be created with a register coming from another layout, as long as that layout is compatible with the device. For example:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">another_layout</span> <span class="o">=</span> <span class="n">SquareLatticeLayout</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">another_layout</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">TestDevice</span><span class="o">.</span><span class="n">pre_calibrated_layouts</span>
+<span class="n">reg_</span> <span class="o">=</span> <span class="n">another_layout</span><span class="o">.</span><span class="n">square_register</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg_</span><span class="p">,</span> <span class="n">TestDevice</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>However, it is not possible to use a register created from an invalid layout, even if the register is valid:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">bad_layout</span> <span class="o">=</span> <span class="n">TriangularLatticeLayout</span><span class="p">(</span>
+    <span class="mi">200</span><span class="p">,</span> <span class="mi">10</span>
+<span class="p">)</span>  <span class="c1"># This layout is too large for TestDevice</span>
+<span class="n">good_reg</span> <span class="o">=</span> <span class="n">bad_layout</span><span class="o">.</span><span class="n">hexagonal_register</span><span class="p">(</span>
+    <span class="mi">10</span>
+<span class="p">)</span>  <span class="c1"># On its own, this register is valid in TestDevice</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">good_reg</span><span class="p">,</span> <span class="n">TestDevice</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+The &#39;register&#39; is associated with an incompatible register layout.
+</pre></div></div>
+</div>
+<section id="Maximum-Layout-Filling-Fraction">
+<h3>Maximum Layout Filling Fraction<a class="headerlink" href="#Maximum-Layout-Filling-Fraction" title="Link to this heading"></a></h3>
+<p>Through the <code class="docutils literal notranslate"><span class="pre">Device.max_layout_filling</span></code>, a device also specifies how much a layout can be filled. Although the default value is 0.5, some devices might have slightly higher or lower values.</p>
+<p>In the case of our <code class="docutils literal notranslate"><span class="pre">TestDevice</span></code>, we specified the maximum layout filling fraction to be 0.4 . This means that we can use up to 40% of a <code class="docutils literal notranslate"><span class="pre">RegisterLayout</span></code> to form our register.</p>
+<p>Let us see what would happen if we were to go over this value (e.g. by making a register of 49 atoms from a layout with 100 atoms):</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">layout</span> <span class="o">=</span> <span class="n">TestDevice</span><span class="o">.</span><span class="n">calibrated_register_layouts</span><span class="p">[</span>
+    <span class="s2">&quot;SquareLatticeLayout(10x10, 4.0µm)&quot;</span>
+<span class="p">]</span>
+<span class="n">too_big_reg</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">square_register</span><span class="p">(</span><span class="mi">7</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">too_big_reg</span><span class="p">,</span> <span class="n">TestDevice</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Given the number of traps in the layout and the device&#39;s maximum layout filling fraction, the given register has too many qubits (49). On this device, this layout can hold at most 40 qubits.
+</pre></div></div>
+</div>
+</section>
+</section>
+<section id="Mappable-Registers">
+<h2>Mappable Registers<a class="headerlink" href="#Mappable-Registers" title="Link to this heading"></a></h2>
+<p>Finally, layouts enable the creation of a <code class="docutils literal notranslate"><span class="pre">MappableRegister</span></code> — a register with the traps of each qubit still to be defined. This register can then be used to create a sort of parametrized <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, where deciding which traps will be mapped to which qubits only happens when <code class="docutils literal notranslate"><span class="pre">Sequence.build()</span></code> is called.</p>
+<p>For example, below we define a mappable register with 10 qubits.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">map_register</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">make_mappable_register</span><span class="p">(</span><span class="n">n_qubits</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">map_register</span><span class="o">.</span><span class="n">qubit_ids</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&#39;q0&#39;, &#39;q1&#39;, &#39;q2&#39;, &#39;q3&#39;, &#39;q4&#39;, &#39;q5&#39;, &#39;q6&#39;, &#39;q7&#39;, &#39;q8&#39;, &#39;q9&#39;)
+</pre></div></div>
+</div>
+<p>We now use this register in our simple sequence:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">map_register</span><span class="p">,</span> <span class="n">TestDevice</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">seq</span><span class="o">.</span><span class="n">is_register_mappable</span><span class="p">()</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;rydberg&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="n">duration</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">amplitude</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">detuning</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+    <span class="s2">&quot;rydberg&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_reg_layouts_54_0.png" src="../_images/tutorials_reg_layouts_54_0.png" />
+</div>
+</div>
+<p>To define the register, we can then call <code class="docutils literal notranslate"><span class="pre">Sequence.build()</span></code>, indicating in the <code class="docutils literal notranslate"><span class="pre">qubits</span></code> argument the map between qubit IDs and trap IDs. Note that not all the qubit IDs need to be associated to a trap ID, and that the qubit IDs have to be defined in their order of appearance in <code class="docutils literal notranslate"><span class="pre">MappableRegister.qubit_ids</span></code> (it is not possible to associate a trap ID to qubit ID “q4” if no trap ID was assigned to qubit ID “q3”).</p>
+<p>In this way, we can build multiple sequences, with only the <code class="docutils literal notranslate"><span class="pre">Register</span></code> changing from one to the other:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq1</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">qubits</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;q0&quot;</span><span class="p">:</span> <span class="mi">16</span><span class="p">,</span> <span class="s2">&quot;q1&quot;</span><span class="p">:</span> <span class="mi">19</span><span class="p">,</span> <span class="s2">&quot;q2&quot;</span><span class="p">:</span> <span class="mi">34</span><span class="p">})</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;First register:&quot;</span><span class="p">,</span> <span class="n">seq1</span><span class="o">.</span><span class="n">register</span><span class="o">.</span><span class="n">qubits</span><span class="p">)</span>
+
+<span class="n">seq2</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">qubits</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;q0&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;q2&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span> <span class="s2">&quot;q1&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;q3&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">})</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Second register:&quot;</span><span class="p">,</span> <span class="n">seq2</span><span class="o">.</span><span class="n">register</span><span class="o">.</span><span class="n">qubits</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+First register: {&#39;q0&#39;: array([-12.,   8.]), &#39;q1&#39;: array([-12.,  20.]), &#39;q2&#39;: array([-4.,  0.])}
+Second register: {&#39;q0&#39;: array([-16., -16.]), &#39;q1&#39;: array([ -8., -16.]), &#39;q2&#39;: array([-12.,   4.]), &#39;q3&#39;: array([  4., -16.])}
+</pre></div></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../extended_usage_intro.html" class="btn btn-neutral float-left" title="Introduction to Extended Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="output_mod_eom.html" class="btn btn-neutral float-right" title="Output Modulation &amp; EOM Mode" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

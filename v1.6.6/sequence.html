@@ -1,0 +1,410 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sequence Creation and Validation &mdash; Pulser 1.6.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=1d29987b"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <script src="_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Backend Execution" href="tutorials/backends.html" />
+    <link rel="prev" title="Pulses and Waveforms" href="pulses.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.6.6" /><meta name="readthedocs-resolver-filename" content="/sequence.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Pulser
+              <img src="_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Sequence Creation and Validation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#The-Pulser-Sequence">The Pulser <code class="docutils literal notranslate"><span class="pre">Sequence</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Fundamental-Sequence-Capabilities">Fundamental <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> Capabilities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Building">Building</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Inspecting">Inspecting</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Drawing-and-Printing">Drawing and Printing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Runtime-Validation">Runtime Validation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Switching-the-device">Switching the device</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pulser.Sequence.with_new_device"><code class="docutils literal notranslate"><span class="pre">with_new_device()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#Backend-specific-validation">Backend-specific validation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Sequence Creation and Validation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/sequence.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Sequence-Creation-and-Validation">
+<h1>Sequence Creation and Validation<a class="headerlink" href="#Sequence-Creation-and-Validation" title="Link to this heading"></a></h1>
+<p><em>What you will learn:</em></p>
+<ul class="simple">
+<li><p>what a Pulser <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> is;</p></li>
+<li><p>what you can do with a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>;</p></li>
+<li><p>how to make sure your <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> is valid.</p></li>
+</ul>
+<section id="The-Pulser-Sequence">
+<h2>The Pulser <code class="docutils literal notranslate"><span class="pre">Sequence</span></code><a class="headerlink" href="#The-Pulser-Sequence" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> is what encapsulates a Pulser program and it brings together all the concepts we have introduced so far in the <em>Fundamentals</em> section. Concretely, a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> combines:</p>
+<ul class="simple">
+<li><p>a <a class="reference internal" href="register.html"><span class="doc">Register</span></a> that defines the relative positions of the atoms involved in the computation;</p></li>
+<li><p>a <a class="reference internal" href="hardware.html#The-Device"><span class="std std-ref">Device</span></a> that dictates the physical constraints the program must respect;</p></li>
+<li><p><a class="reference internal" href="hardware.html#The-Channels"><span class="std std-ref">Channels</span></a>, selected from the <code class="docutils literal notranslate"><span class="pre">Device</span></code>, that define which states are used in the computation;</p></li>
+<li><p>a schedule of operations, wherein <a class="reference internal" href="pulses.html"><span class="doc">Pulses</span></a> are included, that determine what happens over time.</p></li>
+</ul>
+<p>As described in <a class="reference internal" href="programming.html"><span class="doc">Programming a Neutral-Atom QPU</span></a> and exemplified in the <a class="reference internal" href="tutorials/creating.html"><span class="doc">Tutorial:</span></a>, constructing a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> is akin to programming a <a class="reference internal" href="programming.html#hamiltonian-evolves-the-state"><span class="std std-ref">time-dependent Hamiltonian</span></a>. This program can then be given to a <a class="reference internal" href="tutorials/backends.html"><span class="doc">Backend</span></a> that will evolve an initial state according to the programmed Hamiltonian, producing a result.</p>
+<p>The pages linked above covered the step-by-step process of constructing a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>. In this page, we will instead highlight the most relevant capabilities of the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> object itself.</p>
+</section>
+<section id="Fundamental-Sequence-Capabilities">
+<h2>Fundamental <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> Capabilities<a class="headerlink" href="#Fundamental-Sequence-Capabilities" title="Link to this heading"></a></h2>
+<p>In this section, we focus only on the fundamental features for programming a sequence in Pulser.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">See Also</p>
+<p>All the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> properties and methods can be found in <a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html"><span class="doc">its API reference</span></a>.</p>
+</div>
+<section id="Building">
+<h3>Building<a class="headerlink" href="#Building" title="Link to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.declare_channel" title="pulser.sequence.Sequence.declare_channel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence.declare_channel</span></code></a>(name, channel_id[, …])</p></td>
+<td><p>Declares a new channel in the Sequence.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.add" title="pulser.sequence.Sequence.add"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence.add</span></code></a>(pulse, channel[, protocol])</p></td>
+<td><p>Adds a pulse to a channel.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.delay" title="pulser.sequence.Sequence.delay"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence.delay</span></code></a>(duration, channel[, at_rest])</p></td>
+<td><p>Idles a given channel for a specific duration.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.measure" title="pulser.sequence.Sequence.measure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence.measure</span></code></a>([basis])</p></td>
+<td><p>Measures in a valid basis.</p></td>
+</tr>
+</tbody>
+</table>
+<p>These four method are all you need to build a basic Pulser <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>. As shown in <a class="reference internal" href="tutorials/creating.html"><span class="doc">this tutorial</span></a>, they should be used in this order:</p>
+<ol class="arabic simple">
+<li><p>Pick a channel from the <code class="docutils literal notranslate"><span class="pre">Device</span></code> and declare it with <code class="docutils literal notranslate"><span class="pre">Sequence.declare_channel()</span></code>.</p></li>
+<li><p>Add pulses and delays to the channel with <code class="docutils literal notranslate"><span class="pre">Sequence.add()</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence.delay()</span></code>.</p></li>
+<li><p>Terminate the sequence with <code class="docutils literal notranslate"><span class="pre">Sequence.measure()</span></code>.</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Tip</p>
+<p>For more details on each of these methods, click on them in the table above.</p>
+</div>
+</section>
+<section id="Inspecting">
+<h3>Inspecting<a class="headerlink" href="#Inspecting" title="Link to this heading"></a></h3>
+<p>During and after the sequence building process, you migh want to inspect or access its contents. These properties and methods allow you to do so:</p>
+<p class="rubric">Properties</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.declared_channels" title="pulser.sequence.Sequence.declared_channels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence.declared_channels</span></code></a></p></td>
+<td><p>Channels declared in this Sequence.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.device" title="pulser.sequence.Sequence.device"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence.device</span></code></a></p></td>
+<td><p>Device that the sequence is using.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.draw" title="pulser.sequence.Sequence.draw"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence.draw</span></code></a>([mode, as_phase_modulated, …])</p></td>
+<td><p>Draws the sequence in its current state.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.get_addressed_bases" title="pulser.sequence.Sequence.get_addressed_bases"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence.get_addressed_bases</span></code></a>()</p></td>
+<td><p>Returns the bases addressed by the declared channels.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.get_addressed_states" title="pulser.sequence.Sequence.get_addressed_states"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence.get_addressed_states</span></code></a>()</p></td>
+<td><p>Returns the states addressed by the declared channels.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.get_duration" title="pulser.sequence.Sequence.get_duration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence.get_duration</span></code></a>([channel, …])</p></td>
+<td><p>Returns the current duration of a channel or the whole sequence.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.get_measurement_basis" title="pulser.sequence.Sequence.get_measurement_basis"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence.get_measurement_basis</span></code></a>()</p></td>
+<td><p>Gets the sequence’s measurement basis.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.get_register" title="pulser.sequence.Sequence.get_register"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence.get_register</span></code></a>([include_mappable])</p></td>
+<td><p>The atom register on which to apply the pulses.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.is_measured" title="pulser.sequence.Sequence.is_measured"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence.is_measured</span></code></a>()</p></td>
+<td><p>States whether the sequence has been measured.</p></td>
+</tr>
+</tbody>
+</table>
+<section id="Drawing-and-Printing">
+<h4>Drawing and Printing<a class="headerlink" href="#Drawing-and-Printing" title="Link to this heading"></a></h4>
+<p>In particular, it is often useful to visualize a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>’s contents, which we can do either by <strong>drawing</strong> or <strong>printing</strong>. Let’s exemplify these two options with the very simple sequence in <a class="reference internal" href="tutorials/creating.html#Preparing-an-atom-in-the-Rydberg-state"><span class="std std-ref">this tutorial</span></a>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+
+<span class="n">sequence</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span>
+    <span class="n">pulser</span><span class="o">.</span><span class="n">Register</span><span class="p">({</span><span class="s2">&quot;q0&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)}),</span> <span class="n">pulser</span><span class="o">.</span><span class="n">AnalogDevice</span>
+<span class="p">)</span>
+<span class="n">sequence</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;rydberg_global&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">pulse</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="mf">3.14</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">sequence</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span>
+<span class="n">sequence</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Channel: rydberg_global
+t: 0 | Initial targets: q0 | Phase Reference: 0.0
+t: 0-&gt;1000 | Pulse(Amp=3.14 rad/µs, Detuning=0 rad/µs, Phase=0) | Targets: q0
+
+
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="_images/sequence_8_1.png" src="_images/sequence_8_1.png" />
+</div>
+</div>
+<ul class="simple">
+<li><p>With <code class="docutils literal notranslate"><span class="pre">print(sequence)</span></code>, we have access to its contents in text form. This is particularly useful to access the exact timings of each instruction.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Tip</p>
+<p>To get the text representation of a sequence as a string, e.g. for saving it to a file, call <code class="docutils literal notranslate"><span class="pre">str(sequence)</span></code> instead.</p>
+</div>
+<ul class="simple">
+<li><p>With <code class="docutils literal notranslate"><span class="pre">sequence.draw()</span></code>, we see a plot of the channel’s contents over time. This method is <a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.draw"><span class="std std-ref">highly configurable</span></a>, though most of its options are related to features we have not yet covered.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Understanding</strong> <code class="docutils literal notranslate"><span class="pre">Sequence.draw()</span></code>:</p>
+<p>You might have noticed that <strong>two overlapping curves appear when you draw the</strong> <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>. These represent the pulse you programmed (shaded in solid color) and the <em>modulated pulse</em> we expect to actually reach the atoms (hashed with diagonal lines). You can find an explation for this effect and its implications in <a class="reference internal" href="tutorials/output_mod_eom.html"><span class="doc">this tutorial</span></a>.</p>
+</div>
+</section>
+</section>
+</section>
+<section id="Runtime-Validation">
+<h2>Runtime Validation<a class="headerlink" href="#Runtime-Validation" title="Link to this heading"></a></h2>
+<p>Alongside containing all the information necessary for execution on a backend, the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>’s main function is to ensure that all its contents respect the <a class="reference internal" href="hardware.html"><span class="doc">Device specifications</span></a>.</p>
+<p>Here is an example:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pulser.AnalogDevice</span></code> has a defined <code class="docutils literal notranslate"><span class="pre">min_atom_distance</span></code>, a minimum distance that must be respected between any two atoms in a register;</p></li>
+<li><p>if we create a <code class="docutils literal notranslate"><span class="pre">Register</span></code> where two atoms are closer than this distance, it will not respect the device’s constraints;</p></li>
+<li><p>therefore, once they are both given to the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> it will complain right away, giving us a chance to modify our register or choose a new device before we proceed with the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> creation.</p></li>
+</ul>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+
+<span class="n">spacing</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># The spacing we will use between atoms</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Register</span><span class="p">({</span><span class="s2">&quot;q0&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s2">&quot;q1&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">spacing</span><span class="p">,</span> <span class="mi">0</span><span class="p">)})</span>
+
+<span class="c1"># spacing is below the AnalogDevice&#39;s specs, so we expect an error</span>
+<span class="k">assert</span> <span class="n">spacing</span> <span class="o">&lt;</span> <span class="n">pulser</span><span class="o">.</span><span class="n">AnalogDevice</span><span class="o">.</span><span class="n">min_atom_distance</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">pulser</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">pulser</span><span class="o">.</span><span class="n">AnalogDevice</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Failed with error: &quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Failed with error:  The minimal distance between atoms in this device (5 µm) is not respected (up to a precision of 1e-6 µm) for the pairs: [(&#39;q0&#39;, &#39;q1&#39;)]
+</pre></div></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Important</p>
+<p>This automatic validation occurs upon every addition to the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> so that, if something is invalid, it is caught and corrected right away. By the same token, <strong>if a Sequence is constructed without any errors, it is automatically ensured to be valid against the chosen device’s constraints</strong>.</p>
+</div>
+<section id="Switching-the-device">
+<h3>Switching the device<a class="headerlink" href="#Switching-the-device" title="Link to this heading"></a></h3>
+<p>Sometimes, one wants to change the device of an already constructed <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>. Before manually reconstructing the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> with the new device, one can try the <a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence.with_new_device" title="pulser.sequence.Sequence.with_new_device"><code class="xref py py-class docutils literal notranslate"><span class="pre">with_new_device()</span></code></a> method:</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="pulser.Sequence.with_new_device">
+<span class="sig-prename descclassname"><span class="pre">pulser.Sequence.</span></span><span class="sig-name descname"><span class="pre">with_new_device</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_device</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser.Sequence.with_new_device" title="Link to this definition"></a></dt>
+<dd><p>Replicate the sequence with a different device.</p>
+<p>This method is designed to replicate the sequence with as few changes
+to the original contents as possible.
+If the <cite>strict</cite> option is chosen, the device switch will fail whenever
+it cannot guarantee that the new sequence’s contents will not be
+modified in the process.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>new_device</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeVar</span></code>(<code class="docutils literal notranslate"><span class="pre">DeviceType</span></code>, bound= <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseDevice</span></code>)</span>) – The target device instance.</p></li>
+<li><p><strong>strict</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Enforce a strict match between devices and channels to
+guarantee the pulse sequence is left unchanged.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="apidoc/_autosummary/pulser.sequence.Sequence.html#pulser.sequence.Sequence" title="pulser.sequence.sequence.Sequence"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The sequence on the new device.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p>This method attemps to automatically reconstruct the sequence with the new device, which will only succeed if the new sequence is valid on the new device.</p>
+<div class="admonition warning">
+<p class="admonition-title fa fa-exclamation-circle">Attention</p>
+<p>This switch may modify the contents of the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> — to ensure the contents stay unchanged, set <code class="docutils literal notranslate"><span class="pre">strict=True</span></code>.</p>
+</div>
+</section>
+<section id="Backend-specific-validation">
+<h3>Backend-specific validation<a class="headerlink" href="#Backend-specific-validation" title="Link to this heading"></a></h3>
+<p>There are a handful of backend-specific constraints that are not enforced during sequence construction. This is because execution on a <a class="reference internal" href="tutorials/backends.html#6.-Differences-when-running-on-a-QPU"><span class="std std-ref">QPU enforces additional restrictions</span></a> that don’t directly affect the programmed Hamiltonian, so they are not enforced by default. Nonetheless, <strong>when using an emulator to fully mimic the QPU execution process, all the QPU constraints can be enabled via the</strong> <code class="docutils literal notranslate"><span class="pre">mimic_qpu</span></code> <strong>argument</strong>.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pulses.html" class="btn btn-neutral float-left" title="Pulses and Waveforms" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tutorials/backends.html" class="btn btn-neutral float-right" title="Backend Execution" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,528 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulations with Noise and Errors &mdash; Pulser 1.5.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8f564690"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="SPAM errors" href="spam.html" />
+    <link rel="prev" title="Phase Shifts and Virtual Z gates" href="phase_shifts_vz_gates.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.5.6" /><meta name="readthedocs-resolver-filename" content="/tutorials/noisy_sim.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Emulation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Simulations with Noise and Errors</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Introduction">Introduction</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#1.-SPAM-(State-Preparation-And-Measurement)-errors:">1. SPAM (<em>State Preparation And Measurement</em>) errors:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.-Laser-noises:">2. Laser noises:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.-Effective-noise-channels:">3. Effective noise channels:</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Single-atom-noisy-simulations">Single atom noisy simulations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Sequence-preparation">Sequence preparation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#The-SimConfig-object">The SimConfig object</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SPAM-noise-use-case">SPAM noise use case</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Setting-evaluation-times">Setting evaluation times</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Plotting-noisy-and-clean-results">Plotting noisy and clean results</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Simulations with Noise and Errors</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/noisy_sim.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Simulations-with-Noise-and-Errors">
+<h1>Simulations with Noise and Errors<a class="headerlink" href="#Simulations-with-Noise-and-Errors" title="Link to this heading"></a></h1>
+<section id="Introduction">
+<h2>Introduction<a class="headerlink" href="#Introduction" title="Link to this heading"></a></h2>
+<p>This notebook is the first in a series of tutorials on the use of the <code class="docutils literal notranslate"><span class="pre">pulser-simulation</span></code> module to simulate pulse sequences with noise and errors. These are an unavoidable part of a real quantum system, and a good simulation of a pulse sequence should be able to reproduce them accurately. A detailed explanation of these phenomena can be found in the following <a class="reference external" href="https://arxiv.org/abs/1802.10424">reference</a>.</p>
+<p>Currently, <code class="docutils literal notranslate"><span class="pre">pulser-simulation</span></code> supports <em>noises</em> for the laser pulses and <em>errors</em> for the state preparation and measurement stages:</p>
+<section id="1.-SPAM-(State-Preparation-And-Measurement)-errors:">
+<h3>1. SPAM (<em>State Preparation And Measurement</em>) errors:<a class="headerlink" href="#1.-SPAM-(State-Preparation-And-Measurement)-errors:" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>State Preparation errors</strong>: The initial state preparation can fail to trap all the atoms in the ground state <span class="math notranslate nohighlight">\(\ket{g}\)</span>. We model this by the probability <span class="math notranslate nohighlight">\(\eta\)</span> of <em>not</em> having a given atom during processing.</p></li>
+<li><p><strong>Measurement errors</strong>: In addition, the probabilities <span class="math notranslate nohighlight">\(\epsilon, \epsilon '\)</span> are linked to detection errors. The first one is the probability of detecting an atom in the ground state <span class="math notranslate nohighlight">\(\ket{g}\)</span> as if it were in the excited state <span class="math notranslate nohighlight">\(\ket{r}\)</span> (“false positives”), and the second one is the probability of detecting an atom in the excited state <span class="math notranslate nohighlight">\(\ket{r}\)</span> as if it were in the ground state <span class="math notranslate nohighlight">\(\ket{g}\)</span> (“false negatives”).</p></li>
+</ul>
+</section>
+<section id="2.-Laser-noises:">
+<h3>2. Laser noises:<a class="headerlink" href="#2.-Laser-noises:" title="Link to this heading"></a></h3>
+<p>The fluctuations of the properties of the lasers affect their effectiveness in addressing the desired transitions between atomic levels:</p>
+<ul class="simple">
+<li><p><strong>Doppler damping</strong>: The atoms in the register are cooled to a temperature <span class="math notranslate nohighlight">\(T \sim 50\mu K\)</span>, which is low but still non-zero. Therefore, the laser frequency they experience is Doppler-shifted due to thermal motion. This can be seen as a shift in the detuning frequency of the laser.</p></li>
+<li><p><strong>Waist of the laser</strong>: For global pulses, the laser amplitude has a Gaussian profile and atoms at the border of the waist feel a slightly lower amplitude than those at the focus.</p></li>
+<li><p><strong>Amplitude fluctuations</strong>: Fluctuations in the laser amplitude from pulse to pulse.</p></li>
+</ul>
+</section>
+<section id="3.-Effective-noise-channels:">
+<h3>3. Effective noise channels:<a class="headerlink" href="#3.-Effective-noise-channels:" title="Link to this heading"></a></h3>
+<p>More generally, we can include effective noise channels in our simulation. These can represent the aggregate of different noise sources, as well as an interaction with an environment. To include these in our simulations, we use the Lindblad master equation, an evolution equation for the <em>density matrix</em> <span class="math notranslate nohighlight">\(\rho\)</span> of the system. Some introductory lecture notes on the topic can be found <a class="reference external" href="https://profmcruz.files.wordpress.com/2017/08/quantum-computation-and-quantum-information-nielsen-chuang.pdf">here (see chapters 8.2 to
+8.4)</a>. <code class="docutils literal notranslate"><span class="pre">pulser-simulation</span></code> includes the following noise channels:</p>
+<ul class="simple">
+<li><p><strong>Dephasing channel</strong>: Implements a decay in the <em>coherence</em> or <em>interference</em> terms (the off-diagonal terms in <span class="math notranslate nohighlight">\(\rho\)</span>). It applies random <span class="math notranslate nohighlight">\(z\)</span>-rotations on each qubit according to a given probability <span class="math notranslate nohighlight">\(p\)</span>, the dephasing probability.</p></li>
+<li><p><strong>Depolarizing channel</strong>: A more general type of noise in which <span class="math notranslate nohighlight">\(\rho\)</span> loses information due to interactions with the environment. This is represented as an evolution towards the completely mixed state <span class="math notranslate nohighlight">\(\rho \rightarrow \frac{\mathbb{I}}{2}\)</span>, effectively erasing the coherence in <span class="math notranslate nohighlight">\(\rho\)</span> with a probability <span class="math notranslate nohighlight">\(p\)</span>.</p></li>
+<li><p><strong>Custom effective noise channel</strong>: we can also include custom noise channels by providing the Lindblad operators and their coefficients.</p></li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">qutip</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Register</span><span class="p">,</span> <span class="n">Pulse</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser_simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimConfig</span><span class="p">,</span> <span class="n">QutipEmulator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnalogDevice</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="Single-atom-noisy-simulations">
+<h2>Single atom noisy simulations<a class="headerlink" href="#Single-atom-noisy-simulations" title="Link to this heading"></a></h2>
+<section id="Sequence-preparation">
+<h3>Sequence preparation<a class="headerlink" href="#Sequence-preparation" title="Link to this heading"></a></h3>
+<p>We prepare a single atom.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)],</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We act on this atom with a Constant Pulse, such that it oscillates between the ground state and excited Rydberg state (Rabi oscillations):</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">AnalogDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ch0&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">duration</span> <span class="o">=</span> <span class="mi">2500</span>
+<span class="n">pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse</span><span class="p">,</span> <span class="s2">&quot;ch0&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_noisy_sim_8_0.png" src="../_images/tutorials_noisy_sim_8_0.png" />
+</div>
+</div>
+<p>In order to characterize simulation results, we designed a dedicated class, the <code class="docutils literal notranslate"><span class="pre">SimulationResults</span></code> class. It has two child classes, the <code class="docutils literal notranslate"><span class="pre">CoherentResults</span></code> for when the final state can be represented as a state vector or density matrix and <code class="docutils literal notranslate"><span class="pre">NoisyResults</span></code> when it can only be provided as a probability distribution of final states.</p>
+<p>In the following, we run a noiseless simulation to obtain a <code class="docutils literal notranslate"><span class="pre">CoherentResults</span></code> object in <code class="docutils literal notranslate"><span class="pre">clean_res</span></code>. This object allows to get useful information on the simulation parameters, the simulation results and more.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="n">clean_res</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>We can for example plot the expectation values of an observable across time</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define Rydberg state observable</span>
+<span class="n">obs</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">proj</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">clean_res</span><span class="o">.</span><span class="n">_sim_times</span><span class="p">,</span> <span class="n">clean_res</span><span class="o">.</span><span class="n">expect</span><span class="p">([</span><span class="n">obs</span><span class="p">])[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Population in $|r\rangle$&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_noisy_sim_13_0.png" src="../_images/tutorials_noisy_sim_13_0.png" />
+</div>
+</div>
+</section>
+<section id="The-SimConfig-object">
+<h3>The SimConfig object<a class="headerlink" href="#The-SimConfig-object" title="Link to this heading"></a></h3>
+<p>Each simulation has an associated <code class="docutils literal notranslate"><span class="pre">SimConfig</span></code> object, which encapsulates parameters such as noise types, the temperature of the register and so on. You can view it at any time using the <code class="docutils literal notranslate"><span class="pre">show_config()</span></code> method:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span><span class="o">.</span><span class="n">show_config</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Options:
+----------
+Number of runs:        15
+Samples per run:       5
+</pre></div></div>
+</div>
+<p>When creating a new <code class="docutils literal notranslate"><span class="pre">SimConfig</span></code>, you can choose several parameters such as the number of runs and the number of delivered samples per run through the fields <code class="docutils literal notranslate"><span class="pre">'runs'</span></code> and <code class="docutils literal notranslate"><span class="pre">'samples_per_run'</span></code> respectively. The number of samples per run has no physical interpretation, this is used simply to cut down the calculation time by acquiring more shots without resampling the noise parameters.</p>
+</section>
+<section id="SPAM-noise-use-case">
+<h3>SPAM noise use case<a class="headerlink" href="#SPAM-noise-use-case" title="Link to this heading"></a></h3>
+<p>We will use as a toy example the <code class="docutils literal notranslate"><span class="pre">SPAM</span></code> noise and add it to our simulation in order to describe the different objects used for noisy simulations.</p>
+<p>To do so, we can create a new <code class="docutils literal notranslate"><span class="pre">SimConfig</span></code> object and assign it to the <code class="docutils literal notranslate"><span class="pre">config</span></code> field of <code class="docutils literal notranslate"><span class="pre">sim</span></code> via the <code class="docutils literal notranslate"><span class="pre">QutipEmulator.set_config</span></code> setter. We pass noise types as a tuple of strings to the <code class="docutils literal notranslate"><span class="pre">SimConfig</span></code> object created.</p>
+<p>You can list the different types of noises supported for each basis by calling <code class="docutils literal notranslate"><span class="pre">Simconfig.supported_noises</span></code> as follows:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">supported_noises</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;ising&#39;: {&#39;SPAM&#39;,
+  &#39;amplitude&#39;,
+  &#39;dephasing&#39;,
+  &#39;depolarizing&#39;,
+  &#39;doppler&#39;,
+  &#39;eff_noise&#39;},
+ &#39;XY&#39;: {&#39;SPAM&#39;}}
+</pre></div></div>
+</div>
+<p>By default, all config classes are in the <code class="docutils literal notranslate"><span class="pre">ising</span></code> mode, allowing a wide range of noises. However, for some applications, we need to operate in the <code class="docutils literal notranslate"><span class="pre">XY</span></code> mode, where only the SPAM noise is available for the moment.</p>
+<p>Let’s come back to our toy example. We add <code class="docutils literal notranslate"><span class="pre">&quot;SPAM&quot;</span></code> noise to our clean simulation, select 30 different realizations of the state taking each time 5 samples per run:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">config_spam</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;SPAM&quot;</span><span class="p">),</span> <span class="n">runs</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">samples_per_run</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">set_config</span><span class="p">(</span><span class="n">config_spam</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The configuration is updated, the current parameters of the SPAM errors should be included:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span><span class="o">.</span><span class="n">show_config</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Options:
+----------
+Number of runs:        30
+Samples per run:       5
+Noise types:           SPAM
+SPAM dictionary:       {&#39;eta&#39;: 0.005, &#39;epsilon&#39;: 0.01, &#39;epsilon_prime&#39;: 0.05}
+</pre></div></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">SimConfig.spam_dict</span></code> is the spam parameters dictionary where <code class="docutils literal notranslate"><span class="pre">eta</span></code> is the probability of a badly prepared state, <code class="docutils literal notranslate"><span class="pre">epsilon</span></code> the false positive probability and <code class="docutils literal notranslate"><span class="pre">epsilon_prime</span></code> the false negative one.</p>
+<p>When dealing with a <code class="docutils literal notranslate"><span class="pre">SimConfig</span></code> object with different noise parameters from the config in <code class="docutils literal notranslate"><span class="pre">QutipEmulator.config</span></code>, you can “add” both configurations together, obtaining a single <code class="docutils literal notranslate"><span class="pre">SimConfig</span></code> with all noises from both configurations - on the other hand, the <code class="docutils literal notranslate"><span class="pre">runs</span></code> and <code class="docutils literal notranslate"><span class="pre">samples_per_run</span></code> will always be updated. This adds simulation parameters to noises that weren’t available in the former <code class="docutils literal notranslate"><span class="pre">QutipEmulator.config</span></code>. Noises specified in both <code class="docutils literal notranslate"><span class="pre">SimConfigs</span></code> will keep the noise parameters in
+<code class="docutils literal notranslate"><span class="pre">QutipEmulator.config</span></code>. Try it out with <code class="docutils literal notranslate"><span class="pre">QutipEmulator.add_config</span></code>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cfg2</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span>
+    <span class="n">noise</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;SPAM&quot;</span><span class="p">,</span> <span class="s2">&quot;dephasing&quot;</span><span class="p">,</span> <span class="s2">&quot;doppler&quot;</span><span class="p">),</span>
+    <span class="n">eta</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span>
+    <span class="n">temperature</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">runs</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">add_config</span><span class="p">(</span><span class="n">cfg2</span><span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">show_config</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Options:
+----------
+Number of runs:        50
+Samples per run:       5
+Noise types:           SPAM, doppler, dephasing
+SPAM dictionary:       {&#39;eta&#39;: 0.005, &#39;epsilon&#39;: 0.01, &#39;epsilon_prime&#39;: 0.05}
+Temperature:           1000.0µK
+Dephasing probability: 0.05
+</pre></div></div>
+</div>
+<p>We can observe that the <code class="docutils literal notranslate"><span class="pre">eta</span></code> parameter wasn’t changed, since both <code class="docutils literal notranslate"><span class="pre">SimConfig</span></code> objects had <code class="docutils literal notranslate"><span class="pre">'SPAM'</span></code> as a noise model already.</p>
+<p>We created a noisy simulation using <code class="docutils literal notranslate"><span class="pre">set_config</span></code> and <code class="docutils literal notranslate"><span class="pre">add_config</span></code> methods of the the QutipEmulator class. But it’s not the only way, you can directly create a noisy simulation when you create your simulation object.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span>
+    <span class="n">seq</span><span class="p">,</span>
+    <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">config</span><span class="o">=</span><span class="n">SimConfig</span><span class="p">(</span>
+        <span class="n">noise</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;SPAM&quot;</span><span class="p">,</span> <span class="s2">&quot;dephasing&quot;</span><span class="p">,</span> <span class="s2">&quot;doppler&quot;</span><span class="p">),</span>
+        <span class="n">temperature</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+        <span class="n">runs</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">show_config</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Options:
+----------
+Number of runs:        50
+Samples per run:       5
+Noise types:           SPAM, dephasing, doppler
+SPAM dictionary:       {&#39;eta&#39;: 0.005, &#39;epsilon&#39;: 0.01, &#39;epsilon_prime&#39;: 0.05}
+Temperature:           1000.0µK
+Dephasing probability: 0.05
+</pre></div></div>
+</div>
+</section>
+<section id="Setting-evaluation-times">
+<h3>Setting evaluation times<a class="headerlink" href="#Setting-evaluation-times" title="Link to this heading"></a></h3>
+<p>As a <code class="docutils literal notranslate"><span class="pre">QutipEmulator</span></code> field, <code class="docutils literal notranslate"><span class="pre">evaluation_times</span></code> refers to the times at which you sample during your simulation. You can assign it different types of values:</p>
+<ul class="simple">
+<li><p>A float between 0 and 1: indicating the fraction of the full time array at which you want to sample.</p></li>
+<li><p>The string <code class="docutils literal notranslate"><span class="pre">'Full'</span></code> to evaluate every ns or <code class="docutils literal notranslate"><span class="pre">'Minimal'</span></code> to evaluate only at the start and the end.</p></li>
+<li><p>A time list: if there are specific periods of times at which you want to sample. Only, make sure the list you use is a subset of the hamiltonian sample time list.</p></li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span><span class="o">.</span><span class="n">set_evaluation_times</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">noisy_res</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>We get a <code class="docutils literal notranslate"><span class="pre">NoisyResults</span></code> object from our noisy simulation. This object represents the final result as a probability distribution over the sampled bitstrings, rather than a quantum state <code class="docutils literal notranslate"><span class="pre">QObj</span></code> in the <code class="docutils literal notranslate"><span class="pre">CleanResults</span></code> case.</p>
+</section>
+<section id="Plotting-noisy-and-clean-results">
+<h3>Plotting noisy and clean results<a class="headerlink" href="#Plotting-noisy-and-clean-results" title="Link to this heading"></a></h3>
+<p>The new <code class="docutils literal notranslate"><span class="pre">res</span></code> instance has similar methods to the usual <code class="docutils literal notranslate"><span class="pre">SimResults</span></code> object. For example, we can calculate expectation values.</p>
+<p>Below, the comparison between the clean and noise simulations.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">noisy_res</span><span class="o">.</span><span class="n">_sim_times</span><span class="p">,</span> <span class="n">noisy_res</span><span class="o">.</span><span class="n">expect</span><span class="p">([</span><span class="n">obs</span><span class="p">])[</span><span class="mi">0</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;noisy&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">clean_res</span><span class="o">.</span><span class="n">_sim_times</span><span class="p">,</span> <span class="n">clean_res</span><span class="o">.</span><span class="n">expect</span><span class="p">([</span><span class="n">obs</span><span class="p">])[</span><span class="mi">0</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;clean&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Time ($\mu s$)&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Population in $|r\rangle$&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.05</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span> <span class="n">borderaxespad</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_noisy_sim_41_0.png" src="../_images/tutorials_noisy_sim_41_0.png" />
+</div>
+</div>
+<p>You can also use the <code class="docutils literal notranslate"><span class="pre">SimResults.plot(obs)</span></code> method to plot expectation values of a given observable. Here we compute the <code class="docutils literal notranslate"><span class="pre">sigma_z</span></code> local operator expectation values. Error bars are activated by default for noise simulations but if you don’t want them you can set to False the field <code class="docutils literal notranslate"><span class="pre">error_bars</span></code>.</p>
+<p>Be wary that computing the expectation value of non-diagonal operators will raise an error, as <code class="docutils literal notranslate"><span class="pre">NoisyResults</span></code> bitstrings are already projected on the <span class="math notranslate nohighlight">\(Z\)</span> basis.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">obs</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmaz</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">noisy_res</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_noisy_sim_44_0.png" src="../_images/tutorials_noisy_sim_44_0.png" />
+</div>
+</div>
+<p>Now you have the basic knowledge to tackle noise simulations. In the following tutorials, we will see in more detail simulations with <a class="reference internal" href="spam.html"><span class="doc">SPAM errors</span></a>, <a class="reference internal" href="laser_noise.html"><span class="doc">laser noise</span></a> and <a class="reference internal" href="effective_noise.html"><span class="doc">effective noise channels</span></a>. Enjoy!</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="phase_shifts_vz_gates.html" class="btn btn-neutral float-left" title="Phase Shifts and Virtual Z gates" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="spam.html" class="btn btn-neutral float-right" title="SPAM errors" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

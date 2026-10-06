@@ -1,0 +1,462 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laser noise &mdash; Pulser 1.5.3 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=d75fd82e"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Effective noise channels" href="effective_noise.html" />
+    <link rel="prev" title="SPAM errors" href="spam.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.5.3" /><meta name="readthedocs-resolver-filename" content="/tutorials/laser_noise.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Emulation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spam.html">SPAM errors</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Laser noise</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Single-atom-noisy-simulations">Single atom noisy simulations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Sequence-preparation">Sequence preparation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Doppler-shift">Doppler shift</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Amplitude-noise">Amplitude noise</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Multiple-Atoms">Multiple Atoms</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Laser noise</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/laser_noise.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Laser-noise">
+<h1>Laser noise<a class="headerlink" href="#Laser-noise" title="Link to this heading"></a></h1>
+<section id="Introduction">
+<h2>Introduction<a class="headerlink" href="#Introduction" title="Link to this heading"></a></h2>
+<p>Laser noises were introduced in the introductory tutorial <a class="reference internal" href="noisy_sim.html"><span class="doc">Simulating sequences with errors and noises</span></a>. They will be further detailed in this notebook. We recommend you to check the introductory tutorial before going through this one.</p>
+<p>The laser noises model errors coming from the laser-atom interaction itself, encapsulating effects like:</p>
+<ul class="simple">
+<li><p><strong>Doppler damping</strong>: the atoms in the register are cooled to a temperature <span class="math notranslate nohighlight">\(T \sim 50\mu K\)</span>, which is low but still non-zero. Therefore, the laser frequency they observe doppler-shifted due to thermal motion. This can be seen as a shift in the detuning frequency of the laser.</p></li>
+<li><p><strong>Waist of the laser</strong>: for global pulses, the laser amplitude has a Gaussian profile and atoms at the border of the waist feel a slightly lower amplitude than those at the focus.</p></li>
+<li><p><strong>Amplitude fluctuations</strong>: the <code class="docutils literal notranslate"><span class="pre">amp_sigma</span></code> parameter dictates fluctuations in the laser amplitude from pulse to pulse.</p></li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">qutip</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Register</span><span class="p">,</span> <span class="n">Pulse</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser_simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimConfig</span><span class="p">,</span> <span class="n">QutipEmulator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnalogDevice</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.waveforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">RampWaveform</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Single-atom-noisy-simulations">
+<h2>Single atom noisy simulations<a class="headerlink" href="#Single-atom-noisy-simulations" title="Link to this heading"></a></h2>
+<section id="Sequence-preparation">
+<h3>Sequence preparation<a class="headerlink" href="#Sequence-preparation" title="Link to this heading"></a></h3>
+<p>We start with a single atom away from the center of the register.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">30</span><span class="p">)],</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Then we act on this atom with a Constant Pulse, such that it oscillates between the ground state and excited Rydberg state (Rabi oscillations):</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">AnalogDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;channel 0&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">duration</span> <span class="o">=</span> <span class="mi">2500</span>
+<span class="n">pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse</span><span class="p">,</span> <span class="s2">&quot;channel 0&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_laser_noise_8_0.png" src="../_images/tutorials_laser_noise_8_0.png" />
+</div>
+</div>
+<p>Then we create the simulation object with which we will add noises.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">set_evaluation_times</span><span class="p">(</span><span class="mf">0.4</span><span class="p">)</span>
+<span class="n">res_clean</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">obs</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">proj</span><span class="p">()</span>
+<span class="n">config_spam</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;SPAM&quot;</span><span class="p">),</span> <span class="n">runs</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">samples_per_run</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Doppler-shift">
+<h3>Doppler shift<a class="headerlink" href="#Doppler-shift" title="Link to this heading"></a></h3>
+<p>As for any noise, the doppler noise is set via a <code class="docutils literal notranslate"><span class="pre">SimConfig</span></code> object. Note that you can change the standard deviation of the doppler noise, which is <span class="math notranslate nohighlight">\(k \times \sqrt{k_B T / m}\)</span> where <span class="math notranslate nohighlight">\(k\)</span> is the norm of the effective wavevector of the lasers, by changing the temperature field setting it in <span class="math notranslate nohighlight">\(\mu K\)</span>.</p>
+<p>We’ll exaggerate the temperature to emphasize the effects of the Doppler shift (the default temperature being <span class="math notranslate nohighlight">\(50 \mu K\)</span>).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">config_doppler</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span>
+    <span class="n">noise</span><span class="o">=</span><span class="s2">&quot;doppler&quot;</span><span class="p">,</span> <span class="n">runs</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">temperature</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">samples_per_run</span><span class="o">=</span><span class="mi">10</span>
+<span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">set_config</span><span class="p">(</span><span class="n">config_doppler</span><span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">show_config</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Options:
+----------
+Number of runs:        100
+Samples per run:       10
+Noise types:           doppler
+Temperature:           5000.0µK
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res_clean</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Noiseless&quot;</span><span class="p">)</span>
+<span class="n">res_doppler</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">res_doppler</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;With doppler shift&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.05</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span> <span class="n">borderaxespad</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Excited state population&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_laser_noise_15_0.png" src="../_images/tutorials_laser_noise_15_0.png" />
+</div>
+</div>
+</section>
+<section id="Amplitude-noise">
+<h3>Amplitude noise<a class="headerlink" href="#Amplitude-noise" title="Link to this heading"></a></h3>
+<p>When activated, we switch to a description of the laser amplitude as a gaussian profile whose standard deviation is the <code class="docutils literal notranslate"><span class="pre">laser_waist</span></code>. Furthermore, the amplitude of the laster fluctuates according to a gaussian profile with standard deviation <code class="docutils literal notranslate"><span class="pre">amp_sigma</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span><span class="o">.</span><span class="n">reset_config</span><span class="p">()</span>
+<span class="n">config_amp_noise</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span>
+    <span class="n">noise</span><span class="o">=</span><span class="s2">&quot;amplitude&quot;</span><span class="p">,</span>
+    <span class="n">runs</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">set_config</span><span class="p">(</span><span class="n">config_amp_noise</span><span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">show_config</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Options:
+----------
+Number of runs:        100
+Samples per run:       5
+Noise types:           amplitude
+Laser waist:           175.0μm
+Amplitude standard dev.:  0.05
+</pre></div></div>
+</div>
+<p>Notice we are now using 100 runs in order to see the effects of the modulations clearly.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res_clean</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Noiseless&quot;</span><span class="p">)</span>
+<span class="n">res_doppler</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">res_doppler</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;With amplitude noise&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.01</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span> <span class="n">borderaxespad</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Excited state population&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_laser_noise_20_0.png" src="../_images/tutorials_laser_noise_20_0.png" />
+</div>
+</div>
+<p>Even with the default parameters, we still observe a small damping of the Rabi oscillations.</p>
+</section>
+</section>
+<section id="Multiple-Atoms">
+<h2>Multiple Atoms<a class="headerlink" href="#Multiple-Atoms" title="Link to this heading"></a></h2>
+<p>We will now run the AFM state preparation sequence from the Pulser tutorial with our noise models and compare the results to the noiseless case.</p>
+<p>At this stage, you know how to manipulate the different laser noises. In this multi-qubit case, we will combine all these effects.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Parameters in rad/µs and ns</span>
+<span class="n">omega_max</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">delta_0</span> <span class="o">=</span> <span class="o">-</span><span class="mi">6</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">delta_f</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+
+<span class="n">t_rise</span> <span class="o">=</span> <span class="mi">252</span>
+<span class="n">t_fall</span> <span class="o">=</span> <span class="mi">500</span>
+<span class="n">t_sweep</span> <span class="o">=</span> <span class="p">(</span><span class="n">delta_f</span> <span class="o">-</span> <span class="n">delta_0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span>
+
+<span class="n">U</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">R_interatomic</span> <span class="o">=</span> <span class="n">AnalogDevice</span><span class="o">.</span><span class="n">rydberg_blockade_radius</span><span class="p">(</span><span class="n">U</span><span class="p">)</span>
+
+<span class="n">n_side</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">n_side</span><span class="p">,</span> <span class="n">n_side</span><span class="p">,</span> <span class="n">R_interatomic</span> <span class="o">*</span> <span class="mf">0.9</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+
+<span class="n">rise</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span>
+    <span class="n">RampWaveform</span><span class="p">(</span><span class="n">t_rise</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">omega_max</span><span class="p">),</span> <span class="n">delta_0</span><span class="p">,</span> <span class="mf">0.0</span>
+<span class="p">)</span>
+<span class="n">sweep</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantAmplitude</span><span class="p">(</span>
+    <span class="n">omega_max</span><span class="p">,</span> <span class="n">RampWaveform</span><span class="p">(</span><span class="n">t_sweep</span><span class="p">,</span> <span class="n">delta_0</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">),</span> <span class="mf">0.0</span>
+<span class="p">)</span>
+<span class="n">fall</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span>
+    <span class="n">RampWaveform</span><span class="p">(</span><span class="n">t_fall</span><span class="p">,</span> <span class="n">omega_max</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="n">delta_f</span><span class="p">,</span> <span class="mf">0.0</span>
+<span class="p">)</span>
+
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">AnalogDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ising&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rise</span><span class="p">,</span> <span class="s2">&quot;ising&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">sweep</span><span class="p">,</span> <span class="s2">&quot;ising&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">fall</span><span class="p">,</span> <span class="s2">&quot;ising&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">config_all_noise</span> <span class="o">=</span> <span class="n">SimConfig</span><span class="p">(</span>
+    <span class="n">noise</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;doppler&quot;</span><span class="p">,</span> <span class="s2">&quot;amplitude&quot;</span><span class="p">),</span>
+    <span class="n">runs</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">samples_per_run</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">amp_sigma</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">laser_waist</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">temperature</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">simul</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span>
+    <span class="n">seq</span><span class="p">,</span>
+    <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">evaluation_times</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">config</span><span class="o">=</span><span class="n">config_all_noise</span><span class="p">,</span>  <span class="c1"># Take 10% of the time steps as evaluation times (7 time steps)</span>
+<span class="p">)</span>
+<span class="n">noisy_results</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="n">simul</span><span class="o">.</span><span class="n">reset_config</span><span class="p">()</span>
+<span class="n">clean_results</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>We will plot the simulation results by sampling the final states. Rather than using the <code class="docutils literal notranslate"><span class="pre">sample_final_state()</span></code> method on the noisy results object (which just samples from the last realization of the noisy simulation), we need to extract the <code class="docutils literal notranslate"><span class="pre">Counter</span></code> object from the <code class="docutils literal notranslate"><span class="pre">NoisyResults.results</span></code> object, which has accumulated the samples of all the simulated runs.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">noisy_count</span> <span class="o">=</span> <span class="n">noisy_results</span><span class="o">.</span><span class="n">results</span><span class="p">[</span>
+    <span class="o">-</span><span class="mi">1</span>
+<span class="p">]</span>  <span class="c1"># Extract the Counter object from the last evaluated time step.</span>
+<span class="n">clean_count</span> <span class="o">=</span> <span class="n">clean_results</span><span class="o">.</span><span class="n">sample_final_state</span><span class="p">(</span>
+    <span class="n">N_samples</span><span class="o">=</span><span class="mi">100</span> <span class="o">*</span> <span class="mi">10</span>
+<span class="p">)</span>  <span class="c1"># Compare with 100 runs of 10 samples each</span>
+
+<span class="n">clean_most_freq</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="mi">100</span> <span class="o">*</span> <span class="n">v</span> <span class="o">/</span> <span class="mi">1000</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">clean_count</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+<span class="n">noisy_most_freq</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="mi">100</span> <span class="o">*</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">noisy_count</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span>
+    <span class="n">clean_most_freq</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="nb">list</span><span class="p">(</span><span class="n">clean_most_freq</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Noiseless&quot;</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">noisy_most_freq</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="nb">list</span><span class="p">(</span><span class="n">noisy_most_freq</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Noisy&quot;</span><span class="p">)</span>
+
+<span class="c1"># Only show the xticks to the most frequent states:</span>
+<span class="n">most_freq</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">noisy_count</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">noisy_count</span><span class="o">.</span><span class="n">get</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)[:</span><span class="mi">1</span><span class="p">]</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Counts (%)&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">most_freq</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Sampling from the noisy and clean simulations (100x10 samples)&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.01</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span> <span class="n">borderaxespad</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_laser_noise_27_0.png" src="../_images/tutorials_laser_noise_27_0.png" />
+</div>
+</div>
+<p>The bars represent the simulation results as populations of bitstrings. They’re colored blue for the noiseless simulation, and orange for the noisy one. We clearly identify the antiferromagnetic state as the most populated one in both cases, but it is slightly less populated in the noisy case, while some other bitstrings, not present in the noiseless case, appear.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="spam.html" class="btn btn-neutral float-left" title="SPAM errors" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="effective_noise.html" class="btn btn-neutral float-right" title="Effective noise channels" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

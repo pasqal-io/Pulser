@@ -1,0 +1,1232 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Efficient estimation techniques for Variational Quantum Simulation &mdash; Pulser 1.2.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/max_width.css" />
+
+  
+      <script src="../_static/jquery.js"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+      <script src="../_static/doctools.js"></script>
+      <script src="../_static/sphinx_highlight.js"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Building 1D Rydberg Crystals" href="1D_crystals.html" />
+    <link rel="prev" title="Simulation of XYZ spin models using Floquet engineering in XY mode" href="mw_engineering.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.2.2" /><meta name="readthedocs-resolver-filename" content="/tutorials/shadow_est.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installation and First Steps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../intro_rydberg_blockade.html">Quickstart: The Rydberg Blockade</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Pulse Sequence Creation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simulating.html">Simulation of Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamental Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../review.html">Quantum Computing with Neutral Atoms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Backend Execution</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution of Pulser Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Classical Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Quantum Simulation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="afm_prep.html">Preparing a state with antiferromagnetic order in the Ising model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Spin Chain</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mw_engineering.html">Simulation of XYZ spin models using Floquet engineering in XY mode</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Efficient estimation techniques for Variational Quantum Simulation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Random-classical-shadows">Random classical shadows</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Main-ideas-and-implementation">Main ideas and implementation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Reconstructing-a-given-quantum-state">Reconstructing a given quantum state</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Derandomized-Paulis">Derandomized Paulis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Derandomization-Algorithm">Derandomization Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Estimating-expectation-values-from-Pauli-measurements">Estimating expectation values from Pauli measurements</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Variational-Quantum-Simulation-for-the-H_2-molecule">Variational Quantum Simulation for the <span class="math notranslate nohighlight">\(H_2\)</span> molecule</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Jordan-Wigner-Hamiltonian-(cost-function)">Jordan-Wigner Hamiltonian (cost function)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Quantum-Loop-(VQS)">Quantum Loop (VQS)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Estimating-Jordan-Wigner-H_2-Hamiltonian-with-classical-shadows">Estimating Jordan-Wigner <span class="math notranslate nohighlight">\(H_2\)</span> Hamiltonian with classical shadows</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Randomized-measurements">Randomized measurements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Derandomized-measurements">Derandomized measurements</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="1D_crystals.html">Building 1D Rydberg Crystals</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cz_gate.html">Control-Z Gate Sequence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pulser.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Efficient estimation techniques for Variational Quantum Simulation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/shadow_est.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Efficient-estimation-techniques-for-Variational-Quantum-Simulation">
+<h1>Efficient estimation techniques for Variational Quantum Simulation<a class="headerlink" href="#Efficient-estimation-techniques-for-Variational-Quantum-Simulation" title="Permalink to this heading"></a></h1>
+<section id="Introduction">
+<h2>Introduction<a class="headerlink" href="#Introduction" title="Permalink to this heading"></a></h2>
+<p><span class="math notranslate nohighlight">\(\newcommand{\ket}[1]{\left|#1\right&gt;} \newcommand{\bra}[1]{\left&lt;#1\right|}\)</span> This notebook’s purpose is to introduce the concept of classical shadow estimation, as well as its use in <strong>VQS</strong> (<strong>V</strong>ariational <strong>Q</strong>uantum <strong>S</strong>imulation). This technique, introduced in <a class="reference external" href="https://arxiv.org/abs/2002.08953">this article by Huang, Kueng and Preskill</a>, is used for efficiently estimating multiple observables, and is extremely powerful in that regard, asymptotically reaching theoretical
+lower bounds of quantum information theory regarding the number of required samples of a given state for estimation (<a class="reference external" href="https://arxiv.org/abs/2101.02464">see here for details</a>).</p>
+<p>The primary goal of this notebook is to estimate the groundstate energy of the <span class="math notranslate nohighlight">\(H_2\)</span> molecule, using a VQS. We will first implement the method of random classical shadows in Python. Then, we’ll introduce its derandomized counterpart, which is particularly useful in our setting. We’ll finally describe the VQS, and benchmark the estimation methods we introduced for computing the molecule’s energy. This notebook draws some inspiration from <a class="reference external" href="https://pennylane.ai/qml/demos/tutorial_classical_shadows.html">this PennyLane Jupyter
+notebook</a> on quantum machine learning and classical shadows.</p>
+</section>
+<section id="Random-classical-shadows">
+<h2>Random classical shadows<a class="headerlink" href="#Random-classical-shadows" title="Permalink to this heading"></a></h2>
+<section id="Main-ideas-and-implementation">
+<h3>Main ideas and implementation<a class="headerlink" href="#Main-ideas-and-implementation" title="Permalink to this heading"></a></h3>
+<p>Classical shadow estimation relies on the fact that for a particular choice of measurement, we can efficiently store snapshots of the state that contain enough information to accurately predict linear functions of observables.</p>
+<p>Let us consider an <span class="math notranslate nohighlight">\(n\)</span>-qubit quantum state <span class="math notranslate nohighlight">\(\rho\)</span> (prepared by a pulse sequence) and apply a random unitary <span class="math notranslate nohighlight">\(U\)</span> to the state:</p>
+<div class="math notranslate nohighlight">
+\[\rho \to U \rho U^\dagger.\]</div>
+<p>Next, we measure in the computational basis and obtain a bit string of outcomes <span class="math notranslate nohighlight">\(|b\rangle = |0011\ldots10\rangle\)</span>. If the unitaries <span class="math notranslate nohighlight">\(U\)</span> are chosen at random from a particular ensemble, then we can store the reverse operation <span class="math notranslate nohighlight">\(U^\dagger |b\rangle\langle b| U\)</span> efficiently in classical memory. We call this a <em>snapshot</em> of the state. Moreover, we can view the average over these snapshots as a measurement channel:</p>
+<div class="math notranslate nohighlight">
+\[\mathbb{E}\left[U^\dagger |b\rangle\langle b| U\right] = \mathcal{M}(\rho).\]</div>
+<p>We restrict ourselves to unitary ensembles that define a tomographically complete set of measurements (i.e <span class="math notranslate nohighlight">\(\mathcal{M}\)</span> is invertible), therefore :</p>
+<div class="math notranslate nohighlight">
+\[\rho = \mathbb{E}\left[\mathcal{M}^{-1}\left(U^\dagger |b\rangle\langle b| U \right)\right].\]</div>
+<p>If we apply the procedure outlined above <span class="math notranslate nohighlight">\(N\)</span> times, then the collection of inverted snapshots is what we call the <em>classical shadow</em></p>
+<div class="math notranslate nohighlight">
+\[S(\rho,N) = \left\{\hat{\rho}_1= \mathcal{M}^{-1}\left(U_1^\dagger |b_1\rangle\langle b_1| U_1 \right)
+,\ldots, \hat{\rho}_N= \mathcal{M}^{-1}\left(U_N^\dagger |b_N\rangle\langle b_N| U_N \right)
+\right\}.\]</div>
+<p>Since the shadow approximates <span class="math notranslate nohighlight">\(\rho\)</span>, we can now estimate <strong>any</strong> observable with the empirical mean:</p>
+<div class="math notranslate nohighlight">
+\[\langle O \rangle = \frac{1}{N}\sum_i \text{Tr}{\hat{\rho}_i O}.\]</div>
+<p>We will be using a median-of-means procedure in practice.</p>
+<p>We start by defining several useful quantities, such as the unitary matrices associated with Pauli measurements : the Hadamard matrix, change of basis from <span class="math notranslate nohighlight">\(\{\ket{0}, \ket{1}\}\)</span> to the eigenbasis of <span class="math notranslate nohighlight">\(\sigma_X\)</span>, <span class="math notranslate nohighlight">\(\{\ket{+}, \ket{-}\}\)</span>, and its <span class="math notranslate nohighlight">\(\sigma_Y, \sigma_Z\)</span> counterparts. We will then draw randomly from this tomographically complete set of <span class="math notranslate nohighlight">\(3\)</span> unitaries.</p>
+<p>Note that we will need <span class="math notranslate nohighlight">\(4\)</span> qubits for our VQS problem : we will explain the mapping from the molecule to qubits later.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">qutip</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">minimize</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Register</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Pulse</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">DigitalAnalogDevice</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser_simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">QutipEmulator</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">num_qubits</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">zero_state</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">proj</span><span class="p">()</span>
+<span class="n">one_state</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">proj</span><span class="p">()</span>
+<span class="n">hadamard</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">qutip</span><span class="o">.</span><span class="n">Qobj</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">]])</span>
+<span class="n">h_mul_phase</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">Qobj</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="n">j</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="n">j</span><span class="p">]]))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">unitary_ensemble</span> <span class="o">=</span> <span class="p">[</span><span class="n">hadamard</span><span class="p">,</span> <span class="n">h_mul_phase</span><span class="p">,</span> <span class="n">qutip</span><span class="o">.</span><span class="n">qeye</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
+
+<span class="n">g</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">r</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">n</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">r</span><span class="o">.</span><span class="n">dag</span><span class="p">()</span>
+
+<span class="n">sx</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmax</span><span class="p">()</span>
+<span class="n">sy</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmay</span><span class="p">()</span>
+<span class="n">sz</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmaz</span><span class="p">()</span>
+
+<span class="n">gggg</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">g</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">g</span><span class="p">])</span>
+<span class="n">ggrr</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">g</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">r</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<p>We first define a function that spits out a random bitstring sampled from a given density matrix.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">measure_bitstring</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Auxiliary function that returns a bitstring according to the measure of a quantum state.&quot;&quot;&quot;</span>
+    <span class="n">probs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">diag</span><span class="p">())</span>
+    <span class="n">probs</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">probs</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multinomial</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">probs</span><span class="p">))[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">bitstring</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">binary_repr</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">num_qubits</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">bitstring</span>
+</pre></div>
+</div>
+</div>
+<p>We will need to compute the number of shadows needed given :</p>
+<ul class="simple">
+<li><p>A list of observables <span class="math notranslate nohighlight">\(o_i\)</span></p></li>
+<li><p>Desired precision on expectation values <span class="math notranslate nohighlight">\(\epsilon\)</span> : if <span class="math notranslate nohighlight">\(\tilde{o}_i\)</span> is the estimated expectation value for observable <span class="math notranslate nohighlight">\(o_i\)</span>, we wish for <span class="math notranslate nohighlight">\(|Tr(o_i \rho) - \tilde{o}_i| \leq \epsilon\)</span></p></li>
+<li><p>Failure probability <span class="math notranslate nohighlight">\(\delta\)</span> : we wish for the above equation to be satisfied with probability <span class="math notranslate nohighlight">\(1-\delta\)</span></p></li>
+</ul>
+<p>Precise formulae are given in <a class="reference external" href="https://arxiv.org/abs/2002.08953">Huang et al.</a> The integer <span class="math notranslate nohighlight">\(K\)</span> returned by the function will serve as the number of blocks in our median of means procedure afterwards.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">compute_shadow_size</span><span class="p">(</span><span class="n">delta</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">observables</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Helper function.</span>
+
+<span class="sd">    Computes both the number of shadows needed as well as the size of blocks needed</span>
+<span class="sd">    for the median_of_means method in order to approximate the expectation value of M</span>
+<span class="sd">    (linear) observables with additive error epsilon and fail probability delta.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        delta (float): Failure probability.</span>
+<span class="sd">        epsilon (float): Additive error on expectation values.</span>
+<span class="sd">        observables (list[qutip.Qobj]): Observables the expectation value of which is to be computed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">M</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">observables</span><span class="p">)</span>
+    <span class="n">K</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">M</span> <span class="o">/</span> <span class="n">delta</span><span class="p">)</span>
+    <span class="n">shadow_norm</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">op</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span>
+            <span class="n">op</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">op</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">**</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span> <span class="nb">ord</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="p">)</span>
+        <span class="o">**</span> <span class="mi">2</span>
+    <span class="p">)</span>
+    <span class="c1"># Theoretical number of shadows per cluster in the median of means procedure :</span>
+    <span class="c1"># N = 34 * max(shadow_norm(o) for o in observables) / epsilon ** 2</span>
+    <span class="c1"># We use N = 20 here to allow for quick simulation</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="mi">20</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">N</span> <span class="o">*</span> <span class="n">K</span><span class="p">)),</span> <span class="nb">int</span><span class="p">(</span><span class="n">K</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Next, we design a function that returns snapshots (bitstrings) of the rotated state as well as the sampled unitaries used to rotate the state <span class="math notranslate nohighlight">\(\rho\)</span>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">calculate_classical_shadow</span><span class="p">(</span><span class="n">rho</span><span class="p">,</span> <span class="n">shadow_size</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a state rho, creates a collection of snapshots consisting of a bit string</span>
+<span class="sd">    and the index of a unitary operation.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple of two numpy arrays. The first array contains measurement outcomes as bitstrings</span>
+<span class="sd">        while the second array contains the index for the sampled Pauli&#39;s (0,1,2=X,Y,Z).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># sample random Pauli measurements uniformly</span>
+    <span class="n">unitary_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">shadow_size</span><span class="p">,</span> <span class="n">num_qubits</span><span class="p">))</span>
+    <span class="n">outcomes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ns</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">shadow_size</span><span class="p">):</span>
+        <span class="n">unitmat</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">unitary_ensemble</span><span class="p">[</span><span class="n">unitary_ids</span><span class="p">[</span><span class="n">ns</span><span class="p">,</span> <span class="n">i</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_qubits</span><span class="p">)]</span>
+        <span class="p">)</span>
+        <span class="n">outcomes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">measure_bitstring</span><span class="p">(</span><span class="n">unitmat</span><span class="o">.</span><span class="n">dag</span><span class="p">()</span> <span class="o">*</span> <span class="n">rho</span> <span class="o">*</span> <span class="n">unitmat</span><span class="p">))</span>
+
+    <span class="c1"># combine the computational basis outcomes and the sampled unitaries</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">outcomes</span><span class="p">,</span> <span class="n">unitary_ids</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We then reconstruct an estimate of the quantum state from the sampled bitstrings, using the inverse quantum channel <span class="math notranslate nohighlight">\(\mathcal{M}^{-1}\)</span> defined above. In the particular case of Pauli measurements, we can actually compute the inverse channel :</p>
+<div class="math notranslate nohighlight">
+\[\mathcal{M}^{-1} = \otimes_{i=1}^n (3 U_i \ket{b_i}\bra{b_i} U^\dagger_i - \mathbb{1}_2)\]</div>
+<p>where <span class="math notranslate nohighlight">\(i\)</span> runs over all qubits : <span class="math notranslate nohighlight">\(\ket{b_i}\)</span>, <span class="math notranslate nohighlight">\(b_i \in \{0,1\}\)</span>, is the single-bit snapshot of qubit <span class="math notranslate nohighlight">\(i\)</span> and <span class="math notranslate nohighlight">\(U_i\)</span> is the sampled unitary corresponding to the snapshot, acting on qubit <span class="math notranslate nohighlight">\(i\)</span>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">snapshot_state</span><span class="p">(</span><span class="n">outcome_ns</span><span class="p">,</span> <span class="n">unitary_ids_ns</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Reconstructs an estimate of a state from a single snapshot in a shadow.</span>
+
+<span class="sd">    Implements Eq. (S44) from https://arxiv.org/pdf/2002.08953.pdf</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        outcome_ns: Bitstring at ns</span>
+<span class="sd">        unitary_ids_ns: Rotation applied at ns.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Reconstructed snapshot.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">state_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_qubits</span><span class="p">):</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">unitary_ensemble</span><span class="p">[</span><span class="n">unitary_ids_ns</span><span class="p">[</span><span class="n">k</span><span class="p">]]</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">zero_state</span> <span class="k">if</span> <span class="n">outcome_ns</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;0&quot;</span> <span class="k">else</span> <span class="n">one_state</span>
+        <span class="n">state_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">op</span> <span class="o">*</span> <span class="n">b</span> <span class="o">*</span> <span class="n">op</span><span class="o">.</span><span class="n">dag</span><span class="p">()</span> <span class="o">-</span> <span class="n">qutip</span><span class="o">.</span><span class="n">qeye</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">state_list</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We finally write a median of means procedure. We feed it an observable, the list of snapshots computed above and the number of blocks needed. It returns the median of the means of the observable acting on the snapshots in each block.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">_median_of_means</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">snap_list</span><span class="p">,</span> <span class="n">K</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">K</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">snap_list</span><span class="p">):</span>  <span class="c1"># preventing the n_blocks &gt; n_observations</span>
+        <span class="n">K</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">snap_list</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="c1"># dividing seq in K random blocks</span>
+    <span class="n">indic</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">K</span><span class="p">))</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">snap_list</span><span class="p">)</span> <span class="o">/</span> <span class="n">K</span><span class="p">)))</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">indic</span><span class="p">)</span>
+    <span class="c1"># computing and saving mean per block</span>
+    <span class="n">means</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">K</span><span class="p">):</span>
+        <span class="n">states</span> <span class="o">=</span> <span class="p">[</span><span class="n">snap_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">indic</span> <span class="o">==</span> <span class="n">block</span><span class="p">)[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">exp</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">states</span><span class="p">)</span>
+        <span class="n">means</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">exp</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">means</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Reconstructing-a-given-quantum-state">
+<h3>Reconstructing a given quantum state<a class="headerlink" href="#Reconstructing-a-given-quantum-state" title="Permalink to this heading"></a></h3>
+<p>Let us try out the efficiency of this method. We will reconstruct a given density matrix from classical shadows estimation, and observe the evolution of the trace distance between the original state and its reconstruction according to the number of shadows used.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">state_reconstruction</span><span class="p">(</span><span class="n">snaps</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">snaps</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">snaps</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">num_qubits</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">shadow_size</span> <span class="o">=</span> <span class="mi">10000</span>
+<span class="n">rho_1</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="p">(</span>
+        <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)])</span>
+        <span class="o">+</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
+    <span class="p">)</span>
+    <span class="o">.</span><span class="n">proj</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">unit</span><span class="p">()</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Original density matrix :&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">rho_1</span><span class="o">.</span><span class="n">full</span><span class="p">())</span>
+<span class="n">outcomes</span><span class="p">,</span> <span class="n">unitary_ids</span> <span class="o">=</span> <span class="n">calculate_classical_shadow</span><span class="p">(</span><span class="n">rho_1</span><span class="p">,</span> <span class="n">shadow_size</span><span class="p">)</span>
+<span class="n">snapshots</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">snapshot_state</span><span class="p">(</span><span class="n">outcomes</span><span class="p">[</span><span class="n">ns</span><span class="p">],</span> <span class="n">unitary_ids</span><span class="p">[</span><span class="n">ns</span><span class="p">])</span> <span class="k">for</span> <span class="n">ns</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">shadow_size</span><span class="p">)</span>
+<span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Shadow reconstruction :&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="n">state_reconstruction</span><span class="p">(</span><span class="n">snapshots</span><span class="p">)</span><span class="o">.</span><span class="n">full</span><span class="p">(),</span> <span class="mi">2</span><span class="p">))</span>
+
+<span class="n">dist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">shadow_sizes</span> <span class="o">=</span> <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">2000</span><span class="p">,</span> <span class="mi">5000</span><span class="p">,</span> <span class="mi">10000</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">shadow_size</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">shadow_sizes</span><span class="p">):</span>
+    <span class="n">outcomes</span><span class="p">,</span> <span class="n">unitary_ids</span> <span class="o">=</span> <span class="n">calculate_classical_shadow</span><span class="p">(</span><span class="n">rho_1</span><span class="p">,</span> <span class="n">shadow_size</span><span class="p">)</span>
+    <span class="n">snapshots</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">snapshot_state</span><span class="p">(</span><span class="n">outcomes</span><span class="p">[</span><span class="n">ns</span><span class="p">],</span> <span class="n">unitary_ids</span><span class="p">[</span><span class="n">ns</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">ns</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">shadow_size</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">dist</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tracedist</span><span class="p">(</span><span class="n">state_reconstruction</span><span class="p">(</span><span class="n">snapshots</span><span class="p">),</span> <span class="n">rho_1</span><span class="p">)</span>
+<span class="n">num_qubits</span> <span class="o">=</span> <span class="mi">4</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Original density matrix :
+[[0.5+0.j 0.5+0.j 0. +0.j 0. +0.j]
+ [0.5+0.j 0.5+0.j 0. +0.j 0. +0.j]
+ [0. +0.j 0. +0.j 0. +0.j 0. +0.j]
+ [0. +0.j 0. +0.j 0. +0.j 0. +0.j]]
+Shadow reconstruction :
+[[ 0.47+0.j    0.51+0.j    0.  +0.j    0.01+0.01j]
+ [ 0.51-0.j    0.53+0.j    0.  +0.01j  0.01+0.j  ]
+ [ 0.  -0.j    0.  -0.01j  0.  +0.j   -0.01-0.01j]
+ [ 0.01-0.01j  0.01-0.j   -0.01+0.01j -0.01+0.j  ]]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">shadow_sizes</span><span class="p">,</span> <span class="n">dist</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Shadow size&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$||\rho - \hat{\rho}||_1$&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_shadow_est_23_0.png" src="../_images/tutorials_shadow_est_23_0.png" />
+</div>
+</div>
+<p>As we can expect, the estimation gets better and better as shadow size gets larger, with about <span class="math notranslate nohighlight">\(2\)</span>% accuracy at <span class="math notranslate nohighlight">\(10000\)</span> shadows. This mostly serves as a reality check, as we will be using classical shadows to estimate observables acting on quantum states, not to reconstruct those states.</p>
+</section>
+</section>
+<section id="Derandomized-Paulis">
+<h2>Derandomized Paulis<a class="headerlink" href="#Derandomized-Paulis" title="Permalink to this heading"></a></h2>
+<section id="Derandomization-Algorithm">
+<h3>Derandomization Algorithm<a class="headerlink" href="#Derandomization-Algorithm" title="Permalink to this heading"></a></h3>
+<p>Randomized classical shadows are useful when dealing with low-weight, general observables. However, suppose, as is the case when estimating the Hamiltonian of the <span class="math notranslate nohighlight">\(H_2\)</span> molecule written as a sum of Pauli strings, that we’re dealing with Pauli observables of varying weights. In this setting, choosing wisely each Pauli measurement instead of randomly drawing a basis is particularly useful : indeed, say one wants to measure observable
+<span class="math notranslate nohighlight">\(\sigma_x^1 \otimes \sigma_x^2 \otimes \dots \otimes \sigma_x^n\)</span>. Using random rotations in each Pauli <span class="math notranslate nohighlight">\(X,Y\)</span> or <span class="math notranslate nohighlight">\(Z\)</span> basis and projection in the <span class="math notranslate nohighlight">\(Z\)</span> (computational) basis, there is a probability <span class="math notranslate nohighlight">\(\frac{1}{3^n}\)</span> to get each measurement basis right (i.e. rotate the system using the Hadamard matrix). This is extremely unlikely and unefficient as the number of qubits goes up. <a class="reference external" href="https://arxiv.org/abs/2103.07510">Huang et al</a> outline an interesting greedy algorithm used
+for choosing suitable measurement bases for the efficient estimation of <span class="math notranslate nohighlight">\(L\)</span> <span class="math notranslate nohighlight">\(n-\)</span>qubit Pauli strings, <span class="math notranslate nohighlight">\(\{O_i\}\)</span>.</p>
+<p>Feeding these observables and chosen Pauli measurements {P_i} as input, the algorithm aims at optimizing a certain cost function. This function, labeled <span class="math notranslate nohighlight">\(Conf_\epsilon(O_i, P_j)\)</span> is such that, if <span class="math notranslate nohighlight">\(Conf_\epsilon(O_i, P_j) \leq \frac{\delta}{2}\)</span>, then the empirical averages <span class="math notranslate nohighlight">\(\tilde{\omega_l}\)</span> of each Pauli observable <span class="math notranslate nohighlight">\(O_l\)</span> will be <span class="math notranslate nohighlight">\(\epsilon\)</span>-close to its true average <span class="math notranslate nohighlight">\(Tr(\rho O_l)\)</span> with probability <span class="math notranslate nohighlight">\(1-\delta\)</span>.</p>
+<p>In order to implement this cost function, we first need to design two auxiliary functions. The first one decides if a given Pauli measurement <span class="math notranslate nohighlight">\(p\)</span> is compatible with (“hits”) a Pauli observable <span class="math notranslate nohighlight">\(o\)</span>. This means that each time <span class="math notranslate nohighlight">\(o\)</span> acts non-trivially on a qubit <span class="math notranslate nohighlight">\(q_i\)</span> with Pauli matrix <span class="math notranslate nohighlight">\(\sigma \in \{\sigma_X, \sigma_Y, \sigma_Z\}, \sigma \neq \mathbb{1}\)</span>, <span class="math notranslate nohighlight">\(p\)</span> acts on <span class="math notranslate nohighlight">\(q_i\)</span> with <span class="math notranslate nohighlight">\(\sigma\)</span>. We denote it by <span class="math notranslate nohighlight">\(o \triangleright p\)</span>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">hits</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">o</span><span class="p">,</span> <span class="n">end</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Determines if measurement p hits observable o</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        p (str): Pauli string in str format (ex &quot;XYZ&quot;), measurement</span>
+<span class="sd">        o (str): same as above, observable (ex &quot;11ZY&quot;)</span>
+<span class="sd">        end (int): index before which to check if p hits o</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">end</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">o</span> <span class="o">=</span> <span class="n">o</span><span class="p">[:</span><span class="n">end</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">o</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">x</span> <span class="o">==</span> <span class="n">p</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">or</span> <span class="n">x</span> <span class="o">==</span> <span class="s2">&quot;1&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="kc">True</span>
+</pre></div>
+</div>
+</div>
+<p>The second function simply computes the number of qubits observable <span class="math notranslate nohighlight">\(o\)</span> acts non-trivially upon.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">weight</span><span class="p">(</span><span class="n">o</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="n">o_k</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="n">start</span><span class="p">:]</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">o_k</span><span class="p">)</span> <span class="o">-</span> <span class="n">o_k</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We now implement the conditioned cost function using these auxiliary functions. We call it “conditioned”, since we feed it only the first <span class="math notranslate nohighlight">\(m \times n + k\)</span> single-qubit Pauli measurements, and average over the others, not yet determined ones.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">cond_conf</span><span class="p">(</span><span class="n">o</span><span class="p">,</span> <span class="n">P_sharp</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the (modified) conditionned expectation value of the cost function depending</span>
+<span class="sd">    on already chosen Paulis in P_sharp.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        o (list[str]): list of Pauli strings to be measured</span>
+<span class="sd">        P_sharp (list[str]): list of already chosen Paulis</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Hyperparameters : see Huang et al. for more details</span>
+    <span class="n">eta</span> <span class="o">=</span> <span class="mf">0.9</span>
+    <span class="n">nu</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">eta</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">P_sharp</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>  <span class="c1"># index of last chosen Pauli string</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">P_sharp</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="p">)</span>  <span class="c1"># index of last chosen Pauli matrix in mth Pauli string</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">L</span><span class="p">):</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">m_prime</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
+            <span class="n">v</span> <span class="o">+=</span> <span class="p">(</span><span class="n">eta</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">hits</span><span class="p">(</span><span class="n">P_sharp</span><span class="p">[</span><span class="n">m_prime</span><span class="p">],</span> <span class="n">o</span><span class="p">[</span><span class="n">l</span><span class="p">]))</span>
+        <span class="n">v</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
+            <span class="mi">1</span>
+            <span class="o">-</span> <span class="p">(</span><span class="n">nu</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">**</span> <span class="p">(</span><span class="n">weight</span><span class="p">(</span><span class="n">o</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="n">start</span><span class="o">=</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)))</span>
+            <span class="o">*</span> <span class="n">hits</span><span class="p">(</span><span class="n">P_sharp</span><span class="p">[</span><span class="n">m</span><span class="p">],</span> <span class="n">o</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="n">end</span><span class="o">=</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">result</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">v</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+</pre></div>
+</div>
+</div>
+<p>Finally, we design a simple greedy algorithm which purpose is to minimize this conditioned cost function, choosing one single-qubit Pauli at a time.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">derandomization</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">o</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Derandomization algorithm returning best Pauli indices according to a greedy algorithm</span>
+<span class="sd">    that aims at minimizing the cost function above.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        M (int): number of measurements</span>
+<span class="sd">        n (int): number of qubits (size of Pauli strings)</span>
+<span class="sd">        epsilon (float): desired accuracy on observable expectation values</span>
+<span class="sd">        o (list[str]): list of Pauli strings to be measured</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">o</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">P_sharp</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">M</span><span class="p">):</span>
+        <span class="n">P_sharp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+            <span class="n">P_sharp_m</span> <span class="o">=</span> <span class="n">P_sharp</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
+            <span class="n">P_sharp</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">+=</span> <span class="s2">&quot;X&quot;</span>
+            <span class="n">valmin</span> <span class="o">=</span> <span class="n">cond_conf</span><span class="p">(</span><span class="n">o</span><span class="p">,</span> <span class="n">P_sharp</span><span class="p">)</span>
+            <span class="n">argmin</span> <span class="o">=</span> <span class="s2">&quot;X&quot;</span>
+            <span class="k">for</span> <span class="n">W</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;Y&quot;</span><span class="p">,</span> <span class="s2">&quot;Z&quot;</span><span class="p">]:</span>
+                <span class="n">P_sharp</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">P_sharp_m</span> <span class="o">+</span> <span class="n">W</span>
+                <span class="n">val_W</span> <span class="o">=</span> <span class="n">cond_conf</span><span class="p">(</span><span class="n">o</span><span class="p">,</span> <span class="n">P_sharp</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">val_W</span> <span class="o">&lt;</span> <span class="n">valmin</span><span class="p">:</span>
+                    <span class="n">valmin</span> <span class="o">=</span> <span class="n">val_W</span>
+                    <span class="n">argmin</span> <span class="o">=</span> <span class="n">W</span>
+            <span class="n">P_sharp</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">P_sharp_m</span> <span class="o">+</span> <span class="n">argmin</span>
+    <span class="k">return</span> <span class="n">P_sharp</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Estimating-expectation-values-from-Pauli-measurements">
+<h3>Estimating expectation values from Pauli measurements<a class="headerlink" href="#Estimating-expectation-values-from-Pauli-measurements" title="Permalink to this heading"></a></h3>
+<p>Now that we have our Pauli measurements, we proceed differently from randomized classical shadows, where we gave an estimate of the actual quantum channels. Here, we’re only interested in the Pauli averages <span class="math notranslate nohighlight">\(\tilde{\omega}_l\)</span>, that we can infer from Pauli measurements <span class="math notranslate nohighlight">\(p\)</span> that <strong>hit</strong> observable <span class="math notranslate nohighlight">\(o_l\)</span>. Indeed, we have the following formula :</p>
+<div class="math notranslate nohighlight">
+\[\tilde{\omega}_{l}=\frac{1}{h\left(\mathbf{o}_{l} ;\left[\mathbf{p}_{1}, \ldots, \mathbf{p}_{M}\right]\right)} \sum_{m: \mathbf{o}_{l} \triangleright \mathbf{p}_{m}} \prod_{j: \mathbf{o}_{l}[j] \neq I} \mathbf{q}_{m}[j]\]</div>
+<p>where <span class="math notranslate nohighlight">\(h\left(\mathbf{o}_{l} ;\left[\mathbf{p}_{1}, \ldots, \mathbf{p}_{M}\right]\right)\)</span> is the number of times a Pauli measurement <span class="math notranslate nohighlight">\(p_i\)</span> is such that <span class="math notranslate nohighlight">\(o \triangleright p_i\)</span>, and <span class="math notranslate nohighlight">\(\mathbf{q}_m\)</span> is the output of the measurement of Pauli string <span class="math notranslate nohighlight">\(p_m\)</span> (<span class="math notranslate nohighlight">\(\mathbf{q}_m \in \{\pm 1\}^n\)</span>).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">_pauli_index</span><span class="p">(</span><span class="n">letter</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">letter</span> <span class="o">==</span> <span class="s2">&quot;X&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">elif</span> <span class="n">letter</span> <span class="o">==</span> <span class="s2">&quot;Y&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">2</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">pauli_string_value</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sigma</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the evaluation of a Pauli string sigma in a bitstring state $|x&gt;$,</span>
+<span class="sd">    assuming the state is already rotated in the needed eigenbases of all single-qubit Paulis.</span>
+
+<span class="sd">    NB : Faster than using qutip.measure due to not returning the eigenstates...</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (str): input bitstring</span>
+<span class="sd">        sigma (str): input Pauli string to be measured on |x&gt;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">outcomes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">q</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">q</span> <span class="o">==</span> <span class="s2">&quot;0&quot;</span><span class="p">:</span>
+            <span class="n">outcomes</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">sigma</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">outcomes</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">sigma</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">outcomes</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">classical_shadow_derand</span><span class="p">(</span><span class="n">rho</span><span class="p">,</span> <span class="n">measurements</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the n-strings of ±1 corresponding to measurements in the input list on state rho.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        rho (qutip.Qobj): input state as a density matrix</span>
+<span class="sd">        measurements (list[str]): derandomized measurement bases in which to measure state rho</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple of two numpy arrays. The first array contains measurement outcomes as bitstrings</span>
+<span class="sd">        while the second array contains the index for the derandomized Pauli&#39;s (0,1,2=X,Y,Z).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Fill the unitary ids with derandomized measurements ids</span>
+    <span class="n">shadow_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">measurements</span><span class="p">)</span>
+    <span class="n">outcomes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ns</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">shadow_size</span><span class="p">):</span>
+        <span class="c1"># multi-qubit change of basis</span>
+        <span class="n">unitmat</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">unitary_ensemble</span><span class="p">[</span><span class="n">_pauli_index</span><span class="p">(</span><span class="n">measurements</span><span class="p">[</span><span class="n">ns</span><span class="p">][</span><span class="n">i</span><span class="p">])]</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_qubits</span><span class="p">)</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">measure_bitstring</span><span class="p">(</span><span class="n">unitmat</span><span class="o">.</span><span class="n">dag</span><span class="p">()</span> <span class="o">*</span> <span class="n">rho</span> <span class="o">*</span> <span class="n">unitmat</span><span class="p">)</span>
+        <span class="n">outcomes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pauli_string_value</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">measurements</span><span class="p">[</span><span class="n">ns</span><span class="p">]))</span>
+    <span class="c1"># ±1 strings</span>
+    <span class="k">return</span> <span class="n">outcomes</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">exp_value</span><span class="p">(</span><span class="n">input_pauli</span><span class="p">,</span> <span class="n">pm_strings</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes an estimation of the expectation value of a given Pauli string given multiple ±1 bitstring</span>
+<span class="sd">    outcomes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sum_product</span><span class="p">,</span> <span class="n">cnt_match</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+
+    <span class="k">for</span> <span class="n">single_measurement</span> <span class="ow">in</span> <span class="n">pm_strings</span><span class="p">:</span>
+        <span class="n">not_match</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">product</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">pauli</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">input_pauli</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">pauli</span> <span class="o">!=</span> <span class="n">single_measurement</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">pauli</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
+                <span class="n">not_match</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="n">pauli</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
+                <span class="n">product</span> <span class="o">*=</span> <span class="n">single_measurement</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">not_match</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="n">sum_product</span> <span class="o">+=</span> <span class="n">product</span>
+        <span class="n">cnt_match</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">cnt_match</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;No measurement given for </span><span class="si">{</span><span class="n">input_pauli</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">return</span> <span class="n">sum_product</span> <span class="o">/</span> <span class="n">cnt_match</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="Variational-Quantum-Simulation-for-the-H_2-molecule">
+<h2>Variational Quantum Simulation for the <span class="math notranslate nohighlight">\(H_2\)</span> molecule<a class="headerlink" href="#Variational-Quantum-Simulation-for-the-H_2-molecule" title="Permalink to this heading"></a></h2>
+<p>The main problem with usual variational classical algorithms, the classical counterparts of VQS, is computing the value of the <span class="math notranslate nohighlight">\(2^n \times 2^n\)</span> matrix on the output state vector <span class="math notranslate nohighlight">\(\bra{\psi}H\ket{\psi}\)</span> after each loop of the algorithm, which grows exponentially in the size of the system. The purpose of VQS algorithms is to offer a solution which time complexity only grows polynomially, thanks to reading all the important properties on the quantum state. Therefore, we need accurate
+and efficient methods to estimate these properties, which we’ll present afterwards.</p>
+<p>For now, let’s focus on what makes a VQS algorithm, specifically for computing the groundstate energy of the <span class="math notranslate nohighlight">\(H_2\)</span> molecule.</p>
+<section id="Jordan-Wigner-Hamiltonian-(cost-function)">
+<h3>Jordan-Wigner Hamiltonian (cost function)<a class="headerlink" href="#Jordan-Wigner-Hamiltonian-(cost-function)" title="Permalink to this heading"></a></h3>
+<p>We need to write the Hamiltonian in a way that’s compatible with the formalism of quantum computing. We first second-quantize the Hamiltonian, obtaining an expression in terms of fermionic operators <span class="math notranslate nohighlight">\(a, a^\dagger\)</span>. Then, we use the Jordan-Wigner transformation, which maps the fermionic operators to Pauli matrices. We obtain the Hamiltonian below, acting on <span class="math notranslate nohighlight">\(4\)</span> qubits, decomposed in terms of the coefficients in front of the Pauli matrices.</p>
+<p><a class="reference external" href="https://math.berkeley.edu/~linlin/2018Spring_290/SRL12.pdf">This article by Seeley et al.</a> gives us the value of <span class="math notranslate nohighlight">\(H_{JW}\)</span>.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}H_{J W}=-0.81261 \mathbb{1}+0.171201 \sigma_{0}^{z}+0.171201 \sigma_{1}^{z}-0.2227965 \sigma_{2}^{z} \\
+-0.2227965 \sigma_{3}^{z} +0.16862325 \sigma_{1}^{z} \sigma_{0}^{z}+0.12054625 \sigma_{2}^{z} \sigma_{0}^{z} \\
++0.165868 \sigma_{2}^{z} \sigma_{1}^{z}+0.165868 \sigma_{3}^{z} \sigma_{0}^{z} +0.12054625 \sigma_{3}^{z}\sigma_{1}^{z} \\
++0.17434925 \sigma_{3}^{z} \sigma_{2}^{z}-0.04532175 \sigma_{3}^{x} \sigma_{2}^{x} \sigma_{1}^{y} \sigma_{0}^{y}\\
++0.04532175 \sigma_{3}^{x} \sigma_{2}^{y} \sigma_{1}^{y} \sigma_{0}^{x}+0.04532175 \sigma_{3}^{y} \sigma_{2}^{x}
+\sigma_{1}^{x} \sigma_{0}^{y} -0.04532175 \sigma_{3}^{y} \sigma_{2}^{y} \sigma_{1}^{x} \sigma_{0}^{x}\end{split}\]</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">pauli</span><span class="p">(</span><span class="n">positions</span><span class="o">=</span><span class="p">[],</span> <span class="n">operators</span><span class="o">=</span><span class="p">[]):</span>
+    <span class="n">op_list</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">operators</span><span class="p">[</span><span class="n">positions</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">j</span><span class="p">)]</span> <span class="k">if</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">positions</span> <span class="k">else</span> <span class="n">qutip</span><span class="o">.</span><span class="n">qeye</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_qubits</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">op_list</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">coeff_fact</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="mf">0.81261</span><span class="p">,</span>
+    <span class="mf">0.171201</span><span class="p">,</span>
+    <span class="mf">0.2227965</span><span class="p">,</span>
+    <span class="mf">0.16862325</span><span class="p">,</span>
+    <span class="mf">0.174349</span><span class="p">,</span>
+    <span class="mf">0.12054625</span><span class="p">,</span>
+    <span class="mf">0.165868</span><span class="p">,</span>
+    <span class="mf">0.04532175</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">paulis</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">pauli</span><span class="p">(),</span>
+    <span class="n">pauli</span><span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">sz</span><span class="p">])</span> <span class="o">+</span> <span class="n">pauli</span><span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="n">sz</span><span class="p">]),</span>
+    <span class="n">pauli</span><span class="p">([</span><span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="n">sz</span><span class="p">])</span> <span class="o">+</span> <span class="n">pauli</span><span class="p">([</span><span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="n">sz</span><span class="p">]),</span>
+    <span class="n">pauli</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">sz</span><span class="p">,</span> <span class="n">sz</span><span class="p">]),</span>
+    <span class="n">pauli</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="n">sz</span><span class="p">,</span> <span class="n">sz</span><span class="p">]),</span>
+    <span class="n">pauli</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">sz</span><span class="p">,</span> <span class="n">sz</span><span class="p">])</span> <span class="o">+</span> <span class="n">pauli</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="n">sz</span><span class="p">,</span> <span class="n">sz</span><span class="p">]),</span>
+    <span class="n">pauli</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="n">sz</span><span class="p">,</span> <span class="n">sz</span><span class="p">])</span> <span class="o">+</span> <span class="n">pauli</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">sz</span><span class="p">,</span> <span class="n">sz</span><span class="p">]),</span>
+    <span class="n">pauli</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">sx</span><span class="p">,</span> <span class="n">sx</span><span class="p">,</span> <span class="n">sy</span><span class="p">,</span> <span class="n">sy</span><span class="p">])</span>
+    <span class="o">+</span> <span class="n">pauli</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">sy</span><span class="p">,</span> <span class="n">sy</span><span class="p">,</span> <span class="n">sx</span><span class="p">,</span> <span class="n">sx</span><span class="p">]),</span>
+    <span class="n">pauli</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">sx</span><span class="p">,</span> <span class="n">sy</span><span class="p">,</span> <span class="n">sy</span><span class="p">,</span> <span class="n">sx</span><span class="p">])</span>
+    <span class="o">+</span> <span class="n">pauli</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">sy</span><span class="p">,</span> <span class="n">sx</span><span class="p">,</span> <span class="n">sx</span><span class="p">,</span> <span class="n">sy</span><span class="p">]),</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># H2 Molecule : 4 qubits in Jordan-Wigner mapping of the Hamiltonian</span>
+<span class="n">a</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="n">a</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">a</span><span class="p">,</span> <span class="n">a</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">a</span><span class="p">,</span> <span class="o">-</span><span class="n">a</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">],</span>
+    <span class="p">],</span>
+    <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">reg</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_shadow_est_49_0.png" src="../_images/tutorials_shadow_est_49_0.png" />
+</div>
+</div>
+<p>Let us keep the exact ground-state energy of the molecule for future reference, by diagonalizing it exactly - this is possible for such a small system, however, this quickly becomes an intractable problem for large molecules.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">cost_hamiltonian_JW</span><span class="p">():</span>
+    <span class="n">H</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="o">-</span><span class="n">coeff_fact</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">paulis</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="o">+</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">paulis</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="o">-</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">paulis</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="o">+</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="n">paulis</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+        <span class="o">+</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">paulis</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+        <span class="o">+</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">*</span> <span class="n">paulis</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+        <span class="o">+</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="o">*</span> <span class="n">paulis</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span>
+        <span class="o">-</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span> <span class="o">*</span> <span class="n">paulis</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span>
+        <span class="o">+</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span> <span class="o">*</span> <span class="n">paulis</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">H</span>
+
+
+<span class="k">global</span> <span class="n">H</span>
+<span class="n">H</span> <span class="o">=</span> <span class="n">cost_hamiltonian_JW</span><span class="p">()</span>
+<span class="n">exact_energy</span><span class="p">,</span> <span class="n">ground_state</span> <span class="o">=</span> <span class="n">cost_hamiltonian_JW</span><span class="p">()</span><span class="o">.</span><span class="n">groundstate</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">exact_energy</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-1.8510459284448646
+</pre></div></div>
+</div>
+</section>
+<section id="Quantum-Loop-(VQS)">
+<h3>Quantum Loop (VQS)<a class="headerlink" href="#Quantum-Loop-(VQS)" title="Permalink to this heading"></a></h3>
+<p>Much like in the <em>Using QAOA to solve a QUBO problem</em> notebook, we will use a mixed classical-quantum approach for minimizing the energy. The quantum part will do the exploration in Hilbert space, according to a certain set of parameters <span class="math notranslate nohighlight">\(\theta_i, \tau_j\)</span>, and the classical part will find the optimal parameters given the value of the energy after each loop. For now, we will ignore sampling problems and simply compute the exact expectation value of <span class="math notranslate nohighlight">\(H_{JW}\)</span>. See <a class="reference external" href="https://arxiv.org/abs/1812.08767">this article by Xiao
+Yuan et al.</a> for details about VQS algorithms.</p>
+<p>Two mixing Hamiltonians are used for the exploration of the solution space : <span class="math notranslate nohighlight">\(H_1 = \hbar / 2 \sum_i \sigma_i^x + \sum_{j&lt;i}\frac{C_6}{|\textbf{r}_i-\textbf{r}_j|^{6}} \hat n_i \hat n_j\)</span> and <span class="math notranslate nohighlight">\(H_2 = H_1 + \hbar / 2 \sum_i \sigma_i^z\)</span>. We apply them repeatedly one after the other in <span class="math notranslate nohighlight">\(p\)</span> layers. In total, <span class="math notranslate nohighlight">\(2p\)</span> unitaries <span class="math notranslate nohighlight">\(U(\theta_i, H_1) = \exp(-i \theta_i H_1)\)</span> and <span class="math notranslate nohighlight">\(U(\tau_i, H_2) = \exp(-i \tau_i H_2)\)</span> act on the initial state to produce state
+<span class="math notranslate nohighlight">\(|\Psi(\theta, \tau)\rangle\)</span> and measure <span class="math notranslate nohighlight">\(H_{JW}\)</span>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">quantum_loop</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">in_state</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="n">reg</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        param (np.array): time parameters for each mixing Hamiltonian. There are 2p time parameters in param.</span>
+<span class="sd">        in_state (qubit.Qobj): initial state.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">DigitalAnalogDevice</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ch0&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+    <span class="n">middle</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+
+    <span class="k">for</span> <span class="n">tau</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">param</span><span class="p">[</span><span class="n">middle</span><span class="p">:],</span> <span class="n">param</span><span class="p">[:</span><span class="n">middle</span><span class="p">]):</span>
+        <span class="n">pulse_1</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="n">tau</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">pulse_2</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse_1</span><span class="p">,</span> <span class="s2">&quot;ch0&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse_2</span><span class="p">,</span> <span class="s2">&quot;ch0&quot;</span><span class="p">)</span>
+
+    <span class="n">seq</span><span class="o">.</span><span class="n">measure</span><span class="p">(</span><span class="s2">&quot;ground-rydberg&quot;</span><span class="p">)</span>
+    <span class="n">simul</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+    <span class="n">simul</span><span class="o">.</span><span class="n">set_initial_state</span><span class="p">(</span><span class="n">in_state</span><span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">results</span><span class="o">.</span><span class="n">expect</span><span class="p">([</span><span class="n">H</span><span class="p">])[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">loop_JW</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">in_state</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span>
+        <span class="n">quantum_loop</span><span class="p">,</span>
+        <span class="n">param</span><span class="p">,</span>
+        <span class="n">method</span><span class="o">=</span><span class="s2">&quot;Nelder-Mead&quot;</span><span class="p">,</span>
+        <span class="n">args</span><span class="o">=</span><span class="n">in_state</span><span class="p">,</span>
+        <span class="n">options</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;return_all&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;maxiter&quot;</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span> <span class="s2">&quot;adaptive&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span>
+</pre></div>
+</div>
+</div>
+<p>We choose to act on the quantum states with <span class="math notranslate nohighlight">\(5\)</span> layers of noncommuting mixing Hamiltonians, and an initial set of parameters such that pulses with Hamiltonian <span class="math notranslate nohighlight">\(H_1\)</span> last <span class="math notranslate nohighlight">\(2\mu s\)</span>, and those with <span class="math notranslate nohighlight">\(H_2\)</span> last <span class="math notranslate nohighlight">\(4\mu s\)</span>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Setup for VQS</span>
+<span class="n">layers</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">param</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2000</span><span class="p">]</span> <span class="o">*</span> <span class="n">layers</span> <span class="o">+</span> <span class="p">[</span><span class="mi">4000</span><span class="p">]</span> <span class="o">*</span> <span class="n">layers</span>
+</pre></div>
+</div>
+</div>
+<p>We now obtain the ground-state energy :</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+
+<span class="c1"># Ignore the warnings</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">UserWarning</span><span class="p">)</span>
+
+<span class="n">loop_ising_results</span> <span class="o">=</span> <span class="n">loop_JW</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">gggg</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">loop_ising_results</span><span class="o">.</span><span class="n">fun</span><span class="p">,</span> <span class="n">exact_energy</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-1.8408758713434579 -1.8510459284448646
+</pre></div></div>
+</div>
+<p>As we can see, it’s not so far off, since we’re about <span class="math notranslate nohighlight">\(2\)</span>% off from the exact value. Adding more layers, tweaking the mixing Hamiltonians or the initial parameters can help with the accuracy.</p>
+<p>Let’s see how well the optimizer did after each loop.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">quantum_loop</span><span class="p">(</span><span class="n">pars</span><span class="p">,</span> <span class="n">gggg</span><span class="p">)</span> <span class="k">for</span> <span class="n">pars</span> <span class="ow">in</span> <span class="n">loop_ising_results</span><span class="o">.</span><span class="n">allvecs</span><span class="p">],</span> <span class="s2">&quot;k&quot;</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">exact_energy</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.lines.Line2D at 0x1dde0c0cbc0&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_shadow_est_61_1.png" src="../_images/tutorials_shadow_est_61_1.png" />
+</div>
+</div>
+<p>Seems like we can cut on calculation time by only allowing <span class="math notranslate nohighlight">\(100\)</span> iterations, since we don’t get much more accurate afterwards.</p>
+</section>
+</section>
+<section id="Estimating-Jordan-Wigner-H_2-Hamiltonian-with-classical-shadows">
+<h2>Estimating Jordan-Wigner <span class="math notranslate nohighlight">\(H_2\)</span> Hamiltonian with classical shadows<a class="headerlink" href="#Estimating-Jordan-Wigner-H_2-Hamiltonian-with-classical-shadows" title="Permalink to this heading"></a></h2>
+<section id="Randomized-measurements">
+<h3>Randomized measurements<a class="headerlink" href="#Randomized-measurements" title="Permalink to this heading"></a></h3>
+<p>We now consider the real-life problem where we don’t have access to the exact value <span class="math notranslate nohighlight">\(\bra{\Psi(\theta_i, \tau_j)} H_{JW} \ket{\Psi(\theta_i, \tau_j)}\)</span>. It can be estimated with classical shadows. We modify the quantum loop to add classical shadow estimation of the several Pauli strings making up the <span class="math notranslate nohighlight">\(H_{JW}\)</span> Hamiltonian : this is the perfect setting to do so, because we have multiple Pauli strings and most of them have low weight.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">exp_value_JW</span><span class="p">(</span><span class="n">exp_values</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="o">-</span><span class="n">coeff_fact</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp_values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="o">+</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp_values</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="o">-</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp_values</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="o">+</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp_values</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+        <span class="o">+</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp_values</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+        <span class="o">+</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp_values</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+        <span class="o">+</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp_values</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span>
+        <span class="o">-</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp_values</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span>
+        <span class="o">+</span> <span class="n">coeff_fact</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp_values</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">quantum_loop_shadows</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">in_state</span><span class="p">,</span> <span class="n">shadow_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="n">reg</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        param (np.array): time parameters for each mixing Hamiltonian. There are 2p time parameters in param.</span>
+<span class="sd">        in_state (qubit.Qobj): initial state.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">DigitalAnalogDevice</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ch0&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+    <span class="n">middle</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+
+    <span class="k">for</span> <span class="n">tau</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">param</span><span class="p">[</span><span class="n">middle</span><span class="p">:],</span> <span class="n">param</span><span class="p">[:</span><span class="n">middle</span><span class="p">]):</span>
+        <span class="n">pulse_1</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="n">tau</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">pulse_2</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse_1</span><span class="p">,</span> <span class="s2">&quot;ch0&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse_2</span><span class="p">,</span> <span class="s2">&quot;ch0&quot;</span><span class="p">)</span>
+
+    <span class="n">seq</span><span class="o">.</span><span class="n">measure</span><span class="p">(</span><span class="s2">&quot;ground-rydberg&quot;</span><span class="p">)</span>
+    <span class="n">simul</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+    <span class="n">simul</span><span class="o">.</span><span class="n">set_initial_state</span><span class="p">(</span><span class="n">in_state</span><span class="p">)</span>
+
+    <span class="c1"># Classical shadow estimation</span>
+    <span class="c1"># Theoretical shadow size and number of clusters :</span>
+    <span class="c1"># shadow_size, K = compute_shadow_size(0.1, 0.5, paulis)</span>
+    <span class="c1"># We use K=4 to allow for quick simulation</span>
+    <span class="n">K</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">rho</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">run</span><span class="p">()</span><span class="o">.</span><span class="n">get_final_state</span><span class="p">()</span><span class="o">.</span><span class="n">proj</span><span class="p">()</span>
+    <span class="n">outcomes</span><span class="p">,</span> <span class="n">unitary_ids</span> <span class="o">=</span> <span class="n">calculate_classical_shadow</span><span class="p">(</span><span class="n">rho</span><span class="p">,</span> <span class="n">shadow_size</span><span class="p">)</span>
+    <span class="n">snapshots</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">snapshot_state</span><span class="p">(</span><span class="n">outcomes</span><span class="p">[</span><span class="n">ns</span><span class="p">],</span> <span class="n">unitary_ids</span><span class="p">[</span><span class="n">ns</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">ns</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">shadow_size</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">meds</span> <span class="o">=</span> <span class="p">[</span><span class="n">_median_of_means</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">snapshots</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span> <span class="k">for</span> <span class="n">obs</span> <span class="ow">in</span> <span class="n">paulis</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">exp_value_JW</span><span class="p">(</span><span class="n">meds</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">loop_JW_shadows</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">in_state</span><span class="p">,</span> <span class="n">shadow_size</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span>
+        <span class="n">quantum_loop_shadows</span><span class="p">,</span>
+        <span class="n">param</span><span class="p">,</span>
+        <span class="n">method</span><span class="o">=</span><span class="s2">&quot;Nelder-Mead&quot;</span><span class="p">,</span>
+        <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">in_state</span><span class="p">,</span> <span class="n">shadow_size</span><span class="p">),</span>
+        <span class="n">options</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;return_all&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;maxiter&quot;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;adaptive&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">shadow_sizes</span> <span class="o">=</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">60</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">100</span><span class="p">]</span>
+<span class="n">energies</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">shadow_size</span> <span class="ow">in</span> <span class="n">shadow_sizes</span><span class="p">:</span>
+    <span class="n">energies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="nb">abs</span><span class="p">(</span>
+            <span class="n">loop_JW_shadows</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">gggg</span><span class="p">,</span> <span class="n">shadow_size</span><span class="o">=</span><span class="n">shadow_size</span><span class="p">)</span><span class="o">.</span><span class="n">fun</span>
+            <span class="o">-</span> <span class="n">exact_energy</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Shadow size&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$|\frac{E - E_</span><span class="si">{ground}</span><span class="s2">}{E_</span><span class="si">{ground}</span><span class="s2">}|$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">shadow_sizes</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="n">e</span> <span class="o">/</span> <span class="n">exact_energy</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">energies</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&lt;matplotlib.lines.Line2D at 0x1dde39ccfe0&gt;]
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_shadow_est_69_1.png" src="../_images/tutorials_shadow_est_69_1.png" />
+</div>
+</div>
+<p>As could be expected, the estimation can be worse than what we got before : we added both randomness and sampling issues to the problem. Raising shadow size will allow more and more precise results. However, it can also be closer to the exact value for the same reasons.</p>
+</section>
+<section id="Derandomized-measurements">
+<h3>Derandomized measurements<a class="headerlink" href="#Derandomized-measurements" title="Permalink to this heading"></a></h3>
+<p>Finally, we try out the derandomized measurements method. To implement this one, we need to decompose the Hamiltonian into individual Pauli strings, rather than group them when they share the same leading coefficient as we did before, as it reduced the number of estimations.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[31]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">coeff_non_fact</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="o">-</span><span class="mf">0.81261</span><span class="p">,</span>
+    <span class="mf">0.171201</span><span class="p">,</span>
+    <span class="mf">0.171201</span><span class="p">,</span>
+    <span class="o">-</span><span class="mf">0.2227965</span><span class="p">,</span>
+    <span class="o">-</span><span class="mf">0.2227965</span><span class="p">,</span>
+    <span class="mf">0.16862325</span><span class="p">,</span>
+    <span class="mf">0.174349</span><span class="p">,</span>
+    <span class="mf">0.12054625</span><span class="p">,</span>
+    <span class="mf">0.12054625</span><span class="p">,</span>
+    <span class="mf">0.165868</span><span class="p">,</span>
+    <span class="mf">0.165868</span><span class="p">,</span>
+    <span class="o">-</span><span class="mf">0.04532175</span><span class="p">,</span>
+    <span class="o">-</span><span class="mf">0.04532175</span><span class="p">,</span>
+    <span class="mf">0.04532175</span><span class="p">,</span>
+    <span class="mf">0.04532175</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">paulis_str</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;1111&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Z111&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;1Z11&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;11Z1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;111Z&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ZZ11&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;11ZZ&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Z1Z1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;1Z1Z&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;1ZZ1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Z11Z&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;YYXX&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;XXYY&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;XYYX&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;YXXY&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[32]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">exp_value_JW_non_fact</span><span class="p">(</span><span class="n">outcomes</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">c</span> <span class="o">*</span> <span class="n">exp_value</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">outcomes</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">sigma</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">coeff_non_fact</span><span class="p">,</span> <span class="n">paulis_str</span><span class="p">)</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Then, we ask the derandomization algorithm to return <span class="math notranslate nohighlight">\(60\)</span> suitable Pauli measurements regarding our input Pauli observables. <span class="math notranslate nohighlight">\(60\)</span> is arbitrary, but is small enough that the algorithm runs quickly and large enough that it gives good results.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">measurements</span> <span class="o">=</span> <span class="n">derandomization</span><span class="p">(</span><span class="mi">60</span><span class="p">,</span> <span class="n">paulis_str</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">&quot;ZZZZ measurements : </span><span class="si">{</span><span class="n">measurements</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;ZZZZ&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">, XXYY measurements : </span><span class="si">{</span><span class="n">measurements</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;XXYY&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">, &quot;</span>
+    <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;YXXY measurements : </span><span class="si">{</span><span class="n">measurements</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;YXXY&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">, XYYX measurements : </span><span class="si">{</span><span class="n">measurements</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;XYYX&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">, &quot;</span>
+    <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;YYXX measurements : </span><span class="si">{</span><span class="n">measurements</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;YYXX&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> : total = 60 measurements&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ZZZZ measurements : 18, XXYY measurements : 11, YXXY measurements : 11, XYYX measurements : 10, YYXX measurements : 10 : total = 60 measurements
+</pre></div></div>
+</div>
+<p>As we can see, since all Pauli observables appearing in the Jordan-Wigner Hamiltonian involving the <span class="math notranslate nohighlight">\(Z\)</span>-basis never involve another basis, we find that it is always worth it to measure Pauli string <span class="math notranslate nohighlight">\(ZZZZ\)</span> rather than <span class="math notranslate nohighlight">\(ZZZX\)</span>, or <span class="math notranslate nohighlight">\(ZYZZ\)</span>, etc. This is a sign that our cost function is doing its job !</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[34]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">quantum_loop_derand</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">in_state</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="n">reg</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        param (np.array): time parameters for each mixing Hamiltonian. There are 2p time parameters in param.</span>
+<span class="sd">        in_state (qubit.Qobj): initial state.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">DigitalAnalogDevice</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ch0&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+    <span class="n">middle</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+
+    <span class="k">for</span> <span class="n">tau</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">param</span><span class="p">[</span><span class="n">middle</span><span class="p">:],</span> <span class="n">param</span><span class="p">[:</span><span class="n">middle</span><span class="p">]):</span>
+        <span class="n">pulse_1</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="n">tau</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">pulse_2</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse_1</span><span class="p">,</span> <span class="s2">&quot;ch0&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse_2</span><span class="p">,</span> <span class="s2">&quot;ch0&quot;</span><span class="p">)</span>
+
+    <span class="n">seq</span><span class="o">.</span><span class="n">measure</span><span class="p">(</span><span class="s2">&quot;ground-rydberg&quot;</span><span class="p">)</span>
+    <span class="n">simul</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+    <span class="n">simul</span><span class="o">.</span><span class="n">set_initial_state</span><span class="p">(</span><span class="n">in_state</span><span class="p">)</span>
+
+    <span class="c1"># Classical shadow estimation</span>
+    <span class="n">rho</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">run</span><span class="p">()</span><span class="o">.</span><span class="n">get_final_state</span><span class="p">()</span><span class="o">.</span><span class="n">proj</span><span class="p">()</span>
+    <span class="n">outcomes</span> <span class="o">=</span> <span class="n">classical_shadow_derand</span><span class="p">(</span><span class="n">rho</span><span class="p">,</span> <span class="n">measurements</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">exp_value_JW_non_fact</span><span class="p">(</span><span class="n">outcomes</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">loop_JW_derand</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">in_state</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span>
+        <span class="n">quantum_loop_derand</span><span class="p">,</span>
+        <span class="n">param</span><span class="p">,</span>
+        <span class="n">method</span><span class="o">=</span><span class="s2">&quot;Nelder-Mead&quot;</span><span class="p">,</span>
+        <span class="n">args</span><span class="o">=</span><span class="n">in_state</span><span class="p">,</span>
+        <span class="n">options</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;return_all&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;maxiter&quot;</span><span class="p">:</span> <span class="mi">150</span><span class="p">,</span> <span class="s2">&quot;adaptive&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[35]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">measurement_sizes</span> <span class="o">=</span> <span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">60</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">100</span><span class="p">]</span>
+<span class="n">energies_derand</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">meas_size</span> <span class="ow">in</span> <span class="n">measurement_sizes</span><span class="p">:</span>
+    <span class="n">measurements</span> <span class="o">=</span> <span class="n">derandomization</span><span class="p">(</span><span class="n">meas_size</span><span class="p">,</span> <span class="n">paulis_str</span><span class="p">)</span>
+    <span class="n">energies_derand</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="nb">abs</span><span class="p">(</span><span class="n">loop_JW_derand</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">gggg</span><span class="p">)</span><span class="o">.</span><span class="n">fun</span> <span class="o">-</span> <span class="n">exact_energy</span><span class="p">)</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">exact_energy</span><span class="p">)</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[36]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Measurement size&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$|\frac{E - E_</span><span class="si">{ground}</span><span class="s2">}{E_</span><span class="si">{ground}</span><span class="s2">}|$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">measurement_sizes</span><span class="p">,</span> <span class="n">energies_derand</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[36]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&lt;matplotlib.lines.Line2D at 0x1dde13198b0&gt;]
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_shadow_est_80_1.png" src="../_images/tutorials_shadow_est_80_1.png" />
+</div>
+</div>
+<p>We consistently obtain accurate results using this derandomized technique, and we obtain them far quicker than when dealing with randomized classical shadows. For roughly the same number of samples (<span class="math notranslate nohighlight">\(\sim 60\)</span> for each method, be it for shadow size or number of measurements), we experience much less computing time using the derandomized method. This was to be expected : by restricting the observables to Pauli strings, we allow for efficient estimation that can be easily computed in
+<span class="math notranslate nohighlight">\(O(M\times n)\)</span>, as well as remove randomness problematic with higher-weight observables (such as <span class="math notranslate nohighlight">\(YYXX\)</span> or <span class="math notranslate nohighlight">\(YXXY\)</span>).</p>
+<p>Note that we obtain <span class="math notranslate nohighlight">\(2\%\)</span> accuracy after about <span class="math notranslate nohighlight">\(50\)</span> <span class="math notranslate nohighlight">\(Z-\)</span> basis measurements (fluorescence) of the output state, rotated before each sampling in the bases returned by the derandomization algorithm.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="mw_engineering.html" class="btn btn-neutral float-left" title="Simulation of XYZ spin models using Floquet engineering in XY mode" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="1D_crystals.html" class="btn btn-neutral float-right" title="Building 1D Rydberg Crystals" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

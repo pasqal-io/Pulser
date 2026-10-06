@@ -1,0 +1,1087 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Classical Simulation &mdash; Pulser 1.1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/max_width.css" />
+
+  
+      <script src="../_static/jquery.js"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+      <script src="../_static/doctools.js"></script>
+      <script src="../_static/sphinx_highlight.js"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Backend Interfaces" href="backend.html" />
+    <link rel="prev" title="Core Features" href="core.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.1.1" /><meta name="readthedocs-resolver-filename" content="/apidoc/simulation.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installation and First Steps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../intro_rydberg_blockade.html">Quickstart: The Rydberg Blockade</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/creating.html">Pulse Sequence Creation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/simulating.html">Simulation of Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamental Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../review.html">Quantum Computing with Neutral Atoms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Backend Execution</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/backends.html">Backend Execution of Pulser Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Classical Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Quantum Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/afm_prep.html">Preparing a state with antiferromagnetic order in the Ising model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/xy_spin_chain.html">XY Spin Chain</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/mw_engineering.html">Simulation of XYZ spin models using Floquet engineering in XY mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/shadow_est.html">Efficient estimation techniques for Variational Quantum Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/1D_crystals.html">Building 1D Rydberg Crystals</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/cz_gate.html">Control-Z Gate Sequence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="pulser.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="core.html">Core Features</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Classical Simulation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#qutipemulator">QutipEmulator</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pulser_simulation.simulation.QutipEmulator"><code class="docutils literal notranslate"><span class="pre">QutipEmulator</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#simconfig">SimConfig</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pulser_simulation.SimConfig"><code class="docutils literal notranslate"><span class="pre">SimConfig</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#simulation-results">Simulation Results</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#qutipresult">QutipResult</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#coherentresults">CoherentResults</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#noisyresults">NoisyResults</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="backend.html">Backend Interfaces</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="pulser.html">API Reference</a></li>
+      <li class="breadcrumb-item active">Classical Simulation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/apidoc/simulation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="classical-simulation">
+<h1>Classical Simulation<a class="headerlink" href="#classical-simulation" title="Permalink to this heading"></a></h1>
+<p>Since version 0.6.0, all simulation classes (previously under the <code class="docutils literal notranslate"><span class="pre">pulser.simulation</span></code> module)
+are in the <code class="docutils literal notranslate"><span class="pre">pulser-simulation</span></code> extension and should be imported from <code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code>.</p>
+<section id="qutipemulator">
+<h2>QutipEmulator<a class="headerlink" href="#qutipemulator" title="Permalink to this heading"></a></h2>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">QutipEmulator</span></code> is the class to simulate <code class="xref py py-class docutils literal notranslate"><span class="pre">SequenceSamples</span></code>, that are samples of a <code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code>.
+It is possible to simulate directly a <code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code> object by using the class method
+<code class="docutils literal notranslate"><span class="pre">QutipEmulator.from_sequence</span></code>.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser_simulation.simulation.</span></span><span class="sig-name descname"><span class="pre">QutipEmulator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sampled_seq</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">register</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluation_times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Full'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator" title="Permalink to this definition"></a></dt>
+<dd><p>Emulator of a pulse sequence using QuTiP.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sampled_seq</strong> (<a class="reference internal" href="core.html#pulser.sampler.samples.SequenceSamples" title="pulser.sampler.samples.SequenceSamples"><code class="xref py py-class docutils literal notranslate"><span class="pre">SequenceSamples</span></code></a>) – A pulse sequence samples used in the emulation.</p></li>
+<li><p><strong>register</strong> (<a class="reference internal" href="core.html#pulser.register.base_register.BaseRegister" title="pulser.register.base_register.BaseRegister"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseRegister</span></code></a>) – The register associating coordinates to the qubits targeted
+by the pulses within the samples.</p></li>
+<li><p><strong>device</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">BaseDevice</span></code>) – The device specifications used in the emulation. Register and
+samples have to satisfy its constraints.</p></li>
+<li><p><strong>sampling_rate</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">1.0</span></code>) – The fraction of samples that we wish to extract from
+the samples to simulate. Has to be a value between 0.05 and 1.0.</p></li>
+<li><p><strong>config</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="#pulser_simulation.SimConfig" title="pulser_simulation.simconfig.SimConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimConfig</span></code></a>], default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Configuration to be used for this simulation.</p></li>
+<li><p><strong>evaluation_times</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]], <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]], <code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>]]], default: <code class="docutils literal notranslate"><span class="pre">'Full'</span></code>) – <p>Choose between:</p>
+<ul>
+<li><p>”Full”: The times are set to be the ones used to define the
+Hamiltonian to the solver.</p></li>
+<li><p>”Minimal”: The times are set to only include initial and final
+times.</p></li>
+<li><p>An ArrayLike object of times in µs if you wish to only include
+those specific times.</p></li>
+<li><p>A float to act as a sampling rate for the resulting state.</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.sampling_times">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sampling_times</span></span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.sampling_times" title="Permalink to this definition"></a></dt>
+<dd><p>The times at which hamiltonian is sampled.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.dim">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dim</span></span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.dim" title="Permalink to this definition"></a></dt>
+<dd><p>The dimension of the basis.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.basis_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">basis_name</span></span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.basis_name" title="Permalink to this definition"></a></dt>
+<dd><p>The name of the basis.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.basis">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">basis</span></span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.basis" title="Permalink to this definition"></a></dt>
+<dd><p>The basis in which result is expressed.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.config">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.config" title="Permalink to this definition"></a></dt>
+<dd><p>The current configuration, as a SimConfig instance.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.set_config">
+<span class="sig-name descname"><span class="pre">set_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cfg</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.set_config" title="Permalink to this definition"></a></dt>
+<dd><p>Sets current config to cfg and updates simulation parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cfg</strong> (<a class="reference internal" href="#pulser_simulation.SimConfig" title="pulser_simulation.simconfig.SimConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimConfig</span></code></a>) – New configuration.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.add_config">
+<span class="sig-name descname"><span class="pre">add_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.add_config" title="Permalink to this definition"></a></dt>
+<dd><p>Updates the current configuration with parameters of another one.</p>
+<p>Mostly useful when dealing with multiple noise types in different
+configurations and wanting to merge these configurations together.
+Adds simulation parameters to noises that weren’t available in the
+former SimConfig. Noises specified in both SimConfigs will keep
+former noise parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>config</strong> (<a class="reference internal" href="#pulser_simulation.SimConfig" title="pulser_simulation.simconfig.SimConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimConfig</span></code></a>) – SimConfig to retrieve parameters from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.show_config">
+<span class="sig-name descname"><span class="pre">show_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">solver_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.show_config" title="Permalink to this definition"></a></dt>
+<dd><p>Shows current configuration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.reset_config">
+<span class="sig-name descname"><span class="pre">reset_config</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.reset_config" title="Permalink to this definition"></a></dt>
+<dd><p>Resets configuration to default.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.initial_state">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initial_state</span></span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.initial_state" title="Permalink to this definition"></a></dt>
+<dd><p>The initial state of the simulation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.set_initial_state">
+<span class="sig-name descname"><span class="pre">set_initial_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.set_initial_state" title="Permalink to this definition"></a></dt>
+<dd><p>Sets the initial state of the simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>state</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code>]) – <p>The initial state.
+Choose between:</p>
+<ul class="simple">
+<li><p>”all-ground” for all atoms in ground state</p></li>
+<li><p>An ArrayLike with a shape compatible with the system</p></li>
+<li><p>A Qobj object</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.evaluation_times">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">evaluation_times</span></span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.evaluation_times" title="Permalink to this definition"></a></dt>
+<dd><p>The times at which the results of this simulation are returned.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.set_evaluation_times">
+<span class="sig-name descname"><span class="pre">set_evaluation_times</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.set_evaluation_times" title="Permalink to this definition"></a></dt>
+<dd><p>Sets times at which the results of this simulation are returned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]], <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]], <code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>]]]) – <p>Choose between:</p>
+<ul class="simple">
+<li><p>”Full”: The times are set to be the ones used to define the
+Hamiltonian to the solver.</p></li>
+<li><p>”Minimal”: The times are set to only include initial and
+final times.</p></li>
+<li><p>An ArrayLike object of times in µs if you wish to only
+include those specific times.</p></li>
+<li><p>A float to act as a sampling rate for the resulting state.</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.build_operator">
+<span class="sig-name descname"><span class="pre">build_operator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operations</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.build_operator" title="Permalink to this definition"></a></dt>
+<dd><p>Creates an operator with non-trivial actions on some qubits.</p>
+<p>Takes as argument a list of tuples <code class="docutils literal notranslate"><span class="pre">[(operator_1,</span> <span class="pre">qubits_1),</span>
+<span class="pre">(operator_2,</span> <span class="pre">qubits_2)...]</span></code>. Returns the operator given by the tensor
+product of {<code class="docutils literal notranslate"><span class="pre">operator_i</span></code> applied on <code class="docutils literal notranslate"><span class="pre">qubits_i</span></code>} and Id on the rest.
+<code class="docutils literal notranslate"><span class="pre">(operator,</span> <span class="pre">'global')</span></code> returns the sum for all <code class="docutils literal notranslate"><span class="pre">j</span></code> of operator
+applied at <code class="docutils literal notranslate"><span class="pre">qubit_j</span></code> and identity elsewhere.</p>
+<p>Example for 4 qubits: <code class="docutils literal notranslate"><span class="pre">[(Z,</span> <span class="pre">[1,</span> <span class="pre">2]),</span> <span class="pre">(Y,</span> <span class="pre">[3])]</span></code> returns <cite>ZZYI</cite>
+and <code class="docutils literal notranslate"><span class="pre">[(X,</span> <span class="pre">'global')]</span></code> returns <cite>XIII + IXII + IIXI + IIIX</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>operations</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>]) – List of tuples <cite>(operator, qubits)</cite>.
+<cite>operator</cite> can be a <code class="docutils literal notranslate"><span class="pre">qutip.Quobj</span></code> or a string key for
+<code class="docutils literal notranslate"><span class="pre">self.op_matrix</span></code>. <cite>qubits</cite> is the list on which operator
+will be applied. The qubits can be passed as their
+index or their label in the register.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The final operator.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.get_hamiltonian">
+<span class="sig-name descname"><span class="pre">get_hamiltonian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.get_hamiltonian" title="Permalink to this definition"></a></dt>
+<dd><p>Get the Hamiltonian created from the sequence at a fixed time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code></p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The whole Hamiltonian is divided by <span class="math notranslate nohighlight">\(\hbar\)</span>, so its
+units are rad/µs.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>time</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>) – The specific time at which we want to extract the
+Hamiltonian (in ns).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A new Qobj for the Hamiltonian with coefficients
+extracted from the effective sequence (determined by
+<cite>self.sampling_rate</cite>) at the specified time.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">progress_bar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.run" title="Permalink to this definition"></a></dt>
+<dd><p>Simulates the sequence using QuTiP’s solvers.</p>
+<p>Will return NoisyResults if the noise in the SimConfig requires it.
+Otherwise will return CoherentResults.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>progress_bar</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – If True, the progress bar of QuTiP’s
+solver will be shown. If None or False, no text appears.</p></li>
+<li><p><strong>options</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>) – <p>Used as arguments for qutip.Options(). If specified, will
+override SimConfig solver_options. If no <cite>max_step</cite> value is
+provided, an automatic one is calculated from the <cite>Sequence</cite>’s
+schedule (half of the shortest duration among pulses and
+delays).
+Refer to the QuTiP <a class="reference external" href="https://bit.ly/3il9A2u">docs</a> for an overview of the parameters.</p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">SimulationResults</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.draw">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw_phase_area</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_phase_shifts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_phase_curve</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fig_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kwargs_savefig</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.draw" title="Permalink to this definition"></a></dt>
+<dd><p>Draws the samples of a sequence of operations used for simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>draw_phase_area</strong> (bool, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether phase and area values need
+to be shown as text on the plot, defaults to False.</p></li>
+<li><p><strong>draw_phase_shifts</strong> (bool, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether phase shift and reference
+information should be added to the plot, defaults to False.</p></li>
+<li><p><strong>draw_phase_curve</strong> (bool, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Draws the changes in phase in its own curve
+(ignored if the phase doesn’t change throughout the channel).</p></li>
+<li><p><strong>fig_name</strong> (str | None, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The name on which to save the figure.
+If None the figure will not be saved.</p></li>
+<li><p><strong>kwargs_savefig</strong> (dict, default: <code class="docutils literal notranslate"><span class="pre">{}</span></code>) – Keywords arguments for
+<code class="docutils literal notranslate"><span class="pre">matplotlib.pyplot.savefig</span></code>. Not applicable if <cite>fig_name</cite>
+is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>Sequence.draw(): Draws the sequence in its current state.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simulation.QutipEmulator.from_sequence">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_sequence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluation_times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Full'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">with_modulation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simulation.QutipEmulator.from_sequence" title="Permalink to this definition"></a></dt>
+<dd><p>Simulation of a pulse sequence using QuTiP.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sequence</strong> (<a class="reference internal" href="core.html#pulser.sequence.sequence.Sequence" title="pulser.sequence.sequence.Sequence"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>) – An instance of a Pulser Sequence that we
+want to simulate.</p></li>
+<li><p><strong>sampling_rate</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">1.0</span></code>) – The fraction of samples that we wish to
+extract from the pulse sequence to simulate. Has to be a
+value between 0.05 and 1.0.</p></li>
+<li><p><strong>config</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="#pulser_simulation.SimConfig" title="pulser_simulation.simconfig.SimConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimConfig</span></code></a>], default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Configuration to be used for this simulation.</p></li>
+<li><p><strong>evaluation_times</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]], <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]], <code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>]]], default: <code class="docutils literal notranslate"><span class="pre">'Full'</span></code>) – <p>Choose between:</p>
+<ul>
+<li><p>”Full”: The times are set to be the ones used to define the
+Hamiltonian to the solver.</p></li>
+<li><p>”Minimal”: The times are set to only include initial and
+final times.</p></li>
+<li><p>An ArrayLike object of times in µs if you wish to only
+include those specific times.</p></li>
+<li><p>A float to act as a sampling rate for the resulting state.</p></li>
+</ul>
+</p></li>
+<li><p><strong>with_modulation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether to simulate the sequence with the
+programmed input or the expected output.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#pulser_simulation.simulation.QutipEmulator" title="pulser_simulation.simulation.QutipEmulator"><code class="xref py py-class docutils literal notranslate"><span class="pre">QutipEmulator</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="simconfig">
+<h2>SimConfig<a class="headerlink" href="#simconfig" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser_simulation.SimConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser_simulation.</span></span><span class="sig-name descname"><span class="pre">SimConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">noise=()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">runs=15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">samples_per_run=5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature=50.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">laser_waist=175.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amp_sigma=0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eta=0.005</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon=0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon_prime=0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relaxation_rate=0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dephasing_rate=0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hyperfine_dephasing_rate=0.001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depolarizing_rate=0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eff_noise_rates=&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eff_noise_opers=&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">solver_options=None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.SimConfig" title="Permalink to this definition"></a></dt>
+<dd><p>Specifies a simulation’s configuration.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Being a frozen dataclass, the configuration chosen upon instantiation
+cannot be changed later on.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>noise</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">'leakage'</span></code>, <code class="docutils literal notranslate"><span class="pre">'doppler'</span></code>, <code class="docutils literal notranslate"><span class="pre">'amplitude'</span></code>, <code class="docutils literal notranslate"><span class="pre">'SPAM'</span></code>, <code class="docutils literal notranslate"><span class="pre">'dephasing'</span></code>, <code class="docutils literal notranslate"><span class="pre">'relaxation'</span></code>, <code class="docutils literal notranslate"><span class="pre">'depolarizing'</span></code>, <code class="docutils literal notranslate"><span class="pre">'eff_noise'</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">'leakage'</span></code>, <code class="docutils literal notranslate"><span class="pre">'doppler'</span></code>, <code class="docutils literal notranslate"><span class="pre">'amplitude'</span></code>, <code class="docutils literal notranslate"><span class="pre">'SPAM'</span></code>, <code class="docutils literal notranslate"><span class="pre">'dephasing'</span></code>, <code class="docutils literal notranslate"><span class="pre">'relaxation'</span></code>, <code class="docutils literal notranslate"><span class="pre">'depolarizing'</span></code>, <code class="docutils literal notranslate"><span class="pre">'eff_noise'</span></code>], <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>]], default: <code class="docutils literal notranslate"><span class="pre">()</span></code>) – <p>Types of noises to be used in the
+simulation. You may specify just one, or a tuple of the allowed
+noise types:</p>
+<ul>
+<li><p>”leakage”: Adds an error state ‘x’ to the computational
+basis, that can interact with the other states via an
+effective noise channel (which must be defined).</p></li>
+<li><p>”relaxation”: Relaxation from the Rydberg to the ground state.</p></li>
+<li><p>”dephasing”: Random phase (Z) flip.</p></li>
+<li><p>”depolarizing”: Quantum noise where the state (rho) is
+turned into a mixed state I/2 at a rate gamma (in rad/µs).</p></li>
+<li><p>”eff_noise”: General effective noise channel defined by
+the set of collapse operators <strong>eff_noise_opers</strong> and the
+corresponding rates <strong>eff_noise_rates</strong> (in rad/µs).</p></li>
+<li><p>”doppler”: Local atom detuning due to finite speed of the
+atoms and Doppler effect with respect to laser frequency.</p></li>
+<li><p>”amplitude”: Gaussian damping due to finite laser waist</p></li>
+<li><p>”SPAM”: SPAM errors. Defined by <strong>eta</strong>, <strong>epsilon</strong> and
+<strong>epsilon_prime</strong>.</p></li>
+</ul>
+</p></li>
+<li><p><strong>eta</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">0.005</span></code>) – Probability of each atom to be badly prepared.</p></li>
+<li><p><strong>epsilon</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">0.01</span></code>) – Probability of false positives.</p></li>
+<li><p><strong>epsilon_prime</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">0.05</span></code>) – Probability of false negatives.</p></li>
+<li><p><strong>runs</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, default: <code class="docutils literal notranslate"><span class="pre">15</span></code>) – Number of runs needed : each run draws a new random
+noise.</p></li>
+<li><p><strong>samples_per_run</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, default: <code class="docutils literal notranslate"><span class="pre">5</span></code>) – Number of samples per noisy run.
+Useful for cutting down on computing time, but unrealistic.</p></li>
+<li><p><strong>temperature</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">50.0</span></code>) – Temperature, set in µK, of the Rydberg array.
+Also sets the standard deviation of the speed of the atoms.</p></li>
+<li><p><strong>laser_waist</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">175.0</span></code>) – Waist of the gaussian laser, set in µm, in global
+pulses.</p></li>
+<li><p><strong>amp_sigma</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">0.05</span></code>) – Dictates the fluctuations in amplitude as a standard
+deviation of a normal distribution centered in 1.</p></li>
+<li><p><strong>solver_options</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Options</span></code>], default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Options for the qutip solver.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.SimConfig.from_noise_model">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_noise_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">noise_model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.SimConfig.from_noise_model" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a SimConfig from a NoiseModel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeVar</span></code>(<code class="docutils literal notranslate"><span class="pre">T</span></code>, bound= SimConfig)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.SimConfig.to_noise_model">
+<span class="sig-name descname"><span class="pre">to_noise_model</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.SimConfig.to_noise_model" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a NoiseModel from the SimConfig.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="core.html#pulser.noise_model.NoiseModel" title="pulser.noise_model.NoiseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">NoiseModel</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.SimConfig.with_leakage">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">with_leakage</span></span><a class="headerlink" href="#pulser_simulation.SimConfig.with_leakage" title="Permalink to this definition"></a></dt>
+<dd><p>Whether or not ‘leakage’ is included in the noise types.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.SimConfig.spam_dict">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">spam_dict</span></span><a class="headerlink" href="#pulser_simulation.SimConfig.spam_dict" title="Permalink to this definition"></a></dt>
+<dd><p>A dictionary combining the SPAM error parameters.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.SimConfig.doppler_sigma">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">doppler_sigma</span></span><a class="headerlink" href="#pulser_simulation.SimConfig.doppler_sigma" title="Permalink to this definition"></a></dt>
+<dd><p>Standard deviation for Doppler shifting due to thermal motion.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.SimConfig.supported_noises">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">supported_noises</span></span><a class="headerlink" href="#pulser_simulation.SimConfig.supported_noises" title="Permalink to this definition"></a></dt>
+<dd><p>Return the noises implemented on pulser.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="simulation-results">
+<h2>Simulation Results<a class="headerlink" href="#simulation-results" title="Permalink to this heading"></a></h2>
+<p>Depending on the types of noise involved in a simulation, the results are returned
+as an instance of <code class="xref py py-class docutils literal notranslate"><span class="pre">SimulationResults</span></code>, namely <code class="xref py py-class docutils literal notranslate"><span class="pre">CoherentResults</span></code>
+(when each result can still be represented as a <code class="xref py py-class docutils literal notranslate"><span class="pre">QutipResult</span></code> i.e. a state vector
+or a density matrix, before being measured) or <code class="xref py py-class docutils literal notranslate"><span class="pre">NoisyResults</span></code> (when each of them can only
+be represented as <code class="xref py py-class docutils literal notranslate"><span class="pre">SampledResult</span></code> i.e. a probability distribution over the basis states).</p>
+<p>Both classes feature methods for processing and displaying the results stored
+within them.</p>
+<section id="qutipresult">
+<h3>QutipResult<a class="headerlink" href="#qutipresult" title="Permalink to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser_simulation.qutip_result.QutipResult">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser_simulation.qutip_result.</span></span><span class="sig-name descname"><span class="pre">QutipResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">atom_order</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meas_basis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matching_meas_basis</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.qutip_result.QutipResult" title="Permalink to this definition"></a></dt>
+<dd><p>Represents the result of a run as a Qutip QObj.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>atom_order</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>], <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>]) – The order of the atoms in the bitstrings that
+represent the measured states.</p></li>
+<li><p><strong>meas_basis</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – The measurement basis.</p></li>
+<li><p><strong>state</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code>) – The Qobj representing the state. Can be a statevector
+or a density matrix.</p></li>
+<li><p><strong>matching_meas_basis</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – Whether the measurement basis is the
+same as the state’s basis.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.qutip_result.QutipResult.sampling_errors">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sampling_errors</span></span><a class="headerlink" href="#pulser_simulation.qutip_result.QutipResult.sampling_errors" title="Permalink to this definition"></a></dt>
+<dd><p>The sampling error associated to each bitstring’s sampling rate.</p>
+<p>Uses the standard error of the mean as a quantifier for sampling error.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.qutip_result.QutipResult.get_state">
+<span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reduce_to_basis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_global_phase</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.qutip_result.QutipResult.get_state" title="Permalink to this definition"></a></dt>
+<dd><p>Gets the state with some optional post-processing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reduce_to_basis</strong> (str | None, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Reduces the full state vector
+to the given basis (“ground-rydberg”, “digital” or “XY”), if
+the population of the states to be ignored is negligible.</p></li>
+<li><p><strong>ignore_global_phase</strong> (bool, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – If True and if the final state is a vector,
+changes the final state’s global phase such that the largest
+term (in absolute value) is real.</p></li>
+<li><p><strong>tol</strong> (float, default: <code class="docutils literal notranslate"><span class="pre">1e-06</span></code>) – Maximum allowed population of each eliminated state.</p></li>
+<li><p><strong>normalize</strong> (bool, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Whether to normalize the reduced state.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>qutip.Qobj</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The resulting state.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>TypeError</strong> – If trying to reduce to a basis that would eliminate
+    states with significant occupation probabilites.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.qutip_result.QutipResult.get_samples">
+<span class="sig-name descname"><span class="pre">get_samples</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_samples</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.qutip_result.QutipResult.get_samples" title="Permalink to this definition"></a></dt>
+<dd><p>Takes multiple samples from the sampling distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>n_samples</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – Number of samples to return.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Counter</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Samples of bitstrings corresponding to measured quantum states.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.qutip_result.QutipResult.plot_histogram">
+<span class="sig-name descname"><span class="pre">plot_histogram</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_n_bitstrings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.qutip_result.QutipResult.plot_histogram" title="Permalink to this definition"></a></dt>
+<dd><p>Plots the result in an histogram.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>min_rate</strong> (float, default: <code class="docutils literal notranslate"><span class="pre">0.001</span></code>) – The minimum sampling rate a bitstring must have to be
+displayed.</p></li>
+<li><p><strong>max_n_bitstrings</strong> (int | None, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An optional limit on the number of bitrstrings
+displayed.</p></li>
+<li><p><strong>show</strong> (bool, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Whether or not to call <cite>plt.show()</cite> before returning.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.qutip_result.QutipResult.sampling_dist">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sampling_dist</span></span><a class="headerlink" href="#pulser_simulation.qutip_result.QutipResult.sampling_dist" title="Permalink to this definition"></a></dt>
+<dd><p>Sampling distribution of the measured bitstring.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>atom_order</strong> – The order of the atoms in the bitstrings that
+represent the measured states.</p></li>
+<li><p><strong>meas_basis</strong> – The measurement basis.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="coherentresults">
+<h3>CoherentResults<a class="headerlink" href="#coherentresults" title="Permalink to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.CoherentResults">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser_simulation.simresults.</span></span><span class="sig-name descname"><span class="pre">CoherentResults</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_output</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sim_times</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meas_basis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meas_errors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.CoherentResults" title="Permalink to this definition"></a></dt>
+<dd><p>Results of a coherent simulation run of a pulse sequence.</p>
+<p>Contains methods for studying the states and extracting useful information
+from them.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.CoherentResults.states">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">states</span></span><a class="headerlink" href="#pulser_simulation.simresults.CoherentResults.states" title="Permalink to this definition"></a></dt>
+<dd><p>List of <code class="docutils literal notranslate"><span class="pre">qutip.Qobj</span></code> for each state in the simulation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.CoherentResults.get_state">
+<span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduce_to_basis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_global_phase</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.CoherentResults.get_state" title="Permalink to this definition"></a></dt>
+<dd><p>Get the state at time t of the simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>t</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>) – Time (in µs) at which to return the state.</p></li>
+<li><p><strong>reduce_to_basis</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>], default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Reduces the full state vector
+to the given basis (“ground-rydberg”, “digital” or “XY”), if
+the population of the states to be ignored is negligible.</p></li>
+<li><p><strong>ignore_global_phase</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – If True and if the final state is a vector,
+changes the final state’s global phase such that the largest
+term (in absolute value) is real.</p></li>
+<li><p><strong>tol</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">1e-06</span></code>) – Maximum allowed population of each
+eliminated state.</p></li>
+<li><p><strong>normalize</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Whether to normalize the reduced
+state.</p></li>
+<li><p><strong>t_tol</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">0.001</span></code>) – Tolerance for the difference between t and
+closest time.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The resulting state at time t.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>TypeError</strong> – If trying to reduce to a basis that would eliminate
+    states with significant occupation probabilites.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.CoherentResults.get_final_state">
+<span class="sig-name descname"><span class="pre">get_final_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reduce_to_basis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_global_phase</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.CoherentResults.get_final_state" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the final state of the simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reduce_to_basis</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>], default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Reduces the full state vector
+to the given basis (“ground-rydberg”, “digital” or “XY”), if
+the population of the states to be ignored is negligible.</p></li>
+<li><p><strong>ignore_global_phase</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – If True, changes the
+final state’s global phase such that the largest term (in
+absolute value) is real.</p></li>
+<li><p><strong>tol</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">1e-06</span></code>) – Maximum allowed population of each
+eliminated state.</p></li>
+<li><p><strong>normalize</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Whether to normalize the reduced
+state.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The resulting final state.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>If trying to reduce to a basis that would eliminate states with</strong> – </p></li>
+<li><p><strong>significant occupation probabilites.</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.CoherentResults.sample_state">
+<span class="sig-name descname"><span class="pre">sample_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.CoherentResults.sample_state" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the result of multiple measurements at time t.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>t</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>) – Time (in µs) at which the state is sampled.</p></li>
+<li><p><strong>n_samples</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, default: <code class="docutils literal notranslate"><span class="pre">1000</span></code>) – Number of samples to return.</p></li>
+<li><p><strong>t_tol</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">0.001</span></code>) – Tolerance for the difference between t and
+closest time.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Counter</span></code></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Sample distribution of bitstrings corresponding to measured
+quantum states at time t.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.CoherentResults.count">
+<span class="sig-name descname"><span class="pre">count</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">integer</span> <span class="pre">--</span> <span class="pre">return</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">occurrences</span> <span class="pre">of</span> <span class="pre">value</span></span></span><a class="headerlink" href="#pulser_simulation.simresults.CoherentResults.count" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.CoherentResults.expect">
+<span class="sig-name descname"><span class="pre">expect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obs_list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.CoherentResults.expect" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the expectation values of operators in obs_list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obs_list</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]], <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]], <code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>]]]]) – Input observable list. ArrayLike objects will
+be converted to qutip.Qobj.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]], <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]], <code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>]]]]</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Expectation values of obs_list.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.CoherentResults.index">
+<span class="sig-name descname"><span class="pre">index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="optional">[</span>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em><span class="optional">[</span>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em><span class="optional">]</span><span class="optional">]</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">integer</span> <span class="pre">--</span> <span class="pre">return</span> <span class="pre">first</span> <span class="pre">index</span> <span class="pre">of</span> <span class="pre">value.</span></span></span><a class="headerlink" href="#pulser_simulation.simresults.CoherentResults.index" title="Permalink to this definition"></a></dt>
+<dd><p>Raises ValueError if the value is not present.</p>
+<p>Supporting start and stop arguments is optional, but
+recommended.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.CoherentResults.plot">
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">op</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.CoherentResults.plot" title="Permalink to this definition"></a></dt>
+<dd><p>Plots the expectation value of a given operator op.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>op</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code>) – Operator whose expectation value is wanted.</p></li>
+<li><p><strong>fmt</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, default: <code class="docutils literal notranslate"><span class="pre">''</span></code>) – Curve plot format.</p></li>
+<li><p><strong>label</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, default: <code class="docutils literal notranslate"><span class="pre">''</span></code>) – Curve label.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.CoherentResults.sample_final_state">
+<span class="sig-name descname"><span class="pre">sample_final_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">N_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.CoherentResults.sample_final_state" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the result of multiple measurements of the final state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>N_samples</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, default: <code class="docutils literal notranslate"><span class="pre">1000</span></code>) – Number of samples to return.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Counter</span></code></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Sample distribution of bitstrings corresponding to
+measured quantum states at the end of the simulation.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="noisyresults">
+<h3>NoisyResults<a class="headerlink" href="#noisyresults" title="Permalink to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.NoisyResults">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser_simulation.simresults.</span></span><span class="sig-name descname"><span class="pre">NoisyResults</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_output</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sim_times</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_measures</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.NoisyResults" title="Permalink to this definition"></a></dt>
+<dd><p>Results of a noisy simulation run of a pulse sequence.</p>
+<p>Contrary to a CoherentResults object, this object contains a list of
+Counters describing the state distribution at the time it was created by
+using QutipEmulator.run() with a noisy simulation.
+Contains methods for studying the populations and extracting useful
+information from them.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.NoisyResults.states">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">states</span></span><a class="headerlink" href="#pulser_simulation.simresults.NoisyResults.states" title="Permalink to this definition"></a></dt>
+<dd><p>Measured states as a list of diagonal qutip.Qobj.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.NoisyResults.results">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">results</span></span><a class="headerlink" href="#pulser_simulation.simresults.NoisyResults.results" title="Permalink to this definition"></a></dt>
+<dd><p>Probability distribution of the bitstrings.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.NoisyResults.get_state">
+<span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.NoisyResults.get_state" title="Permalink to this definition"></a></dt>
+<dd><p>Gets the state at time t as a diagonal density matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code></p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is not the density matrix of the system, but is a convenient
+way of computing expectation values of observables.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>t</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>) – Time (in µs) at which to return the state.</p></li>
+<li><p><strong>t_tol</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">0.001</span></code>) – Tolerance for the difference between t and
+closest time.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>States probability distribution as a diagonal density matrix.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.NoisyResults.get_final_state">
+<span class="sig-name descname"><span class="pre">get_final_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.NoisyResults.get_final_state" title="Permalink to this definition"></a></dt>
+<dd><p>Get the final state of the simulation as a diagonal density matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code></p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is not the density matrix of the system, but is a convenient
+way of computing expectation values of observables.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>States probability distribution as a density matrix.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.NoisyResults.plot">
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">op</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error_bars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.NoisyResults.plot" title="Permalink to this definition"></a></dt>
+<dd><p>Plots the expectation value of a given operator op.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The observable must be diagonal.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>op</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code>) – Operator whose expectation value is wanted.</p></li>
+<li><p><strong>fmt</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, default: <code class="docutils literal notranslate"><span class="pre">'.'</span></code>) – Curve plot format.</p></li>
+<li><p><strong>label</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, default: <code class="docutils literal notranslate"><span class="pre">''</span></code>) – y-Axis label.</p></li>
+<li><p><strong>error_bars</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Choose to display error bars.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.NoisyResults.count">
+<span class="sig-name descname"><span class="pre">count</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">integer</span> <span class="pre">--</span> <span class="pre">return</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">occurrences</span> <span class="pre">of</span> <span class="pre">value</span></span></span><a class="headerlink" href="#pulser_simulation.simresults.NoisyResults.count" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.NoisyResults.expect">
+<span class="sig-name descname"><span class="pre">expect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obs_list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.NoisyResults.expect" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the expectation values of operators in obs_list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obs_list</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]], <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]], <code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>]]]]) – Input observable list. ArrayLike objects will
+be converted to qutip.Qobj.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]], <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">_SupportsArray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]], <code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NestedSequence</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">complex</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>]]]]</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Expectation values of obs_list.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.NoisyResults.index">
+<span class="sig-name descname"><span class="pre">index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="optional">[</span>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em><span class="optional">[</span>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em><span class="optional">]</span><span class="optional">]</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">integer</span> <span class="pre">--</span> <span class="pre">return</span> <span class="pre">first</span> <span class="pre">index</span> <span class="pre">of</span> <span class="pre">value.</span></span></span><a class="headerlink" href="#pulser_simulation.simresults.NoisyResults.index" title="Permalink to this definition"></a></dt>
+<dd><p>Raises ValueError if the value is not present.</p>
+<p>Supporting start and stop arguments is optional, but
+recommended.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.NoisyResults.sample_final_state">
+<span class="sig-name descname"><span class="pre">sample_final_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">N_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.NoisyResults.sample_final_state" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the result of multiple measurements of the final state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>N_samples</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, default: <code class="docutils literal notranslate"><span class="pre">1000</span></code>) – Number of samples to return.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Counter</span></code></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Sample distribution of bitstrings corresponding to
+measured quantum states at the end of the simulation.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.simresults.NoisyResults.sample_state">
+<span class="sig-name descname"><span class="pre">sample_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.simresults.NoisyResults.sample_state" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the result of multiple measurements at time t.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>t</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>) – Time at which the state is sampled (in µs).</p></li>
+<li><p><strong>n_samples</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, default: <code class="docutils literal notranslate"><span class="pre">1000</span></code>) – Number of samples to return.</p></li>
+<li><p><strong>t_tol</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, default: <code class="docutils literal notranslate"><span class="pre">0.001</span></code>) – Tolerance for the difference between t and
+closest time.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Counter</span></code></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Sample distribution of bitstrings corresponding to
+measured quantum states at time t.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="core.html" class="btn btn-neutral float-left" title="Core Features" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="backend.html" class="btn btn-neutral float-right" title="Backend Interfaces" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

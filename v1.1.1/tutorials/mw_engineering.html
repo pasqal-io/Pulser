@@ -1,0 +1,714 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulation of XYZ spin models using Floquet engineering in XY mode &mdash; Pulser 1.1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/max_width.css" />
+
+  
+      <script src="../_static/jquery.js"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+      <script src="../_static/doctools.js"></script>
+      <script src="../_static/sphinx_highlight.js"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Efficient estimation techniques for Variational Quantum Simulation" href="shadow_est.html" />
+    <link rel="prev" title="XY Spin Chain" href="xy_spin_chain.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.1.1" /><meta name="readthedocs-resolver-filename" content="/tutorials/mw_engineering.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installation and First Steps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../intro_rydberg_blockade.html">Quickstart: The Rydberg Blockade</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Pulse Sequence Creation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simulating.html">Simulation of Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamental Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../review.html">Quantum Computing with Neutral Atoms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Backend Execution</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution of Pulser Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Classical Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Quantum Simulation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="afm_prep.html">Preparing a state with antiferromagnetic order in the Ising model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Spin Chain</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Simulation of XYZ spin models using Floquet engineering in XY mode</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Floquet-Engineering-on-two-atoms">Floquet Engineering on two atoms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Domain-wall-dynamics">Domain-wall dynamics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="shadow_est.html">Efficient estimation techniques for Variational Quantum Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1D_crystals.html">Building 1D Rydberg Crystals</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cz_gate.html">Control-Z Gate Sequence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pulser.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Simulation of XYZ spin models using Floquet engineering in XY mode</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/mw_engineering.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Simulation-of-XYZ-spin-models-using-Floquet-engineering-in-XY-mode">
+<h1>Simulation of XYZ spin models using Floquet engineering in XY mode<a class="headerlink" href="#Simulation-of-XYZ-spin-models-using-Floquet-engineering-in-XY-mode" title="Permalink to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">qutip</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pulse</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Register</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser_simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">QutipEmulator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">MockDevice</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.waveforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlackmanWaveform</span>
+</pre></div>
+</div>
+</div>
+<p>In this notebook, we will reproduce some results of “Microwave-engineering of programmable XXZ Hamiltonians in arrays of Rydberg atoms”, P. Scholl, et. al., <a class="reference external" href="https://arxiv.org/pdf/2107.14459.pdf">https://arxiv.org/pdf/2107.14459.pdf</a>.</p>
+<section id="Floquet-Engineering-on-two-atoms">
+<h2>Floquet Engineering on two atoms<a class="headerlink" href="#Floquet-Engineering-on-two-atoms" title="Permalink to this heading"></a></h2>
+<p>We start by considering the dynamics of two interacting atoms under <span class="math notranslate nohighlight">\(H_{XXZ}\)</span>. To demonstrate the dynamically tunable aspect of the microwave engineering, we change the Hamiltonian during the evolution of the system. More specifically, we start from <span class="math notranslate nohighlight">\(|\rightarrow \rightarrow \rangle_y\)</span>, let the atoms evolve under <span class="math notranslate nohighlight">\(H_{XX}\)</span> and apply a microwave pulse sequence between <span class="math notranslate nohighlight">\(0.9\mu s\)</span> and <span class="math notranslate nohighlight">\(1.2\mu s\)</span> only.</p>
+<p>Let us first define our <span class="math notranslate nohighlight">\(\pm X\)</span> and <span class="math notranslate nohighlight">\(\pm Y\)</span> pulses.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Times are in ns</span>
+<span class="n">t_pulse</span> <span class="o">=</span> <span class="mi">16</span>
+
+<span class="n">X_pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span><span class="n">BlackmanWaveform</span><span class="p">(</span><span class="n">t_pulse</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">Y_pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span>
+    <span class="n">BlackmanWaveform</span><span class="p">(</span><span class="n">t_pulse</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span>
+<span class="p">)</span>
+<span class="n">mX_pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span>
+    <span class="n">BlackmanWaveform</span><span class="p">(</span><span class="n">t_pulse</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="p">)</span>
+<span class="n">mY_pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span>
+    <span class="n">BlackmanWaveform</span><span class="p">(</span><span class="n">t_pulse</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Let’s also define a function to add the pulses during one cycle.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">Floquet_XXZ_cycles</span><span class="p">(</span><span class="n">n_cycles</span><span class="p">,</span> <span class="n">tau_1</span><span class="p">,</span> <span class="n">tau_2</span><span class="p">,</span> <span class="n">t_pulse</span><span class="p">):</span>
+    <span class="n">t_half</span> <span class="o">=</span> <span class="n">t_pulse</span> <span class="o">/</span> <span class="mf">2.0</span>
+    <span class="n">tau_3</span> <span class="o">=</span> <span class="n">tau_2</span>
+    <span class="n">tc</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">tau_2</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">tau_1</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_cycles</span><span class="p">):</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="n">tau_1</span> <span class="o">-</span> <span class="n">t_half</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">X_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="n">tau_2</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">t_half</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">mY_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">tau_3</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">t_half</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Y_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="n">tau_2</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">t_half</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">mX_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="n">tau_1</span> <span class="o">-</span> <span class="n">t_half</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We are ready to start building our sequence.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># We take two atoms distant by 10 ums.</span>
+<span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+<span class="n">qubits</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">coords</span><span class="p">))</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="p">(</span><span class="n">qubits</span><span class="p">)</span>
+
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">MockDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;MW&quot;</span><span class="p">,</span> <span class="s2">&quot;mw_global&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">set_magnetic_field</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+<span class="n">tc</span> <span class="o">=</span> <span class="mi">156</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">tc</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+<span class="n">Floquet_XXZ_cycles</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">tc</span> <span class="o">/</span> <span class="mf">6.0</span><span class="p">,</span> <span class="n">tc</span> <span class="o">/</span> <span class="mf">6.0</span><span class="p">,</span> <span class="n">t_pulse</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="mi">6</span> <span class="o">*</span> <span class="n">tc</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+
+<span class="c1"># Here are our evaluation times</span>
+<span class="n">t_list</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">13</span><span class="p">):</span>
+    <span class="n">t_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tc</span> <span class="o">/</span> <span class="mf">1000.0</span> <span class="o">*</span> <span class="n">p</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Let’s draw the sequence, to see that the microwave engineering only happens between <span class="math notranslate nohighlight">\(468 ns\)</span> and <span class="math notranslate nohighlight">\(1092 ns\)</span>, which corresponds to <span class="math notranslate nohighlight">\(H_{XX} \to H_{XXX}\)</span>. During that period, the total y-magnetization <span class="math notranslate nohighlight">\(\langle \sigma^y_1 + \sigma^y_2 \rangle\)</span> is expected to be frozen, as this quantity commutes with <span class="math notranslate nohighlight">\(H_{XXX}\)</span>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_10_0.png" src="../_images/tutorials_mw_engineering_10_0.png" />
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span>
+    <span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">evaluation_times</span><span class="o">=</span><span class="n">t_list</span>
+<span class="p">)</span>
+<span class="n">psi_y</span> <span class="o">=</span> <span class="p">(</span><span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">unit</span><span class="p">()</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">set_initial_state</span><span class="p">(</span><span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">psi_y</span><span class="p">,</span> <span class="n">psi_y</span><span class="p">))</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sy</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">sigmay</span><span class="p">()</span>
+<span class="n">Id</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">qeye</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">Sigma_y</span> <span class="o">=</span> <span class="p">(</span><span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">sy</span><span class="p">,</span> <span class="n">Id</span><span class="p">)</span> <span class="o">+</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">Id</span><span class="p">,</span> <span class="n">sy</span><span class="p">))</span> <span class="o">/</span> <span class="mf">2.0</span>
+<span class="n">Sigma_y_res</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">expect</span><span class="p">([</span><span class="n">Sigma_y</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+
+<span class="c1"># Showing the Hamiltonian engineering period.</span>
+<span class="n">line1</span> <span class="o">=</span> <span class="mf">3e-3</span> <span class="o">*</span> <span class="n">tc</span>
+<span class="n">line2</span> <span class="o">=</span> <span class="mf">7e-3</span> <span class="o">*</span> <span class="n">tc</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axvspan</span><span class="p">(</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;grey&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="sa">r</span><span class="s2">&quot;$H_</span><span class="si">{XX}</span><span class="s2"> \to H_</span><span class="si">{XXX}</span><span class="s2">$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">evaluation_times</span><span class="p">,</span> <span class="n">Sigma_y_res</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;o&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Time [µs]&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">rf</span><span class="s2">&quot;$ (\langle \sigma_1^y + \sigma_2^y \rangle)/2$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_13_0.png" src="../_images/tutorials_mw_engineering_13_0.png" />
+</div>
+</div>
+<p>Note that one cannot directly measure off diagonal elements of the density matrix experimentally. To be able to measure <span class="math notranslate nohighlight">\(\langle \sigma^y_1 + \sigma^y_2 \rangle\)</span>, one would need to first apply a rotation on the atoms (equivalent to changing the basis) and then measure the population.</p>
+</section>
+<section id="Domain-wall-dynamics">
+<h2>Domain-wall dynamics<a class="headerlink" href="#Domain-wall-dynamics" title="Permalink to this heading"></a></h2>
+<p>Now, we will look at the dynamics of the system under <span class="math notranslate nohighlight">\(H_{XX2Z}\)</span> when starting in a Domain-Wall (DW) state <span class="math notranslate nohighlight">\(|\psi_0\rangle = |\uparrow \uparrow \uparrow \uparrow \uparrow \downarrow \downarrow \downarrow \downarrow \downarrow\rangle \equiv |0000011111\rangle\)</span>, for two distinct geometries : open boundary conditions (OBC) and periodic boundary conditions (PBC). In the case of <span class="math notranslate nohighlight">\(H_{XX2Z}\)</span>, only 2 pulses per Floquet cycle are required, as the <span class="math notranslate nohighlight">\(X\)</span> and <span class="math notranslate nohighlight">\(-X\)</span> pulses cancel
+out.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">Floquet_XX2Z_cycles</span><span class="p">(</span><span class="n">n_cycles</span><span class="p">,</span> <span class="n">t_pulse</span><span class="p">):</span>
+    <span class="n">t_half</span> <span class="o">=</span> <span class="n">t_pulse</span> <span class="o">/</span> <span class="mf">2.0</span>
+    <span class="n">tau_3</span> <span class="o">=</span> <span class="n">tau_2</span> <span class="o">=</span> <span class="n">tc</span> <span class="o">/</span> <span class="mf">4.0</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_cycles</span><span class="p">):</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="n">tau_2</span> <span class="o">-</span> <span class="n">t_half</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">mY_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">tau_3</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">t_half</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Y_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+        <span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="n">tau_2</span> <span class="o">-</span> <span class="n">t_half</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">N_at</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="c1"># Number of Floquet cycles</span>
+<span class="n">N_cycles</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="c1"># In the following, we will take 1000 projective measurements of the system at the final time.</span>
+<span class="n">N_samples</span> <span class="o">=</span> <span class="mi">1000</span>
+</pre></div>
+</div>
+</div>
+<p>In the experiment, all the atoms start in the same initial state. In order to create a domain-wall state, one must apply a <span class="math notranslate nohighlight">\(\pi\)</span>-pulse on only half of the atoms. On the hardware, this can be done by using a Spatial Light Modulator which imprints a specific phase pattern on a laser beam. This results in a set of focused laser beams in the atomic plane, whose geometry corresponds to the subset of sites to address, preventing the addressed atoms from interacting with the global microwave
+pulse due to a shift in energy.</p>
+<p>This feature is implemented in Pulser. For implementing this, we need to define a <span class="math notranslate nohighlight">\(\pi\)</span>-pulse, and the list of indices of the atoms we want to mask.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">initial_pi_pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span>
+    <span class="n">BlackmanWaveform</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">t_pulse</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+<span class="p">)</span>
+<span class="n">masked_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">N_at</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Line geometry</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">N_at</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="n">magnetizations_obc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N_at</span><span class="p">,</span> <span class="n">N_cycles</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="n">correl_obc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N_cycles</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_cycles</span><span class="p">):</span>  <span class="c1"># Runtime close to 2 min!</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">MockDevice</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;MW&quot;</span><span class="p">,</span> <span class="s2">&quot;mw_global&quot;</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">set_magnetic_field</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="c1"># Configure the SLM mask, that will prevent the masked qubits from interacting with the first global \pi pulse</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">config_slm_mask</span><span class="p">(</span><span class="n">masked_indices</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">initial_pi_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">X_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+    <span class="n">Floquet_XX2Z_cycles</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">t_pulse</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">mX_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+    <span class="n">sim</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">sample_final_state</span><span class="p">(</span><span class="n">N_samples</span><span class="p">)</span>
+    <span class="n">correl</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">samples</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_at</span><span class="p">):</span>
+            <span class="n">correl</span> <span class="o">-=</span> <span class="p">(</span>
+                <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span>
+                <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">key</span><span class="p">[(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">N_at</span><span class="p">]))</span>
+                <span class="o">*</span> <span class="n">value</span>
+                <span class="o">/</span> <span class="n">N_samples</span>
+            <span class="p">)</span>
+            <span class="n">magnetizations_obc</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">m</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span>
+                <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span> <span class="o">*</span> <span class="n">value</span> <span class="o">/</span> <span class="n">N_samples</span>
+            <span class="p">)</span>
+    <span class="n">correl_obc</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">N_at</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">correl</span> <span class="o">/</span> <span class="mi">2</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Circular geometry</span>
+<span class="n">coords</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="mf">10.0</span>
+    <span class="o">*</span> <span class="n">N_at</span>
+    <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+    <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">N_at</span><span class="p">),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">N_at</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">theta</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_at</span><span class="p">)</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+
+<span class="n">magnetizations_pbc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N_at</span><span class="p">,</span> <span class="n">N_cycles</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="n">correl_pbc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N_cycles</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_cycles</span><span class="p">):</span>  <span class="c1"># Runtime close to 2 min!</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">MockDevice</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;MW&quot;</span><span class="p">,</span> <span class="s2">&quot;mw_global&quot;</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">set_magnetic_field</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">config_slm_mask</span><span class="p">(</span><span class="n">masked_indices</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">initial_pi_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">X_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+    <span class="n">Floquet_XX2Z_cycles</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">t_pulse</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">mX_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+    <span class="n">sim</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">sample_final_state</span><span class="p">(</span><span class="n">N_samples</span><span class="p">)</span>
+    <span class="n">correl</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">samples</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_at</span><span class="p">):</span>
+            <span class="n">correl</span> <span class="o">-=</span> <span class="p">(</span>
+                <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span>
+                <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">key</span><span class="p">[(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">N_at</span><span class="p">]))</span>
+                <span class="o">*</span> <span class="n">value</span>
+                <span class="o">/</span> <span class="n">N_samples</span>
+            <span class="p">)</span>
+            <span class="n">magnetizations_pbc</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">m</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span>
+                <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span> <span class="o">*</span> <span class="n">value</span> <span class="o">/</span> <span class="n">N_samples</span>
+            <span class="p">)</span>
+    <span class="n">correl_pbc</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">N_at</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">correl</span> <span class="o">/</span> <span class="mi">2</span>
+</pre></div>
+</div>
+</div>
+<p>Let’s plot the evolution of the magnetization <span class="math notranslate nohighlight">\(\langle \sigma^z_j \rangle\)</span> in time for all the sites <span class="math notranslate nohighlight">\(j\)</span>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">magnetizations_obc</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s2">&quot;RdBu&quot;</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;OBC&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Cycle&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Atom number&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">cbar</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">shrink</span><span class="o">=</span><span class="mf">0.7</span><span class="p">)</span>
+<span class="n">cbar</span><span class="o">.</span><span class="n">set_label</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$\langle \sigma^z \rangle$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">magnetizations_pbc</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s2">&quot;RdBu&quot;</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;PBC&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Cycle&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Atom number&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">cbar</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">shrink</span><span class="o">=</span><span class="mf">0.7</span><span class="p">)</span>
+<span class="n">cbar</span><span class="o">.</span><span class="n">set_label</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$\langle \sigma^z \rangle$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_23_0.png" src="../_images/tutorials_mw_engineering_23_0.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_23_1.png" src="../_images/tutorials_mw_engineering_23_1.png" />
+</div>
+</div>
+<p>We see that the magnetization profiles look rather different for OBC and PBC. It seems that the initial DW melts in the case of PBC. In fact, the decrease of <span class="math notranslate nohighlight">\(|\langle \sigma^z_j \rangle|\)</span> for all sites is due to a delocalization of the DW along the circle. This delocalization can be more apparent when looking at correlations. More specifically, we see on the plot below that the number of spin flips between consecutive atoms along the circle,
+<span class="math notranslate nohighlight">\(\langle N_{flip} \rangle=1/2\sum_j(1-\langle \sigma_j^z \sigma_{j+1}^z\rangle)\)</span>, remains quite low during the dynamics for both OBC (red) and PBC (blue), while it should tend to <span class="math notranslate nohighlight">\(N_{at}/2=5\)</span> for randomly distributed spins.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span>
+    <span class="sa">r</span><span class="s2">&quot;Evolution of $\langle N_</span><span class="si">{flip}</span><span class="s2"> \rangle$ in time for OBC (red) and PBC (blue).&quot;</span><span class="p">,</span>
+    <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Cycle&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$\langle N_</span><span class="si">{flip}</span><span class="s2"> \rangle$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">correl_pbc</span><span class="p">,</span> <span class="s2">&quot;--o&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">correl_obc</span><span class="p">,</span> <span class="s2">&quot;--o&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_25_0.png" src="../_images/tutorials_mw_engineering_25_0.png" />
+</div>
+</div>
+<p>To investigate even more this delocalization effect, let’s consider a smaller region of only 3 spins prepared in <span class="math notranslate nohighlight">\(|\uparrow \rangle\)</span>. The delocalization timescale will then be shorter, and we will see it more clearly happening in the system</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">N_cycles</span> <span class="o">=</span> <span class="mi">25</span>
+<span class="n">magnetizations_pbc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N_at</span><span class="p">,</span> <span class="n">N_cycles</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="n">samples_evol</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">masked_indices</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_cycles</span><span class="p">):</span>  <span class="c1"># Runtime close to 4 min!</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">MockDevice</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">set_magnetic_field</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;MW&quot;</span><span class="p">,</span> <span class="s2">&quot;mw_global&quot;</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">config_slm_mask</span><span class="p">(</span><span class="n">masked_indices</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">initial_pi_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">X_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+    <span class="n">Floquet_XX2Z_cycles</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">t_pulse</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">mX_pulse</span><span class="p">,</span> <span class="s2">&quot;MW&quot;</span><span class="p">)</span>
+    <span class="n">sim</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">sample_final_state</span><span class="p">(</span><span class="n">N_samples</span><span class="p">)</span>
+    <span class="n">samples_evol</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+    <span class="n">correl</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">samples</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_at</span><span class="p">):</span>
+            <span class="n">magnetizations_pbc</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">m</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span>
+                <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span> <span class="o">*</span> <span class="n">value</span> <span class="o">/</span> <span class="n">N_samples</span>
+            <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">magnetizations_pbc</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s2">&quot;RdBu&quot;</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Cycle&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Atom number&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">cbar</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+<span class="n">cbar</span><span class="o">.</span><span class="n">set_label</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$\langle \sigma^z \rangle$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_28_0.png" src="../_images/tutorials_mw_engineering_28_0.png" />
+</div>
+</div>
+<p>We see above that the magnetization profile tends to average. But if we look at the histogram of sampled states in time, we will remark that domain-wall configurations are dominant (in red in the histograms below). As time increases, the delocalization mechanism populates more and more domain-wall states distinct from the initial state.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dw_preserved</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;0001111111&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;1000111111&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;1100011111&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;1110001111&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;1111000111&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;1111100011&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;1111110001&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;1111111000&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;0111111100&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;0011111110&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="k">for</span> <span class="n">n_cycle</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">N_cycles</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>  <span class="c1"># Runtime close to 2 min !</span>
+    <span class="n">color_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">key</span><span class="p">:</span> <span class="s2">&quot;red&quot;</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dw_preserved</span> <span class="k">else</span> <span class="s2">&quot;black&quot;</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">samples_evol</span><span class="p">[</span><span class="n">n_cycle</span><span class="p">]</span>
+    <span class="p">}</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Cycle $= </span><span class="si">{}</span><span class="s2">$&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_cycle</span><span class="p">),</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span>
+        <span class="n">samples_evol</span><span class="p">[</span><span class="n">n_cycle</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
+        <span class="n">samples_evol</span><span class="p">[</span><span class="n">n_cycle</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">color_dict</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
+    <span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;bitstrings&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;counts&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">rotation</span><span class="o">=</span><span class="mi">90</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_30_0.png" src="../_images/tutorials_mw_engineering_30_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_30_1.png" src="../_images/tutorials_mw_engineering_30_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_30_2.png" src="../_images/tutorials_mw_engineering_30_2.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_30_3.png" src="../_images/tutorials_mw_engineering_30_3.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_30_4.png" src="../_images/tutorials_mw_engineering_30_4.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_30_5.png" src="../_images/tutorials_mw_engineering_30_5.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_30_6.png" src="../_images/tutorials_mw_engineering_30_6.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_30_7.png" src="../_images/tutorials_mw_engineering_30_7.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_30_8.png" src="../_images/tutorials_mw_engineering_30_8.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_30_9.png" src="../_images/tutorials_mw_engineering_30_9.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_30_10.png" src="../_images/tutorials_mw_engineering_30_10.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_30_11.png" src="../_images/tutorials_mw_engineering_30_11.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_mw_engineering_30_12.png" src="../_images/tutorials_mw_engineering_30_12.png" />
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="xy_spin_chain.html" class="btn btn-neutral float-left" title="XY Spin Chain" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="shadow_est.html" class="btn btn-neutral float-right" title="Efficient estimation techniques for Variational Quantum Simulation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,341 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interpolated Waveforms &mdash; Pulser 1.5.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=44dfd65d"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="JSON Serialization" href="serialization.html" />
+    <link rel="prev" title="Composite Waveforms" href="composite_wfs.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.5.1" /><meta name="readthedocs-resolver-filename" content="/tutorials/interpolated_wfs.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Interpolated Waveforms</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Use-in-a-parameterized-sequence">Use in a parameterized sequence</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Emulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Interpolated Waveforms</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/interpolated_wfs.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Interpolated-Waveforms">
+<h1>Interpolated Waveforms<a class="headerlink" href="#Interpolated-Waveforms" title="Link to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pulse</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Register</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnalogDevice</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.waveforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">InterpolatedWaveform</span>
+</pre></div>
+</div>
+</div>
+<p>In some particular applications (the most notorious being its use in optimal control at the pulse level) it is useful to define a waveform through the interpolation of a set of data points. For these cases, Pulser provides the <code class="docutils literal notranslate"><span class="pre">InterpolatedWaveform</span></code> class.</p>
+<p>In its most stripped back form, the <code class="docutils literal notranslate"><span class="pre">InterpolatedWavefrom</span></code> requires two things: a <code class="docutils literal notranslate"><span class="pre">duration</span></code> and a list of <code class="docutils literal notranslate"><span class="pre">values</span></code>. The placement of these values along the times axis defaults to spacing the values evenly along the whole duration of the waveform.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># A standard interpolation (using PchipInterpolator)</span>
+<span class="n">duration</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">4.4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">int_wf</span> <span class="o">=</span> <span class="n">InterpolatedWaveform</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span>
+<span class="n">int_wf</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_interpolated_wfs_4_0.png" src="../_images/tutorials_interpolated_wfs_4_0.png" />
+</div>
+</div>
+<p>If we want to specify the time coordinate of each data point, we can do so through the <code class="docutils literal notranslate"><span class="pre">times</span></code> option. These should come in a list of values betwen <code class="docutils literal notranslate"><span class="pre">0</span></code> and <code class="docutils literal notranslate"><span class="pre">1</span></code>, which are interperted as fractions of the total duration. As an example, below we specify that the <code class="docutils literal notranslate"><span class="pre">values</span></code> are all bunched in the first half of the waveform, except for the last one, which is left at the end.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span> <span class="mi">1</span><span class="p">]</span>
+<span class="n">int_wf_t</span> <span class="o">=</span> <span class="n">InterpolatedWaveform</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">times</span><span class="o">=</span><span class="n">ts</span><span class="p">)</span>
+<span class="n">int_wf_t</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_interpolated_wfs_6_0.png" src="../_images/tutorials_interpolated_wfs_6_0.png" />
+</div>
+</div>
+<p>The other crucial component is the <code class="docutils literal notranslate"><span class="pre">interpolator</span></code>. Currently, the class supports two interpolator classes from the <code class="docutils literal notranslate"><span class="pre">scipy.interpolate</span></code> module: <code class="docutils literal notranslate"><span class="pre">PchipInterpolator</span></code> (chosen by default) and <code class="docutils literal notranslate"><span class="pre">interp1d</span></code>. Below, we change the interpolator to <code class="docutils literal notranslate"><span class="pre">interp1d</span></code>, which does a linear interpolation by default:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">int_wf2</span> <span class="o">=</span> <span class="n">InterpolatedWaveform</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">interpolator</span><span class="o">=</span><span class="s2">&quot;interp1d&quot;</span><span class="p">)</span>
+<span class="n">int_wf2</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_interpolated_wfs_8_0.png" src="../_images/tutorials_interpolated_wfs_8_0.png" />
+</div>
+</div>
+<p>One can also change the optional parameters of the chosen interpolator by giving them to <code class="docutils literal notranslate"><span class="pre">InterpolatedWaveform</span></code>. For example, the interpolation with <code class="docutils literal notranslate"><span class="pre">interp1d</span></code> can be cubic instead of linear by changing the <code class="docutils literal notranslate"><span class="pre">kind</span></code> parameter.</p>
+<p>Naturally, the choice of interpolator will dictate which extra parameters can be optionally provided. As such, one must refer to the chosen interpolator’s documentation for the specific details.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">int_wf3</span> <span class="o">=</span> <span class="n">InterpolatedWaveform</span><span class="p">(</span>
+    <span class="n">duration</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">interpolator</span><span class="o">=</span><span class="s2">&quot;interp1d&quot;</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;cubic&quot;</span>
+<span class="p">)</span>
+<span class="n">int_wf3</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_interpolated_wfs_10_0.png" src="../_images/tutorials_interpolated_wfs_10_0.png" />
+</div>
+</div>
+<p>Finally, an <code class="docutils literal notranslate"><span class="pre">InterpolatedWaveform</span></code> can be streched or contracted in both magnitude and duration:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Streching an interpolated waveform</span>
+<span class="n">int_wf_stretch_y</span> <span class="o">=</span> <span class="n">int_wf</span> <span class="o">*</span> <span class="mi">2</span>
+<span class="n">int_wf_stretch_x</span> <span class="o">=</span> <span class="n">int_wf</span><span class="o">.</span><span class="n">change_duration</span><span class="p">(</span><span class="n">duration</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">int_wf</span><span class="o">.</span><span class="n">samples</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Original&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">int_wf_stretch_y</span><span class="o">.</span><span class="n">samples</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Streched in Y&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">int_wf_stretch_x</span><span class="o">.</span><span class="n">samples</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Streched in X&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_interpolated_wfs_12_0.png" src="../_images/tutorials_interpolated_wfs_12_0.png" />
+</div>
+</div>
+<section id="Use-in-a-parameterized-sequence">
+<h2>Use in a parameterized sequence<a class="headerlink" href="#Use-in-a-parameterized-sequence" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">InterpolatedWaveform</span></code> is used like any other waveform. In the contexts where it usually comes up, it might be helpful to incorporate it in a parametrized sequence. Below, we’ll show how to make a parametrized sequence where the data points for the amplitude and detuning waveforms are variables.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+<span class="n">param_seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">AnalogDevice</span><span class="p">)</span>
+<span class="n">param_seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;rydberg_global&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">,</span> <span class="n">initial_target</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">amp_vals</span> <span class="o">=</span> <span class="n">param_seq</span><span class="o">.</span><span class="n">declare_variable</span><span class="p">(</span><span class="s2">&quot;amp_vals&quot;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="n">det_vals</span> <span class="o">=</span> <span class="n">param_seq</span><span class="o">.</span><span class="n">declare_variable</span><span class="p">(</span><span class="s2">&quot;det_vals&quot;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+<span class="n">amp_wf</span> <span class="o">=</span> <span class="n">InterpolatedWaveform</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">amp_vals</span><span class="p">)</span>
+<span class="n">det_wf</span> <span class="o">=</span> <span class="n">InterpolatedWaveform</span><span class="p">(</span>
+    <span class="mi">1000</span><span class="p">,</span> <span class="n">det_vals</span><span class="p">,</span> <span class="n">interpolator</span><span class="o">=</span><span class="s2">&quot;interp1d&quot;</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;cubic&quot;</span>
+<span class="p">)</span>
+<span class="n">pls</span> <span class="o">=</span> <span class="n">Pulse</span><span class="p">(</span><span class="n">amp_wf</span><span class="p">,</span> <span class="n">det_wf</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="n">param_seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pls</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>From here, we can build some random sequence by specifying the values of <code class="docutils literal notranslate"><span class="pre">amp_vals</span></code> and <code class="docutils literal notranslate"><span class="pre">det_vals</span></code>. For example:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq1</span> <span class="o">=</span> <span class="n">param_seq</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">amp_vals</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">det_vals</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mi">5</span><span class="p">])</span>
+<span class="n">seq1</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_interpolated_wfs_17_0.png" src="../_images/tutorials_interpolated_wfs_17_0.png" />
+</div>
+</div>
+<p>Notice how the interpolation points are automatically drawn on top of the waveforms. You can disable this option through the <code class="docutils literal notranslate"><span class="pre">draw_interp_pts</span></code> parameter:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq1</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">draw_interp_pts</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_interpolated_wfs_19_0.png" src="../_images/tutorials_interpolated_wfs_19_0.png" />
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="composite_wfs.html" class="btn btn-neutral float-left" title="Composite Waveforms" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="serialization.html" class="btn btn-neutral float-right" title="JSON Serialization" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,458 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Local Adressability with DMM &mdash; Pulser 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/max_width.css" />
+
+  
+      <script src="../_static/jquery.js"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+      <script src="../_static/doctools.js"></script>
+      <script src="../_static/sphinx_highlight.js"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="State preparation with the SLM mask" href="slm_mask.html" />
+    <link rel="prev" title="JSON Serialization" href="serialization.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.0.0" /><meta name="readthedocs-resolver-filename" content="/tutorials/dmm.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installation and First Steps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../intro_rydberg_blockade.html">Quickstart: The Rydberg Blockade</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Pulse Sequence Creation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simulating.html">Simulation of Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamental Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../review.html">Quantum Computing with Neutral Atoms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Backend Execution</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution of Pulser Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Classical Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Local Adressability with DMM</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Define-a-Detuning-Map">Define a Detuning Map</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#DMM-Channel-and-Device">DMM Channel and Device</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#DMM-in-a-Sequence">DMM in a Sequence</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Quantum Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="afm_prep.html">Preparing a state with antiferromagnetic order in the Ising model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Spin Chain</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mw_engineering.html">Simulation of XYZ spin models using Floquet engineering in XY mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shadow_est.html">Efficient estimation techniques for Variational Quantum Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1D_crystals.html">Building 1D Rydberg Crystals</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cz_gate.html">Control-Z Gate Sequence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pulser.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Local Adressability with DMM</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/dmm.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Local-Adressability-with-DMM">
+<h1>Local Adressability with DMM<a class="headerlink" href="#Local-Adressability-with-DMM" title="Permalink to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.channels.dmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">DMM</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnalogDevice</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.register</span><span class="w"> </span><span class="kn">import</span> <span class="n">Register</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.register.register_layout</span><span class="w"> </span><span class="kn">import</span> <span class="n">RegisterLayout</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.register.mappable_reg</span><span class="w"> </span><span class="kn">import</span> <span class="n">MappableRegister</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.register.weight_maps</span><span class="w"> </span><span class="kn">import</span> <span class="n">DetuningMap</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.sampler</span><span class="w"> </span><span class="kn">import</span> <span class="n">sampler</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.sequence</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.pulse</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pulse</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.waveforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConstantWaveform</span><span class="p">,</span> <span class="n">RampWaveform</span>
+</pre></div>
+</div>
+</div>
+<section id="Introduction">
+<h2>Introduction<a class="headerlink" href="#Introduction" title="Permalink to this heading"></a></h2>
+<p>Even when working with <strong>global</strong> addressing channels, the <strong>detuning</strong> of individual qubits can be addressed <strong>locally</strong> by using a specific channel named the <strong>Detuning Map Modulator</strong> or <code class="docutils literal notranslate"><span class="pre">DMM</span></code>.</p>
+<p>This <code class="docutils literal notranslate"><span class="pre">Channel</span></code> applies a <code class="docutils literal notranslate"><span class="pre">Global</span></code> pulse of <strong>zero amplitude</strong> and <strong>negative detuning</strong> on a <code class="docutils literal notranslate"><span class="pre">DetuningMap</span></code>. The <code class="docutils literal notranslate"><span class="pre">DetuningMap</span></code> consists of a set of weights on specific sites that dictate the proportion of detuning applied by the <code class="docutils literal notranslate"><span class="pre">DMM</span></code> each site receives.</p>
+<p>This modulation of the <code class="docutils literal notranslate"><span class="pre">DetuningMap</span></code> by the <code class="docutils literal notranslate"><span class="pre">DMM</span></code> Channel is equivalent to adding a term <span class="math notranslate nohighlight">\(-\frac{\hbar}{2}\sum_{i}\epsilon_{i}\Delta(t)\sigma^{z}_{i}\)</span> to the Ising Hamiltonian. Here, <span class="math notranslate nohighlight">\(\Delta(t)\)</span> is the detuning applied on the <code class="docutils literal notranslate"><span class="pre">DMM</span></code>, and <span class="math notranslate nohighlight">\((\epsilon_i)_{i}\)</span> are the weights defined in the <code class="docutils literal notranslate"><span class="pre">DetuningMap</span></code> for each atom.</p>
+</section>
+<section id="Define-a-Detuning-Map">
+<h2>Define a Detuning Map<a class="headerlink" href="#Define-a-Detuning-Map" title="Permalink to this heading"></a></h2>
+<p>A <code class="docutils literal notranslate"><span class="pre">DetuningMap</span></code> associates a set of locations with a set of weights. The locations are the trap coordinates to address and the weights <span class="math notranslate nohighlight">\((\epsilon_i)_i\)</span> have to be between 0 and 1.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">trap_coordinates</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">)]</span>
+<span class="n">weights_1</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># between 0 and 1</span>
+<span class="n">weights_2</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># between 0 and 1</span>
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">DetuningMap</span></code> can be defined from a <code class="docutils literal notranslate"><span class="pre">RegisterLayout</span></code>, a <code class="docutils literal notranslate"><span class="pre">Register</span></code> or a <code class="docutils literal notranslate"><span class="pre">MappableRegister</span></code> by using the <code class="docutils literal notranslate"><span class="pre">define_detuning_map</span></code> method. All it takes is a mapping between trap/qubit IDs and weights.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">register_layout</span> <span class="o">=</span> <span class="n">RegisterLayout</span><span class="p">(</span><span class="n">trap_coordinates</span><span class="p">)</span>
+<span class="n">detuning_map</span> <span class="o">=</span> <span class="n">register_layout</span><span class="o">.</span><span class="n">define_detuning_map</span><span class="p">(</span>
+    <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">weights_1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">)}</span>  <span class="c1"># mapping between trap ids and weights</span>
+<span class="p">)</span>
+
+<span class="n">map_reg</span> <span class="o">=</span> <span class="n">MappableRegister</span><span class="p">(</span><span class="n">register_layout</span><span class="p">)</span>
+<span class="n">det_map_from_map_reg</span> <span class="o">=</span> <span class="n">map_reg</span><span class="o">.</span><span class="n">define_detuning_map</span><span class="p">(</span>
+    <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">weights_1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">)}</span>  <span class="c1"># mapping between trap ids and weights</span>
+<span class="p">)</span>
+
+<span class="n">register</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">(</span>
+    <span class="n">trap_coordinates</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span>
+<span class="p">)</span>
+<span class="n">det_map_from_reg</span> <span class="o">=</span> <span class="n">register</span><span class="o">.</span><span class="n">define_detuning_map</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="sa">f</span><span class="s2">&quot;q</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">weights_1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+    <span class="p">}</span>  <span class="c1"># mapping between qubit ids and weights</span>
+<span class="p">)</span>
+
+<span class="n">detuning_map</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="k">assert</span> <span class="n">detuning_map</span> <span class="o">==</span> <span class="n">det_map_from_map_reg</span>
+<span class="k">assert</span> <span class="n">detuning_map</span> <span class="o">==</span> <span class="n">det_map_from_reg</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_dmm_8_0.png" src="../_images/tutorials_dmm_8_0.png" />
+</div>
+</div>
+<p>The traps are represented by a grey dot and highlighted by a grey square, whose shade is proportional to the value of the associated weight. It is possible to display the value of the weights by specifying a list of <code class="docutils literal notranslate"><span class="pre">labels</span></code>. If the weight is null then no <code class="docutils literal notranslate"><span class="pre">DMM</span></code> is applied: the atom is not highlighted by a grey square and the value of the weight is not shown when <code class="docutils literal notranslate"><span class="pre">labels</span></code> are specified.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">detuning_map_2</span> <span class="o">=</span> <span class="n">register_layout</span><span class="o">.</span><span class="n">define_detuning_map</span><span class="p">(</span>
+    <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">weights_2</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">)}</span>  <span class="c1"># mapping between trap ids and weights</span>
+<span class="p">)</span>
+<span class="n">detuning_map_2</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_dmm_10_0.png" src="../_images/tutorials_dmm_10_0.png" />
+</div>
+</div>
+</section>
+<section id="DMM-Channel-and-Device">
+<h2>DMM Channel and Device<a class="headerlink" href="#DMM-Channel-and-Device" title="Permalink to this heading"></a></h2>
+<p>A <code class="docutils literal notranslate"><span class="pre">DMM</span></code> Channel is a <code class="docutils literal notranslate"><span class="pre">Channel</span></code> that accepts pulses of zero amplitude and detuning below 0 and above:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">bottom_detuning</span></code> for each site.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">total_bottom_detuning</span></code> for the total detuning distributed among the atoms:</p></li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dmm</span> <span class="o">=</span> <span class="n">DMM</span><span class="p">(</span>
+    <span class="n">clock_period</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">min_duration</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>
+    <span class="n">max_duration</span><span class="o">=</span><span class="mi">2</span><span class="o">**</span><span class="mi">26</span><span class="p">,</span>
+    <span class="n">mod_bandwidth</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">bottom_detuning</span><span class="o">=-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">20</span><span class="p">,</span>  <span class="c1"># detuning between 0 and -20 MHz</span>
+    <span class="n">total_bottom_detuning</span><span class="o">=-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">2000</span><span class="p">,</span>  <span class="c1"># total detuning</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">DMM</span></code> channels are defined separately from the other channels of the device. They are defined as a list in <code class="docutils literal notranslate"><span class="pre">dmm_objects</span></code>. They can be accessed via the property <code class="docutils literal notranslate"><span class="pre">dmm_channels</span></code> of the device, where an id is automatically associated to each <code class="docutils literal notranslate"><span class="pre">DMM</span></code> with the format <code class="docutils literal notranslate"><span class="pre">dmm_{index</span> <span class="pre">of</span> <span class="pre">appearance</span> <span class="pre">in</span> <span class="pre">dmm_objects}</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mock_device</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span>
+    <span class="n">AnalogDevice</span><span class="o">.</span><span class="n">to_virtual</span><span class="p">(),</span>
+    <span class="n">dmm_objects</span><span class="o">=</span><span class="p">(</span><span class="n">dmm</span><span class="p">,</span> <span class="n">DMM</span><span class="p">()),</span>
+    <span class="n">reusable_channels</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">mock_device</span><span class="o">.</span><span class="n">dmm_channels</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;dmm_0&#39;: DMM.Global(Max Absolute Detuning: None, Max Amplitude: 0, Clock period: 4 ns, Minimum pulse duration: 16 ns, Maximum pulse duration: 67108864 ns, Modulation Bandwidth: 8 MHz, Basis: &#39;ground-rydberg&#39;), &#39;dmm_1&#39;: DMM.Global(Max Absolute Detuning: None, Max Amplitude: 0, Clock period: 1 ns, Minimum pulse duration: 1 ns, Maximum pulse duration: 100000000 ns, Basis: &#39;ground-rydberg&#39;)}
+</pre></div></div>
+</div>
+</section>
+<section id="DMM-in-a-Sequence">
+<h2>DMM in a Sequence<a class="headerlink" href="#DMM-in-a-Sequence" title="Permalink to this heading"></a></h2>
+<p>In a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> defined with a <code class="docutils literal notranslate"><span class="pre">Device</span></code> having <code class="docutils literal notranslate"><span class="pre">dmm_objects</span></code>, the <code class="docutils literal notranslate"><span class="pre">DMM</span></code> channels can be configured using <code class="docutils literal notranslate"><span class="pre">config_detuning_map</span></code>. This configuration associates a <code class="docutils literal notranslate"><span class="pre">DMM</span></code> - referenced by <code class="docutils literal notranslate"><span class="pre">dmm_id</span></code> in the <code class="docutils literal notranslate"><span class="pre">Device</span></code>- with a <code class="docutils literal notranslate"><span class="pre">DetuningMap</span></code>, under a <code class="docutils literal notranslate"><span class="pre">dmm_name</span></code> in the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">register</span><span class="p">,</span> <span class="n">mock_device</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">config_detuning_map</span><span class="p">(</span><span class="n">detuning_map</span><span class="p">,</span> <span class="s2">&quot;dmm_0&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">seq</span><span class="o">.</span><span class="n">declared_channels</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;dmm_0&#39;: DMM.Global(Max Absolute Detuning: None, Max Amplitude: 0, Clock period: 4 ns, Minimum pulse duration: 16 ns, Maximum pulse duration: 67108864 ns, Modulation Bandwidth: 8 MHz, Basis: &#39;ground-rydberg&#39;)}
+</pre></div></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">dmm_name</span></code> is generated automatically. It is <code class="docutils literal notranslate"><span class="pre">dmm_id</span></code> if no detuning map has been associated to the <code class="docutils literal notranslate"><span class="pre">DMM</span></code> referenced by <code class="docutils literal notranslate"><span class="pre">dmm_id</span></code> in the device, otherwise it takes the suffix <code class="docutils literal notranslate"><span class="pre">_{number</span> <span class="pre">of</span> <span class="pre">times</span> <span class="pre">dmm_id</span> <span class="pre">has</span> <span class="pre">been</span> <span class="pre">declared</span> <span class="pre">so</span> <span class="pre">far}</span></code>. For instance, if we associate a new detuning map to <code class="docutils literal notranslate"><span class="pre">dmm_0</span></code> in the previous sequence, the name of this new declared channel will be <code class="docutils literal notranslate"><span class="pre">dmm_0_1</span></code>. To be noted that configuring a <code class="docutils literal notranslate"><span class="pre">dmm_id</span></code> multiple times is only possible in a <code class="docutils literal notranslate"><span class="pre">VirtualDevice</span></code> with
+<code class="docutils literal notranslate"><span class="pre">reusable_channels=True</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">config_detuning_map</span><span class="p">(</span><span class="n">detuning_map_2</span><span class="p">,</span> <span class="s2">&quot;dmm_0&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">seq</span><span class="o">.</span><span class="n">declared_channels</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+dict_keys([&#39;dmm_0&#39;, &#39;dmm_0_1&#39;])
+</pre></div></div>
+</div>
+<p>Let’s now apply a global detuning on the detuning maps. This is done by calling <code class="docutils literal notranslate"><span class="pre">add_dmm_detuning</span></code> and providing a waveform (the detuning <span class="math notranslate nohighlight">\(\Delta(t)\)</span> to modulate the <code class="docutils literal notranslate"><span class="pre">DetuningMap</span></code> with) and the <code class="docutils literal notranslate"><span class="pre">dmm_name</span></code> to use (provides the <code class="docutils literal notranslate"><span class="pre">DetuningMap</span></code> and checks that <span class="math notranslate nohighlight">\(\Delta(t)\)</span> is in agreement with the characteristics of the corresponding <code class="docutils literal notranslate"><span class="pre">DMM</span></code>).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">add_dmm_detuning</span><span class="p">(</span><span class="n">ConstantWaveform</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="o">-</span><span class="mi">10</span><span class="p">),</span> <span class="s2">&quot;dmm_0&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add_dmm_detuning</span><span class="p">(</span><span class="n">ConstantWaveform</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="o">-</span><span class="mi">10</span><span class="p">),</span> <span class="s2">&quot;dmm_0_1&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">draw_detuning_maps</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_dmm_22_0.png" src="../_images/tutorials_dmm_22_0.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_dmm_22_1.png" src="../_images/tutorials_dmm_22_1.png" />
+</div>
+</div>
+<p>Once a detuning map is configured, it is not possible to define a <code class="docutils literal notranslate"><span class="pre">Microwave</span></code> channel. However, it is possible to declare <code class="docutils literal notranslate"><span class="pre">Rydberg</span></code> and <code class="docutils literal notranslate"><span class="pre">Raman</span></code> channels. Let’s declare a <code class="docutils literal notranslate"><span class="pre">Rydberg.Global</span></code> channel in our sequence.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ryd_glob&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Be careful with the protocols that are used to add the pulses to <code class="docutils literal notranslate"><span class="pre">Channels</span></code> and <code class="docutils literal notranslate"><span class="pre">DMM</span></code>:</p>
+<ul class="simple">
+<li><p>The protocol to add a waveform to a <code class="docutils literal notranslate"><span class="pre">DMM</span></code> is by default <code class="docutils literal notranslate"><span class="pre">&quot;no-delay&quot;</span></code>, meaning that it will be added straight after the last pulse, without caring about the other channels. This is why the pulse on <code class="docutils literal notranslate"><span class="pre">dmm_0_1</span></code> is added at <span class="math notranslate nohighlight">\(t=0\)</span>. It can be changed to other values by defining the <code class="docutils literal notranslate"><span class="pre">protocol</span></code> argument.</p></li>
+<li><p>The protocol to add a pulse to a <code class="docutils literal notranslate"><span class="pre">Rydberg</span></code> or a <code class="docutils literal notranslate"><span class="pre">Raman</span></code> channel is <code class="docutils literal notranslate"><span class="pre">&quot;min-delay&quot;</span></code>, meaning that the pulse will by default be added after the end of the pulse of a <code class="docutils literal notranslate"><span class="pre">DMM</span></code>. It can be switched to <code class="docutils literal notranslate"><span class="pre">&quot;no-delay&quot;</span></code>.</p></li>
+</ul>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mf">4.5</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s2">&quot;ryd_glob&quot;</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="s2">&quot;no-delay&quot;</span>
+<span class="p">)</span>  <span class="c1"># added at the beginning with protocol &quot;no delay&quot;</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add_dmm_detuning</span><span class="p">(</span><span class="n">RampWaveform</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s2">&quot;dmm_0&quot;</span><span class="p">)</span>  <span class="c1"># added at t=100</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s2">&quot;ryd_glob&quot;</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="s2">&quot;no-delay&quot;</span>
+<span class="p">)</span>  <span class="c1"># added at t=100</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_dmm_26_0.png" src="../_images/tutorials_dmm_26_0.png" />
+</div>
+</div>
+<p>It is possible to display the amplitude and detuning per qubits, by setting to <code class="docutils literal notranslate"><span class="pre">True</span></code> the arguments <code class="docutils literal notranslate"><span class="pre">draw_qubit_amp</span></code> and <code class="docutils literal notranslate"><span class="pre">draw_qubit_det</span></code>. This adds two plots after the drawing of the sequence. The first one shows the evolution of these quantities along time for groups of qubits experiencing the same amplitude or detuning. The second represents these group of qubits on a register.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;input+output&quot;</span><span class="p">,</span>  <span class="c1"># &quot;input&quot; only shows input signals, &quot;input+output&quot;</span>
+    <span class="n">draw_qubit_det</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">draw_qubit_amp</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_dmm_28_0.png" src="../_images/tutorials_dmm_28_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_dmm_28_1.png" src="../_images/tutorials_dmm_28_1.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_dmm_28_2.png" src="../_images/tutorials_dmm_28_2.png" />
+</div>
+</div>
+<p>You can see that by combining a global pulse with a positive detuning and pulses on the <code class="docutils literal notranslate"><span class="pre">DMM</span></code> channels, it is possible to have <strong>positive local detuning</strong> (see the detuning on <code class="docutils literal notranslate"><span class="pre">q3</span></code> from <code class="docutils literal notranslate"><span class="pre">t=0</span></code> to <code class="docutils literal notranslate"><span class="pre">t=100ns</span></code>).</p>
+<p>It can also be noted that from <code class="docutils literal notranslate"><span class="pre">t=100ns</span></code> to <code class="docutils literal notranslate"><span class="pre">t=300ns</span></code>, the local detuning is defined by the detuning ramp applied on <code class="docutils literal notranslate"><span class="pre">detuning_map</span></code>, hence it is locally a detuning ramp, going to 0 with a slope defined by the weight of <code class="docutils literal notranslate"><span class="pre">detuning_map</span></code> on each atom. This is why the detuning on <code class="docutils literal notranslate"><span class="pre">q3</span></code> during this duration is constant equal to 0 and that <code class="docutils literal notranslate"><span class="pre">q1</span></code> and <code class="docutils literal notranslate"><span class="pre">q2</span></code> have the same local detuning.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="serialization.html" class="btn btn-neutral float-left" title="JSON Serialization" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="slm_mask.html" class="btn btn-neutral float-right" title="State preparation with the SLM mask" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

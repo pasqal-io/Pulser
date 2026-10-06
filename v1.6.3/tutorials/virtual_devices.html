@@ -1,0 +1,427 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Devices and Virtual Devices &mdash; Pulser 1.6.3 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=452006c5"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Parametrized Sequences" href="paramseqs.html" />
+    <link rel="prev" title="Output Modulation &amp; EOM Mode" href="output_mod_eom.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.6.3" /><meta name="readthedocs-resolver-filename" content="/tutorials/virtual_devices.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Devices and Virtual Devices</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Physical-devices">Physical devices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Virtual-Devices">Virtual Devices</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Converting-a-Device-into-a-Virtual-Device">Converting a Device into a Virtual Device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Changing-parameters-of-a-virtual-device-with-dataclasses.replace()">Changing parameters of a virtual device with <code class="docutils literal notranslate"><span class="pre">dataclasses.replace()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Unrealistic-parameters-of-a-virtual-device">Unrealistic parameters of a virtual device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Building-your-own-virtual-device">Building your own virtual device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Defining-the-channels-of-your-device">Defining the channels of your device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#A-built-in-example-of-a-virtual-device:-the-MockDevice">A built-in example of a virtual device: the <code class="docutils literal notranslate"><span class="pre">MockDevice</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Devices and Virtual Devices</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/virtual_devices.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Devices-and-Virtual-Devices">
+<h1>Devices and Virtual Devices<a class="headerlink" href="#Devices-and-Virtual-Devices" title="Link to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">VirtualDevice</span><span class="p">,</span> <span class="n">AnalogDevice</span><span class="p">,</span> <span class="n">MockDevice</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.channels</span><span class="w"> </span><span class="kn">import</span> <span class="n">Rydberg</span><span class="p">,</span> <span class="n">Raman</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Register</span>
+</pre></div>
+</div>
+</div>
+<section id="Physical-devices">
+<h2>Physical devices<a class="headerlink" href="#Physical-devices" title="Link to this heading"></a></h2>
+<div class="line-block">
+<div class="line">To perform any computation using Pulser, it is necessary to choose a device. For convenience, some examples of typical physical devices are included and can be accessed via <code class="docutils literal notranslate"><span class="pre">pulser.devices</span></code>.</div>
+<div class="line">These devices are instances of the <code class="docutils literal notranslate"><span class="pre">Device</span></code> class. They are constrained by physical considerations and all their parameters are defined.</div>
+</div>
+<p>As an example, we present below the specifications of the physical device <code class="docutils literal notranslate"><span class="pre">AnalogDevice</span></code>, which can be accessed via the <code class="docutils literal notranslate"><span class="pre">Device.print_specs()</span></code> method.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Display AnalogDevice&#39;s specifications</span>
+<span class="n">AnalogDevice</span><span class="o">.</span><span class="n">print_specs</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+---------------------------
+AnalogDevice Specifications
+---------------------------
+A realistic device for analog sequence execution.
+
+Register parameters:
+ - Dimensions: 2D
+ - Maximum number of atoms: 80
+ - Maximum distance from origin: 38 µm
+ - Minimum distance between neighbouring atoms: 5 μm
+
+Layout parameters:
+ - Requires layout: Yes
+ - Accepts new layout: Yes
+ - Minimal number of traps: 1
+ - Minimum layout filling fraction: 0.0
+ - Maximum layout filling fraction: 0.5
+
+Device parameters:
+ - Rydberg level: 60
+ - Ising interaction coefficient: 865723.02
+ - Channels can be reused: No
+ - Supported bases: ground-rydberg
+ - Supported states: r, g
+ - SLM Mask: No
+ - Maximum sequence duration: 6000 ns
+ - Maximum number of runs: 2000
+
+Channels:
+ - &#39;rydberg_global&#39;: Rydberg(addressing=&#39;Global&#39;, max_abs_detuning=125.66370614359172, max_amp=12.566370614359172, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=4, min_duration=16, max_duration=100000000, min_avg_amp=0, mod_bandwidth=8, custom_phase_jump_time=None, eom_config=RydbergEOM(limiting_beam=&lt;RydbergBeam.RED: 2&gt;, max_limiting_amp=188.49555921538757, intermediate_detuning=2827.4333882308138, controlled_beams=(&lt;RydbergBeam.BLUE: 1&gt;,), mod_bandwidth=40, custom_buffer_time=240, multiple_beam_control=True, blue_shift_coeff=1.0, red_shift_coeff=1.0), propagation_dir=None)
+</pre></div></div>
+</div>
+</section>
+<section id="Virtual-Devices">
+<h2>Virtual Devices<a class="headerlink" href="#Virtual-Devices" title="Link to this heading"></a></h2>
+<section id="Converting-a-Device-into-a-Virtual-Device">
+<h3>Converting a Device into a Virtual Device<a class="headerlink" href="#Converting-a-Device-into-a-Virtual-Device" title="Link to this heading"></a></h3>
+<p>However, we sometimes want to perform the computations on a more permissive device, a device that would have more dimensions or more atoms for instance, or more types of channels. This can be done on an emulator behaving like a device. The <code class="docutils literal notranslate"><span class="pre">VirtualDevice</span></code> class is useful to define such an emulator, a virtual device.</p>
+<p>Let’s start by configuring a virtual device having the same parameters as <code class="docutils literal notranslate"><span class="pre">AnalogDevice</span></code>. To do this, we use the <code class="docutils literal notranslate"><span class="pre">Device.to_virtual()</span></code> method that creates a virtual device from a physical one.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Converting the Device object in a VirtualDevice object</span>
+<span class="n">VirtualAnalog</span> <span class="o">=</span> <span class="n">AnalogDevice</span><span class="o">.</span><span class="n">to_virtual</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">VirtualAnalog</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+VirtualDevice(name=&#39;AnalogDevice&#39;, dimensions=2, rydberg_level=60, min_atom_distance=5, max_atom_num=80, max_radial_distance=38, interaction_coeff_xy=None, supports_slm_mask=False, min_layout_filling=0.0, max_layout_filling=0.5, optimal_layout_filling=0.45, min_layout_traps=1, max_layout_traps=None, max_sequence_duration=6000, max_runs=2000, requires_layout=True, reusable_channels=False, channel_ids=(&#39;rydberg_global&#39;,), channel_objects=(Rydberg(addressing=&#39;Global&#39;, max_abs_detuning=125.66370614359172, max_amp=12.566370614359172, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=4, min_duration=16, max_duration=100000000, min_avg_amp=0, mod_bandwidth=8, custom_phase_jump_time=None, eom_config=RydbergEOM(limiting_beam=&lt;RydbergBeam.RED: 2&gt;, max_limiting_amp=188.49555921538757, intermediate_detuning=2827.4333882308138, controlled_beams=(&lt;RydbergBeam.BLUE: 1&gt;,), mod_bandwidth=40, custom_buffer_time=240, multiple_beam_control=True, blue_shift_coeff=1.0, red_shift_coeff=1.0), propagation_dir=None),), dmm_objects=(), default_noise_model=None)
+</pre></div></div>
+</div>
+</section>
+<section id="Changing-parameters-of-a-virtual-device-with-dataclasses.replace()">
+<h3>Changing parameters of a virtual device with <code class="docutils literal notranslate"><span class="pre">dataclasses.replace()</span></code><a class="headerlink" href="#Changing-parameters-of-a-virtual-device-with-dataclasses.replace()" title="Link to this heading"></a></h3>
+<div class="line-block">
+<div class="line">As proposed earlier, a virtual device gives us the possibility to modify the parameters of a physical device. The function <code class="docutils literal notranslate"><span class="pre">dataclasses.replace()</span></code> can be used to create a new <code class="docutils literal notranslate"><span class="pre">VirtualDevice</span></code> having some parameters changed.</div>
+<div class="line">For example, simulations can be run on a virtual device having the same properties as <code class="docutils literal notranslate"><span class="pre">AnalogDevice</span></code> but allowing working in 3 dimensions.</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Adding a dimension to the emulator</span>
+<span class="n">VirtualAnalog3D</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span><span class="n">VirtualAnalog</span><span class="p">,</span> <span class="n">dimensions</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">VirtualAnalog3D</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+VirtualDevice(name=&#39;AnalogDevice&#39;, dimensions=3, rydberg_level=60, min_atom_distance=5, max_atom_num=80, max_radial_distance=38, interaction_coeff_xy=None, supports_slm_mask=False, min_layout_filling=0.0, max_layout_filling=0.5, optimal_layout_filling=0.45, min_layout_traps=1, max_layout_traps=None, max_sequence_duration=6000, max_runs=2000, requires_layout=True, reusable_channels=False, channel_ids=(&#39;rydberg_global&#39;,), channel_objects=(Rydberg(addressing=&#39;Global&#39;, max_abs_detuning=125.66370614359172, max_amp=12.566370614359172, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=4, min_duration=16, max_duration=100000000, min_avg_amp=0, mod_bandwidth=8, custom_phase_jump_time=None, eom_config=RydbergEOM(limiting_beam=&lt;RydbergBeam.RED: 2&gt;, max_limiting_amp=188.49555921538757, intermediate_detuning=2827.4333882308138, controlled_beams=(&lt;RydbergBeam.BLUE: 1&gt;,), mod_bandwidth=40, custom_buffer_time=240, multiple_beam_control=True, blue_shift_coeff=1.0, red_shift_coeff=1.0), propagation_dir=None),), dmm_objects=(), default_noise_model=None)
+</pre></div></div>
+</div>
+</section>
+<section id="Unrealistic-parameters-of-a-virtual-device">
+<h3>Unrealistic parameters of a virtual device<a class="headerlink" href="#Unrealistic-parameters-of-a-virtual-device" title="Link to this heading"></a></h3>
+<div class="line-block">
+<div class="line">Among the parameters defined in a <code class="docutils literal notranslate"><span class="pre">VirtualDevice</span></code>, some are called unrealistic as they do not refer to something physically implementable.</div>
+<div class="line">For instance, it is possible to change the Rydberg level used in the simulation or to call a channel multiple times in the same sequence. Modifying the Rydberg level has an impact on the coefficient <span class="math notranslate nohighlight">\(C_6\)</span> (see <a class="reference external" href="https://github.com/pasqal-io/Pulser/blob/develop/pulser-core/pulser/devices/interaction_coefficients/C6_coeffs.json">here</a> for the correspondance between the Rydberg level and <span class="math notranslate nohighlight">\(C_6\)</span> coefficient).</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Changing the Rydberg level</span>
+<span class="n">VirtualAnalog3D</span><span class="o">.</span><span class="n">change_rydberg_level</span><span class="p">(</span><span class="mi">61</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">VirtualAnalog3D</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+VirtualDevice(name=&#39;AnalogDevice&#39;, dimensions=3, rydberg_level=61, min_atom_distance=5, max_atom_num=80, max_radial_distance=38, interaction_coeff_xy=None, supports_slm_mask=False, min_layout_filling=0.0, max_layout_filling=0.5, optimal_layout_filling=0.45, min_layout_traps=1, max_layout_traps=None, max_sequence_duration=6000, max_runs=2000, requires_layout=True, reusable_channels=False, channel_ids=(&#39;rydberg_global&#39;,), channel_objects=(Rydberg(addressing=&#39;Global&#39;, max_abs_detuning=125.66370614359172, max_amp=12.566370614359172, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=4, min_duration=16, max_duration=100000000, min_avg_amp=0, mod_bandwidth=8, custom_phase_jump_time=None, eom_config=RydbergEOM(limiting_beam=&lt;RydbergBeam.RED: 2&gt;, max_limiting_amp=188.49555921538757, intermediate_detuning=2827.4333882308138, controlled_beams=(&lt;RydbergBeam.BLUE: 1&gt;,), mod_bandwidth=40, custom_buffer_time=240, multiple_beam_control=True, blue_shift_coeff=1.0, red_shift_coeff=1.0), propagation_dir=None),), dmm_objects=(), default_noise_model=None)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Enable the multiple declaration of a channel in a sequence</span>
+<span class="n">VirtualAnalog3D</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span><span class="n">VirtualAnalog3D</span><span class="p">,</span> <span class="n">reusable_channels</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="c1"># Creating a square register</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">square</span><span class="p">(</span>
+    <span class="mi">4</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span>
+<span class="p">)</span>  <span class="c1"># 4x4 array with atoms 5 um apart</span>
+<span class="c1"># Building a sequence with the register and the virtual device</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">VirtualAnalog3D</span><span class="p">)</span>
+<span class="c1"># Declare twice the channel &quot;rydberg_global&quot;</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ch0&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ch1&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="c1"># Show the declared channels</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">seq</span><span class="o">.</span><span class="n">declared_channels</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;ch0&#39;: Rydberg(addressing=&#39;Global&#39;, max_abs_detuning=125.66370614359172, max_amp=12.566370614359172, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=4, min_duration=16, max_duration=100000000, min_avg_amp=0, mod_bandwidth=8, custom_phase_jump_time=None, eom_config=RydbergEOM(limiting_beam=&lt;RydbergBeam.RED: 2&gt;, max_limiting_amp=188.49555921538757, intermediate_detuning=2827.4333882308138, controlled_beams=(&lt;RydbergBeam.BLUE: 1&gt;,), mod_bandwidth=40, custom_buffer_time=240, multiple_beam_control=True, blue_shift_coeff=1.0, red_shift_coeff=1.0), propagation_dir=None), &#39;ch1&#39;: Rydberg(addressing=&#39;Global&#39;, max_abs_detuning=125.66370614359172, max_amp=12.566370614359172, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=4, min_duration=16, max_duration=100000000, min_avg_amp=0, mod_bandwidth=8, custom_phase_jump_time=None, eom_config=RydbergEOM(limiting_beam=&lt;RydbergBeam.RED: 2&gt;, max_limiting_amp=188.49555921538757, intermediate_detuning=2827.4333882308138, controlled_beams=(&lt;RydbergBeam.BLUE: 1&gt;,), mod_bandwidth=40, custom_buffer_time=240, multiple_beam_control=True, blue_shift_coeff=1.0, red_shift_coeff=1.0), propagation_dir=None)}
+</pre></div></div>
+</div>
+</section>
+<section id="Building-your-own-virtual-device">
+<h3>Building your own virtual device<a class="headerlink" href="#Building-your-own-virtual-device" title="Link to this heading"></a></h3>
+<p>More generally, the <code class="docutils literal notranslate"><span class="pre">VirtualDevice</span></code> class is more permissive than the <code class="docutils literal notranslate"><span class="pre">Device</span></code> class. In fact, some parameters can be left undefined and simpler devices can be built with a <code class="docutils literal notranslate"><span class="pre">VirtualDevice</span></code> instance. A virtual device only needs a <code class="docutils literal notranslate"><span class="pre">name</span></code>, a <code class="docutils literal notranslate"><span class="pre">dimension</span></code> and a <code class="docutils literal notranslate"><span class="pre">rydberg_level</span></code> to be initialized.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">BasicVirtualDevice</span> <span class="o">=</span> <span class="n">VirtualDevice</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;BasicMockDevice&quot;</span><span class="p">,</span>
+    <span class="n">dimensions</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">rydberg_level</span><span class="o">=</span><span class="mi">61</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">BasicVirtualDevice</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+VirtualDevice(name=&#39;BasicMockDevice&#39;, dimensions=2, rydberg_level=61, min_atom_distance=0, max_atom_num=None, max_radial_distance=None, interaction_coeff_xy=None, supports_slm_mask=True, min_layout_filling=0.0, max_layout_filling=0.5, optimal_layout_filling=None, min_layout_traps=1, max_layout_traps=None, max_sequence_duration=None, max_runs=None, requires_layout=False, reusable_channels=True, channel_ids=(), channel_objects=(), dmm_objects=(DMM(addressing=&#39;Global&#39;, max_abs_detuning=None, max_amp=0, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=1, min_duration=1, max_duration=100000000, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None, bottom_detuning=None, total_bottom_detuning=None),), default_noise_model=None)
+</pre></div></div>
+</div>
+</section>
+<section id="Defining-the-channels-of-your-device">
+<h3>Defining the channels of your device<a class="headerlink" href="#Defining-the-channels-of-your-device" title="Link to this heading"></a></h3>
+<div class="line-block">
+<div class="line">Nevertheless, to perform computations, channels have to be defined. The channels enabled on the device are defined in <code class="docutils literal notranslate"><span class="pre">channel_objects</span></code>. Their IDs can be defined in <code class="docutils literal notranslate"><span class="pre">channel_ids</span></code>, but if no IDs are provided, they will be automatically generated as <code class="docutils literal notranslate"><span class="pre">{channeltype}_adressing</span></code>.</div>
+<div class="line">For example, the <code class="docutils literal notranslate"><span class="pre">Rydberg.Global</span></code> channel is automatically named <code class="docutils literal notranslate"><span class="pre">rydberg_global</span></code> in the specifications of <code class="docutils literal notranslate"><span class="pre">AnalogDevice</span></code>.</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># This basic device can be used for digital quantum computing</span>
+<span class="n">DigitalQCVirtualDevice</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span>
+    <span class="n">BasicVirtualDevice</span><span class="p">,</span>
+    <span class="n">channel_ids</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;ryd_loc&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ram_loc&quot;</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">channel_objects</span><span class="o">=</span><span class="p">(</span>
+        <span class="n">Rydberg</span><span class="o">.</span><span class="n">Local</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">max_duration</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span>
+        <span class="n">Raman</span><span class="o">.</span><span class="n">Local</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">max_duration</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">DigitalQCVirtualDevice</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+VirtualDevice(name=&#39;BasicMockDevice&#39;, dimensions=2, rydberg_level=61, min_atom_distance=0, max_atom_num=None, max_radial_distance=None, interaction_coeff_xy=None, supports_slm_mask=True, min_layout_filling=0.0, max_layout_filling=0.5, optimal_layout_filling=None, min_layout_traps=1, max_layout_traps=None, max_sequence_duration=None, max_runs=None, requires_layout=False, reusable_channels=True, channel_ids=(&#39;ryd_loc&#39;, &#39;ram_loc&#39;), channel_objects=(Rydberg(addressing=&#39;Local&#39;, max_abs_detuning=None, max_amp=None, min_retarget_interval=0, fixed_retarget_t=0, max_targets=None, clock_period=1, min_duration=1, max_duration=None, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None), Raman(addressing=&#39;Local&#39;, max_abs_detuning=None, max_amp=None, min_retarget_interval=0, fixed_retarget_t=0, max_targets=None, clock_period=1, min_duration=1, max_duration=None, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None)), dmm_objects=(DMM(addressing=&#39;Global&#39;, max_abs_detuning=None, max_amp=0, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=1, min_duration=1, max_duration=100000000, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None, bottom_detuning=None, total_bottom_detuning=None),), default_noise_model=None)
+</pre></div></div>
+</div>
+</section>
+<section id="A-built-in-example-of-a-virtual-device:-the-MockDevice">
+<h3>A built-in example of a virtual device: the <code class="docutils literal notranslate"><span class="pre">MockDevice</span></code><a class="headerlink" href="#A-built-in-example-of-a-virtual-device:-the-MockDevice" title="Link to this heading"></a></h3>
+<p>Actually, there exists a virtual device having all the channels already implemented, with no constraints on the number of atoms, the distance between them. This virtual device is the <code class="docutils literal notranslate"><span class="pre">MockDevice</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">MyMockDevice</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span><span class="n">MockDevice</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;MyMockDevice&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">MyMockDevice</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+VirtualDevice(name=&#39;MyMockDevice&#39;, dimensions=3, rydberg_level=70, min_atom_distance=0.0, max_atom_num=None, max_radial_distance=None, interaction_coeff_xy=3700.0, supports_slm_mask=True, min_layout_filling=0.0, max_layout_filling=0.5, optimal_layout_filling=None, min_layout_traps=1, max_layout_traps=None, max_sequence_duration=None, max_runs=None, requires_layout=False, reusable_channels=True, channel_ids=(&#39;rydberg_global&#39;, &#39;rydberg_local&#39;, &#39;raman_global&#39;, &#39;raman_local&#39;, &#39;mw_global&#39;), channel_objects=(Rydberg(addressing=&#39;Global&#39;, max_abs_detuning=None, max_amp=None, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=1, min_duration=1, max_duration=None, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None), Rydberg(addressing=&#39;Local&#39;, max_abs_detuning=None, max_amp=None, min_retarget_interval=0, fixed_retarget_t=0, max_targets=None, clock_period=1, min_duration=1, max_duration=None, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None), Raman(addressing=&#39;Global&#39;, max_abs_detuning=None, max_amp=None, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=1, min_duration=1, max_duration=None, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None), Raman(addressing=&#39;Local&#39;, max_abs_detuning=None, max_amp=None, min_retarget_interval=0, fixed_retarget_t=0, max_targets=None, clock_period=1, min_duration=1, max_duration=None, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None), Microwave(addressing=&#39;Global&#39;, max_abs_detuning=None, max_amp=None, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=1, min_duration=1, max_duration=None, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None)), dmm_objects=(DMM(addressing=&#39;Global&#39;, max_abs_detuning=None, max_amp=0, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=1, min_duration=1, max_duration=100000000, min_avg_amp=0, mod_bandwidth=None, custom_phase_jump_time=None, eom_config=None, propagation_dir=None, bottom_detuning=None, total_bottom_detuning=None),), default_noise_model=None)
+</pre></div></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>In action</strong>:</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">MockDevice</span></code> is being used to solve a <a class="reference internal" href="mwis.html"><span class="doc">Maximally Weighted Independent Set (MWIS)</span></a>.</p>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="output_mod_eom.html" class="btn btn-neutral float-left" title="Output Modulation &amp; EOM Mode" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="paramseqs.html" class="btn btn-neutral float-right" title="Parametrized Sequences" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

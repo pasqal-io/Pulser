@@ -1,0 +1,360 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pulses and Waveforms &mdash; Pulser 1.6.3 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=452006c5"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <script src="_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Sequence Creation and Validation" href="sequence.html" />
+    <link rel="prev" title="Register and Rydberg-Atom Interactions" href="register.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.6.3" /><meta name="readthedocs-resolver-filename" content="/pulses.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Pulser
+              <img src="_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Pulses and Waveforms</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Programming-the-driving-Hamiltonian">Programming the driving Hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Waveforms">Waveforms</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#The-Waveform-base-class">The <code class="docutils literal notranslate"><span class="pre">Waveform</span></code> base class</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Available-Waveforms">Available Waveforms</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Pulses">Pulses</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Standard-definition">Standard definition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Shortcuts-for-constant-parameters">Shortcuts for constant parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Tips-for-Pulse-creation">Tips for Pulse creation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Keep-the-Channel-constraints-in-mind">Keep the <code class="docutils literal notranslate"><span class="pre">Channel</span></code> constraints in mind</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Remember-that-waveforms-can-be-concatenated">Remember that waveforms can be concatenated</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Pulses and Waveforms</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/pulses.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Pulses-and-Waveforms">
+<h1>Pulses and Waveforms<a class="headerlink" href="#Pulses-and-Waveforms" title="Link to this heading"></a></h1>
+<p><em>What you will learn:</em></p>
+<ul class="simple">
+<li><p>how <code class="docutils literal notranslate"><span class="pre">Pulse</span></code>s are used to define the <a class="reference internal" href="programming.html#driving-hamiltonian"><span class="std std-ref">driving Hamiltonian</span></a>;</p></li>
+<li><p>what are <code class="docutils literal notranslate"><span class="pre">Waveform</span></code>s and which options you can choose from;</p></li>
+<li><p>how to create a <code class="docutils literal notranslate"><span class="pre">Pulse</span></code>;</p></li>
+<li><p>some helpful tips to keep in mind when creating a <code class="docutils literal notranslate"><span class="pre">Pulse</span></code>.</p></li>
+</ul>
+<section id="Programming-the-driving-Hamiltonian">
+<h2>Programming the driving Hamiltonian<a class="headerlink" href="#Programming-the-driving-Hamiltonian" title="Link to this heading"></a></h2>
+<p>To program the <a class="reference internal" href="programming.html#driving-hamiltonian"><span class="std std-ref">driving Hamiltonian</span></a> of a system with <span class="math notranslate nohighlight">\(N\)</span> atoms in Pulser, one needs to combine two objects:</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Channel</span></code>, which defines</p>
+<ul>
+<li><p>the <a class="reference internal" href="conventions.html#bases"><span class="std std-ref">addressed basis</span></a>, i.e. the states <span class="math notranslate nohighlight">\(|a\rangle\)</span> and <span class="math notranslate nohighlight">\(|b\rangle\)</span>) and</p></li>
+<li><p>which atoms are targeted. i.e. for which atom(s) in <span class="math notranslate nohighlight">\(i \in \{1,...,N\}\)</span> is <span class="math notranslate nohighlight">\(\Omega_i\)</span>, <span class="math notranslate nohighlight">\(\delta_i\)</span> and <span class="math notranslate nohighlight">\(\phi_i\)</span> defined.</p></li>
+</ul>
+</li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Pulse</span></code>, which defines, over a given duration <span class="math notranslate nohighlight">\(\Delta t\)</span>,</p>
+<ul>
+<li><p>the Rabi frequency, <span class="math notranslate nohighlight">\(\Omega(t \rightarrow t+\Delta t)\)</span> (given as a <code class="docutils literal notranslate"><span class="pre">Waveform</span></code>);</p></li>
+<li><p>the detuning, <span class="math notranslate nohighlight">\(\delta(t \rightarrow t+\Delta t)\)</span> (also given as a <code class="docutils literal notranslate"><span class="pre">Waveform</span></code>);</p></li>
+<li><p>the phase, <span class="math notranslate nohighlight">\(\phi\)</span>, which is constant from <span class="math notranslate nohighlight">\(t\)</span> to <span class="math notranslate nohighlight">\(t+\Delta t\)</span>.</p></li>
+</ul>
+</li>
+</ul>
+<div class="admonition note">
+<p>By adding <strong>pulses</strong> to <strong>channels</strong>, the full driving Hamiltonian is defined over the entire duration of the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>.</p>
+</div>
+</section>
+<section id="Waveforms">
+<h2>Waveforms<a class="headerlink" href="#Waveforms" title="Link to this heading"></a></h2>
+<section id="The-Waveform-base-class">
+<h3>The <code class="docutils literal notranslate"><span class="pre">Waveform</span></code> base class<a class="headerlink" href="#The-Waveform-base-class" title="Link to this heading"></a></h3>
+<p>In Pulser, a <a class="reference internal" href="apidoc/_autosummary/pulser.waveforms.Waveform.html"><span class="doc">Waveform</span></a> defines some time-dependent parameter over a certain duration. Every <code class="docutils literal notranslate"><span class="pre">Waveform</span></code> has two key properties:</p>
+<ul class="simple">
+<li><p>its <code class="docutils literal notranslate"><span class="pre">duration</span></code>, which is an integer value in <span class="math notranslate nohighlight">\(ns\)</span>;</p></li>
+<li><p>its <code class="docutils literal notranslate"><span class="pre">samples</span></code>, which <em>define the Waveform’s value at each</em> <span class="math notranslate nohighlight">\(ns\)</span>.</p></li>
+</ul>
+<div class="admonition note">
+<p>In Pulser, samples are <em>always</em> defined with a time step of <strong>1 ns</strong>. This means that, to access a value at <code class="docutils literal notranslate"><span class="pre">t=x</span> <span class="pre">#ns</span></code>, one can simply get <code class="docutils literal notranslate"><span class="pre">samples[x]</span></code>.</p>
+</div>
+</section>
+<section id="Available-Waveforms">
+<h3>Available Waveforms<a class="headerlink" href="#Available-Waveforms" title="Link to this heading"></a></h3>
+<p>To create a <code class="docutils literal notranslate"><span class="pre">Waveform</span></code>, one must use one of its subclasses:</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.waveforms.ConstantWaveform.html#pulser.waveforms.ConstantWaveform" title="pulser.waveforms.ConstantWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ConstantWaveform</span></code></a>(duration, value)</p></td>
+<td><p>A waveform of constant value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.waveforms.RampWaveform.html#pulser.waveforms.RampWaveform" title="pulser.waveforms.RampWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RampWaveform</span></code></a>(duration, start, stop)</p></td>
+<td><p>A linear ramp waveform.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.waveforms.BlackmanWaveform.html#pulser.waveforms.BlackmanWaveform" title="pulser.waveforms.BlackmanWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BlackmanWaveform</span></code></a>(duration, area)</p></td>
+<td><p>A Blackman window of a specified duration and area.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.waveforms.InterpolatedWaveform.html#pulser.waveforms.InterpolatedWaveform" title="pulser.waveforms.InterpolatedWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">InterpolatedWaveform</span></code></a>(duration, values[, …])</p></td>
+<td><p>A waveform created from interpolation of a set of data points.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.waveforms.CustomWaveform.html#pulser.waveforms.CustomWaveform" title="pulser.waveforms.CustomWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CustomWaveform</span></code></a>(samples)</p></td>
+<td><p>A custom waveform.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.waveforms.KaiserWaveform.html#pulser.waveforms.KaiserWaveform" title="pulser.waveforms.KaiserWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KaiserWaveform</span></code></a>(duration, area[, beta])</p></td>
+<td><p>A Kaiser window of a specified duration and beta parameter.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.waveforms.CompositeWaveform.html#pulser.waveforms.CompositeWaveform" title="pulser.waveforms.CompositeWaveform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CompositeWaveform</span></code></a>(*waveforms)</p></td>
+<td><p>A waveform combining multiple smaller waveforms.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="Pulses">
+<h2>Pulses<a class="headerlink" href="#Pulses" title="Link to this heading"></a></h2>
+<section id="Standard-definition">
+<h3>Standard definition<a class="headerlink" href="#Standard-definition" title="Link to this heading"></a></h3>
+<p>To create a <code class="docutils literal notranslate"><span class="pre">Pulse</span></code>, one must define <span class="math notranslate nohighlight">\(\Omega(t)\)</span>, <span class="math notranslate nohighlight">\(\delta(t)\)</span> and <span class="math notranslate nohighlight">\(\phi\)</span> over a duration <span class="math notranslate nohighlight">\(\Delta t\)</span>. While the phase <span class="math notranslate nohighlight">\(\phi\)</span> must be constant in each <code class="docutils literal notranslate"><span class="pre">Pulse</span></code>, <span class="math notranslate nohighlight">\(\Omega\)</span> and <span class="math notranslate nohighlight">\(\delta\)</span> are time-dependent; as such, they are defined as waveforms.</p>
+<div class="admonition note">
+<p>In a <code class="docutils literal notranslate"><span class="pre">Pulse</span></code>, <span class="math notranslate nohighlight">\(\Omega(t)\)</span> and <span class="math notranslate nohighlight">\(\delta(t)\)</span> are always in units of <span class="math notranslate nohighlight">\(rad/\mu s\)</span>, while <span class="math notranslate nohighlight">\(\phi\)</span> is in <span class="math notranslate nohighlight">\(rad\)</span>.</p>
+</div>
+<p>As an example, below is a 500 <span class="math notranslate nohighlight">\(ns\)</span> <code class="docutils literal notranslate"><span class="pre">Pulse</span></code>, with amplitude given by a <code class="docutils literal notranslate"><span class="pre">BlackmanWaveform</span></code> of area <span class="math notranslate nohighlight">\(\pi\)</span>, detuning given by a <code class="docutils literal notranslate"><span class="pre">RampWaveform</span></code> from -10 to 10 <span class="math notranslate nohighlight">\(rad/\mu s\)</span> and a phase of <span class="math notranslate nohighlight">\(\pi/2\)</span>.</p>
+<div class="admonition note">
+<p>In Pulser, <strong>Rabi frequency</strong> and <strong>amplitude</strong> are equivalent terms for <span class="math notranslate nohighlight">\(\Omega\)</span> and are used interchangeably.</p>
+</div>
+<div class="admonition warning">
+<p>In the same Pulse, the amplitude and detuning waveforms <strong>must have the same duration</strong>.</p>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+
+<span class="n">pulse</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="p">(</span>
+    <span class="n">amplitude</span><span class="o">=</span><span class="n">pulser</span><span class="o">.</span><span class="n">BlackmanWaveform</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">),</span>
+    <span class="n">detuning</span><span class="o">=</span><span class="n">pulser</span><span class="o">.</span><span class="n">RampWaveform</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+    <span class="n">phase</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">pulse</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>  <span class="c1"># Draws the Pulse</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="_images/pulses_7_0.png" src="_images/pulses_7_0.png" />
+</div>
+</div>
+</section>
+<section id="Shortcuts-for-constant-parameters">
+<h3>Shortcuts for constant parameters<a class="headerlink" href="#Shortcuts-for-constant-parameters" title="Link to this heading"></a></h3>
+<p>When the <code class="docutils literal notranslate"><span class="pre">amplitude</span></code> or <code class="docutils literal notranslate"><span class="pre">detuning</span></code> are constant, these class methods avoid having to use <code class="docutils literal notranslate"><span class="pre">ConstantWaveform</span></code>:</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.pulse.Pulse.html#pulser.pulse.Pulse.ConstantAmplitude" title="pulser.pulse.Pulse.ConstantAmplitude"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Pulse.ConstantAmplitude</span></code></a></p></td>
+<td><p>Pulse with a constant amplitude and a detuning waveform.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.pulse.Pulse.html#pulser.pulse.Pulse.ConstantDetuning" title="pulser.pulse.Pulse.ConstantDetuning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Pulse.ConstantDetuning</span></code></a></p></td>
+<td><p>Creates a Pulse with an amplitude waveform and a constant detuning.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="apidoc/_autosummary/pulser.pulse.Pulse.html#pulser.pulse.Pulse.ConstantPulse" title="pulser.pulse.Pulse.ConstantPulse"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Pulse.ConstantPulse</span></code></a></p></td>
+<td><p>Pulse with a constant amplitude and a constant detuning.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<ul class="simple">
+<li><p>In <code class="docutils literal notranslate"><span class="pre">Pulse.ConstantAmplitude()</span></code> and <code class="docutils literal notranslate"><span class="pre">Pulse.ConstantDetuning()</span></code>, the pulse <code class="docutils literal notranslate"><span class="pre">duration</span></code> is taken from the <code class="docutils literal notranslate"><span class="pre">Waveform</span></code> parameter.</p></li>
+<li><p>In <code class="docutils literal notranslate"><span class="pre">Pulse.ConstantPulse()</span></code>, <code class="docutils literal notranslate"><span class="pre">duration</span></code> must be explicitly given.</p></li>
+</ul>
+</div>
+<p>Below is an example of these methods in action, all of them creating the same 1000 <span class="math notranslate nohighlight">\(ns\)</span> pulse with <span class="math notranslate nohighlight">\(\Omega=1~rad/\mu s\)</span>, <span class="math notranslate nohighlight">\(\delta=-1~rad/\mu s\)</span> and <span class="math notranslate nohighlight">\(\phi=0\)</span>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+
+<span class="n">const1</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">ConstantWaveform</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># A constant waveform of 1000 ns</span>
+<span class="n">pulse1</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantAmplitude</span><span class="p">(</span>
+    <span class="n">amplitude</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># float</span>
+    <span class="n">detuning</span><span class="o">=-</span><span class="n">const1</span><span class="p">,</span>  <span class="c1"># Waveform</span>
+    <span class="n">phase</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>  <span class="c1"># float</span>
+<span class="p">)</span>
+<span class="n">pulse2</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span>
+    <span class="n">amplitude</span><span class="o">=</span><span class="n">const1</span><span class="p">,</span>  <span class="c1"># Waveform</span>
+    <span class="n">detuning</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># float</span>
+    <span class="n">phase</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>  <span class="c1"># float</span>
+<span class="p">)</span>
+<span class="n">pulse3</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span>
+    <span class="n">duration</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>  <span class="c1"># int</span>
+    <span class="n">amplitude</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># float</span>
+    <span class="n">detuning</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># float</span>
+    <span class="n">phase</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>  <span class="c1"># float</span>
+<span class="p">)</span>
+<span class="k">assert</span> <span class="n">pulse1</span> <span class="o">==</span> <span class="n">pulse2</span> <span class="o">==</span> <span class="n">pulse3</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="Tips-for-Pulse-creation">
+<h2>Tips for Pulse creation<a class="headerlink" href="#Tips-for-Pulse-creation" title="Link to this heading"></a></h2>
+<section id="Keep-the-Channel-constraints-in-mind">
+<h3>Keep the <code class="docutils literal notranslate"><span class="pre">Channel</span></code> constraints in mind<a class="headerlink" href="#Keep-the-Channel-constraints-in-mind" title="Link to this heading"></a></h3>
+<p>Some <code class="docutils literal notranslate"><span class="pre">Channel</span></code> parameters dictate what is allowed in a <code class="docutils literal notranslate"><span class="pre">Pulse</span></code> once it’s added to the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, so it is often useful to have these limitations in mind when first designing the <code class="docutils literal notranslate"><span class="pre">Pulse</span></code>. In particular, you should keep in mind:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Channel.max_abs_detuning</span></code>, the maximum absolute value of detuning allowed;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Channel.max_amp</span></code>, the maximum amplitude allowed;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Channel.min_avg_amp</span></code>, the minimum average amplitude allowed (when not zero);</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Channel.min_duration</span></code>, the minimum pulse duration allowed;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Channel.clock_period</span></code>, which dictates that every pulse’s duration must be a multiple of this value.</p></li>
+</ul>
+</section>
+<section id="Remember-that-waveforms-can-be-concatenated">
+<h3>Remember that waveforms can be concatenated<a class="headerlink" href="#Remember-that-waveforms-can-be-concatenated" title="Link to this heading"></a></h3>
+<p>When programming <span class="math notranslate nohighlight">\(\Omega(t)\)</span> and <span class="math notranslate nohighlight">\(\delta(t)\)</span> with Pulser, it’s usually preferable to divide these quantities into a stream of simple pulses. However, this is not always convenient, as the natural breaking point in the <code class="docutils literal notranslate"><span class="pre">amplitude</span></code> and <code class="docutils literal notranslate"><span class="pre">detuning</span></code> waveforms may not always match. In these cases, the <code class="docutils literal notranslate"><span class="pre">CompositeWaveform</span></code> allows for the creation of a more complex waveform by concatenation of multiple, smaller waveforms. Take a look a <a class="reference internal" href="tutorials/composite_wfs.html"><span class="doc">this page</span></a> to
+see how <code class="docutils literal notranslate"><span class="pre">CompositeWaveform</span></code> might help you.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="register.html" class="btn btn-neutral float-left" title="Register and Rydberg-Atom Interactions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="sequence.html" class="btn btn-neutral float-right" title="Sequence Creation and Validation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

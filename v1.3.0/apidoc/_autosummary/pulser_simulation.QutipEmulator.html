@@ -1,0 +1,559 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QutipEmulator &mdash; Pulser 1.3.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=1f29e9d3"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <script src="../../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="SimConfig" href="pulser_simulation.SimConfig.html" />
+    <link rel="prev" title="QutipBackend" href="pulser_simulation.QutipBackend.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.3.0" /><meta name="readthedocs-resolver-filename" content="/apidoc/_autosummary/pulser_simulation.QutipEmulator.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Pulser
+              <img src="../../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Emulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../simulation.html#classes">Classes</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="pulser_simulation.QutipBackend.html">QutipBackend</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">QutipEmulator</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pulser_simulation.QutipEmulator"><code class="docutils literal notranslate"><span class="pre">QutipEmulator</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pulser_simulation.SimConfig.html">SimConfig</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../simulation.html#modules">Modules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+      <li class="breadcrumb-item active">QutipEmulator</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/apidoc/_autosummary/pulser_simulation.QutipEmulator.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="qutipemulator">
+<h1>QutipEmulator<a class="headerlink" href="#qutipemulator" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser_simulation.</span></span><span class="sig-name descname"><span class="pre">QutipEmulator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sampled_seq</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">register</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluation_times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Full'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipEmulator" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Emulator of a pulse sequence using QuTiP.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sampled_seq</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser.sampler.SequenceSamples.html#pulser.sampler.SequenceSamples" title="pulser.sampler.samples.SequenceSamples"><code class="xref py py-class docutils literal notranslate"><span class="pre">SequenceSamples</span></code></a></span>) – A pulse sequence samples used in the emulation.</p></li>
+<li><p><strong>register</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseRegister</span></code></span>) – The register associating coordinates to the qubits targeted
+by the pulses within the samples.</p></li>
+<li><p><strong>device</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseDevice</span></code></span>) – The device specifications used in the emulation. Register and
+samples have to satisfy its constraints.</p></li>
+<li><p><strong>sampling_rate</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">1.0</span></code>) – The fraction of samples that we wish to extract from
+the samples to simulate. Has to be a value between 0.05 and 1.0.</p></li>
+<li><p><strong>config</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser_simulation.SimConfig.html#pulser_simulation.SimConfig" title="pulser_simulation.simconfig.SimConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimConfig</span></code></a> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Configuration to be used for this simulation.</p></li>
+<li><p><strong>evaluation_times</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | ArrayLike</span>, default: <code class="docutils literal notranslate"><span class="pre">'Full'</span></code>) – <p>Choose between:</p>
+<ul>
+<li><p>”Full”: The times are set to be the ones used to define the
+Hamiltonian to the solver.</p></li>
+<li><p>”Minimal”: The times are set to only include initial and final
+times.</p></li>
+<li><p>An ArrayLike object of times in µs if you wish to only include
+those specific times.</p></li>
+<li><p>A float to act as a sampling rate for the resulting state.</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.basis" title="pulser_simulation.QutipEmulator.basis"><code class="xref py py-obj docutils literal notranslate"><span class="pre">basis</span></code></a></p></td>
+<td><p>The basis in which result is expressed.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.basis_name" title="pulser_simulation.QutipEmulator.basis_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">basis_name</span></code></a></p></td>
+<td><p>The name of the basis.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.config" title="pulser_simulation.QutipEmulator.config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">config</span></code></a></p></td>
+<td><p>The current configuration, as a SimConfig instance.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.dim" title="pulser_simulation.QutipEmulator.dim"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dim</span></code></a></p></td>
+<td><p>The dimension of the basis.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.evaluation_times" title="pulser_simulation.QutipEmulator.evaluation_times"><code class="xref py py-obj docutils literal notranslate"><span class="pre">evaluation_times</span></code></a></p></td>
+<td><p>The times at which the results of this simulation are returned.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.initial_state" title="pulser_simulation.QutipEmulator.initial_state"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initial_state</span></code></a></p></td>
+<td><p>The initial state of the simulation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.sampling_times" title="pulser_simulation.QutipEmulator.sampling_times"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling_times</span></code></a></p></td>
+<td><p>The times at which hamiltonian is sampled.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.add_config" title="pulser_simulation.QutipEmulator.add_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_config</span></code></a></p></td>
+<td><p>Updates the current configuration with parameters of another one.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.build_operator" title="pulser_simulation.QutipEmulator.build_operator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_operator</span></code></a></p></td>
+<td><p>Creates an operator with non-trivial actions on some qubits.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.draw" title="pulser_simulation.QutipEmulator.draw"><code class="xref py py-obj docutils literal notranslate"><span class="pre">draw</span></code></a></p></td>
+<td><p>Draws the samples of a sequence of operations used for simulation.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.from_sequence" title="pulser_simulation.QutipEmulator.from_sequence"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_sequence</span></code></a></p></td>
+<td><p>Simulation of a pulse sequence using QuTiP.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.get_hamiltonian" title="pulser_simulation.QutipEmulator.get_hamiltonian"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_hamiltonian</span></code></a></p></td>
+<td><p>Get the Hamiltonian created from the sequence at a fixed time.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.reset_config" title="pulser_simulation.QutipEmulator.reset_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reset_config</span></code></a></p></td>
+<td><p>Resets configuration to default.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.run" title="pulser_simulation.QutipEmulator.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run</span></code></a></p></td>
+<td><p>Simulates the sequence using QuTiP's solvers.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.set_config" title="pulser_simulation.QutipEmulator.set_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_config</span></code></a></p></td>
+<td><p>Sets current config to cfg and updates simulation parameters.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.set_evaluation_times" title="pulser_simulation.QutipEmulator.set_evaluation_times"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_evaluation_times</span></code></a></p></td>
+<td><p>Sets times at which the results of this simulation are returned.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.set_initial_state" title="pulser_simulation.QutipEmulator.set_initial_state"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_initial_state</span></code></a></p></td>
+<td><p>Sets the initial state of the simulation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pulser_simulation.QutipEmulator.show_config" title="pulser_simulation.QutipEmulator.show_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">show_config</span></code></a></p></td>
+<td><p>Shows current configuration.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Signatures</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.add_config">
+<span class="sig-name descname"><span class="pre">add_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipEmulator.add_config" title="Link to this definition"></a></dt>
+<dd><p>Updates the current configuration with parameters of another one.</p>
+<p>Mostly useful when dealing with multiple noise types in different
+configurations and wanting to merge these configurations together.
+Adds simulation parameters to noises that weren’t available in the
+former SimConfig. Noises specified in both SimConfigs will keep
+former noise parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>config</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser_simulation.SimConfig.html#pulser_simulation.SimConfig" title="pulser_simulation.simconfig.SimConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimConfig</span></code></a></span>) – SimConfig to retrieve parameters from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.build_operator">
+<span class="sig-name descname"><span class="pre">build_operator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operations</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipEmulator.build_operator" title="Link to this definition"></a></dt>
+<dd><p>Creates an operator with non-trivial actions on some qubits.</p>
+<p>Takes as argument a list of tuples <code class="docutils literal notranslate"><span class="pre">[(operator_1,</span> <span class="pre">qubits_1),</span>
+<span class="pre">(operator_2,</span> <span class="pre">qubits_2)...]</span></code>. Returns the operator given by the tensor
+product of {<code class="docutils literal notranslate"><span class="pre">operator_i</span></code> applied on <code class="docutils literal notranslate"><span class="pre">qubits_i</span></code>} and Id on the rest.
+<code class="docutils literal notranslate"><span class="pre">(operator,</span> <span class="pre">'global')</span></code> returns the sum for all <code class="docutils literal notranslate"><span class="pre">j</span></code> of operator
+applied at <code class="docutils literal notranslate"><span class="pre">qubit_j</span></code> and identity elsewhere.</p>
+<p>Example for 4 qubits: <code class="docutils literal notranslate"><span class="pre">[(Z,</span> <span class="pre">[1,</span> <span class="pre">2]),</span> <span class="pre">(Y,</span> <span class="pre">[3])]</span></code> returns <cite>ZZYI</cite>
+and <code class="docutils literal notranslate"><span class="pre">[(X,</span> <span class="pre">'global')]</span></code> returns <cite>XIII + IXII + IIXI + IIIX</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>operations</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></span>) – List of tuples <cite>(operator, qubits)</cite>.
+<cite>operator</cite> can be a <code class="docutils literal notranslate"><span class="pre">qutip.Quobj</span></code> or a string key for
+<code class="docutils literal notranslate"><span class="pre">self.op_matrix</span></code>. <cite>qubits</cite> is the list on which operator
+will be applied. The qubits can be passed as their
+index or their label in the register.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The final operator.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.draw">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw_phase_area</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_phase_shifts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_phase_curve</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fig_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kwargs_savefig</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipEmulator.draw" title="Link to this definition"></a></dt>
+<dd><p>Draws the samples of a sequence of operations used for simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>draw_phase_area</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether phase and area values need
+to be shown as text on the plot, defaults to False.</p></li>
+<li><p><strong>draw_phase_shifts</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether phase shift and reference
+information should be added to the plot, defaults to False.</p></li>
+<li><p><strong>draw_phase_curve</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Draws the changes in phase in its own curve
+(ignored if the phase doesn’t change throughout the channel).</p></li>
+<li><p><strong>fig_name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The name on which to save the figure.
+If None the figure will not be saved.</p></li>
+<li><p><strong>kwargs_savefig</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">{}</span></code>) – Keywords arguments for
+<code class="docutils literal notranslate"><span class="pre">matplotlib.pyplot.savefig</span></code>. Not applicable if <cite>fig_name</cite>
+is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>Sequence.draw(): Draws the sequence in its current state.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.from_sequence">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_sequence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluation_times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Full'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">with_modulation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipEmulator.from_sequence" title="Link to this definition"></a></dt>
+<dd><p>Simulation of a pulse sequence using QuTiP.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sequence</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser.sequence.Sequence.html#pulser.sequence.Sequence" title="pulser.sequence.sequence.Sequence"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a></span>) – An instance of a Pulser Sequence that we
+want to simulate.</p></li>
+<li><p><strong>sampling_rate</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">1.0</span></code>) – The fraction of samples that we wish to
+extract from the pulse sequence to simulate. Has to be a
+value between 0.05 and 1.0.</p></li>
+<li><p><strong>config</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser_simulation.SimConfig.html#pulser_simulation.SimConfig" title="pulser_simulation.simconfig.SimConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimConfig</span></code></a> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Configuration to be used for this simulation.</p></li>
+<li><p><strong>evaluation_times</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | ArrayLike</span>, default: <code class="docutils literal notranslate"><span class="pre">'Full'</span></code>) – <p>Choose between:</p>
+<ul>
+<li><p>”Full”: The times are set to be the ones used to define the
+Hamiltonian to the solver.</p></li>
+<li><p>”Minimal”: The times are set to only include initial and
+final times.</p></li>
+<li><p>An ArrayLike object of times in µs if you wish to only
+include those specific times.</p></li>
+<li><p>A float to act as a sampling rate for the resulting state.</p></li>
+</ul>
+</p></li>
+<li><p><strong>with_modulation</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether to simulate the sequence with the
+programmed input or the expected output.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#pulser_simulation.QutipEmulator" title="pulser_simulation.simulation.QutipEmulator"><code class="xref py py-class docutils literal notranslate"><span class="pre">QutipEmulator</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.get_hamiltonian">
+<span class="sig-name descname"><span class="pre">get_hamiltonian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipEmulator.get_hamiltonian" title="Link to this definition"></a></dt>
+<dd><p>Get the Hamiltonian created from the sequence at a fixed time.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The whole Hamiltonian is divided by <span class="math notranslate nohighlight">\(\hbar\)</span>, so its
+units are rad/µs.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>time</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – The specific time at which we want to extract the
+Hamiltonian (in ns).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A new Qobj for the Hamiltonian with coefficients
+extracted from the effective sequence (determined by
+<cite>self.sampling_rate</cite>) at the specified time.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.reset_config">
+<span class="sig-name descname"><span class="pre">reset_config</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipEmulator.reset_config" title="Link to this definition"></a></dt>
+<dd><p>Resets configuration to default.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">progress_bar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipEmulator.run" title="Link to this definition"></a></dt>
+<dd><p>Simulates the sequence using QuTiP’s solvers.</p>
+<p>Will return NoisyResults if the noise in the SimConfig requires it.
+Otherwise will return CoherentResults.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>progress_bar</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – If True, the progress bar of QuTiP’s
+solver will be shown. If None or False, no text appears.</p></li>
+<li><p><strong>options</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></span>) – <p>Given directly to the Qutip Solver. If specified, will
+override SimConfig solver_options. If no <cite>max_step</cite> value is
+provided, an automatic one is calculated from the <cite>Sequence</cite>’s
+schedule (half of the shortest duration among pulses and
+delays).
+Refer to the QuTiP <a class="reference external" href="https://bit.ly/3il9A2u">docs</a> for an overview of the parameters.</p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser_simulation.simresults.SimulationResults.html#pulser_simulation.simresults.SimulationResults" title="pulser_simulation.simresults.SimulationResults"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimulationResults</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.set_config">
+<span class="sig-name descname"><span class="pre">set_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cfg</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipEmulator.set_config" title="Link to this definition"></a></dt>
+<dd><p>Sets current config to cfg and updates simulation parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cfg</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="pulser_simulation.SimConfig.html#pulser_simulation.SimConfig" title="pulser_simulation.simconfig.SimConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimConfig</span></code></a></span>) – New configuration.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.set_evaluation_times">
+<span class="sig-name descname"><span class="pre">set_evaluation_times</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipEmulator.set_evaluation_times" title="Link to this definition"></a></dt>
+<dd><p>Sets times at which the results of this simulation are returned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | ArrayLike | <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – <p>Choose between:</p>
+<ul class="simple">
+<li><p>”Full”: The times are set to be the ones used to define the
+Hamiltonian to the solver.</p></li>
+<li><p>”Minimal”: The times are set to only include initial and
+final times.</p></li>
+<li><p>An ArrayLike object of times in µs if you wish to only
+include those specific times.</p></li>
+<li><p>A float to act as a sampling rate for the resulting state.</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.set_initial_state">
+<span class="sig-name descname"><span class="pre">set_initial_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipEmulator.set_initial_state" title="Link to this definition"></a></dt>
+<dd><p>Sets the initial state of the simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>state</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">Qobj</span></code></span>) – <p>The initial state.
+Choose between:</p>
+<ul class="simple">
+<li><p>”all-ground” for all atoms in ground state</p></li>
+<li><p>An ArrayLike with a shape compatible with the system</p></li>
+<li><p>A Qobj object</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.show_config">
+<span class="sig-name descname"><span class="pre">show_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">solver_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pulser_simulation.QutipEmulator.show_config" title="Link to this definition"></a></dt>
+<dd><p>Shows current configuration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.basis">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">basis</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'u'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'d'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'r'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'g'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'h'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pulser_simulation.QutipEmulator.basis" title="Link to this definition"></a></dt>
+<dd><p>The basis in which result is expressed.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.basis_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">basis_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#pulser_simulation.QutipEmulator.basis_name" title="Link to this definition"></a></dt>
+<dd><p>The name of the basis.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.config">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="pulser_simulation.SimConfig.html#pulser_simulation.SimConfig" title="pulser_simulation.simconfig.SimConfig"><span class="pre">SimConfig</span></a></em><a class="headerlink" href="#pulser_simulation.QutipEmulator.config" title="Link to this definition"></a></dt>
+<dd><p>The current configuration, as a SimConfig instance.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.dim">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dim</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#pulser_simulation.QutipEmulator.dim" title="Link to this definition"></a></dt>
+<dd><p>The dimension of the basis.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.evaluation_times">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">evaluation_times</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></em><a class="headerlink" href="#pulser_simulation.QutipEmulator.evaluation_times" title="Link to this definition"></a></dt>
+<dd><p>The times at which the results of this simulation are returned.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.initial_state">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initial_state</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Qobj</span></em><a class="headerlink" href="#pulser_simulation.QutipEmulator.initial_state" title="Link to this definition"></a></dt>
+<dd><p>The initial state of the simulation.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pulser_simulation.QutipEmulator.sampling_times">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sampling_times</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></em><a class="headerlink" href="#pulser_simulation.QutipEmulator.sampling_times" title="Link to this definition"></a></dt>
+<dd><p>The times at which hamiltonian is sampled.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pulser_simulation.QutipBackend.html" class="btn btn-neutral float-left" title="QutipBackend" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pulser_simulation.SimConfig.html" class="btn btn-neutral float-right" title="SimConfig" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

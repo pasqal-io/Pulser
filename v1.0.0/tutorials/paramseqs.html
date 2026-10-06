@@ -1,0 +1,411 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parametrized Sequences &mdash; Pulser 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/max_width.css" />
+
+  
+      <script src="../_static/jquery.js"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+      <script src="../_static/doctools.js"></script>
+      <script src="../_static/sphinx_highlight.js"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Register Layouts &amp; Mappable Registers" href="reg_layouts.html" />
+    <link rel="prev" title="Composite Waveforms" href="composite_wfs.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.0.0" /><meta name="readthedocs-resolver-filename" content="/tutorials/paramseqs.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installation and First Steps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../intro_rydberg_blockade.html">Quickstart: The Rydberg Blockade</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Pulse Sequence Creation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simulating.html">Simulation of Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamental Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../review.html">Quantum Computing with Neutral Atoms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Backend Execution</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution of Pulser Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Classical Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Parametrized Sequences</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Variables-and-Parametrized-Objects">Variables and Parametrized Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Constructing-the-Sequence">Constructing the Sequence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Building">Building</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Quantum Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="afm_prep.html">Preparing a state with antiferromagnetic order in the Ising model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Spin Chain</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mw_engineering.html">Simulation of XYZ spin models using Floquet engineering in XY mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shadow_est.html">Efficient estimation techniques for Variational Quantum Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1D_crystals.html">Building 1D Rydberg Crystals</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cz_gate.html">Control-Z Gate Sequence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pulser.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Parametrized Sequences</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/paramseqs.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Parametrized-Sequences">
+<h1>Parametrized Sequences<a class="headerlink" href="#Parametrized-Sequences" title="Permalink to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pulse</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Register</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.waveforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">RampWaveform</span><span class="p">,</span> <span class="n">BlackmanWaveform</span><span class="p">,</span> <span class="n">CompositeWaveform</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">DigitalAnalogDevice</span>
+</pre></div>
+</div>
+</div>
+<p>From simple sweeps to variational quantum algorithms, it is often the case that one wants to try out multiple pulse sequences that vary only in a few parameters. For this effect, the ability to make a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> <strong>parametrized</strong> was developed.</p>
+<p>A parametrized <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> can be used just like a “regular” <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, with a few key differences. Initialization and channel declaration, for example, don’t change at all:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">DigitalAnalogDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;rydberg&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;raman&quot;</span><span class="p">,</span> <span class="s2">&quot;raman_local&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="Variables-and-Parametrized-Objects">
+<h2>Variables and Parametrized Objects<a class="headerlink" href="#Variables-and-Parametrized-Objects" title="Permalink to this heading"></a></h2>
+<p>The defining characteristic of a parametrized <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> is its use of <strong>variables</strong>. These variables are declared within a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, by calling:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">Omega_max</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">declare_variable</span><span class="p">(</span><span class="s2">&quot;Omega_max&quot;</span><span class="p">)</span>
+<span class="n">ts</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">declare_variable</span><span class="p">(</span><span class="s2">&quot;ts&quot;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+<span class="n">last_target</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">declare_variable</span><span class="p">(</span><span class="s2">&quot;last_target&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The returned <code class="docutils literal notranslate"><span class="pre">Omega_max</span></code>, <code class="docutils literal notranslate"><span class="pre">ts</span></code> and <code class="docutils literal notranslate"><span class="pre">last_target</span></code> objects are of type <code class="docutils literal notranslate"><span class="pre">Variable</span></code>, and are defined by their name, size and data type. In this case, <code class="docutils literal notranslate"><span class="pre">Omega_max</span></code> is a single variable with <code class="docutils literal notranslate"><span class="pre">dtype=float</span></code> (the default), <code class="docutils literal notranslate"><span class="pre">ts</span></code> is an array of two <code class="docutils literal notranslate"><span class="pre">int</span></code> values and <code class="docutils literal notranslate"><span class="pre">last_target</span></code> is an <code class="docutils literal notranslate"><span class="pre">int</span></code>.</p>
+<p>These returned <code class="docutils literal notranslate"><span class="pre">Variable</span></code> objects support simple arithmetic operations (when applicable) and, when of <code class="docutils literal notranslate"><span class="pre">size</span> <span class="pre">&gt;</span> <span class="pre">1</span></code>, even item indexing. Take the following examples:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">t_rise</span><span class="p">,</span> <span class="n">t_fall</span> <span class="o">=</span> <span class="n">ts</span>  <span class="c1"># Unpacking is possible too</span>
+<span class="n">U</span> <span class="o">=</span> <span class="n">Omega_max</span> <span class="o">/</span> <span class="mf">2.3</span>
+<span class="n">delta_0</span> <span class="o">=</span> <span class="o">-</span><span class="mi">6</span> <span class="o">*</span> <span class="n">U</span>
+<span class="n">delta_f</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">U</span>
+<span class="n">t_sweep</span> <span class="o">=</span> <span class="p">(</span><span class="n">delta_f</span> <span class="o">-</span> <span class="n">delta_0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span>
+</pre></div>
+</div>
+</div>
+<p>Both the original <code class="docutils literal notranslate"><span class="pre">Variables</span></code> and the results of these operations serve as valid inputs for <code class="docutils literal notranslate"><span class="pre">Waveforms</span></code>, <code class="docutils literal notranslate"><span class="pre">Pulses</span></code> or <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>-building instructions. We can take <code class="docutils literal notranslate"><span class="pre">Omega_max</span></code> as an argument for a waveform:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pi_wf</span> <span class="o">=</span> <span class="n">BlackmanWaveform</span><span class="o">.</span><span class="n">from_max_val</span><span class="p">(</span><span class="n">Omega_max</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>or use derived quantities, like <code class="docutils literal notranslate"><span class="pre">t_rise</span></code>, <code class="docutils literal notranslate"><span class="pre">t_fall</span></code>, <code class="docutils literal notranslate"><span class="pre">delta_0</span></code> and <code class="docutils literal notranslate"><span class="pre">delta_f</span></code>:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rise_wf</span> <span class="o">=</span> <span class="n">RampWaveform</span><span class="p">(</span><span class="n">t_rise</span><span class="p">,</span> <span class="n">delta_0</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">)</span>
+<span class="n">fall_wf</span> <span class="o">=</span> <span class="n">RampWaveform</span><span class="p">(</span><span class="n">t_fall</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">,</span> <span class="n">delta_0</span><span class="p">)</span>
+<span class="n">rise_fall_wf</span> <span class="o">=</span> <span class="n">CompositeWaveform</span><span class="p">(</span><span class="n">rise_wf</span><span class="p">,</span> <span class="n">fall_wf</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>These waveforms are <em>parametrized</em> objects, so usual attributes like <code class="docutils literal notranslate"><span class="pre">duration</span></code> or <code class="docutils literal notranslate"><span class="pre">samples</span></code> are not available, as they depend on the values of the underlying variables. Nonetheless, they can be used as regular waveforms when creating <code class="docutils literal notranslate"><span class="pre">Pulses</span></code>, which will consequently be <em>parametrized</em> too.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pi_pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span><span class="n">pi_wf</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">rise_fall</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantAmplitude</span><span class="p">(</span><span class="n">Omega_max</span><span class="p">,</span> <span class="n">rise_fall_wf</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Constructing-the-Sequence">
+<h2>Constructing the Sequence<a class="headerlink" href="#Constructing-the-Sequence" title="Permalink to this heading"></a></h2>
+<p>Upon initialization, a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> is, by default, not parametrized. We can check this by calling:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">is_parametrized</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+False
+</pre></div></div>
+</div>
+<p>While it is not parametrized, it is just a normal sequence. We can do the usual stuff, like targeting a local channel, adding regular pulses, or plotting the sequence:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">generic_pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">generic_pulse</span><span class="p">,</span> <span class="s2">&quot;rydberg&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">target</span><span class="p">(</span><span class="s2">&quot;q0&quot;</span><span class="p">,</span> <span class="s2">&quot;raman&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">generic_pulse</span><span class="p">,</span> <span class="s2">&quot;raman&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_paramseqs_19_0.png" src="../_images/tutorials_paramseqs_19_0.png" />
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> becomes parametrized at the moment a parametrized object or variable is given to a sequence-building instruction. For example:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">target_index</span><span class="p">(</span><span class="n">last_target</span><span class="p">,</span> <span class="s2">&quot;raman&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">is_parametrized</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+True
+</pre></div></div>
+</div>
+<p>From this point onward, functionalities like drawing are no longer available, because the instructions start being stored instead of executed on the fly. We can still check the current state of a parametrized sequence by printing it:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Prelude
+-------
+Channel: rydberg
+t: 0 | Initial targets: q0, q1, q2, q3 | Phase Reference: 0.0
+t: 0-&gt;100 | Pulse(Amp=6.28 rad/µs, Detuning=2 rad/µs, Phase=0) | Targets: q0, q1, q2, q3
+
+Channel: raman
+t: 0 | Initial targets: q0 | Phase Reference: 0.0
+t: 0-&gt;100 | Delay
+t: 100-&gt;200 | Pulse(Amp=6.28 rad/µs, Detuning=2 rad/µs, Phase=0) | Targets: q0
+
+Stored calls
+------------
+
+1. target_index(last_target[0], raman)
+</pre></div></div>
+</div>
+<p>Naturally, we can also add the parametrized pulses we previously created:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rise_fall</span><span class="p">,</span> <span class="s2">&quot;rydberg&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pi_pulse</span><span class="p">,</span> <span class="s2">&quot;raman&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Building">
+<h2>Building<a class="headerlink" href="#Building" title="Permalink to this heading"></a></h2>
+<p>Once we’re happy with our parametrized sequence, the last step is to build it into a regular sequence. For that, we call the <code class="docutils literal notranslate"><span class="pre">Sequence.build()</span></code> method, in which we <strong>must attribute values for all the declared variables</strong>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">built_seq</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">build</span><span class="p">(</span>
+    <span class="n">Omega_max</span><span class="o">=</span><span class="mf">2.3</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+    <span class="n">ts</span><span class="o">=</span><span class="p">[</span><span class="mi">200</span><span class="p">,</span> <span class="mi">500</span><span class="p">],</span>
+    <span class="n">last_target</span><span class="o">=</span><span class="n">reg</span><span class="o">.</span><span class="n">find_indices</span><span class="p">([</span><span class="s2">&quot;q3&quot;</span><span class="p">])[</span><span class="mi">0</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="n">built_seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/docs/checkouts/readthedocs.org/user_builds/pulser/envs/v1.0.0/lib/python3.9/site-packages/pulser/sequence/sequence.py:1282: UserWarning: A duration of 519 ns is not a multiple of the channel&#39;s clock period (4 ns). It was rounded up to 520 ns.
+  self._add(pulse, channel, protocol)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_paramseqs_28_1.png" src="../_images/tutorials_paramseqs_28_1.png" />
+</div>
+</div>
+<p>And here we have a regular sequence, built from our parametrized sequence. To create a new one with different parameters, we can simply build it again with new values:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">alt_seq</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">build</span><span class="p">(</span>
+    <span class="n">Omega_max</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">ts</span><span class="o">=</span><span class="p">[</span><span class="mi">400</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span> <span class="n">last_target</span><span class="o">=</span><span class="n">reg</span><span class="o">.</span><span class="n">find_indices</span><span class="p">([</span><span class="s2">&quot;q2&quot;</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+<span class="p">)</span>
+<span class="n">alt_seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_paramseqs_30_0.png" src="../_images/tutorials_paramseqs_30_0.png" />
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="composite_wfs.html" class="btn btn-neutral float-left" title="Composite Waveforms" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="reg_layouts.html" class="btn btn-neutral float-right" title="Register Layouts &amp; Mappable Registers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

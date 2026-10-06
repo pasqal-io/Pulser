@@ -1,0 +1,425 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Output Modulation &amp; EOM Mode &mdash; Pulser 1.6.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8ea99608"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Devices and Virtual Devices" href="virtual_devices.html" />
+    <link rel="prev" title="Register Layouts &amp; Mappable Registers" href="reg_layouts.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.6.4" /><meta name="readthedocs-resolver-filename" content="/tutorials/output_mod_eom.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Output Modulation &amp; EOM Mode</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Output-Modulation">Output Modulation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Modulation-Bandwidth">Modulation Bandwidth</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Influence-in-a-Sequence">Influence in a Sequence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Usage-in-Simulation">Usage in Simulation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#EOM-Mode-Operation">EOM Mode Operation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Output Modulation &amp; EOM Mode</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/output_mod_eom.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Output-Modulation-&amp;-EOM-Mode">
+<h1>Output Modulation &amp; EOM Mode<a class="headerlink" href="#Output-Modulation-&-EOM-Mode" title="Link to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Register</span><span class="p">,</span> <span class="n">Pulse</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">VirtualDevice</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.channels</span><span class="w"> </span><span class="kn">import</span> <span class="n">Rydberg</span><span class="p">,</span> <span class="n">Raman</span>
+</pre></div>
+</div>
+</div>
+<section id="Output-Modulation">
+<h2>Output Modulation<a class="headerlink" href="#Output-Modulation" title="Link to this heading"></a></h2>
+<section id="Modulation-Bandwidth">
+<h3>Modulation Bandwidth<a class="headerlink" href="#Modulation-Bandwidth" title="Link to this heading"></a></h3>
+<p>When programming physical devices, you will likely come across the notion of <em>modulation bandwidth</em>. When a channel has a finite modulation bandwidth, its output (what actually comes out of the channel) is modulated when compared to its input (what is programmed in Pulser) because the component takes some amount of time to reach the desired value.</p>
+<p>To illustrate this, let us start by creating a channel with a defined modulation bandwidth.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rydberg_ch</span> <span class="o">=</span> <span class="n">Rydberg</span><span class="o">.</span><span class="n">Global</span><span class="p">(</span>
+    <span class="n">max_abs_detuning</span><span class="o">=</span><span class="mi">20</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+    <span class="n">max_amp</span><span class="o">=</span><span class="mi">10</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+    <span class="n">mod_bandwidth</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>  <span class="c1"># MHz</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>With this channel object, we can check what the modulation of a waveform will look like. Let’s take, for instance, a short square waveform:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser.waveforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConstantWaveform</span>
+
+<span class="n">constant_wf</span> <span class="o">=</span> <span class="n">ConstantWaveform</span><span class="p">(</span><span class="n">duration</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">constant_wf</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">output_channel</span><span class="o">=</span><span class="n">rydberg_ch</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_output_mod_eom_7_0.png" src="../_images/tutorials_output_mod_eom_7_0.png" />
+</div>
+</div>
+<p>We observe two things:</p>
+<ol class="arabic simple">
+<li><p>The output is streched when compared with the input. This is always the case, and we refer to the time it takes the output to ramp up as the <code class="docutils literal notranslate"><span class="pre">rise</span> <span class="pre">time</span></code>.</p></li>
+<li><p>The output does not have enough time to reach the maximum value set in the input. This happens only when the input pulse is too short.</p></li>
+</ol>
+<p>If we make the pulse long enough, we will see that it will still be extended on both sides by the rise time, but now it reaches the maximum value:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">constant_wf2</span> <span class="o">=</span> <span class="n">ConstantWaveform</span><span class="p">(</span><span class="n">duration</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">constant_wf2</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">output_channel</span><span class="o">=</span><span class="n">rydberg_ch</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_output_mod_eom_9_0.png" src="../_images/tutorials_output_mod_eom_9_0.png" />
+</div>
+</div>
+<p>Note also that all inputs are modulated, but the effect is most pronounced in square pulses. If we take, for example, a <code class="docutils literal notranslate"><span class="pre">BlackmanWaveform</span></code> of similar duration, we see the difference between input and output is more subtle (on the other hand, the output never gets a chance to reach the maximum value because the input is not held at the maximum value).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser.waveforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlackmanWaveform</span>
+
+<span class="n">blackman_wf</span> <span class="o">=</span> <span class="n">BlackmanWaveform</span><span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="mf">0.13</span><span class="p">)</span>
+<span class="n">blackman_wf</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">output_channel</span><span class="o">=</span><span class="n">rydberg_ch</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_output_mod_eom_11_0.png" src="../_images/tutorials_output_mod_eom_11_0.png" />
+</div>
+</div>
+</section>
+<section id="Influence-in-a-Sequence">
+<h3>Influence in a Sequence<a class="headerlink" href="#Influence-in-a-Sequence" title="Link to this heading"></a></h3>
+<p>When creating a sequence on a device whose channels have a finite modulation bandwitdh, its effects are manifested in multiple ways. Let us start by creating such a device and making a simple pulse sequence with it.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">raman_ch</span> <span class="o">=</span> <span class="n">Raman</span><span class="o">.</span><span class="n">Local</span><span class="p">(</span>
+    <span class="n">max_abs_detuning</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">max_amp</span><span class="o">=</span><span class="mi">20</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+    <span class="n">fixed_retarget_t</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">mod_bandwidth</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">test_device</span> <span class="o">=</span> <span class="n">VirtualDevice</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;test_device&quot;</span><span class="p">,</span>
+    <span class="n">dimensions</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">rydberg_level</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>
+    <span class="n">channel_objects</span><span class="o">=</span><span class="p">(</span><span class="n">rydberg_ch</span><span class="p">,</span> <span class="n">raman_ch</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">Register</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">),</span> <span class="n">test_device</span><span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;raman&quot;</span><span class="p">,</span> <span class="s2">&quot;raman_local&quot;</span><span class="p">,</span> <span class="n">initial_target</span><span class="o">=</span><span class="s2">&quot;q0&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;rydberg&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span><span class="n">blackman_wf</span><span class="p">,</span> <span class="o">-</span><span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s2">&quot;rydberg&quot;</span><span class="p">)</span>
+
+<span class="n">short_pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">short_pulse</span><span class="p">,</span> <span class="s2">&quot;raman&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">target</span><span class="p">(</span><span class="s2">&quot;q1&quot;</span><span class="p">,</span> <span class="s2">&quot;raman&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">short_pulse</span><span class="p">,</span> <span class="s2">&quot;raman&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;raman&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">short_pulse</span><span class="p">,</span> <span class="s2">&quot;raman&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;raman&quot;</span><span class="p">,</span> <span class="n">at_rest</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">long_pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">long_pulse</span><span class="p">,</span> <span class="s2">&quot;raman&quot;</span><span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span><span class="n">blackman_wf</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">),</span> <span class="s2">&quot;rydberg&quot;</span><span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">draw_phase_curve</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_output_mod_eom_15_0.png" src="../_images/tutorials_output_mod_eom_15_0.png" />
+</div>
+</div>
+<p>By default, <code class="docutils literal notranslate"><span class="pre">Sequence.draw()</span></code> will display both the programmed input and the modulated output. In this way, one can compare how the output will change with respect to the intended input.</p>
+<p>From looking at the output, there are multiple things to note:</p>
+<ol class="arabic simple">
+<li><p>Not only the amplitude but also the detuning and phase are modulated, all with the same modulation bandwidth.</p></li>
+<li><p>Alignment between channels takes into account the extended duration of the pulses in the other channels. Note, for instance, how the last pulse on the <code class="docutils literal notranslate"><span class="pre">rydberg</span></code> channel starts only after the output of the <code class="docutils literal notranslate"><span class="pre">raman</span></code> channel goes to zero.</p></li>
+<li><p>Similarly, changing the target in a local channel will also wait for the output to ramp down before starting the retargeting.</p></li>
+<li><p>For consecutive pulses in the same channel, there is no automatically imposed delay between them to allow one pulse to finish before the next one starts. As such, whenever the interval between two pulses is too short, they will be “merged” together, as is illustrated in the <code class="docutils literal notranslate"><span class="pre">raman</span></code> channel. To avoid this merging, we can set <code class="docutils literal notranslate"><span class="pre">at_rest=True</span></code> in the <code class="docutils literal notranslate"><span class="pre">delay()</span></code> call. As shown above, when this option is combined with an applied delay time of 0 the channel will be delayed by the exact ammount
+necessary for the previous pulse to finish.</p></li>
+</ol>
+</section>
+<section id="Usage-in-Simulation">
+<h3>Usage in Simulation<a class="headerlink" href="#Usage-in-Simulation" title="Link to this heading"></a></h3>
+<p>In order to get the most realistic results when simulating a sequence, it may be valuable to use the expected output rather than the programmed input. To do so, one can simply initialize the <code class="docutils literal notranslate"><span class="pre">QutipEmulator</span></code> class with <code class="docutils literal notranslate"><span class="pre">with_modulation=True</span></code>. Below, we simulate the sequence with and without modulation to assess the effect it has on the overlap between the resulting final states.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser_simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">QutipEmulator</span>
+
+<span class="n">sim_in</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+<span class="n">sim_out</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">with_modulation</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">input_final_state</span> <span class="o">=</span> <span class="n">sim_in</span><span class="o">.</span><span class="n">run</span><span class="p">()</span><span class="o">.</span><span class="n">get_final_state</span><span class="p">()</span>
+<span class="n">output_final_state</span> <span class="o">=</span> <span class="n">sim_out</span><span class="o">.</span><span class="n">run</span><span class="p">()</span><span class="o">.</span><span class="n">get_final_state</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Final state overlap:&quot;</span><span class="p">,</span> <span class="n">input_final_state</span><span class="o">.</span><span class="n">overlap</span><span class="p">(</span><span class="n">output_final_state</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Final state overlap: (0.9999798250464498+7.915610857080693e-06j)
+</pre></div></div>
+</div>
+</section>
+</section>
+<section id="EOM-Mode-Operation">
+<h2>EOM Mode Operation<a class="headerlink" href="#EOM-Mode-Operation" title="Link to this heading"></a></h2>
+<p>The modulation bandwidth of a channel can impose significant limitations on how a pulse sequence is programmed. Perhaps most importantly, it can force the user to program longer pulses than would otherwise be required, resulting in longer sequences and consequently noisier results.</p>
+<p>To overcome these limitations, a channel can be equipped with an EOM that allows the execution of square pulses with a higher modulation bandwidth. For now, EOM mode operation is reserved for <code class="docutils literal notranslate"><span class="pre">Rydberg</span></code> channels and works under very specific conditions:</p>
+<ol class="arabic simple">
+<li><p>EOM mode must be explicitly enabled (<code class="docutils literal notranslate"><span class="pre">Sequence.enable_eom_mode()</span></code>) and disabled (<code class="docutils literal notranslate"><span class="pre">Sequence.disable_eom_mode()</span></code>).</p></li>
+<li><p>A buffering time is automatically added before the EOM mode is enabled and after it is disabled, as it needs to be isolated from regular channel operation. During the starting buffer, the detuning goes to the value it will assume between EOM pulses (<em>i.e.</em> during delays).</p></li>
+<li><p>When enabling the EOM mode, one must choose the amplitude and detuning value that all square pulses will have. These values will also determine a set of options for the detuning during delays, out of which the best one is chosen. When this detuning value is not zero, the phase of each qubit’s state will drift during delays. If desired, this phase drift can be corrected through the <code class="docutils literal notranslate"><span class="pre">correct_phase_drift</span></code> option, which will adjust the phase of subsequent pulses accordingly.</p></li>
+<li><p>While in EOM mode, one can only add delays or pulses of variable duration (through <code class="docutils literal notranslate"><span class="pre">Sequence.add_eom_pulse()</span></code>) – changing the phase between pulses is also allowed, but the necessary buffer time for a phase jump will still be enforced.</p></li>
+</ol>
+<p>Let us showcase these features with the <code class="docutils literal notranslate"><span class="pre">AnalogDevice</span></code> device, which features an EOM on its <code class="docutils literal notranslate"><span class="pre">rydberg_global</span></code> channel.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnalogDevice</span>
+
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">Register</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">),</span> <span class="n">AnalogDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;rydberg&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s2">&quot;rydberg&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">enable_eom_mode</span><span class="p">(</span><span class="s2">&quot;rydberg&quot;</span><span class="p">,</span> <span class="n">amp_on</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">detuning_on</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add_eom_pulse</span><span class="p">(</span><span class="s2">&quot;rydberg&quot;</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="s2">&quot;rydberg&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add_eom_pulse</span><span class="p">(</span><span class="s2">&quot;rydberg&quot;</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">correct_phase_drift</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">disable_eom_mode</span><span class="p">(</span><span class="s2">&quot;rydberg&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s2">&quot;rydberg&quot;</span><span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_output_mod_eom_23_0.png" src="../_images/tutorials_output_mod_eom_23_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Channel: rydberg
+t: 0 | Initial targets: q0, q1, q2, q3 | Phase Reference: 0.0
+t: 0-&gt;100 | Pulse(Amp=1 rad/µs, Detuning=0 rad/µs, Phase=0) | Targets: q0, q1, q2, q3
+t: 100-&gt;220 | Delay
+t: 220-&gt;460 | Detuned Delay | Detuning: -0.5 rad/µs
+t: 460-&gt;560 | Pulse(Amp=1 rad/µs, Detuning=0 rad/µs, Phase=0) | Targets: q0, q1, q2, q3
+t: 560-&gt;860 | Detuned Delay | Detuning: -0.5 rad/µs
+t: 860-&gt;920 | Pulse(Amp=1 rad/µs, Detuning=0 rad/µs, Phase=6.13) | Targets: q0, q1, q2, q3
+t: 920-&gt;1160 | Delay
+t: 1160-&gt;1260 | Pulse(Amp=1 rad/µs, Detuning=0 rad/µs, Phase=6.13) | Targets: q0, q1, q2, q3
+
+
+</pre></div></div>
+</div>
+<p>As expected, inside the isolated EOM mode block in the middle we see that the pulses are much sharper, but we can only do square pulses with a fixed amplitude and there is some non-zero detuning in between them.</p>
+<p>We also observe how the phase of the second EOM pulse changes to correct for the phase drift during the detuned delay (because we set <code class="docutils literal notranslate"><span class="pre">correct_phase_drift=True</span></code>).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="reg_layouts.html" class="btn btn-neutral float-left" title="Register Layouts &amp; Mappable Registers" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="virtual_devices.html" class="btn btn-neutral float-right" title="Devices and Virtual Devices" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,439 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hardware specifications &mdash; Pulser 1.4.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=9172181d"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <script src="_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Register and Rydberg-Atom Interactions" href="register.html" />
+    <link rel="prev" title="Conventions" href="conventions.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.4.0" /><meta name="readthedocs-resolver-filename" content="/hardware.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Pulser
+              <img src="_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Conventions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Hardware specifications</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#The-Device">The <code class="docutils literal notranslate"><span class="pre">Device</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Choosing-a-Device">Choosing a <code class="docutils literal notranslate"><span class="pre">Device</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Reading-through-the-Device's-specifications">Reading through the <code class="docutils literal notranslate"><span class="pre">Device</span></code>’s specifications</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Tips-on-Device-selection">Tips on <code class="docutils literal notranslate"><span class="pre">Device</span></code> selection</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#The-Channels">The <code class="docutils literal notranslate"><span class="pre">Channels</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Reading-through-the-Channel's-specifications">Reading through the <code class="docutils literal notranslate"><span class="pre">Channel</span></code>’s specifications</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Tips-on-Channel-selection">Tips on <code class="docutils literal notranslate"><span class="pre">Channel</span></code> selection</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#The-AnalogDevice">The <code class="docutils literal notranslate"><span class="pre">AnalogDevice</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/backends.html">Backend Execution</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Emulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Hardware specifications</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/hardware.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Hardware-specifications">
+<h1>Hardware specifications<a class="headerlink" href="#Hardware-specifications" title="Link to this heading"></a></h1>
+<p><em>What you will learn:</em></p>
+<ul class="simple">
+<li><p>what is a Device and why is a Device needed;</p></li>
+<li><p>what are the available devices and where to find them;</p></li>
+<li><p>what do a Device and a Channel enforce;</p></li>
+<li><p>tips on how to pick a <code class="docutils literal notranslate"><span class="pre">Device</span></code>;</p></li>
+</ul>
+<section id="The-Device">
+<h2>The <code class="docutils literal notranslate"><span class="pre">Device</span></code><a class="headerlink" href="#The-Device" title="Link to this heading"></a></h2>
+<p>As presented in the <a class="reference internal" href="programming.html#writing-a-pulser-program"><span class="std std-ref">introduction to programming a neutral-atom QPU</span></a>, the first step to writing a Pulser program is <a class="reference internal" href="programming.html#pick-a-device"><span class="std std-ref">the selection of a Device</span></a>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">Device</span></code> is an object that stores <strong>all</strong> the physical constraints a quantum program written with Pulser should verify. The <code class="docutils literal notranslate"><span class="pre">Device</span></code> enforces that each operation added to the quantum program (i.e. the <code class="docutils literal notranslate"><span class="pre">pulser.Sequence</span></code>) respects its constraints.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Important note</strong>:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">Device</span></code> represents the physics of a neutral-atom QPU but is not the QPU itself. A QPU must be accessed via a <code class="docutils literal notranslate"><span class="pre">Backend</span></code>, which is presented <a class="reference internal" href="tutorials/backends.html"><span class="doc">in this section</span></a>.</p>
+</div>
+<section id="Choosing-a-Device">
+<h3>Choosing a <code class="docutils literal notranslate"><span class="pre">Device</span></code><a class="headerlink" href="#Choosing-a-Device" title="Link to this heading"></a></h3>
+<center><p><img alt="Decision Diagram to select a Device for the computation" class="no-scaled-link" src="_images/decision_diagram_device.png" style="width: 600px;" /></p>
+</center><p>To choose a <code class="docutils literal notranslate"><span class="pre">Device</span></code> for your <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, the first question you should ask yourself is:</p>
+<center><p>“How close do I want the physical constraints I program with to be to the QPU’s?”</p>
+</center><p><strong>If you want to program with the physical constraints of a QPU</strong>: Each QPU has an associated <code class="docutils literal notranslate"><span class="pre">Device</span></code>, which you can <a class="reference internal" href="tutorials/backends.html#1.2.-Preparation-for-execution-on-QPUBackend"><span class="std std-ref">get from the cloud provider you use to access this QPU</span></a>.</p>
+<p>There are several reasons for which you might want to feel less constrained by the features currently supported by real QPUs. For instance, you might want to design an algorithm for a QPU having better performances (supporting more qubits, longer sequences, …) or hardware components that have not been installed.</p>
+<p>Pulser enables you to define your own devices, but a <code class="docutils literal notranslate"><span class="pre">Device</span></code> object takes as input lots of parameters that have all to be defined. Therefore, for user convenience, <code class="docutils literal notranslate"><span class="pre">Pulser</span></code> provides:</p>
+<ul class="simple">
+<li><p><strong>Examples of typical physical devices</strong> in <code class="docutils literal notranslate"><span class="pre">pulser.devices</span></code>. Notably, <code class="docutils literal notranslate"><span class="pre">pulser.AnalogDevice</span></code> is an example of a QPU implementing an <a class="reference internal" href="programming.html#ising-hamiltonian"><span class="std std-ref">Ising Hamiltonian</span></a>.</p></li>
+<li><p><strong>The possibility to define a device without some physical constraints</strong> using the <code class="docutils literal notranslate"><span class="pre">VirtualDevice</span></code> class. An example of such a virtual device is the <code class="docutils literal notranslate"><span class="pre">MockDevice</span></code> provided in the <code class="docutils literal notranslate"><span class="pre">pulser.devices</span></code>, which gives full liberty to write a quantum program. <code class="docutils literal notranslate"><span class="pre">VirtualDevice</span></code> is detailed in <a class="reference internal" href="tutorials/virtual_devices.html"><span class="doc">an advanced tutorial</span></a>.</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Note</strong>:</p>
+<p>The selection of a device in a Pulser program does not enforce any choice on the <a class="reference internal" href="tutorials/backends.html"><span class="doc">backend</span></a>. No matter the device you used to program your <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, you can always submit it to any QPU: if the values of the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> match the constraints of the <code class="docutils literal notranslate"><span class="pre">QPU</span></code>, it will be executed.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Tip</strong>:</p>
+<p>It is possible to change the device with which a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> was built, by using <code class="docutils literal notranslate"><span class="pre">Sequence.switch_device</span></code>. This is especially useful to check if the values of the <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> match the constraints of the <code class="docutils literal notranslate"><span class="pre">QPU</span></code> prior to submitting to the <code class="docutils literal notranslate"><span class="pre">QPU</span></code>. For instance, you could have built your <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> with an example of a <code class="docutils literal notranslate"><span class="pre">Device</span></code> like <code class="docutils literal notranslate"><span class="pre">AnalogDevice</span></code>, and now want to run it on a QPU, or the specifications of your QPU might have changed between your design and submission.</p>
+</div>
+</section>
+<section id="Reading-through-the-Device's-specifications">
+<h3>Reading through the <code class="docutils literal notranslate"><span class="pre">Device</span></code>’s specifications<a class="headerlink" href="#Reading-through-the-Device's-specifications" title="Link to this heading"></a></h3>
+<p>The second question you should ask yourself to choose your <code class="docutils literal notranslate"><span class="pre">Device</span></code> is:</p>
+<center><p>“Do its constraints allow me to program my <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> ?”</p>
+</center><p>The device specifications are here to guide your choice. Here are all the parameters in a <code class="docutils literal notranslate"><span class="pre">Device</span></code>:</p>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser.devices._device_datacls.</span></span><span class="sig-name descname"><span class="pre">Device</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dimensions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rydberg_level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_atom_distance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_atom_num</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_radial_distance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interaction_coeff_xy=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supports_slm_mask=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_layout_filling=0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimal_layout_filling=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_layout_traps=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_layout_traps=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_sequence_duration=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_runs=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requires_layout=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_ids=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_objects=&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dmm_objects=&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_noise_model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">short_description=''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pre_calibrated_layouts=&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">accepts_new_layouts=True</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Specifications of a neutral-atom device.</p>
+<p>Each <code class="docutils literal notranslate"><span class="pre">Device</span></code> instance holds the characteristics of a physical device,
+which when associated with a <code class="xref py py-class docutils literal notranslate"><span class="pre">pulser.Sequence</span></code> condition its
+development.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A Device instance is immutable and must have all of its parameters
+defined. For more unconstrained usage in emulations, it can be
+converted to a VirtualDevice through the <cite>Device.to_virtual()</cite> method.`</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The name of the device.</p></li>
+<li><p><strong>dimensions</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">2</span></code>, <code class="docutils literal notranslate"><span class="pre">3</span></code>]</span>) – Whether it supports 2D or 3D arrays.</p></li>
+<li><p><strong>max_atom_num</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Maximum number of atoms supported in an array.</p></li>
+<li><p><strong>max_radial_distance</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The furthest away an atom can be from the center
+of the array (in μm).</p></li>
+<li><p><strong>min_atom_distance</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – The closest together two atoms can be (in μm).</p></li>
+<li><p><strong>requires_layout</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Whether the register used in the sequence must be
+created from a register layout. Only enforced in QPU execution.</p></li>
+<li><p><strong>accepts_new_layouts</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">True</span></code>) – Whether registers built from register layouts
+that are not already calibrated are accepted. Only enforced in
+QPU execution.</p></li>
+<li><p><strong>max_layout_filling</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0.5</span></code>) – The largest fraction of a layout that can be filled
+with atoms.</p></li>
+<li><p><strong>optimal_layout_filling</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An optional value for the fraction of a layout
+that should be filled with atoms.</p></li>
+<li><p><strong>min_layout_traps</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">1</span></code>) – The minimum number of traps a layout can have.</p></li>
+<li><p><strong>max_layout_traps</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An optional value for the maximum number of traps a
+layout can have.</p></li>
+<li><p><strong>pre_calibrated_layouts</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<a class="reference internal" href="apidoc/_autosummary/pulser.register.RegisterLayout.html#pulser.register.RegisterLayout" title="pulser.register.register_layout.RegisterLayout"><code class="xref py py-class docutils literal notranslate"><span class="pre">RegisterLayout</span></code></a>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">&lt;factory&gt;</span></code>) – RegisterLayout instances that are already
+available on the Device.</p></li>
+<li><p><strong>rydberg_level</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The value of the principal quantum number <span class="math notranslate nohighlight">\(n\)</span>
+when the Rydberg level used is of the form
+<span class="math notranslate nohighlight">\(|nS_{1/2}, m_j = +1/2\rangle\)</span>.</p></li>
+<li><p><strong>interaction_coeff_xy</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – <span class="math notranslate nohighlight">\(C_3/\hbar\)</span>
+(in <span class="math notranslate nohighlight">\(rad \cdot \mu s^{-1} \cdot \mu m^3\)</span>),
+which sets the van der Waals interaction strength between atoms in
+different Rydberg states. Needed only if there is a Microwave
+channel in the device. If unsure, 3700.0 is a good default value.</p></li>
+<li><p><strong>channel_objects</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Channel</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">&lt;factory&gt;</span></code>) – The Channel subclass instances specifying each
+channel in the device.</p></li>
+<li><p><strong>channel_ids</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Custom IDs for each channel object. When defined,
+an ID must be given for each channel. If not defined, the IDs are
+generated internally based on the channels’ names and addressing.</p></li>
+<li><p><strong>dmm_objects</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<a class="reference internal" href="apidoc/_autosummary/pulser.channels.DMM.html#pulser.channels.DMM" title="pulser.channels.dmm.DMM"><code class="xref py py-class docutils literal notranslate"><span class="pre">DMM</span></code></a>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>]</span>, default: <code class="docutils literal notranslate"><span class="pre">&lt;factory&gt;</span></code>) – The DMM subclass instances specifying each channel in the
+device. They are referenced by their order in the list, with the ID
+“dmm_[index in dmm_objects]”.</p></li>
+<li><p><strong>supports_slm_mask</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">False</span></code>) – Whether the device supports the SLM mask feature.</p></li>
+<li><p><strong>max_sequence_duration</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The maximum allowed duration for a sequence
+(in ns).</p></li>
+<li><p><strong>max_runs</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The maximum number of runs allowed on the device. Only used
+for backend execution.</p></li>
+<li><p><strong>default_noise_model</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="apidoc/_autosummary/pulser.noise_model.NoiseModel.html#pulser.noise_model.NoiseModel" title="pulser.noise_model.NoiseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">NoiseModel</span></code></a> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An optional noise model characterizing the default
+noise of the device. Can be used by emulator backends that support
+noise.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Note</strong>:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">Device</span></code> object has many useful properties and methods, that you can check in the <a class="reference internal" href="apidoc/_autosummary/pulser.devices.Device.html#pulser.devices.Device"><span class="std std-ref">API documentation</span></a>. For instance, it is possible to display some of the specifications of the <code class="docutils literal notranslate"><span class="pre">Device</span></code> with <code class="docutils literal notranslate"><span class="pre">Device.specs</span></code>. See an example with <code class="docutils literal notranslate"><span class="pre">AnalogDevice.specs</span></code> <a class="reference internal" href="#The-AnalogDevice"><span class="std std-ref">in the section below</span></a>.</p>
+</div>
+</section>
+<section id="Tips-on-Device-selection">
+<h3>Tips on <code class="docutils literal notranslate"><span class="pre">Device</span></code> selection<a class="headerlink" href="#Tips-on-Device-selection" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">Device</span></code> is going to constrain the next steps of your <a class="reference internal" href="programming.html#writing-a-pulser-program"><span class="std std-ref">quantum program</span></a>:</p>
+<ol class="arabic simple">
+<li><p>Some parameters are going to constrain <a class="reference internal" href="programming.html#create-the-register"><span class="std std-ref">the creation of your Register</span></a>, and therefore, the <a class="reference internal" href="programming.html#interaction-hamiltonian"><span class="std std-ref">interaction strength in the interaction Hamiltonian</span></a>. Some of these parameters are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">dimensions</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_atom_num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_radial_distance</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">min_atom_distance</span></code></p></li>
+</ul>
+</li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">rydberg_level</span></code> determines the <a class="reference internal" href="programming.html#ising-hamiltonian"><span class="std std-ref">Ising interaction coefficient</span></a> <span class="math notranslate nohighlight">\(C_6\)</span> of the Ising Hamiltonian. The quantity <span class="math notranslate nohighlight">\(\frac{C_6}{\hbar}\)</span> is accessible via the <code class="docutils literal notranslate"><span class="pre">interaction_coeff</span></code> attribute of the <code class="docutils literal notranslate"><span class="pre">Device</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Channels</span></code> in the <code class="docutils literal notranslate"><span class="pre">channel_objects</span></code> parameter are going to determine what <a class="reference internal" href="programming.html#pick-the-channels"><span class="std std-ref">Channels are available for the computation</span></a>. Knowing what states you want to use in your computation, you can first check that they are among the <code class="docutils literal notranslate"><span class="pre">Device.supported_states</span></code>, then find the bases and their associated channel that enable to use these states using <a class="reference internal" href="conventions.html#bases"><span class="std std-ref">the conventions page</span></a>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">max_sequence_duration</span></code> constrains the duration of the <a class="reference internal" href="programming.html#add-the-pulses"><span class="std std-ref">Pulses you can add</span></a>, and therefore the Hamiltonian describing the system can at most be defined between 0 and this value.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">max_runs</span></code> limits the number of runs a quantum program can be executed on the QPU. See <a class="reference internal" href="tutorials/backends.html"><span class="doc">the section on Backends</span></a> to read more about this.</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Note</strong>:</p>
+<p>If the Device associated with a QPU has <code class="docutils literal notranslate"><span class="pre">requires_layout=True</span></code>, then you have to define the <code class="docutils literal notranslate"><span class="pre">Register</span></code> from a layout. This adds more constraints to the creation of your <code class="docutils literal notranslate"><span class="pre">Register</span></code>, and is <a class="reference internal" href="tutorials/reg_layouts.html"><span class="doc">presented in an advanced tutorial</span></a>.</p>
+</div>
+</section>
+</section>
+<section id="The-Channels">
+<h2>The <code class="docutils literal notranslate"><span class="pre">Channels</span></code><a class="headerlink" href="#The-Channels" title="Link to this heading"></a></h2>
+<p>The third step to writing a Pulser program is <a class="reference internal" href="programming.html#pick-a-device"><span class="std std-ref">the selection of Channels among the Device</span></a>.</p>
+<p>As a reminder, the selection of a <code class="docutils literal notranslate"><span class="pre">Channel</span></code> defines the <a class="reference internal" href="programming.html#interaction-hamiltonian"><span class="std std-ref">interaction Hamiltonian</span></a> and <a class="reference internal" href="programming.html#driving-hamiltonian"><span class="std std-ref">the driving Hamiltonian</span></a> <span class="math notranslate nohighlight">\(H^D\)</span>.</p>
+<div class="math notranslate nohighlight">
+\[H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-i\phi} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{i\phi} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|\]</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">Channels</span></code> available for selection are stored in the <code class="docutils literal notranslate"><span class="pre">channels</span></code> property of the <code class="docutils literal notranslate"><span class="pre">Device</span></code>, a dictionnary associating a <code class="docutils literal notranslate"><span class="pre">channel_id</span></code> to each <code class="docutils literal notranslate"><span class="pre">Channel</span></code> in <code class="docutils literal notranslate"><span class="pre">channel_objects</span></code>. For instance, <code class="docutils literal notranslate"><span class="pre">AnalogDevice</span></code> only contains one channel, the <code class="docutils literal notranslate"><span class="pre">rydberg_global</span></code> channel, which can be accessed with <code class="docutils literal notranslate"><span class="pre">AnalogDevice.channels[&quot;rydberg_global&quot;]</span></code>.</p>
+<section id="Reading-through-the-Channel's-specifications">
+<h3>Reading through the <code class="docutils literal notranslate"><span class="pre">Channel</span></code>’s specifications<a class="headerlink" href="#Reading-through-the-Channel's-specifications" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">Channel</span></code> is defined by:</p>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pulser.channels.base_channel.</span></span><span class="sig-name descname"><span class="pre">Channel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">addressing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_abs_detuning</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_amp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_retarget_interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_retarget_t</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_targets</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clock_period</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100000000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_avg_amp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mod_bandwidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_phase_jump_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">propagation_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Base class of a hardware channel.</p>
+<p>Not to be initialized itself, but rather through a child class and the
+<code class="docutils literal notranslate"><span class="pre">Local</span></code> or <code class="docutils literal notranslate"><span class="pre">Global</span></code> classmethods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>addressing</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">'Global'</span></code>, <code class="docutils literal notranslate"><span class="pre">'Local'</span></code>]</span>) – “Local” or “Global”.</p></li>
+<li><p><strong>max_abs_detuning</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Maximum possible detuning (in rad/µs), in absolute
+value.</p></li>
+<li><p><strong>max_amp</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Maximum pulse amplitude (in rad/µs).</p></li>
+<li><p><strong>min_retarget_interval</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Minimum time required between the ends of two
+target instructions (in ns).</p></li>
+<li><p><strong>fixed_retarget_t</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – Time taken to change the target (in ns).</p></li>
+<li><p><strong>max_targets</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – How many qubits can be addressed at once by the same beam.</p></li>
+<li><p><strong>clock_period</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">1</span></code>) – The duration of a clock cycle (in ns). The duration of a
+pulse or delay instruction is enforced to be a multiple of the
+clock cycle.</p></li>
+<li><p><strong>min_duration</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">1</span></code>) – The shortest duration an instruction can take.</p></li>
+<li><p><strong>max_duration</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">100000000</span></code>) – The longest duration an instruction can take.</p></li>
+<li><p><strong>min_avg_amp</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">0</span></code>) – The minimum average amplitude of a pulse (when not zero).</p></li>
+<li><p><strong>mod_bandwidth</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The modulation bandwidth at -3dB (50% reduction), in
+MHz.</p></li>
+<li><p><strong>custom_phase_jump_time</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An optional custom value for the phase jump
+time that overrides the default value estimated from the modulation
+bandwidth. It is not enforced in EOM mode.</p></li>
+<li><p><strong>propagation_dir</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>, default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The propagation direction of the beam associated with
+the channel, given as a vector in 3D space.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>To create a channel targeting the ‘ground-rydberg’ transition globally,
+call <code class="docutils literal notranslate"><span class="pre">Rydberg.Global(...)</span></code>.</p>
+</dd></dl>
+
+</section>
+<section id="Tips-on-Channel-selection">
+<h3>Tips on <code class="docutils literal notranslate"><span class="pre">Channel</span></code> selection<a class="headerlink" href="#Tips-on-Channel-selection" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">Channel</span></code> is going to determine the computational basis used in the driving Hamiltonian, and what is the Hamiltonian each atom sees:</p>
+<ul class="simple">
+<li><p>The type of the <code class="docutils literal notranslate"><span class="pre">Channel</span></code> defines the <a class="reference internal" href="conventions.html#bases"><span class="std std-ref">states</span></a> that can be addressed by the <a class="reference internal" href="programming.html#driving-hamiltonian"><span class="std std-ref">driving Hamiltonian</span></a> if this channel is picked. All the child classes of <code class="docutils literal notranslate"><span class="pre">Channel</span></code> can be found <a class="reference internal" href="apidoc/_autosummary/pulser.channels.html"><span class="doc">here</span></a>.</p></li>
+<li><p>The addressing of the <code class="docutils literal notranslate"><span class="pre">Channel</span></code> determines what atoms experience the driving Hamiltonian. In general, physical <code class="docutils literal notranslate"><span class="pre">Channels</span></code> have a <code class="docutils literal notranslate"><span class="pre">Global</span></code> addressability, which means that a Pulse added to this channel will implement the same driving Hamiltonian on all the atoms.</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">Channel</span></code> also set constraints on the next stage of your quantum program, the addition of Pulses:</p>
+<ul class="simple">
+<li><p>the <strong>duration</strong> of the pulse is constrained by <code class="docutils literal notranslate"><span class="pre">min_duration</span></code> and <code class="docutils literal notranslate"><span class="pre">max_duration</span></code>, as well as <code class="docutils literal notranslate"><span class="pre">clock_period</span></code> (it has to be a multiple of the clock period).</p></li>
+<li><p>the <strong>amplitude</strong> is limited by the maximum amplitude <code class="docutils literal notranslate"><span class="pre">max_amp</span></code> and <code class="docutils literal notranslate"><span class="pre">min_avg_amp</span></code>.</p></li>
+<li><p>the <strong>detuning</strong> is limited by the maximum absolute detuning <code class="docutils literal notranslate"><span class="pre">max_abs_det</span></code>. It has to be between -<code class="docutils literal notranslate"><span class="pre">max_abs_det</span></code> and <code class="docutils literal notranslate"><span class="pre">max_abs_det</span></code>.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle"><strong>Note</strong>:</p>
+<p>The modulation bandwidth <code class="docutils literal notranslate"><span class="pre">mod_bandwidth</span></code> impacts the duration, the amplitude, the detuning and the phase of the Pulses. It is a more advanced feature explained <a class="reference internal" href="tutorials/output_mod_eom.html"><span class="doc">in this tutorial</span></a>.</p>
+</div>
+</section>
+</section>
+<section id="The-AnalogDevice">
+<h2>The <code class="docutils literal notranslate"><span class="pre">AnalogDevice</span></code><a class="headerlink" href="#The-AnalogDevice" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">pulser</span><span class="o">.</span><span class="n">AnalogDevice</span><span class="o">.</span><span class="n">specs</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+A realistic device for analog sequence execution.
+
+Register parameters:
+ - Dimensions: 2D
+ - Maximum number of atoms: 80
+ - Maximum distance from origin: 38 µm
+ - Minimum distance between neighbouring atoms: 5 μm
+
+Layout parameters:
+ - Requires layout: Yes
+ - Accepts new layout: Yes
+ - Minimal number of traps: 1
+ - Maximum layout filling fraction: 0.5
+
+Device parameters:
+ - Rydberg level: 60
+ - Ising interaction coefficient: 865723.02
+ - Channels can be reused: No
+ - Supported bases: ground-rydberg
+ - Supported states: r, g
+ - SLM Mask: No
+ - Maximum sequence duration: 6000 ns
+ - Maximum number of runs: 2000
+
+Channels:
+ - &#39;rydberg_global&#39;: Rydberg(addressing=&#39;Global&#39;, max_abs_detuning=125.66370614359172, max_amp=12.566370614359172, min_retarget_interval=None, fixed_retarget_t=None, max_targets=None, clock_period=4, min_duration=16, max_duration=100000000, min_avg_amp=0, mod_bandwidth=8, custom_phase_jump_time=None, eom_config=RydbergEOM(limiting_beam=&lt;RydbergBeam.RED: 2&gt;, max_limiting_amp=188.49555921538757, intermediate_detuning=2827.4333882308138, controlled_beams=(&lt;RydbergBeam.BLUE: 1&gt;,), mod_bandwidth=40, custom_buffer_time=240, multiple_beam_control=True, blue_shift_coeff=1.0, red_shift_coeff=1.0), propagation_dir=None)
+</pre></div></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">pulser.AnalogDevice</span></code> only supports the <span class="math notranslate nohighlight">\(\left|r\right&gt;\)</span> and <span class="math notranslate nohighlight">\(\left|g\right&gt;\)</span> states, because it only supports one channel of type “Rydberg” (that can be declared using its name “rydberg_global”). It implements the <a class="reference internal" href="programming.html#ising-hamiltonian"><span class="std std-ref">Ising Hamiltonian</span></a>:</p>
+<div class="math notranslate nohighlight">
+\[\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle\langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - \delta(t) |r\rangle\langle r|_k(t) + \sum_{j&lt;k}\frac{C_6}{\hbar R_{kj}^6} \hat{n}_k \hat{n}_j \right)\]</div>
+<p>There:</p>
+<ul class="simple">
+<li><p>The number of atoms <span class="math notranslate nohighlight">\(N\)</span> is constrained by the <em>Maximum number of atoms</em>.</p></li>
+<li><p>The distance between the atoms <span class="math notranslate nohighlight">\(R_{ij}\)</span> is at least the <em>Minimum distance between neighbouring atoms</em> and at most twice the <em>Maximum distance from origin</em>. The distances are defined by placing the atoms in a 2D-plane.</p></li>
+<li><p><span class="math notranslate nohighlight">\(C_6\)</span> is the <em>Ising interaction coefficient</em>. It is defined from the <em>Rydberg level</em> (i.e. changing the <em>Rydberg level</em> would change the <em>Ising interaction coefficient</em>).</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">&quot;rydberg_global&quot;</span></code> being a <code class="docutils literal notranslate"><span class="pre">&quot;Global&quot;</span></code> channel, each pulse added to this channel is applied on all the atoms (the quantities <span class="math notranslate nohighlight">\(\Omega\)</span>, <span class="math notranslate nohighlight">\(\delta\)</span>, <span class="math notranslate nohighlight">\(\phi\)</span> are the same for each atom).</p></li>
+<li><p>The Hamiltonian (and the pulses with their time-dependent quantities <span class="math notranslate nohighlight">\(\Omega\)</span>, <span class="math notranslate nohighlight">\(\delta\)</span>, <span class="math notranslate nohighlight">\(\phi\)</span>) can be defined between 0 and the minimum of the <em>Maximum sequence duration</em> and the <code class="docutils literal notranslate"><span class="pre">maximum_duration</span></code> of the channel.</p></li>
+<li><p>The value of <span class="math notranslate nohighlight">\(\Omega\)</span> can go between 0 and <code class="docutils literal notranslate"><span class="pre">max_amp</span></code> and the value of <span class="math notranslate nohighlight">\(\delta\)</span> can go between -<code class="docutils literal notranslate"><span class="pre">max_abs_detuning</span></code> and <code class="docutils literal notranslate"><span class="pre">max_abs_detuning</span></code>.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="conventions.html" class="btn btn-neutral float-left" title="Conventions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="register.html" class="btn btn-neutral float-right" title="Register and Rydberg-Atom Interactions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

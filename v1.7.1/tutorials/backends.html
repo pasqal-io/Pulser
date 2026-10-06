@@ -1,0 +1,742 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Execution on an Emulator &mdash; Pulser 1.7.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a77542ef"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="QPU Execution" href="qpu.html" />
+    <link rel="prev" title="Sequence Creation and Validation" href="../sequence.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.7.1" /><meta name="readthedocs-resolver-filename" content="/tutorials/backends.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Execution on an Emulator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#1.-Creating-the-Pulse-Sequence">1. Creating the Pulse Sequence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#2.-Running-on-a-local-backend">2. Running on a local backend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#3.-Retrieving-the-Results">3. Retrieving the Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#4.-Configuring-the-Emulation">4. Configuring the Emulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#5.-Running-Remotely">5. Running Remotely</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#6.-Alternative-user-interfaces-for-using-remote-backends">6. Alternative user interfaces for using remote backends</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="qpu.html">QPU Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../results.html">Results and Observables</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Execution on an Emulator</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/backends.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Execution-on-an-Emulator">
+<h1>Execution on an Emulator<a class="headerlink" href="#Execution-on-an-Emulator" title="Link to this heading"></a></h1>
+<p><em>What you will learn:</em></p>
+<ul class="simple">
+<li><p>what a <code class="docutils literal notranslate"><span class="pre">Backend</span></code> is for;</p></li>
+<li><p>what types of emulator <code class="docutils literal notranslate"><span class="pre">Backend</span></code> exist;</p></li>
+<li><p>how to choose the best <code class="docutils literal notranslate"><span class="pre">Backend</span></code> for your needs;</p></li>
+<li><p>how to execute a <code class="docutils literal notranslate"><span class="pre">Sequence</span></code> on an emulator <code class="docutils literal notranslate"><span class="pre">Backend</span></code> and retrieve the results.</p></li>
+</ul>
+<section id="Introduction">
+<h2>Introduction<a class="headerlink" href="#Introduction" title="Link to this heading"></a></h2>
+<p>When the time comes to execute a Pulser sequence, there are many options: one can choose to execute it on a QPU or on an emulator, which might happen locally or remotely. All these options are accessible through an unified interface we call a <code class="docutils literal notranslate"><span class="pre">Backend</span></code>.</p>
+<p><strong>This tutorial is a step-by-step guide on how to use emulator backends for Pulser sequence execution.</strong></p>
+<p>Although the final goal of a quantum algorithm is to run on a QPU, we always recommend starting on an emulator. Emulators are more readily available, and at lower cost, in addition to providing much more information than a QPU, which can only measure bitstrings. When running on an emulator we recommend first doing some exploratory runs locally to ensure you’re doing the right thing, before submitting your heavier jobs to be run on the cluster through the cloud.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Info</p>
+<p>Go to <a class="reference internal" href="qpu.html"><span class="doc">this tutorial</span></a> for more information on how to execute a Pulser sequence on a <strong>QPU backend</strong>.</p>
+</div>
+</section>
+<section id="1.-Creating-the-Pulse-Sequence">
+<h2>1. Creating the Pulse Sequence<a class="headerlink" href="#1.-Creating-the-Pulse-Sequence" title="Link to this heading"></a></h2>
+<p>The first step is to create the sequence that we want to execute. Let’s prepare an AFM state (as in the <a class="reference internal" href="creating.html"><span class="doc">introduction tutorial</span></a>), but this time on a hexagon of 7 atoms and using another set of pulses. Since it will be executed on an emulator, we <strong>don’t have any constraint</strong> on the <code class="docutils literal notranslate"><span class="pre">Device</span></code> or the <code class="docutils literal notranslate"><span class="pre">Register</span></code> used, so the <code class="docutils literal notranslate"><span class="pre">Device</span></code> could be a <code class="docutils literal notranslate"><span class="pre">VirtualDevice</span></code> like a <code class="docutils literal notranslate"><span class="pre">MockDevice</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pulser</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pulser_simulation</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Picking a Device</span>
+<span class="n">device</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">AnalogDevice</span>
+
+<span class="c1"># 2. Creating the Register</span>
+<span class="n">R_interatomic</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1"># um</span>
+<span class="n">register</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Register</span><span class="o">.</span><span class="n">hexagon</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">R_interatomic</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+
+<span class="n">seq</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">register</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+
+<span class="c1"># 3. Picking the channels</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;rydberg_global&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+
+<span class="c1"># 4. Adding the pulses</span>
+
+<span class="c1"># Parameters in rad/µs</span>
+<span class="n">U</span> <span class="o">=</span> <span class="n">device</span><span class="o">.</span><span class="n">interaction_coeff</span> <span class="o">/</span> <span class="n">R_interatomic</span><span class="o">**</span><span class="mi">6</span>
+
+<span class="c1"># Time parameters</span>
+<span class="n">total_duration</span> <span class="o">=</span> <span class="mi">4000</span>  <span class="c1"># in ns</span>
+<span class="n">interp_pts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>  <span class="c1"># between 0 and 1</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">pulser</span><span class="o">.</span><span class="n">Pulse</span><span class="p">(</span>
+        <span class="n">pulser</span><span class="o">.</span><span class="n">InterpolatedWaveform</span><span class="p">(</span>
+            <span class="n">total_duration</span><span class="p">,</span>
+            <span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1e-9</span><span class="p">,</span> <span class="mf">0.22</span><span class="p">,</span> <span class="mf">0.2181</span><span class="p">,</span> <span class="mf">1e-9</span><span class="p">]),</span>
+            <span class="n">times</span><span class="o">=</span><span class="n">interp_pts</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">pulser</span><span class="o">.</span><span class="n">InterpolatedWaveform</span><span class="p">(</span>
+            <span class="n">total_duration</span><span class="p">,</span>
+            <span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.0556</span><span class="p">,</span> <span class="mf">0.332</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span>
+            <span class="n">times</span><span class="o">=</span><span class="n">interp_pts</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="mi">0</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;rydberg_global&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">draw_register</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_backends_2_0.png" src="../_images/tutorials_backends_2_0.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_backends_2_1.png" src="../_images/tutorials_backends_2_1.png" />
+</div>
+</div>
+</section>
+<section id="2.-Running-on-a-local-backend">
+<h2>2. Running on a local backend<a class="headerlink" href="#2.-Running-on-a-local-backend" title="Link to this heading"></a></h2>
+<p>It is now time to select and initialize the backend. We will start running things locally using the <code class="docutils literal notranslate"><span class="pre">QutipBackendV2</span></code> (from <code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code>). It uses <code class="docutils literal notranslate"><span class="pre">qutip</span></code> to emulate the sequence execution locally.</p>
+<p>Keep in mind that other emulators are available, and the full list is available <a class="reference internal" href="../apidoc/_autosummary/pulser.backends.html#module-pulser.backends"><span class="std std-ref">here</span></a>.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Tip</p>
+<p>You can acess all backends that are available on your system via the <code class="docutils literal notranslate"><span class="pre">pulser.backends</span></code> module so you don’t need to explicitly import them.</p>
+</div>
+<p>Upon creation, all backends require the sequence they will execute.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">qutip_bknd</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">QutipBackendV2</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+<span class="n">qutip_results</span> <span class="o">=</span> <span class="n">qutip_bknd</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>As defined in their default configurations, all backends return the bitstrings at the final time, and <code class="docutils literal notranslate"><span class="pre">QutipBackendV2</span></code> also returns the final state. You can check the default configuration of any emulator backend by printing its <code class="docutils literal notranslate"><span class="pre">default_config</span></code>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">pulser</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">QutipBackendV2</span><span class="o">.</span><span class="n">default_config</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+QutipConfig(
+    callbacks=(),
+    observables=(bitstrings:f01e781d-be48-4536-94f9-4d1d3e5ed7dd, state:c801c252-df05-4af2-8393-cebed0668f9d),
+    default_evaluation_times=array([1.]),
+    initial_state=None,
+    with_modulation=False,
+    interaction_matrix=None,
+    prefer_device_noise_model=False,
+    noise_model=NoiseModel(noise_types=()),
+    n_trajectories=1,
+    sampling_rate=1.0,
+    solver=&lt;Solver.DEFAULT: &#39;default&#39;&gt;,
+    print_progress=False,
+    progress_bar=False,
+    default_num_shots=1000,
+)
+</pre></div></div>
+</div>
+<ul class="simple">
+<li><p>For the detailed explanation of each parameter, please consult the <a class="reference internal" href="../apidoc/_autosummary/pulser_simulation.QutipConfig.html"><span class="doc">API reference</span></a>.</p></li>
+<li><p>Check out <a class="reference internal" href="#4.-Configuring-the-Emulation"><span class="std std-ref">this section</span></a> for more details and best practices on how to configure an emulation.</p></li>
+</ul>
+</section>
+<section id="3.-Retrieving-the-Results">
+<h2>3. Retrieving the Results<a class="headerlink" href="#3.-Retrieving-the-Results" title="Link to this heading"></a></h2>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Info</p>
+<p>For more details on how to extract values from <code class="docutils literal notranslate"><span class="pre">Results</span></code>, consult <a class="reference internal" href="../results.html#Accessing-Results"><span class="std std-ref">this page</span></a>.</p>
+</div>
+<p>For any <code class="docutils literal notranslate"><span class="pre">Results</span></code> returned from an <code class="docutils literal notranslate"><span class="pre">EmulatorBackend</span></code>, we can query the contents of a result by printing them. As we can see below, <code class="docutils literal notranslate"><span class="pre">QutipBackendV2</span></code> returns the bitstrings and quantum state at the final time by default.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Note</p>
+<p>The times at which a result is measured are presented as a fraction of the sequence duration, so a time of <code class="docutils literal notranslate"><span class="pre">1.0</span></code> always represent the final time.</p>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">qutip_results</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Results
+-------
+Stored results: [&#39;bitstrings&#39;, &#39;state&#39;]
+Evaluation times per result: {&#39;bitstrings&#39;: [1.0], &#39;state&#39;: [1.0]}
+Atom order in states and bitstrings: (&#39;q0&#39;, &#39;q1&#39;, &#39;q2&#39;, &#39;q3&#39;, &#39;q4&#39;, &#39;q5&#39;, &#39;q6&#39;)
+Total sequence duration: 4000 ns
+</pre></div></div>
+</div>
+<p>We can query the bitstrings at the final time, if present, using a dedicated property.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">qutip_results</span><span class="o">.</span><span class="n">final_bitstrings</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Counter({&#39;0010101&#39;: 500, &#39;0101010&#39;: 500})
+</pre></div></div>
+</div>
+<p>The same is true for the final state, which we combine below with a special method of <code class="docutils literal notranslate"><span class="pre">QutipState</span></code> to converts it to a <code class="docutils literal notranslate"><span class="pre">qutip.Qobj</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">qutip_state</span> <span class="o">=</span> <span class="n">qutip_results</span><span class="o">.</span><span class="n">final_state</span>
+<span class="c1"># This is particular to `QutipState`</span>
+<span class="n">qutip_state</span><span class="o">.</span><span class="n">to_qobj</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="math notranslate nohighlight">
+Quantum object: dims=[[2, 2, 2, 2, 2, 2, 2], [1]], shape=(128, 1), type='ket', dtype=Dense$$\left(\begin{array}{cc}-1.753\times10^{ -4 }\\-4.517\times10^{ -8 }\\-4.517\times10^{ -8 }\\-1.274\times10^{ -8 }\\-4.517\times10^{ -8 }\\\vdots\\-0.001\\3.746\times10^{ -4 }\\-0.001\\-0.001\\-6.008\times10^{ -6 }\end{array}\right)$$</div></div>
+</div>
+<p>For each <em>stored result</em>, the attribute having its name provides the list of result of that type obtained at each of its evaluation times.</p>
+<p>We can also use this to access the bitstrings measured at the final time.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Note</p>
+<ul class="simple">
+<li><p>You can get a list of all the stored results with <code class="docutils literal notranslate"><span class="pre">get_result_tags()</span></code>.</p></li>
+<li><p>For each of these stored results, you can get the list of evaluation times with <code class="docutils literal notranslate"><span class="pre">get_result_times()</span></code>.</p></li>
+</ul>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Stored results&#39; tags:&quot;</span><span class="p">,</span> <span class="n">qutip_results</span><span class="o">.</span><span class="n">get_result_tags</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="s2">&quot;Evaluation times for &#39;bitstrings&#39;:&quot;</span><span class="p">,</span>
+    <span class="n">qutip_results</span><span class="o">.</span><span class="n">get_result_times</span><span class="p">(</span><span class="s2">&quot;bitstrings&quot;</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="c1"># These are equivalent</span>
+<span class="n">qutip_results</span><span class="o">.</span><span class="n">get_result</span><span class="p">(</span><span class="s2">&quot;bitstrings&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="n">qutip_results</span><span class="o">.</span><span class="n">bitstrings</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Stored results&#39; tags: [&#39;bitstrings&#39;, &#39;state&#39;]
+Evaluation times for &#39;bitstrings&#39;: [1.0]
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Counter({&#39;0010101&#39;: 500, &#39;0101010&#39;: 500})
+</pre></div></div>
+</div>
+</section>
+<section id="4.-Configuring-the-Emulation">
+<h2>4. Configuring the Emulation<a class="headerlink" href="#4.-Configuring-the-Emulation" title="Link to this heading"></a></h2>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Info</p>
+<p>For more details on how to configure an emulation with <code class="docutils literal notranslate"><span class="pre">Observables</span></code>, consult <a class="reference internal" href="../results.html#The-Observable-mechanism"><span class="std std-ref">this page</span></a>.</p>
+</div>
+<p>The contents of the result (i.e. the quantities it stores at specific evaluation times) depend on the <code class="docutils literal notranslate"><span class="pre">Observables</span></code> defined in the <code class="docutils literal notranslate"><span class="pre">EmulationConfig</span></code> of an emulator backend. Each Emulator backends has a configuration given as an instance of the <code class="docutils literal notranslate"><span class="pre">EmulationConfig</span></code> class.</p>
+<ul class="simple">
+<li><p>As can be seen from the <a class="reference internal" href="../apidoc/_autosummary/pulser.backend.EmulationConfig.html"><span class="doc">docs</span></a>, this class defines a few generally applicable configuration options, and then accepts backend specific options as keyword arguments.</p></li>
+<li><p>Each backend defines its favoured <code class="docutils literal notranslate"><span class="pre">EmulationConfig</span></code> subclass via <code class="docutils literal notranslate"><span class="pre">EmulatorBackend.config_type</span></code> (such as <code class="docutils literal notranslate"><span class="pre">QutipConfig</span></code> for <code class="docutils literal notranslate"><span class="pre">QutipBackendV2</span></code>) that makes explicit the specific options for that backend. You can find a generic code to define a configuration from <code class="docutils literal notranslate"><span class="pre">EmulatorBackend.config_type</span></code> <a class="reference internal" href="../results.html#State--or-Operator-dependent-observables"><span class="std std-ref">here</span></a>.</p></li>
+<li><p>In the absence of a custom <code class="docutils literal notranslate"><span class="pre">config</span></code> argument, the emulator will use <code class="docutils literal notranslate"><span class="pre">EmulatorConfig.default_config</span></code>.</p></li>
+</ul>
+<p>To showcase the flexibility of emulation backends specifically, we will configure <code class="docutils literal notranslate"><span class="pre">QutipBackendV2</span></code> to return the overlap with the Anti-Ferromagnetic state <span class="math notranslate nohighlight">\(\frac{1}{\sqrt{2}} \left(\left|grgrgrg\right&gt;+\left|ggrgrgr\right&gt;\right)\)</span> halfway through the sequence and at the end, which can be done using the <code class="docutils literal notranslate"><span class="pre">Fidelity</span></code> observable documented <a class="reference internal" href="../apidoc/_autosummary/pulser.backend.Fidelity.html"><span class="doc">here</span></a>.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Tip</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Fidelity</span></code> is an example of a <code class="docutils literal notranslate"><span class="pre">State</span></code>-dependent observable. Take a look at <a class="reference internal" href="../results.html#The-Observable-mechanism"><span class="std std-ref">this section</span></a> for more details on how to handle this type of observable.</p></li>
+<li><p>A <code class="docutils literal notranslate"><span class="pre">Fidelity</span></code> observable is normally added to the <code class="docutils literal notranslate"><span class="pre">Results</span></code> as <code class="docutils literal notranslate"><span class="pre">fidelity</span></code>, but in order to make it more specific, we use <code class="docutils literal notranslate"><span class="pre">tag_suffix</span></code> to make it present itself as <code class="docutils literal notranslate"><span class="pre">fidelity_AFM_7</span></code>. This option is present for all observables, but it mostly makes sense for observable types that could show up multiple times with different parameters.</p></li>
+<li><p>Rather than defining an <code class="docutils literal notranslate"><span class="pre">EmulationConfig</span></code> from scratch, the example below starts from the backend’s <code class="docutils literal notranslate"><span class="pre">default_config</span></code> and uses <code class="docutils literal notranslate"><span class="pre">EmulationConfig.with_changes()</span></code> to add the fidelity observable.</p></li>
+</ul>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Pick a backend, here we chose QutipBackendV2</span>
+<span class="n">emu_backend_class</span> <span class="o">=</span> <span class="n">pulser_simulation</span><span class="o">.</span><span class="n">QutipBackendV2</span>
+
+<span class="n">config_class</span> <span class="o">=</span> <span class="n">emu_backend_class</span><span class="o">.</span><span class="n">config_type</span>  <span class="c1"># In this case, `QutipConfig`</span>
+<span class="n">state_class</span> <span class="o">=</span> <span class="n">config_class</span><span class="o">.</span><span class="n">state_type</span>  <span class="c1"># In this case, `QutipState`</span>
+
+<span class="n">fidelity_state</span> <span class="o">=</span> <span class="n">state_class</span><span class="o">.</span><span class="n">from_state_amplitudes</span><span class="p">(</span>
+    <span class="n">eigenstates</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="s2">&quot;g&quot;</span><span class="p">),</span>
+    <span class="n">amplitudes</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;grgrgrg&quot;</span><span class="p">:</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="s2">&quot;ggrgrgr&quot;</span><span class="p">:</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)},</span>
+<span class="p">)</span>
+<span class="n">fidelity</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">Fidelity</span><span class="p">(</span>
+    <span class="n">state</span><span class="o">=</span><span class="n">fidelity_state</span><span class="p">,</span> <span class="n">tag_suffix</span><span class="o">=</span><span class="s2">&quot;AFM_7&quot;</span><span class="p">,</span> <span class="n">evaluation_times</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="c1"># Start from the default_config and add the Fidelity observable</span>
+<span class="n">default_config</span> <span class="o">=</span> <span class="n">emu_backend_class</span><span class="o">.</span><span class="n">default_config</span>
+<span class="n">new_observables</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">default_config</span><span class="o">.</span><span class="n">observables</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="n">fidelity</span><span class="p">]</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">default_config</span><span class="o">.</span><span class="n">with_changes</span><span class="p">(</span><span class="n">observables</span><span class="o">=</span><span class="n">new_observables</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+QutipConfig(
+    callbacks=(),
+    observables=(bitstrings:f01e781d-be48-4536-94f9-4d1d3e5ed7dd, state:c801c252-df05-4af2-8393-cebed0668f9d, fidelity_AFM_7:77c1b47e-aad0-4d3e-9840-bcc056b9b813),
+    default_evaluation_times=array([1.]),
+    initial_state=None,
+    with_modulation=False,
+    interaction_matrix=None,
+    prefer_device_noise_model=False,
+    noise_model=NoiseModel(noise_types=()),
+    n_trajectories=1,
+    sampling_rate=1.0,
+    solver=&lt;Solver.DEFAULT: &#39;default&#39;&gt;,
+    print_progress=False,
+    progress_bar=False,
+    default_num_shots=1000,
+)
+</pre></div></div>
+</div>
+<p>Now that we have defined a custom config, we can create a new backend, run the emulation, and analyze the results.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">qutip_bknd_custom</span> <span class="o">=</span> <span class="n">emu_backend_class</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+<span class="n">custom_results</span> <span class="o">=</span> <span class="n">qutip_bknd_custom</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">custom_results</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Results
+-------
+Stored results: [&#39;fidelity_AFM_7&#39;, &#39;bitstrings&#39;, &#39;state&#39;]
+Evaluation times per result: {&#39;fidelity_AFM_7&#39;: [0.5, 1.0], &#39;bitstrings&#39;: [1.0], &#39;state&#39;: [1.0]}
+Atom order in states and bitstrings: (&#39;q0&#39;, &#39;q1&#39;, &#39;q2&#39;, &#39;q3&#39;, &#39;q4&#39;, &#39;q5&#39;, &#39;q6&#39;)
+Total sequence duration: 4000 ns
+</pre></div></div>
+</div>
+<p>Since we requested the fidelity at two different times, asking for the result times will reflect this.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">custom_results</span><span class="o">.</span><span class="n">get_result_times</span><span class="p">(</span><span class="s2">&quot;fidelity_AFM_7&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[0.5, 1.0]
+</pre></div></div>
+</div>
+<p>The two fidelities are in the results in chronological order.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">custom_results</span><span class="o">.</span><span class="n">fidelity_AFM_7</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">custom_results</span><span class="o">.</span><span class="n">fidelity_AFM_7</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.2415769618200006
+0.9998684338132205
+</pre></div></div>
+</div>
+</section>
+<section id="5.-Running-Remotely">
+<h2>5. Running Remotely<a class="headerlink" href="#5.-Running-Remotely" title="Link to this heading"></a></h2>
+<p>Now that we understand the behaviour of our sequence, and how to use emulator backends locally, let’s run the sequence on a pair of remote backends</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">EmuFreeBackendV2</span></code> (from <code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code>): Executes the sequence on <code class="docutils literal notranslate"><span class="pre">QutipBackendV2</span></code> remotely in the cloud.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EmuMPSBackend</span></code> (from <code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code>): Executes the sequence on <code class="docutils literal notranslate"><span class="pre">MPSBackend</span></code> remotely in the cloud.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Info</p>
+<p>A full list of available backends is available in the <code class="docutils literal notranslate"><span class="pre">backends</span></code> module <a class="reference internal" href="../apidoc/_autosummary/pulser.backends.html#module-pulser.backends"><span class="std std-ref">API reference</span></a>.</p>
+</div>
+<p>Notice that running things remotely requires us to provide a <code class="docutils literal notranslate"><span class="pre">RemoteConnection</span></code> object. To execute a Sequence on Pasqal cloud, the appropriate connection object is:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser_pasqal</span><span class="w"> </span><span class="kn">import</span> <span class="n">PasqalCloud</span>
+
+<span class="n">connection</span> <span class="o">=</span> <span class="n">PasqalCloud</span><span class="p">(</span>
+    <span class="n">username</span><span class="o">=</span><span class="n">USERNAME</span><span class="p">,</span>  <span class="c1"># Your username or email address for the Pasqal Cloud Platform</span>
+    <span class="n">project_id</span><span class="o">=</span><span class="n">PROJECT_ID</span><span class="p">,</span>  <span class="c1"># The ID of the project associated to your account</span>
+    <span class="n">password</span><span class="o">=</span><span class="n">PASSWORD</span><span class="p">,</span>  <span class="c1"># The password for your Pasqal Cloud Platform account</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We now have a connection to the cloud. However, before creating the backends, let us create a custom <code class="docutils literal notranslate"><span class="pre">EmulationConfig</span></code> with a <code class="docutils literal notranslate"><span class="pre">Fidelity</span></code> observable again; only this time around, we’ll define the state using the agnostic <code class="docutils literal notranslate"><span class="pre">StateRepr</span></code> type, which is appropriate for all remote backends.</p>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Tip</p>
+<p>When passing a <code class="docutils literal notranslate"><span class="pre">State</span></code> or <code class="docutils literal notranslate"><span class="pre">Operator</span></code> to an observable for remote use, or when passing the <code class="docutils literal notranslate"><span class="pre">initial_state</span></code> to <code class="docutils literal notranslate"><span class="pre">EmulationConfig</span></code>, it is recommended to use the <code class="docutils literal notranslate"><span class="pre">StateRepr</span></code> and <code class="docutils literal notranslate"><span class="pre">OperatorRepr</span></code> classes, which will work for all remote backends but not necessarily for local ones.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title fa fa-exclamation-circle">Warning</p>
+<p>When running remotely, the configuration and emulation results have to be serialized. Since quantum states are potentially extremely large, the <code class="docutils literal notranslate"><span class="pre">StateResult</span></code> observable is disabled, and <code class="docutils literal notranslate"><span class="pre">State</span></code> and <code class="docutils literal notranslate"><span class="pre">Operator</span></code> classes will only serialize if they were created from an abstract representation.</p>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">remote_fidelity_state</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">StateRepr</span><span class="o">.</span><span class="n">from_state_amplitudes</span><span class="p">(</span>
+    <span class="n">eigenstates</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="s2">&quot;g&quot;</span><span class="p">),</span>
+    <span class="n">amplitudes</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;grgrgrg&quot;</span><span class="p">:</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="s2">&quot;ggrgrgr&quot;</span><span class="p">:</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)},</span>
+<span class="p">)</span>
+<span class="n">remote_fidelity</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">Fidelity</span><span class="p">(</span>
+    <span class="n">state</span><span class="o">=</span><span class="n">remote_fidelity_state</span><span class="p">,</span>
+    <span class="n">tag_suffix</span><span class="o">=</span><span class="s2">&quot;AFM_7&quot;</span><span class="p">,</span>
+    <span class="n">evaluation_times</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
+<span class="p">)</span>
+
+<span class="n">remote_config</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">EmulationConfig</span><span class="p">(</span>
+    <span class="n">observables</span><span class="o">=</span><span class="p">[</span><span class="n">remote_fidelity</span><span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Now that we have a proper <code class="docutils literal notranslate"><span class="pre">Sequence</span></code>, <code class="docutils literal notranslate"><span class="pre">EmulationConfig</span></code> and <code class="docutils literal notranslate"><span class="pre">Connection</span></code>, we can create the <code class="docutils literal notranslate"><span class="pre">EmuFreeBackendV2</span></code> and <code class="docutils literal notranslate"><span class="pre">EmuMPSBackend</span></code> with which we want to run the emulation.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">free_bknd</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">EmuFreeBackendV2</span><span class="p">(</span>
+    <span class="n">seq</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">remote_config</span><span class="p">,</span> <span class="n">connection</span><span class="o">=</span><span class="n">connection</span>
+<span class="p">)</span>
+<span class="n">mps_bknd</span> <span class="o">=</span> <span class="n">pulser</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">EmuMPSBackend</span><span class="p">(</span>
+    <span class="n">seq</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">remote_config</span><span class="p">,</span> <span class="n">connection</span><span class="o">=</span><span class="n">connection</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title fa fa-exclamation-circle">Warning</p>
+<p>Remote backends support the submission of multiple jobs on the same <code class="docutils literal notranslate"><span class="pre">run()</span></code> call, so the returned <code class="docutils literal notranslate"><span class="pre">RemoteResults</span></code> instance is a <em>sequence</em> of <code class="docutils literal notranslate"><span class="pre">Results</span></code>. This feature is most useful when combined with a <a class="reference internal" href="paramseqs.html"><span class="doc">parametrized sequence</span></a> for <a class="reference internal" href="qpu.html#4.-Batch-execution-with-parametrized-Sequences"><span class="std std-ref">execution on a QPU backend</span></a>.</p>
+<p>By default, a call to <code class="docutils literal notranslate"><span class="pre">run()</span></code> will submit a single job so the resulting <code class="docutils literal notranslate"><span class="pre">RemoteResults</span></code> will contain a single <code class="docutils literal notranslate"><span class="pre">Results</span></code> instance.</p>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">free_results</span> <span class="o">=</span> <span class="n">free_bknd</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Submitted batch </span><span class="si">{</span><span class="n">free_results</span><span class="o">.</span><span class="n">batch_id</span><span class="si">}</span><span class="s2"> to EmuFreeBackendV2&quot;</span><span class="p">)</span>
+<span class="n">mps_results</span> <span class="o">=</span> <span class="n">mps_bknd</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Submitted batch </span><span class="si">{</span><span class="n">mps_results</span><span class="o">.</span><span class="n">batch_id</span><span class="si">}</span><span class="s2"> to EmuMPSBackend&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Submitted batch 05fe761e-9a5f-468d-8de0-a2629808d5e1 to EmuFreeBackendV2
+Submitted batch ef97bbf1-3450-4fbb-a386-969d759221a2 to EmuMPSBackend
+</pre></div></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Tip</p>
+<p>You can restore the <code class="docutils literal notranslate"><span class="pre">RemoteResults</span></code> object associated to a batch at anytime from its batch ID (see <code class="docutils literal notranslate"><span class="pre">results.batch_id</span></code> above) by running</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pulser.backendRemoteResults(batch_id, connection)
+</pre></div>
+</div>
+</div>
+<p>For remote backends, the object returned is a <code class="docutils literal notranslate"><span class="pre">RemoteResults</span></code> instance, which uses the connection to fetch the results once they are ready. To check the status of the batch, we can run:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">free_results</span><span class="o">.</span><span class="n">get_batch_status</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">mps_results</span><span class="o">.</span><span class="n">get_batch_status</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+BatchStatus.DONE
+BatchStatus.DONE
+</pre></div></div>
+</div>
+<p>When the batch states shows as <code class="docutils literal notranslate"><span class="pre">DONE</span></code>, the results can be accessed. We can use <code class="docutils literal notranslate"><span class="pre">get_available_results</span></code> to see the results as they become available.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Got results:&quot;</span><span class="p">,</span> <span class="n">free_results</span><span class="o">.</span><span class="n">get_available_results</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">free_results</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Fidelities:&quot;</span><span class="p">,</span> <span class="n">free_results</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">fidelity_AFM_7</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Got results: {&#39;ac79ec19-154a-491b-a467-3c105d9f73c8&#39;: &lt;pulser.backend.results.Results object at 0x7d8a5830a540&gt;}
+
+Results
+-------
+Stored results: [&#39;fidelity_AFM_7&#39;]
+Evaluation times per result: {&#39;fidelity_AFM_7&#39;: [0.5, 1.0]}
+Atom order in states and bitstrings: (&#39;q0&#39;, &#39;q1&#39;, &#39;q2&#39;, &#39;q3&#39;, &#39;q4&#39;, &#39;q5&#39;, &#39;q6&#39;)
+Total sequence duration: 4000 ns
+
+Fidelities: [0.2415769618200006, 0.9998684338132205]
+</pre></div></div>
+</div>
+<p>In addition to the above, <code class="docutils literal notranslate"><span class="pre">MPSBackend</span></code>, <code class="docutils literal notranslate"><span class="pre">SVBackend</span></code> and their derivatives, such as the remote <code class="docutils literal notranslate"><span class="pre">EmuMPSBackend</span></code> store runtime <code class="docutils literal notranslate"><span class="pre">statistics</span></code> in the <code class="docutils literal notranslate"><span class="pre">Results</span></code>. For more information about this, please see the corresponding <a class="reference external" href="https://pasqal-io.github.io/emulators/latest/emu_mps/notebooks/getting_started/#computation-statistics">documentation</a>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">mps_results</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Fidelities:&quot;</span><span class="p">,</span> <span class="n">mps_results</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">fidelity_AFM_7</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Results
+-------
+Stored results: [&#39;statistics&#39;, &#39;fidelity_AFM_7&#39;]
+Evaluation times per result: {&#39;statistics&#39;: [0.0025, 0.005, 0.0075, 0.01, 0.0125, 0.015, 0.0175, 0.02, 0.0225, 0.025, 0.0275, 0.03, 0.0325, 0.035, 0.0375, 0.04, 0.0425, 0.045, 0.0475, 0.05, 0.0525, 0.055, 0.0575, 0.06, 0.0625, 0.065, 0.0675, 0.07, 0.0725, 0.075, 0.0775, 0.08, 0.0825, 0.085, 0.0875, 0.09, 0.0925, 0.095, 0.0975, 0.1, 0.1025, 0.105, 0.1075, 0.11, 0.1125, 0.115, 0.1175, 0.12, 0.1225, 0.125, 0.1275, 0.13, 0.1325, 0.135, 0.1375, 0.14, 0.1425, 0.145, 0.1475, 0.15, 0.1525, 0.155, 0.1575, 0.16, 0.1625, 0.165, 0.1675, 0.17, 0.1725, 0.175, 0.1775, 0.18, 0.1825, 0.185, 0.1875, 0.19, 0.1925, 0.195, 0.1975, 0.2, 0.2025, 0.205, 0.2075, 0.21, 0.2125, 0.215, 0.2175, 0.22, 0.2225, 0.225, 0.2275, 0.23, 0.2325, 0.235, 0.2375, 0.24, 0.2425, 0.245, 0.2475, 0.25, 0.2525, 0.255, 0.2575, 0.26, 0.2625, 0.265, 0.2675, 0.27, 0.2725, 0.275, 0.2775, 0.28, 0.2825, 0.285, 0.2875, 0.29, 0.2925, 0.295, 0.2975, 0.3, 0.3025, 0.305, 0.3075, 0.31, 0.3125, 0.315, 0.3175, 0.32, 0.3225, 0.325, 0.3275, 0.33, 0.3325, 0.335, 0.3375, 0.34, 0.3425, 0.345, 0.3475, 0.35, 0.3525, 0.355, 0.3575, 0.36, 0.3625, 0.365, 0.3675, 0.37, 0.3725, 0.375, 0.3775, 0.38, 0.3825, 0.385, 0.3875, 0.39, 0.3925, 0.395, 0.3975, 0.4, 0.4025, 0.405, 0.4075, 0.41, 0.4125, 0.415, 0.4175, 0.42, 0.4225, 0.425, 0.4275, 0.43, 0.4325, 0.435, 0.4375, 0.44, 0.4425, 0.445, 0.4475, 0.45, 0.4525, 0.455, 0.4575, 0.46, 0.4625, 0.465, 0.4675, 0.47, 0.4725, 0.475, 0.4775, 0.48, 0.4825, 0.485, 0.4875, 0.49, 0.4925, 0.495, 0.4975, 0.5, 0.5025, 0.505, 0.5075, 0.51, 0.5125, 0.515, 0.5175, 0.52, 0.5225, 0.525, 0.5275, 0.53, 0.5325, 0.535, 0.5375, 0.54, 0.5425, 0.545, 0.5475, 0.55, 0.5525, 0.555, 0.5575, 0.56, 0.5625, 0.565, 0.5675, 0.57, 0.5725, 0.575, 0.5775, 0.58, 0.5825, 0.585, 0.5875, 0.59, 0.5925, 0.595, 0.5975, 0.6, 0.6025, 0.605, 0.6075, 0.61, 0.6125, 0.615, 0.6175, 0.62, 0.6225, 0.625, 0.6275, 0.63, 0.6325, 0.635, 0.6375, 0.64, 0.6425, 0.645, 0.6475, 0.65, 0.6525, 0.655, 0.6575, 0.66, 0.6625, 0.665, 0.6675, 0.67, 0.6725, 0.675, 0.6775, 0.68, 0.6825, 0.685, 0.6875, 0.69, 0.6925, 0.695, 0.6975, 0.7, 0.7025, 0.705, 0.7075, 0.71, 0.7125, 0.715, 0.7175, 0.72, 0.7225, 0.725, 0.7275, 0.73, 0.7325, 0.735, 0.7375, 0.74, 0.7425, 0.745, 0.7475, 0.75, 0.7525, 0.755, 0.7575, 0.76, 0.7625, 0.765, 0.7675, 0.77, 0.7725, 0.775, 0.7775, 0.78, 0.7825, 0.785, 0.7875, 0.79, 0.7925, 0.795, 0.7975, 0.8, 0.8025, 0.805, 0.8075, 0.81, 0.8125, 0.815, 0.8175, 0.82, 0.8225, 0.825, 0.8275, 0.83, 0.8325, 0.835, 0.8375, 0.84, 0.8425, 0.845, 0.8475, 0.85, 0.8525, 0.855, 0.8575, 0.86, 0.8625, 0.865, 0.8675, 0.87, 0.8725, 0.875, 0.8775, 0.88, 0.8825, 0.885, 0.8875, 0.89, 0.8925, 0.895, 0.8975, 0.9, 0.9025, 0.905, 0.9075, 0.91, 0.9125, 0.915, 0.9175, 0.92, 0.9225, 0.925, 0.9275, 0.93, 0.9325, 0.935, 0.9375, 0.94, 0.9425, 0.945, 0.9475, 0.95, 0.9525, 0.955, 0.9575, 0.96, 0.9625, 0.965, 0.9675, 0.97, 0.9725, 0.975, 0.9775, 0.98, 0.9825, 0.985, 0.9875, 0.99, 0.9925, 0.995, 0.9975, 1.0], &#39;fidelity_AFM_7&#39;: [0.5, 1.0]}
+Atom order in states and bitstrings: (&#39;q0&#39;, &#39;q1&#39;, &#39;q2&#39;, &#39;q3&#39;, &#39;q4&#39;, &#39;q5&#39;, &#39;q6&#39;)
+Total sequence duration: 4000 ns
+
+Fidelities: [0.24161613994468908, 0.999885389768192]
+</pre></div></div>
+</div>
+</section>
+<section id="6.-Alternative-user-interfaces-for-using-remote-backends">
+<h2>6. Alternative user interfaces for using remote backends<a class="headerlink" href="#6.-Alternative-user-interfaces-for-using-remote-backends" title="Link to this heading"></a></h2>
+<p>Once you have created a Pulser sequence, you can also use specialized Python SDKs to send it for execution:</p>
+<ul class="simple">
+<li><p>the <a class="reference external" href="https://docs.pasqal.cloud/cloud/pasqal-cloud/">pasqal-cloud</a> Python SDK, developed by PASQAL and used under-the-hood by Pulser’s remote backends.</p></li>
+<li><p>Azure’s Quantum Development Kit (QDK) which you can use by creating an <a class="reference external" href="https://learn.microsoft.com/en-gb/azure/quantum/provider-pasqal">Azure Quantum workspace</a> directly integrated with PASQAL emulators and QPU.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../sequence.html" class="btn btn-neutral float-left" title="Sequence Creation and Validation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="qpu.html" class="btn btn-neutral float-right" title="QPU Execution" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

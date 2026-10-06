@@ -1,0 +1,530 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>State preparation with the SLM mask &mdash; Pulser 1.7.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=907b7f45" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=908dc885"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="XY Hamiltonian" href="xy_spin_chain.html" />
+    <link rel="prev" title="Local Adressability with DMM" href="dmm.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.7.2" /><meta name="readthedocs-resolver-filename" content="/tutorials/slm_mask.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Execution on an Emulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qpu.html">QPU Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../results.html">Results and Observables</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">State preparation with the SLM mask</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Basics">Basics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#SLM-Mask-in-XY-mode">SLM Mask in XY mode</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Notes-on-XY-mode">Notes on XY mode</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#SLM-Mask-in-Ising-mode">SLM Mask in Ising mode</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Note:">Note:</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">State preparation with the SLM mask</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/slm_mask.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="State-preparation-with-the-SLM-mask">
+<h1>State preparation with the SLM mask<a class="headerlink" href="#State-preparation-with-the-SLM-mask" title="Link to this heading"></a></h1>
+<section id="Basics">
+<h2>Basics<a class="headerlink" href="#Basics" title="Link to this heading"></a></h2>
+<p>When performing quantum computations with global pulses, it might be hard to prepare the system in an arbitrary initial state. This is especially true in the XY mode, where only a global <span class="math notranslate nohighlight">\(\sigma^x\)</span> pulse can produce excitations whose number is otherwise conserved during free evolution. A partial solution to this problem is to utilize an SLM mask. Assume a system of three qubits in XY mode is initially in state <span class="math notranslate nohighlight">\(\left| 000 \right\rangle\)</span>, and that we are interested in preparing the
+state <span class="math notranslate nohighlight">\(\left| 100 \right\rangle\)</span>. Acting naively with a global <span class="math notranslate nohighlight">\(\sigma^x\)</span> pulse of area <span class="math notranslate nohighlight">\(\pi\)</span> would result in state <span class="math notranslate nohighlight">\(\left| 111\right\rangle\)</span>. Using an SLM pattern, however, it is possible to detune the last two qubits away from resonance, and the same global <span class="math notranslate nohighlight">\(\sigma^x\)</span> pulse will produced instead the desired state <span class="math notranslate nohighlight">\(\left| 100\right\rangle\)</span>. Let’s see how it works in practice. First create the register:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pulse</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Register</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">MockDevice</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.waveforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlackmanWaveform</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser_simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">QutipEmulator</span>
+
+<span class="c1"># Qubit register</span>
+<span class="n">qubits</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;q0&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s2">&quot;q1&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s2">&quot;q2&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">)}</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="p">(</span><span class="n">qubits</span><span class="p">)</span>
+<span class="n">reg</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_slm_mask_3_0.png" src="../_images/tutorials_slm_mask_3_0.png" />
+</div>
+</div>
+</section>
+<section id="SLM-Mask-in-XY-mode">
+<h2>SLM Mask in XY mode<a class="headerlink" href="#SLM-Mask-in-XY-mode" title="Link to this heading"></a></h2>
+<p>Let’s now create the sequence and add a global <span class="math notranslate nohighlight">\(\sigma^x\)</span> pulse of area <span class="math notranslate nohighlight">\(\pi\)</span> in XY mode:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create the sequence</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">MockDevice</span><span class="p">)</span>
+
+<span class="c1"># Declare a global XY channel and add the pi pulse</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ch&quot;</span><span class="p">,</span> <span class="s2">&quot;mw_global&quot;</span><span class="p">)</span>
+<span class="n">pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span><span class="n">BlackmanWaveform</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse</span><span class="p">,</span> <span class="s2">&quot;ch&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Drawing the sequence will show the following:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_slm_mask_8_0.png" src="../_images/tutorials_slm_mask_8_0.png" />
+</div>
+</div>
+<p>To set up the SLM mask all we need to do is to pass to the <span class="math notranslate nohighlight">\(\verb:Sequence.config_slm_mask:\)</span> method a list that contains the name of the qubits that we want to mask and the name of the <code class="docutils literal notranslate"><span class="pre">DMM</span></code> channel to use to configure the SLM Mask. The latter is taken as <code class="docutils literal notranslate"><span class="pre">dmm_0</span></code> by default. The device <code class="docutils literal notranslate"><span class="pre">MockDevice</span></code> contains one <code class="docutils literal notranslate"><span class="pre">DMM</span></code>, so <code class="docutils literal notranslate"><span class="pre">dmm_0</span></code> does indeed exist.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Mask the last two qubits</span>
+<span class="n">masked_qubits</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;q1&quot;</span><span class="p">,</span> <span class="s2">&quot;q2&quot;</span><span class="p">]</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">config_slm_mask</span><span class="p">(</span><span class="n">masked_qubits</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>At this point it is possible to visualize the mask by drawing the sequence. The masked pulse will appear with a shaded background, and the names of the masked qubits will be shown in the bottom left corner.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_slm_mask_12_0.png" src="../_images/tutorials_slm_mask_12_0.png" />
+</div>
+</div>
+<p>The sequence drawing method also allows to visualize the register. If an SLM mask is defined, the masked qubits will appear with a shaded square halo around them:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">draw_register</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_slm_mask_14_0.png" src="../_images/tutorials_slm_mask_14_0.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_slm_mask_14_1.png" src="../_images/tutorials_slm_mask_14_1.png" />
+</div>
+</div>
+<p>Now let’s see how the system evolves under this masked pulse. Since the pulse only acts on the first qubit, we expect the final state to be <span class="math notranslate nohighlight">\(\left| 100 \right\rangle\)</span>, or, according to <a class="reference internal" href="../conventions.html#qubit-states"><span class="std std-ref">Pulser’s conventions for XY basis states</span></a>, <span class="math notranslate nohighlight">\((0,1)^T \otimes (1,0)^T \otimes (1,0)^T\)</span> in the Hilbert space <span class="math notranslate nohighlight">\(C^8\)</span>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">qutip</span>
+
+<span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="math notranslate nohighlight">
+Quantum object: dims=[[2, 2, 2], [1]], shape=(8, 1), type='ket', dtype=Dense$$\left(\begin{array}{cc}0\\0\\0\\0\\1\\0\\0\\0\end{array}\right)$$</div></div>
+</div>
+<p>Now run the simulation and print the final state as given by Pulser:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="n">results</span><span class="o">.</span><span class="n">get_final_state</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="math notranslate nohighlight">
+Quantum object: dims=[[2, 2, 2], [1]], shape=(8, 1), type='ket', dtype=Dense$$\left(\begin{array}{cc}0\\0\\0\\0\\1\\0\\0\\0\end{array}\right)$$</div></div>
+</div>
+<p>As expected, the two states agree up to numerical errors.</p>
+<section id="Notes-on-XY-mode">
+<h3>Notes on XY mode<a class="headerlink" href="#Notes-on-XY-mode" title="Link to this heading"></a></h3>
+<p>Since the SLM mask is mostly useful for state preparation, its use in Pulser is restricted to the first pulse in the sequence. This can be seen by adding an extra pulse in the previous example and drawing the sequence:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse</span><span class="p">,</span> <span class="s2">&quot;ch&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_slm_mask_23_0.png" src="../_images/tutorials_slm_mask_23_0.png" />
+</div>
+</div>
+<p>This example also illustrates the fact that in XY mode, the SLM mask can be configured at any moment during the creation of a sequence (either before or after adding pulses) and it will automatically latch to the first pulse. However, in order to reflect real hardware constraints, the mask can be configured only once. Trying to configure the mask a second time will raise an error:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">config_slm_mask</span><span class="p">(</span><span class="n">masked_qubits</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+SLM mask can be configured only once.
+</pre></div></div>
+</div>
+</section>
+</section>
+<section id="SLM-Mask-in-Ising-mode">
+<h2>SLM Mask in Ising mode<a class="headerlink" href="#SLM-Mask-in-Ising-mode" title="Link to this heading"></a></h2>
+<p>In Ising mode, configuring an SLM Mask with a <code class="docutils literal notranslate"><span class="pre">DMM</span></code> labeled <code class="docutils literal notranslate"><span class="pre">dmm_id</span></code> in the device internally configures a detuning map using <code class="docutils literal notranslate"><span class="pre">config_detuning_map</span></code> (see notebook <a class="reference internal" href="dmm.html"><span class="doc">“Local Addressability with DMM”</span></a> for an introduction) with <code class="docutils literal notranslate"><span class="pre">dmm_id</span></code> and a <code class="docutils literal notranslate"><span class="pre">DetuningMap</span></code> <strong>distributing all the applied detuning to the masked qubits</strong>.</p>
+<p>For instance in the last example qubits “q1” and “q2” are masked, so we expect a <code class="docutils literal notranslate"><span class="pre">DetuningMap</span></code> associating to the trap location of “q0” the weight <span class="math notranslate nohighlight">\(0\)</span>, and to the trap locations of “q1” and “q2” the weight <span class="math notranslate nohighlight">\(1\)</span>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create the sequence</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">MockDevice</span><span class="p">)</span>
+
+<span class="c1"># Declare a global Rydberg channel and add the pi pulse</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ch&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantDetuning</span><span class="p">(</span><span class="n">BlackmanWaveform</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse</span><span class="p">,</span> <span class="s2">&quot;ch&quot;</span><span class="p">)</span>
+<span class="c1"># Mask the last two qubits</span>
+<span class="n">masked_qubits</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;q1&quot;</span><span class="p">,</span> <span class="s2">&quot;q2&quot;</span><span class="p">]</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">config_slm_mask</span><span class="p">(</span><span class="n">masked_qubits</span><span class="p">,</span> <span class="s2">&quot;dmm_0&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">_schedule</span><span class="p">[</span><span class="s2">&quot;dmm_0&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">detuning_map</span><span class="o">.</span><span class="n">draw</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_slm_mask_28_0.png" src="../_images/tutorials_slm_mask_28_0.png" />
+</div>
+</div>
+<p>We can see that the shade of the square covering qubit 1 and 2 are the same, and that no square covers qubit 0: the detuning map created is exactly the one wanted.</p>
+<p>Now what happens at the pulse level ?</p>
+<p>If the SLM Mask is configured while some pulses had already been added to the sequence- as it is the case in the previous example- a pulse of constant detuning is immediately applied on the detuning map configured for the SLM Mask. The value of this detuning is very large compared to the amplitude of the first pulse in the schedule (ideally, -10 times this amplitude, or <code class="docutils literal notranslate"><span class="pre">bottom_detuning</span></code> of the <code class="docutils literal notranslate"><span class="pre">DMM</span></code> if <code class="docutils literal notranslate"><span class="pre">bottom_detunig</span></code> is defined and its value is higher).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">draw_detuning_maps</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">draw_qubit_amp</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">draw_qubit_det</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_slm_mask_30_0.png" src="../_images/tutorials_slm_mask_30_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_slm_mask_30_1.png" src="../_images/tutorials_slm_mask_30_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_slm_mask_30_2.png" src="../_images/tutorials_slm_mask_30_2.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_slm_mask_30_3.png" src="../_images/tutorials_slm_mask_30_3.png" />
+</div>
+</div>
+<p>At the qubit level, you can see that all the qubits receive the <span class="math notranslate nohighlight">\(\sigma^x\)</span> pulse of area <span class="math notranslate nohighlight">\(\pi\)</span> in amplitude, but only qubit <code class="docutils literal notranslate"><span class="pre">q0</span></code> is on resonance (detuning is constant equal to 0) and will change state. Detuning on “q1” and “q2” being not of infinite values, they are not perfectly masked and therefore the state resulting from this sequence is not exactly the state <span class="math notranslate nohighlight">\((0,1)^T \otimes (1,0)^T \otimes (1,0)^T\)</span>. However it is very close to this state and represents better the
+experiment.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="n">results</span><span class="o">.</span><span class="n">get_final_state</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="math notranslate nohighlight">
+Quantum object: dims=[[2, 2, 2], [1]], shape=(8, 1), type='ket', dtype=Dense$$\left(\begin{array}{cc}4.901\times10^{ -6 }\\7.328\times10^{ -6 }\\-9.969\times10^{ -7 }\\1.000\\4.662\times10^{ -8 }\\1.635\times10^{ -5 }\\9.692\times10^{ -6 }\\-0.011\end{array}\right)$$</div></div>
+</div>
+<p>Note: Of course, you can add pulses to channels or dmm after the SLM Mask:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse</span><span class="p">,</span> <span class="s2">&quot;ch&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add_dmm_detuning</span><span class="p">(</span><span class="o">-</span><span class="n">BlackmanWaveform</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">),</span> <span class="s2">&quot;dmm_0&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_slm_mask_34_0.png" src="../_images/tutorials_slm_mask_34_0.png" />
+</div>
+</div>
+<p>If the first operation performed in the sequence is the configuration of the SLM Mask, then the <code class="docutils literal notranslate"><span class="pre">DMM</span></code> used for the configuration of the SLM Mask cannot be used until a pulse is added on an Ising channel. The first pulse added will define the SLM Mask.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create the sequence</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">MockDevice</span><span class="p">)</span>
+<span class="c1"># Mask the last two qubits</span>
+<span class="n">masked_qubits</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;q1&quot;</span><span class="p">,</span> <span class="s2">&quot;q2&quot;</span><span class="p">]</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">config_slm_mask</span><span class="p">(</span><span class="n">masked_qubits</span><span class="p">,</span> <span class="s2">&quot;dmm_0&quot;</span><span class="p">)</span>
+<span class="c1"># Declare a global Rydberg channel and add the pi pulse</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ch&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">add_dmm_detuning</span><span class="p">(</span><span class="o">-</span><span class="n">BlackmanWaveform</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">),</span> <span class="s2">&quot;dmm_0&quot;</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+You should add a Pulse to a Global Channel prior to modulating the DMM used for the SLM Mask.
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Masked pulse</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse</span><span class="p">,</span> <span class="s2">&quot;ch&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_slm_mask_37_0.png" src="../_images/tutorials_slm_mask_37_0.png" />
+</div>
+</div>
+<section id="Note:">
+<h3>Note:<a class="headerlink" href="#Note:" title="Link to this heading"></a></h3>
+<p>As in XY mode, you cannot configure the SLM Mask twice. However, be careful that in Ising mode, the moment you configure the SLM Mask matters: once configured, the masked pulse is never changed.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="dmm.html" class="btn btn-neutral float-left" title="Local Adressability with DMM" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="xy_spin_chain.html" class="btn btn-neutral float-right" title="XY Hamiltonian" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,794 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Building 1D Rydberg Crystals &mdash; Pulser 1.2.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/max_width.css" />
+
+  
+      <script src="../_static/jquery.js"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+      <script src="../_static/doctools.js"></script>
+      <script src="../_static/sphinx_highlight.js"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Control-Z Gate Sequence" href="cz_gate.html" />
+    <link rel="prev" title="Efficient estimation techniques for Variational Quantum Simulation" href="shadow_est.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.2.2" /><meta name="readthedocs-resolver-filename" content="/tutorials/1D_crystals.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installation and First Steps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../intro_rydberg_blockade.html">Quickstart: The Rydberg Blockade</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Pulse Sequence Creation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simulating.html">Simulation of Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamental Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../review.html">Quantum Computing with Neutral Atoms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Backend Execution</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Backend Execution of Pulser Sequences</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Classical Simulation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="noisy_sim.html">Simulations with Noise and Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spam.html">SPAM errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="laser_noise.html">Laser noise</a></li>
+<li class="toctree-l1"><a class="reference internal" href="effective_noise.html">Effective noise channels</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Adressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Quantum Simulation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="afm_prep.html">Preparing a state with antiferromagnetic order in the Ising model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Spin Chain</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mw_engineering.html">Simulation of XYZ spin models using Floquet engineering in XY mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shadow_est.html">Efficient estimation techniques for Variational Quantum Simulation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Building 1D Rydberg Crystals</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#1.-Rydberg-Blockade-at-Resonant-Driving">1. Rydberg Blockade at Resonant Driving</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#2.-Ordered-Crystalline-phases">2. Ordered Crystalline phases</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#2.1-Simulation">2.1 Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.2-Rydberg-Crystals:-Z_3-Order">2.2 Rydberg Crystals: <span class="math notranslate nohighlight">\(Z_3\)</span> Order</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.3-Rydberg-Crystals:-Z_4-Order">2.3 Rydberg Crystals: <span class="math notranslate nohighlight">\(Z_4\)</span> Order</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cz_gate.html">Control-Z Gate Sequence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAOA and QAA to solve a QUBO problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pulser.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Building 1D Rydberg Crystals</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/1D_crystals.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Building-1D-Rydberg-Crystals">
+<h1>Building 1D Rydberg Crystals<a class="headerlink" href="#Building-1D-Rydberg-Crystals" title="Permalink to this heading"></a></h1>
+<p>The following notebook shows a study of many-body dynamics on a 1D system. It is based on <a class="reference external" href="https://arxiv.org/abs/1707.04344">1707.04344</a>. The authors of that paper studied the preparation of symmetry-breaking states in antiferromagnetic Ising chains, by tuning the interaction and driving parameters accross the phase diagram. In this notebook, we reproduce some results of this paper. Since this is a particular experiment not based on certified devices, we will use the <code class="docutils literal notranslate"><span class="pre">MockDevice</span></code> class to
+allow for a wide range of configuration settings.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">qutip</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pulse</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Register</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser_simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">QutipEmulator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.waveforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">CompositeWaveform</span><span class="p">,</span> <span class="n">RampWaveform</span><span class="p">,</span> <span class="n">ConstantWaveform</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">MockDevice</span>
+</pre></div>
+</div>
+</div>
+<section id="1.-Rydberg-Blockade-at-Resonant-Driving">
+<h2>1. Rydberg Blockade at Resonant Driving<a class="headerlink" href="#1.-Rydberg-Blockade-at-Resonant-Driving" title="Permalink to this heading"></a></h2>
+<p>We first consider clusters of <span class="math notranslate nohighlight">\(1, 2\)</span> and <span class="math notranslate nohighlight">\(3\)</span> atoms under resonant (<span class="math notranslate nohighlight">\(\delta = 0\)</span>) driving. If all the atoms are placed within each other’s blockade volume, only one excitation per group will be possible at a time. The Rabi frequency will be enhanced by <span class="math notranslate nohighlight">\(\sqrt{N}\)</span></p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">occupation</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">qutip</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">reg</span><span class="o">.</span><span class="n">qubits</span><span class="p">)</span>
+    <span class="n">prod</span> <span class="o">=</span> <span class="p">[</span><span class="n">qutip</span><span class="o">.</span><span class="n">qeye</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">)]</span>
+    <span class="n">prod</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">r</span><span class="o">.</span><span class="n">dag</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">qutip</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">prod</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Given a value of the maximum Rabi Frequency applied to the atoms, we can calculate the corresponding blockade radius using the <code class="docutils literal notranslate"><span class="pre">rydberg_blockade_radius()</span></code> method from <code class="docutils literal notranslate"><span class="pre">MockDevice</span></code>. We use this to arrange clusters of atoms which will experience this blockade effect:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">Omega_max</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">R_blockade</span> <span class="o">=</span> <span class="n">MockDevice</span><span class="o">.</span><span class="n">rydberg_blockade_radius</span><span class="p">(</span><span class="n">Omega_max</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Blockade Radius is: </span><span class="si">{</span><span class="n">R_blockade</span><span class="si">}</span><span class="s2">µm.&quot;</span><span class="p">)</span>
+<span class="n">groups</span> <span class="o">=</span> <span class="mi">3</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">blockade_cluster</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+    <span class="n">atom_coords</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">((</span><span class="n">R_blockade</span> <span class="o">/</span> <span class="n">N</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">40</span> <span class="o">*</span> <span class="n">group</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">groups</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">(</span><span class="n">atom_coords</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+    <span class="n">reg</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span>
+        <span class="n">blockade_radius</span><span class="o">=</span><span class="n">R_blockade</span><span class="p">,</span> <span class="n">draw_half_radius</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">draw_graph</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+
+    <span class="n">resonant_pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantPulse</span><span class="p">(</span><span class="mi">1500</span><span class="p">,</span> <span class="n">Omega_max</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">MockDevice</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ising&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+    <span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">resonant_pulse</span><span class="p">,</span> <span class="s2">&quot;ising&quot;</span><span class="p">)</span>
+
+    <span class="n">simul</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+
+    <span class="n">obs</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="nb">sum</span><span class="p">(</span><span class="n">occupation</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">N</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">groups</span> <span class="o">*</span> <span class="n">N</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+    <span class="p">]</span>
+
+    <span class="n">res</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">progress_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;bdf&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Blockade Radius is: 8.692279598222772µm.
+</pre></div></div>
+</div>
+<p>Next we run <code class="docutils literal notranslate"><span class="pre">blockade_cluster(N)</span></code>, which runs the simulation, for clusters of sizes <span class="math notranslate nohighlight">\(N \in \{1,2,3\}\)</span>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">blockade_cluster</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="k">for</span> <span class="n">N</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_9_0.png" src="../_images/tutorials_1D_crystals_9_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+10.0%. Run time:   0.01s. Est. time left: 00:00:00:00
+20.0%. Run time:   0.02s. Est. time left: 00:00:00:00
+30.0%. Run time:   0.02s. Est. time left: 00:00:00:00
+40.0%. Run time:   0.03s. Est. time left: 00:00:00:00
+50.0%. Run time:   0.04s. Est. time left: 00:00:00:00
+60.0%. Run time:   0.05s. Est. time left: 00:00:00:00
+70.0%. Run time:   0.07s. Est. time left: 00:00:00:00
+80.0%. Run time:   0.07s. Est. time left: 00:00:00:00
+90.0%. Run time:   0.08s. Est. time left: 00:00:00:00
+Total run time:   0.08s
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_9_2.png" src="../_images/tutorials_1D_crystals_9_2.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+10.0%. Run time:   0.02s. Est. time left: 00:00:00:00
+20.0%. Run time:   0.05s. Est. time left: 00:00:00:00
+30.0%. Run time:   0.07s. Est. time left: 00:00:00:00
+40.0%. Run time:   0.13s. Est. time left: 00:00:00:00
+50.0%. Run time:   0.17s. Est. time left: 00:00:00:00
+60.0%. Run time:   0.22s. Est. time left: 00:00:00:00
+70.0%. Run time:   0.27s. Est. time left: 00:00:00:00
+80.0%. Run time:   0.34s. Est. time left: 00:00:00:00
+90.0%. Run time:   0.39s. Est. time left: 00:00:00:00
+Total run time:   0.45s
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_9_4.png" src="../_images/tutorials_1D_crystals_9_4.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+10.0%. Run time:   1.02s. Est. time left: 00:00:00:09
+20.0%. Run time:   1.92s. Est. time left: 00:00:00:07
+30.0%. Run time:   2.74s. Est. time left: 00:00:00:06
+40.0%. Run time:   3.70s. Est. time left: 00:00:00:05
+50.0%. Run time:   4.74s. Est. time left: 00:00:00:04
+60.0%. Run time:   5.74s. Est. time left: 00:00:00:03
+70.0%. Run time:   7.16s. Est. time left: 00:00:00:03
+80.0%. Run time:   8.58s. Est. time left: 00:00:00:02
+90.0%. Run time:  10.25s. Est. time left: 00:00:00:01
+Total run time:  12.29s
+</pre></div></div>
+</div>
+<p>We now plot the probability that a Rydberg state withing the cluster is occupied (by summing the expectation values of the <span class="math notranslate nohighlight">\(|r\rangle\langle r|_i\)</span> operators for each cluster) as it evolves in time, revealing the Rabi frequency of each configuration:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">N</span><span class="p">,</span> <span class="n">expectation</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="n">ax</span><span class="p">[</span><span class="n">N</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Time ($µs$)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">[</span><span class="n">N</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Probability of $|r\rangle$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">[</span><span class="n">N</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Atoms per cluster N = </span><span class="si">{</span><span class="n">N</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+    <span class="n">avg</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">expectation</span><span class="p">)</span> <span class="o">/</span> <span class="n">groups</span>
+    <span class="n">ax</span><span class="p">[</span><span class="n">N</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">avg</span><span class="p">))</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">avg</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_11_0.png" src="../_images/tutorials_1D_crystals_11_0.png" />
+</div>
+</div>
+<p>Only one excitation will be shared between the atoms on each cluster. Notice how the Rabi frequency increases by a factor of <span class="math notranslate nohighlight">\(\sqrt{N}\)</span></p>
+</section>
+<section id="2.-Ordered-Crystalline-phases">
+<h2>2. Ordered Crystalline phases<a class="headerlink" href="#2.-Ordered-Crystalline-phases" title="Permalink to this heading"></a></h2>
+<p>The pulse sequence that we will prepare is based on the following parameters:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Parameters in rad/µs and ns</span>
+<span class="n">delta_0</span> <span class="o">=</span> <span class="o">-</span><span class="mi">6</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">delta_f</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">Omega_max</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">t_rise</span> <span class="o">=</span> <span class="mi">500</span>
+<span class="n">t_stop</span> <span class="o">=</span> <span class="mi">4500</span>
+</pre></div>
+</div>
+</div>
+<p>We calculate the blockade radius from the maximal applied Rabi frequency:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">R_blockade</span> <span class="o">=</span> <span class="n">MockDevice</span><span class="o">.</span><span class="n">rydberg_blockade_radius</span><span class="p">(</span><span class="n">Omega_max</span><span class="p">)</span>
+<span class="n">a</span> <span class="o">=</span> <span class="mf">7.0</span>
+
+<span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="n">a</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Blockade Radius is: </span><span class="si">{</span><span class="n">R_blockade</span><span class="si">}</span><span class="s2">µm.&quot;</span><span class="p">)</span>
+<span class="n">reg</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">blockade_radius</span><span class="o">=</span><span class="n">R_blockade</span><span class="p">,</span> <span class="n">draw_half_radius</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Blockade Radius is: 8.692279598222772µm.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_17_1.png" src="../_images/tutorials_1D_crystals_17_1.png" />
+</div>
+</div>
+<p>Create the pulses using Pulser objects:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">hold</span> <span class="o">=</span> <span class="n">ConstantWaveform</span><span class="p">(</span><span class="n">t_rise</span><span class="p">,</span> <span class="n">delta_0</span><span class="p">)</span>
+<span class="n">excite</span> <span class="o">=</span> <span class="n">RampWaveform</span><span class="p">(</span><span class="n">t_stop</span> <span class="o">-</span> <span class="n">t_rise</span><span class="p">,</span> <span class="n">delta_0</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">)</span>
+<span class="n">sweep</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantAmplitude</span><span class="p">(</span>
+    <span class="n">Omega_max</span><span class="p">,</span> <span class="n">CompositeWaveform</span><span class="p">(</span><span class="n">hold</span><span class="p">,</span> <span class="n">excite</span><span class="p">),</span> <span class="mf">0.0</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">MockDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ising&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">sweep</span><span class="p">,</span> <span class="s2">&quot;ising&quot;</span><span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_20_0.png" src="../_images/tutorials_1D_crystals_20_0.png" />
+</div>
+</div>
+<p>The pulse sequence we just created corresponds a path in the Phase space of the ground state, which we represent schematically with the following function:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">phase_diagram</span><span class="p">(</span><span class="n">seq</span><span class="p">):</span>
+    <span class="n">ratio</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">seq</span><span class="o">.</span><span class="n">_schedule</span><span class="p">[</span><span class="s2">&quot;ising&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">Pulse</span><span class="p">):</span>
+            <span class="n">ratio</span> <span class="o">+=</span> <span class="nb">list</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">detuning</span><span class="o">.</span><span class="n">samples</span> <span class="o">/</span> <span class="n">Omega_max</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;both&quot;</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Interaction Range $R_b/a$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Detuning $\delta/\Omega$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">3.2</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">)</span>
+
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mf">0.6</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="p">(</span><span class="n">y</span> <span class="o">-</span> <span class="mf">1.2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mf">0.8</span> <span class="o">+</span> <span class="mi">50</span> <span class="o">*</span> <span class="p">(</span><span class="n">y</span> <span class="o">-</span> <span class="mf">2.45</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mi">170</span> <span class="o">*</span> <span class="p">(</span><span class="n">y</span> <span class="o">-</span> <span class="mf">3.06</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ratio</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ratio</span><span class="p">),</span> <span class="n">R_blockade</span> <span class="o">/</span> <span class="n">a</span><span class="p">),</span> <span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">phase_diagram</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_23_0.png" src="../_images/tutorials_1D_crystals_23_0.png" />
+</div>
+</div>
+<section id="2.1-Simulation">
+<h3>2.1 Simulation<a class="headerlink" href="#2.1-Simulation" title="Permalink to this heading"></a></h3>
+<p>We run our simulation, for a list of observables corresponding to <span class="math notranslate nohighlight">\(|r\rangle \langle r|_j\)</span> for each atom in the register:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">simul</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+
+<span class="n">occup_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">occupation</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">reg</span><span class="o">.</span><span class="n">qubits</span><span class="p">))]</span>
+
+<span class="n">res</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">progress_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">occupations</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="n">occup_list</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+10.0%. Run time:   0.76s. Est. time left: 00:00:00:06
+20.0%. Run time:   1.61s. Est. time left: 00:00:00:06
+30.0%. Run time:   2.55s. Est. time left: 00:00:00:05
+40.0%. Run time:   3.27s. Est. time left: 00:00:00:04
+50.0%. Run time:   3.86s. Est. time left: 00:00:00:03
+60.0%. Run time:   4.40s. Est. time left: 00:00:00:02
+70.0%. Run time:   4.99s. Est. time left: 00:00:00:02
+80.0%. Run time:   5.60s. Est. time left: 00:00:00:01
+90.0%. Run time:   6.35s. Est. time left: 00:00:00:00
+Total run time:   7.21s
+</pre></div></div>
+</div>
+<p>The following function plots the evolution of the expectation values with respect to time:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">plot_evolution</span><span class="p">(</span><span class="n">results</span><span class="p">):</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Time (µs)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Rydberg Occupation Probabilty&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">expv</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">expv</span><span class="p">))</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">expv</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plot_evolution</span><span class="p">(</span><span class="n">occupations</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_29_0.png" src="../_images/tutorials_1D_crystals_29_0.png" />
+</div>
+</div>
+<p>We finally plot the probability of occupation of the Rydberg level with respect to the values of detuning, for each atom in the array:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">heat_detuning</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">reg</span><span class="o">.</span><span class="n">qubits</span><span class="p">)</span>
+    <span class="n">time_window</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">detunings</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">samples_obj</span><span class="o">.</span><span class="n">to_nested_dict</span><span class="p">()[</span><span class="s2">&quot;Global&quot;</span><span class="p">][</span><span class="s2">&quot;ground-rydberg&quot;</span><span class="p">][</span>
+        <span class="s2">&quot;det&quot;</span>
+    <span class="p">][[</span><span class="nb">int</span><span class="p">(</span><span class="mi">1000</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">simul</span><span class="o">.</span><span class="n">evaluation_times</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]]</span>
+
+    <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">detunings</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">start</span> <span class="o">&lt;=</span> <span class="n">d</span> <span class="o">&lt;=</span> <span class="n">end</span><span class="p">:</span>
+            <span class="n">time_window</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+            <span class="n">x</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span>
+
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">Z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">)[:,</span> <span class="n">time_window</span><span class="p">]</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;hot&quot;</span><span class="p">,</span> <span class="n">shading</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Detuning/2π (MHz)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Atom in array&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;q</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">)],</span> <span class="n">va</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">fraction</span><span class="o">=</span><span class="mf">0.047</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mf">0.015</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">heat_detuning</span><span class="p">(</span><span class="n">occupations</span><span class="p">,</span> <span class="n">delta_0</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_32_0.png" src="../_images/tutorials_1D_crystals_32_0.png" />
+</div>
+</div>
+</section>
+<section id="2.2-Rydberg-Crystals:-Z_3-Order">
+<h3>2.2 Rydberg Crystals: <span class="math notranslate nohighlight">\(Z_3\)</span> Order<a class="headerlink" href="#2.2-Rydberg-Crystals:-Z_3-Order" title="Permalink to this heading"></a></h3>
+<p>To arrive at a different phase, we reduce the interatomic distance <span class="math notranslate nohighlight">\(a\)</span>, thus increasing the interaction range between the atoms. This will lead to a <span class="math notranslate nohighlight">\(Z_3\)</span> ordered phase:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span> <span class="o">=</span> <span class="mf">3.5</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="n">a</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+
+<span class="n">delta_0</span> <span class="o">=</span> <span class="o">-</span><span class="mi">4</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">delta_f</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">Omega_max</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>  <span class="c1"># btw 1.8-2 * 2pi MHz</span>
+<span class="n">t_rise</span> <span class="o">=</span> <span class="mi">600</span>
+<span class="n">t_stop</span> <span class="o">=</span> <span class="mi">2500</span>
+<span class="n">R_blockade</span> <span class="o">=</span> <span class="n">MockDevice</span><span class="o">.</span><span class="n">rydberg_blockade_radius</span><span class="p">(</span><span class="n">Omega_max</span><span class="p">)</span>
+<span class="n">reg</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">blockade_radius</span><span class="o">=</span><span class="n">R_blockade</span><span class="p">,</span> <span class="n">draw_half_radius</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1">#</span>
+<span class="n">hold</span> <span class="o">=</span> <span class="n">ConstantWaveform</span><span class="p">(</span><span class="n">t_rise</span><span class="p">,</span> <span class="n">delta_0</span><span class="p">)</span>
+<span class="n">excite</span> <span class="o">=</span> <span class="n">RampWaveform</span><span class="p">(</span><span class="n">t_stop</span> <span class="o">-</span> <span class="n">t_rise</span><span class="p">,</span> <span class="n">delta_0</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">)</span>
+<span class="n">sweep</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantAmplitude</span><span class="p">(</span>
+    <span class="n">Omega_max</span><span class="p">,</span> <span class="n">CompositeWaveform</span><span class="p">(</span><span class="n">hold</span><span class="p">,</span> <span class="n">excite</span><span class="p">),</span> <span class="mf">0.0</span>
+<span class="p">)</span>
+<span class="c1">#</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">MockDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ising&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">sweep</span><span class="p">,</span> <span class="s2">&quot;ising&quot;</span><span class="p">)</span>
+
+<span class="n">phase_diagram</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+
+<span class="n">simul</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+
+<span class="n">occup_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">occupation</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">reg</span><span class="o">.</span><span class="n">qubits</span><span class="p">))]</span>
+
+<span class="n">res</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">progress_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;bdf&quot;</span><span class="p">)</span>
+
+<span class="n">occupations</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="n">occup_list</span><span class="p">)</span>
+
+<span class="n">plot_evolution</span><span class="p">(</span><span class="n">occupations</span><span class="p">)</span>
+<span class="n">heat_detuning</span><span class="p">(</span><span class="n">occupations</span><span class="p">,</span> <span class="n">delta_0</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_35_0.png" src="../_images/tutorials_1D_crystals_35_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_35_1.png" src="../_images/tutorials_1D_crystals_35_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+10.0%. Run time:   2.20s. Est. time left: 00:00:00:19
+20.0%. Run time:   4.31s. Est. time left: 00:00:00:17
+30.0%. Run time:   6.38s. Est. time left: 00:00:00:14
+40.0%. Run time:   8.46s. Est. time left: 00:00:00:12
+50.0%. Run time:  10.56s. Est. time left: 00:00:00:10
+60.0%. Run time:  12.80s. Est. time left: 00:00:00:08
+70.0%. Run time:  14.89s. Est. time left: 00:00:00:06
+80.0%. Run time:  16.99s. Est. time left: 00:00:00:04
+90.0%. Run time:  19.08s. Est. time left: 00:00:00:02
+Total run time:  21.14s
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_35_3.png" src="../_images/tutorials_1D_crystals_35_3.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_35_4.png" src="../_images/tutorials_1D_crystals_35_4.png" />
+</div>
+</div>
+</section>
+<section id="2.3-Rydberg-Crystals:-Z_4-Order">
+<h3>2.3 Rydberg Crystals: <span class="math notranslate nohighlight">\(Z_4\)</span> Order<a class="headerlink" href="#2.3-Rydberg-Crystals:-Z_4-Order" title="Permalink to this heading"></a></h3>
+<p>Decreasing even more the interatomic distance leads to a <span class="math notranslate nohighlight">\(Z_4\)</span> order. The magnitude of the Rydberg interaction with respect to that of the applied pulses means our solver has to control terms with a wider range, thus leading to longer simulation times:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span> <span class="o">=</span> <span class="mf">2.8</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="n">a</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;q&quot;</span><span class="p">)</span>
+
+<span class="c1"># Parameters in rad/µs and ns</span>
+
+<span class="n">delta_0</span> <span class="o">=</span> <span class="o">-</span><span class="mi">4</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">delta_f</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">Omega_max</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>  <span class="c1"># btw 1.8-2 2pi*MHz</span>
+<span class="n">t_rise</span> <span class="o">=</span> <span class="mi">600</span>
+<span class="n">t_stop</span> <span class="o">=</span> <span class="mi">2500</span>
+<span class="n">R_blockade</span> <span class="o">=</span> <span class="n">MockDevice</span><span class="o">.</span><span class="n">rydberg_blockade_radius</span><span class="p">(</span><span class="n">Omega_max</span><span class="p">)</span>
+<span class="n">reg</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">blockade_radius</span><span class="o">=</span><span class="n">R_blockade</span><span class="p">,</span> <span class="n">draw_half_radius</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1">#</span>
+<span class="n">hold</span> <span class="o">=</span> <span class="n">ConstantWaveform</span><span class="p">(</span><span class="n">t_rise</span><span class="p">,</span> <span class="n">delta_0</span><span class="p">)</span>
+<span class="n">excite</span> <span class="o">=</span> <span class="n">RampWaveform</span><span class="p">(</span><span class="n">t_stop</span> <span class="o">-</span> <span class="n">t_rise</span><span class="p">,</span> <span class="n">delta_0</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">)</span>
+<span class="n">sweep</span> <span class="o">=</span> <span class="n">Pulse</span><span class="o">.</span><span class="n">ConstantAmplitude</span><span class="p">(</span>
+    <span class="n">Omega_max</span><span class="p">,</span> <span class="n">CompositeWaveform</span><span class="p">(</span><span class="n">hold</span><span class="p">,</span> <span class="n">excite</span><span class="p">),</span> <span class="mf">0.0</span>
+<span class="p">)</span>
+
+<span class="c1">#</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">MockDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">&quot;ising&quot;</span><span class="p">,</span> <span class="s2">&quot;rydberg_global&quot;</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">sweep</span><span class="p">,</span> <span class="s2">&quot;ising&quot;</span><span class="p">)</span>
+
+<span class="n">phase_diagram</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+
+<span class="n">simul</span> <span class="o">=</span> <span class="n">QutipEmulator</span><span class="o">.</span><span class="n">from_sequence</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+
+<span class="n">occup_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">occupation</span><span class="p">(</span><span class="n">reg</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">reg</span><span class="o">.</span><span class="n">qubits</span><span class="p">))]</span>
+
+<span class="c1">#</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">simul</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">progress_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;bdf&quot;</span><span class="p">)</span>
+<span class="n">occupations</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="n">occup_list</span><span class="p">)</span>
+
+<span class="n">plot_evolution</span><span class="p">(</span><span class="n">occupations</span><span class="p">)</span>
+<span class="n">heat_detuning</span><span class="p">(</span><span class="n">occupations</span><span class="p">,</span> <span class="n">delta_0</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_38_0.png" src="../_images/tutorials_1D_crystals_38_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_38_1.png" src="../_images/tutorials_1D_crystals_38_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+10.0%. Run time:   4.70s. Est. time left: 00:00:00:42
+20.0%. Run time:  10.75s. Est. time left: 00:00:00:42
+30.0%. Run time:  16.96s. Est. time left: 00:00:00:39
+40.0%. Run time:  24.73s. Est. time left: 00:00:00:37
+50.0%. Run time:  32.96s. Est. time left: 00:00:00:32
+60.0%. Run time:  39.45s. Est. time left: 00:00:00:26
+70.0%. Run time:  44.43s. Est. time left: 00:00:00:19
+80.0%. Run time:  49.02s. Est. time left: 00:00:00:12
+90.0%. Run time:  53.25s. Est. time left: 00:00:00:05
+Total run time:  58.02s
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_38_3.png" src="../_images/tutorials_1D_crystals_38_3.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_1D_crystals_38_4.png" src="../_images/tutorials_1D_crystals_38_4.png" />
+</div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="shadow_est.html" class="btn btn-neutral float-left" title="Efficient estimation techniques for Variational Quantum Simulation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="cz_gate.html" class="btn btn-neutral float-right" title="Control-Z Gate Sequence" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
