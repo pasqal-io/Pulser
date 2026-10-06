@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import functools
+import itertools
 import json
 import pickle
 import re
@@ -25,6 +27,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+import qutip
 
 import pulser
 from pulser.backend.abc import Backend, EmulatorBackend
@@ -42,6 +45,7 @@ from pulser.backend.default_observables import (
     Expectation,
     Fidelity,
     Occupation,
+    PauliString,
     StateResult,
 )
 from pulser.backend.qpu import QPUBackend
@@ -969,6 +973,7 @@ def test_results_aggregation(matching_uuids):
         (BitStrings, AggregationMethod.BAG_UNION),
         (CorrelationMatrix, AggregationMethod.MEAN),
         (Occupation, AggregationMethod.MEAN),
+        (functools.partial(PauliString, {0: "Z"}), AggregationMethod.MEAN),
         (Energy, AggregationMethod.MEAN),
         (EnergyVariance, AggregationMethod.SKIP_WARN),
         (EnergySecondMoment, AggregationMethod.MEAN),
@@ -1638,3 +1643,149 @@ class TestObservables:
         fid_ghz = Fidelity(ghz_state)
         assert fid_ghz.tag == "fidelity"
         assert np.isclose(fid_ghz.apply(state=ghz_state), 1.0)
+
+    @pytest.mark.parametrize(
+        "paulis, expected",
+        [
+            ({0: "Z"}, 0.0),
+            ({1: "X"}, 0.0),
+            ({0: "Z", 2: "Z"}, 1.0),
+            ({0: "Z", 1: "Z", 2: "Z"}, 0.0),
+            ({0: "X", 1: "X", 2: "X"}, 1.0),
+            ({0: "x", 1: "y", 2: "y"}, -1.0),
+            ({2: "Y", 0: "Y", 1: "X"}, -1.0),
+        ],
+    )
+    def test_pauli_string_ghz(self, ghz_state, ham, paulis, expected):
+        obs = PauliString(paulis)
+        assert obs.tag == "pauli_string"
+        assert obs.paulis == {i: p.upper() for i, p in sorted(paulis.items())}
+        assert np.isclose(
+            obs.apply(state=ghz_state, hamiltonian=ham), expected
+        )
+
+    def test_pauli_string_matches_qutip(self, ham):
+        rng = np.random.default_rng(1234)
+        amps = rng.normal(size=8) + 1j * rng.normal(size=8)
+        amps /= np.linalg.norm(amps)
+        state = QutipState.from_state_amplitudes(
+            eigenstates=("r", "g"),
+            amplitudes={
+                "".join(b): a
+                for b, a in zip(itertools.product("rg", repeat=3), amps)
+            },
+        )
+        # In the ("r", "g") basis, |r> = (1, 0)^T, so the Pauli matrices
+        # match qutip's
+        qutip_paulis = {
+            "I": qutip.qeye(2),
+            "X": qutip.sigmax(),
+            "Y": qutip.sigmay(),
+            "Z": qutip.sigmaz(),
+        }
+        for labels in itertools.product("IXYZ", repeat=3):
+            if set(labels) == {"I"}:
+                continue
+            obs = PauliString(
+                {i: p for i, p in enumerate(labels) if p != "I"},
+                tag_suffix="".join(labels),
+            )
+            assert obs.tag == f"pauli_string_{''.join(labels)}"
+            expected = qutip.expect(
+                qutip.tensor(*(qutip_paulis[p] for p in labels)),
+                state.to_qobj(),
+            )
+            assert np.isclose(
+                obs.apply(state=state, hamiltonian=ham), expected
+            )
+
+    @pytest.mark.parametrize(
+        "eigenstates, amplitudes, paulis, expected",
+        [
+            # Descending energy order: Z = |r><r| - |g><g|
+            (("r", "g"), {"r": 1.0}, {0: "Z"}, 1.0),
+            # Ascending energy order: Z = |0><0| - |1><1|
+            (("0", "1"), {"1": 1.0}, {0: "Z"}, -1.0),
+            (("0", "1"), {"0": 1.0}, {0: "Z"}, 1.0),
+            # Y = -i|e0><e1| + i|e1><e0| in both cases
+            (
+                ("r", "g"),
+                {"r": np.sqrt(0.5), "g": 1j * np.sqrt(0.5)},
+                {0: "Y"},
+                1.0,
+            ),
+            (
+                ("0", "1"),
+                {"0": np.sqrt(0.5), "1": 1j * np.sqrt(0.5)},
+                {0: "Y"},
+                1.0,
+            ),
+            # The leakage state is ignored when defining the Pauli matrices
+            (
+                ("r", "g", "x"),
+                {"r": np.sqrt(0.5), "g": np.sqrt(0.5)},
+                {0: "X"},
+                1.0,
+            ),
+        ],
+    )
+    def test_pauli_string_conventions(
+        self, eigenstates, amplitudes, paulis, expected
+    ):
+        state = QutipState.from_state_amplitudes(
+            eigenstates=eigenstates, amplitudes=amplitudes
+        )
+        ham = QutipOperator.from_operator_repr(
+            eigenstates=eigenstates, n_qudits=1, operations=[(1.0, [])]
+        )
+        assert np.isclose(
+            PauliString(paulis).apply(state=state, hamiltonian=ham), expected
+        )
+
+    def test_pauli_string_errors(self, ghz_state, ham):
+        with pytest.raises(TypeError, match="'paulis' must be a mapping"):
+            PauliString([(0, "Z")])
+        with pytest.raises(
+            ValueError, match="'paulis' must contain at least one entry"
+        ):
+            PauliString({})
+        with pytest.raises(
+            TypeError, match="qudit indices in 'paulis' must be integers"
+        ):
+            PauliString({"0": "Z"})
+        with pytest.raises(
+            TypeError, match="qudit indices in 'paulis' must be integers"
+        ):
+            PauliString({True: "Z"})
+        with pytest.raises(
+            ValueError, match="qudit indices in 'paulis' must be non-negative"
+        ):
+            PauliString({-1: "Z"})
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "The Pauli matrices in 'paulis' must be one of "
+                "('X', 'Y', 'Z'); got 'W' for qudit 1."
+            ),
+        ):
+            PauliString({0: "Z", 1: "W"})
+        with pytest.raises(ValueError, match="must be one of"):
+            PauliString({0: 1})
+        # Numpy integers are accepted as indices
+        assert PauliString({np.int64(1): "z"}).paulis == {1: "Z"}
+
+        with pytest.raises(ValueError, match="Got invalid indices"):
+            PauliString({3: "Z"}).apply(state=ghz_state, hamiltonian=ham)
+
+        qutrit_state = QutipState.from_state_amplitudes(
+            eigenstates=("u", "d", "r"), amplitudes={"u": 1.0}
+        )
+        qutrit_ham = QutipOperator.from_operator_repr(
+            eigenstates=("u", "d", "r"), n_qudits=1, operations=[(1.0, [])]
+        )
+        with pytest.raises(
+            ValueError, match="'PauliString' is only defined for qubits"
+        ):
+            PauliString({0: "X"}).apply(
+                state=qutrit_state, hamiltonian=qutrit_ham
+            )

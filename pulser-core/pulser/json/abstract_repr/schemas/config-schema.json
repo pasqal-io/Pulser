@@ -27,6 +27,9 @@
                             "$ref": "#/correlation_matrix"
                         },
                         {
+                            "$ref": "#/pauli_string"
+                        },
+                        {
                             "$ref": "#/energy"
                         },
                         {
@@ -431,6 +434,64 @@
             "observable",
             "evaluation_times",
             "one_state",
+            "tag_suffix"
+        ],
+        "additionalProperties": false
+    },
+    "pauli_string": {
+        "description": "cause the emulator to compute the expectation value of a Pauli string",
+        "type": "object",
+        "properties": {
+            "observable": {
+                "description": "tag to distinguish different instances of an observable",
+                "const": "pauli_string"
+            },
+            "evaluation_times": {
+                "$ref": "#/evaluation_times"
+            },
+            "paulis": {
+                "description": "the Pauli matrix applied to each qudit, as [qudit index, Pauli label] pairs",
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                    "type": "array",
+                    "items": [
+                        {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        {
+                            "enum": [
+                                "X",
+                                "Y",
+                                "Z"
+                            ]
+                        }
+                    ],
+                    "minItems": 2,
+                    "maxItems": 2
+                }
+            },
+            "tag_suffix": {
+                "description": "added to base_tag to distinguish different instances",
+                "type": [
+                    "string",
+                    "null"
+                ]
+            },
+            "default_aggregation_method": {
+                "description": "how values from multiple results are combined",
+                "type": "integer"
+            },
+            "uuid": {
+                "description": "The observable's internal UUID",
+                "type": "string"
+            }
+        },
+        "required": [
+            "observable",
+            "evaluation_times",
+            "paulis",
             "tag_suffix"
         ],
         "additionalProperties": false

@@ -18,7 +18,8 @@ import copy
 import functools
 import warnings
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from numbers import Integral
 from typing import TYPE_CHECKING, Any, Type
 
 from pulser.backend.observable import AggregationMethod, Observable
@@ -434,6 +435,149 @@ class Occupation(Observable):
             ).expect(state)
             for i in range(state.n_qudits)
         ]
+
+
+class PauliString(Observable):
+    r"""Stores the expectation value of a Pauli string.
+
+    A Pauli string is a product of Pauli matrices acting on different
+    qudits, e.g. ``<φ(t)|σ^z_1 σ^x_3 σ^z_10|φ(t)>``. Qudits without an
+    associated Pauli matrix are applied the identity.
+
+    The Pauli matrices are defined following the order of the state's
+    eigenstates (ignoring the leakage state ``"x"``). For eigenstates
+    ``(e0, e1)``, they are
+
+    - ``σ^x = |e0><e1| + |e1><e0|``
+    - ``σ^y = -i|e0><e1| + i|e1><e0|``
+    - ``σ^z = |e0><e0| - |e1><e1|``
+
+    which matches the conventions of ``pulser-simulation`` for both the
+    ``ground-rydberg`` (``("r", "g")``) and ``XY`` (``("0", "1")``) bases.
+
+    Args:
+        paulis: A mapping between the index of a qudit (following the
+            register order) and the Pauli matrix applied to it, given as
+            one of ``"X"``, ``"Y"`` or ``"Z"`` (case-insensitive).
+        evaluation_times: The relative times at which to compute the
+            expectation value. If left as ``None``, uses the
+            ``default_evaluation_times`` of the backend's ``EmulationConfig``.
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
+
+    Example:
+        >>> # Computes <σ^z_1 σ^x_3 σ^z_10>
+        >>> PauliString({1: "Z", 3: "X", 10: "Z"}, tag_suffix="zxz")
+    """
+
+    _PAULI_LABELS = ("X", "Y", "Z")
+
+    def __init__(
+        self,
+        paulis: Mapping[int, str],
+        *,
+        evaluation_times: Sequence[float] | None = None,
+        tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+    ):
+        """Initializes the observable."""
+        super().__init__(
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+            default_aggregation_method=default_aggregation_method,
+        )
+        if not isinstance(paulis, Mapping):
+            raise TypeError(
+                "'paulis' must be a mapping between qudit indices and Pauli "
+                f"matrices; got {type(paulis)} instead. Got {paulis!r}."
+            )
+        if not paulis:
+            raise ValueError("'paulis' must contain at least one entry.")
+        validated: dict[int, str] = {}
+        for index, pauli in paulis.items():
+            if isinstance(index, bool) or not isinstance(index, Integral):
+                raise TypeError(
+                    "The qudit indices in 'paulis' must be integers; got "
+                    f"{index!r} of type {type(index)}."
+                )
+            if index < 0:
+                raise ValueError(
+                    "The qudit indices in 'paulis' must be non-negative; "
+                    f"got {index!r}."
+                )
+            if (
+                not isinstance(pauli, str)
+                or pauli.upper() not in self._PAULI_LABELS
+            ):
+                raise ValueError(
+                    "The Pauli matrices in 'paulis' must be one of "
+                    f"{self._PAULI_LABELS}; got {pauli!r} for qudit {index}."
+                )
+            validated[int(index)] = pauli.upper()
+        self._paulis = dict(sorted(validated.items()))
+
+    @property
+    def paulis(self) -> dict[int, str]:
+        """The Pauli matrix applied to each qudit index."""
+        return dict(self._paulis)
+
+    @property
+    def _base_tag(self) -> str:
+        return "pauli_string"
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        repr = super()._to_abstract_repr()
+        repr["paulis"] = [[i, p] for i, p in self._paulis.items()]
+        return repr
+
+    @staticmethod
+    @functools.cache
+    def _get_pauli_string_operator(
+        paulis: tuple[tuple[int, str], ...],
+        n_qudits: int,
+        eigenstates: Sequence[Eigenstate],
+        op_type: Type[OperatorType],
+    ) -> OperatorType:
+        basis = [s for s in eigenstates if s != "x"]
+        if len(basis) != 2:
+            raise ValueError(
+                "'PauliString' is only defined for qubits, i.e. states with "
+                "exactly two eigenstates (besides the leakage state 'x'); "
+                f"got eigenstates {tuple(eigenstates)}."
+            )
+        e0, e1 = basis
+        pauli_reprs: dict[str, dict[str, complex]] = {
+            "X": {e0 + e1: 1.0, e1 + e0: 1.0},
+            "Y": {e0 + e1: -1.0j, e1 + e0: 1.0j},
+            "Z": {e0 + e0: 1.0, e1 + e1: -1.0},
+        }
+        tensor_op = [
+            (
+                pauli_reprs[label],
+                [i for i, p in paulis if p == label],
+            )
+            for label in PauliString._PAULI_LABELS
+            if any(p == label for _, p in paulis)
+        ]
+        return op_type.from_operator_repr(
+            eigenstates=eigenstates,
+            n_qudits=n_qudits,
+            operations=[(1.0, tensor_op)],
+        )
+
+    def apply(
+        self, *, state: State, hamiltonian: Operator, **kwargs: Any
+    ) -> Any:
+        """Calculates the observable to store in the Results."""
+        return self._get_pauli_string_operator(
+            tuple(self._paulis.items()),
+            state.n_qudits,
+            state.eigenstates,
+            type(hamiltonian),
+        ).expect(state)
 
 
 class Energy(Observable):

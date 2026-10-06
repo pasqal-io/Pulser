@@ -27,8 +27,10 @@ from pulser.backend.default_observables import (
     BitStrings,
     Energy,
     EnergyVariance,
+    Expectation,
     Fidelity,
     Occupation,
+    PauliString,
     StateResult,
 )
 from pulser.backend.observable import Callback
@@ -658,3 +660,54 @@ def test_run_from_sequence_samples(modulation):
     s2 = results2.final_state._state.full()
 
     assert np.allclose(s1, s2, atol=0, rtol=1e-16)  # really the same
+
+
+def test_pauli_string():
+    reg = pulser.Register.from_coordinates(
+        [(0, 0), (6, 0), (0, 8)], prefix="q"
+    )
+    seq = pulser.Sequence(reg, pulser.MockDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(
+        pulser.Pulse.ConstantDetuning(
+            pulser.BlackmanWaveform(500, np.pi), -1.0, 0.3
+        ),
+        "ryd",
+    )
+    eval_times = [0.0, 0.3, 0.6, 1.0]
+    paulis = {0: "Z", 1: "X", 2: "Y"}
+    pauli_obs = PauliString(paulis, evaluation_times=eval_times)
+    # The same operator, built by hand
+    zxy = QutipOperator.from_operator_repr(
+        eigenstates=("r", "g"),
+        n_qudits=3,
+        operations=[
+            (
+                1.0,
+                [
+                    ({"rr": 1.0, "gg": -1.0}, [0]),
+                    ({"rg": 1.0, "gr": 1.0}, [1]),
+                    ({"rg": -1.0j, "gr": 1.0j}, [2]),
+                ],
+            )
+        ],
+    )
+    expectation = Expectation(zxy, evaluation_times=eval_times)
+    state_res = StateResult(evaluation_times=eval_times)
+    results = QutipBackendV2(
+        seq,
+        config=QutipConfig(observables=(pauli_obs, expectation, state_res)),
+    ).run()
+
+    result_times = results.get_result_times(pauli_obs)
+    assert len(result_times) == len(eval_times)
+    qutip_op = qutip.tensor(qutip.sigmaz(), qutip.sigmax(), qutip.sigmay())
+    for t in result_times:
+        value = results.get_result(pauli_obs, t)
+        assert np.isclose(value, results.get_result(expectation, t))
+        assert np.isclose(
+            value,
+            qutip.expect(qutip_op, results.get_result(state_res, t).to_qobj()),
+        )
+    # Not trivially zero at the end of the sequence
+    assert not np.isclose(results.get_result(pauli_obs, 1.0), 0.0)
