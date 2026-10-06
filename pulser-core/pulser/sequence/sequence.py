@@ -2202,28 +2202,26 @@ class Sequence(Generic[DeviceType]):
 
     def _modulate_slm_mask_dmm(self, duration: int, max_amp: float) -> None:
         if self._slm_mask_dmm is not None:
-            bottom_detuning = cast(
-                DMM, self.declared_channels[self._slm_mask_dmm]
-            ).bottom_detuning
-            total_bottom_detuning = cast(
-                DMM, self.declared_channels[self._slm_mask_dmm]
-            ).total_bottom_detuning
-            min_det = -10 * max_amp
-            if bottom_detuning and min_det < bottom_detuning:
-                min_det = bottom_detuning
+            dmm_ch = cast(DMM, self.declared_channels[self._slm_mask_dmm])
+            bottom_detuning = dmm_ch.bottom_detuning
+            total_bottom_detuning = dmm_ch.total_bottom_detuning
+            n_targets = len(set(self._slm_mask_targets))
+            # The detuning takes the sign imposed by the basis addressed by
+            # the DMM and is as large as its bounds allow
+            sign = dmm_ch._detuning_sign
+            det = sign * 10 * max_amp
+            if bottom_detuning and sign * det > sign * bottom_detuning:
+                det = bottom_detuning
             if (
                 total_bottom_detuning
-                and min_det * len(set(self._slm_mask_targets))
-                < total_bottom_detuning
+                and sign * det * n_targets > sign * total_bottom_detuning
             ):
-                min_det = total_bottom_detuning / len(
-                    set(self._slm_mask_targets)
-                )
+                det = total_bottom_detuning / n_targets
             cast(
                 _DMMSchedule, self._schedule[self._slm_mask_dmm]
             )._waiting_for_first_pulse = False
             self._add(
-                Pulse.ConstantPulse(duration, 0, min_det, 0),
+                Pulse.ConstantPulse(duration, 0, det, 0),
                 self._slm_mask_dmm,
                 "no-delay",
             )
