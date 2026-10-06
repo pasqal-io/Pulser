@@ -1370,6 +1370,18 @@ def test_qutip_operator_from_pauli_string():
     assert np.allclose(
         pauli_operator.to_qobj().full(), expected_operator.to_qobj().full()
     )
+def test_qutip_operator_from_pauli_string_with_leakage():
+    operator = QutipOperator.from_pauli_string(
+        eigenstates=("r", "g", "x"),
+        n_qudits=1,
+        pauli_string={0: "x"},
+    )
+    expected=np.array([
+            [0.0, 1.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+        ])
+    assert np.allclose(operator.to_qobj().full(), expected)
 
 
 class TestObservables:
@@ -1646,7 +1658,7 @@ class TestObservables:
         )
         operator = QutipOperator.from_pauli_string(
             eigenstates=("r", "g"),
-            n_qudits=3,
+            n_qudits=3, 
             pauli_string={0: "z", 1: "x", 2: "z"},
         )
         expectation = Expectation(operator)

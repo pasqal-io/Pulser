@@ -135,11 +135,12 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             ValueError: If there are not exactly two eigenstates or an
                 invalid Pauli operator is specified.
         """
-        if len(eigenstates) != 2:
+        qubit_eigenstates = tuple(state for state in eigenstates if state != "x")
+        if len(qubit_eigenstates) != 2:
             raise ValueError(
-                "Pauli operators require exactly two eigenstates."
+                "Pauli operators require exactly two qubit eigenstates,with an optional leakage state 'x'."
             )
-        state_0, state_1 = eigenstates
+        state_0, state_1 = qubit_eigenstates
         pauli_repr: dict[str, Mapping[str, complex]] = {
             "x": {f"{state_1}{state_0}": 1.0, f"{state_0}{state_1}": 1.0},
             "y": {f"{state_1}{state_0}": 1.0j, f"{state_0}{state_1}": -1.0j},
