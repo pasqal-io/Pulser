@@ -135,7 +135,9 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             ValueError: If there are not exactly two eigenstates or an
                 invalid Pauli operator is specified.
         """
-        qubit_eigenstates = tuple(state for state in eigenstates if state != "x")
+        qubit_eigenstates = tuple(
+            state for state in eigenstates if state != "x"
+        )
         if len(qubit_eigenstates) != 2:
             raise ValueError(
                 "Pauli operators require exactly two qubit eigenstates,with an optional leakage state 'x'."
