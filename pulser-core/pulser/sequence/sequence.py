@@ -675,11 +675,18 @@ class Sequence(Generic[DeviceType]):
             dmm_id: How the channel is identified in the device.
                 See in ``Sequence.available_channels`` which DMM IDs are still
                 available (start by "dmm" ) and the associated description. If
-                not given, takes the first available DMM in the device.
+                not given, takes the first available DMM in the device
+                addressing the basis of the current mode.
         """
         if dmm_id is None:
             for ch_id, ch_obj in self.available_channels.items():
-                if isinstance(ch_obj, DMM):
+                # Only a DMM addressing the basis of the current mode can
+                # be configured, so the others are skipped
+                if isinstance(ch_obj, DMM) and (
+                    ch_obj.basis == "XY"
+                    if self._in_xy
+                    else ch_obj.basis != "XY"
+                ):
                     dmm_id = ch_id
                     break
             else:

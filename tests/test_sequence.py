@@ -282,6 +282,18 @@ def test_dmm_declaration_xy(reg, det_map):
     ):
         seq.add_dmm_detuning(ConstantWaveform(100, -1), "dmm_1")
 
+    # In XY mode, the first available DMM addressing the 'XY' basis is
+    # the one taken by default
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.config_detuning_map(det_map)
+    assert list(seq.declared_channels) == ["ch0", "dmm_1"]
+    # And there is none to take if the device only holds Ising DMMs
+    seq = Sequence(reg, dataclasses.replace(MockDevice, dmm_objects=(DMM(),)))
+    seq.declare_channel("ch0", "mw_global")
+    with pytest.raises(ValueError, match="No DMM channel is still available"):
+        seq.config_detuning_map(det_map)
+
     # But it is not available on a sequence in Ising mode
     seq = Sequence(reg, MockDevice)
     seq.declare_channel("ch0", "rydberg_global")
