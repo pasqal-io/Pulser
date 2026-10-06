@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
 import re
 
 import pytest
@@ -168,12 +167,9 @@ def test_from_pauli_string(eigenstates, paulis, expected_operations):
     }
     # It can be given to Expectation and serialized, like any other operator
     config = EmulationConfig(observables=[Expectation(op)])
-    deserialized = EmulationConfig.from_abstract_repr(
-        config.to_abstract_repr()
-    )
-    assert json.loads(deserialized.to_abstract_repr())["observables"] == (
-        json.loads(config.to_abstract_repr())["observables"]
-    )
+    serialized = config.to_abstract_repr()
+    deserialized = EmulationConfig.from_abstract_repr(serialized)
+    assert deserialized.to_abstract_repr() == serialized
 
 
 @pytest.mark.parametrize(
