@@ -135,20 +135,21 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     def entanglement_entropy(
         self,
         *,
-        excluded_indices: Sequence[int] | None = None,
+        included_indices: Sequence[int] | None = None,
     ) -> float:
         """Compute the entropy between two parts of the system.
 
         The entropy between the two parts of the system. The returned value
-        will be the von Neuman entropy of the system excluding
-        `excluded_indices`.
+        will be the von Neuman entropy of the system for the qubits specified
+        by `included_indices`.
 
         Must use qubit indices as they are sorted in `Register.qubit_ids`.
 
         Args:
-            excluded_indices: The indices of the qubits to remove from the
-                subpartition. Defauts to the last half of the qubits in the
-                system.
+            included_indices: The indices of the qubits to include in the
+                subpartition. Defauts to the first half of the qubits in the
+                system. If the state has an odd number of qubits, the first
+                half set by default will be the smaller one.
 
         Returns:
             The entropy between the two parts of the system. The returned value

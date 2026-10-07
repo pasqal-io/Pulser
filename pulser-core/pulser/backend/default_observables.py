@@ -632,9 +632,4 @@ class EntanglementEntropy(Observable):
             range(state.n_qudits // 2)
         )
 
-        other_subpartition = [
-            indice
-            for indice in range(state.n_qudits)
-            if indice not in included_indices
-        ]
-        return state.entanglement_entropy(excluded_indices=other_subpartition)
+        return state.entanglement_entropy(included_indices=included_indices)
