@@ -1,6 +1,6 @@
 # Introduction to Extended Usage
 
-In the "Fundamentals" section, we introduced the basic tools for Analog quantum computing with the Ising Hamiltonian. In this section, we present more tools for Analog quantum computing with the Ising Hamiltonian, as well as introduce other tools to program in other quantum computing paradigms: Weighted Analog with the Ising Hamiltonian, Analog and Weighted Analog with the XY Hamiltonian and Digital. 
+In the "Fundamentals" section, we introduced the basic tools for Analog quantum computing with the Ising Hamiltonian. In this section, we present more tools for Analog quantum computing with the Ising Hamiltonian, as well as introduce other tools to program in other quantum computing paradigms: Weighted Analog with the Ising Hamiltonian, Weighted Analog with the XY Hamiltonian and Digital.
 
 :::{important}
 To program in a specific quantum computing paradigm, ensure the needed features are in your chosen Device's specifications.
@@ -52,24 +52,18 @@ Here, the _weights_ $\{\epsilon_k\}_{1\lt k\lt N}$ are defined by a `DetuningMap
 - An in-depth presentation of Weighted Analog with the Ising Hamiltonian is available [in this notebook](./tutorials/dmm.nblink). Notably, it presents how to create a `DetuningMap`, how to pick a `DMM` and how to add detuning waveforms $\delta_{DMM}$ to it. 
 - Weighted Analog can be used to prepare the qubits in a specific initial state. This is eased by using an {ref}`SLM Mask </tutorials/slm_mask.nblink#SLM-Mask-in-Ising-mode>`.
 
-## Analog with the XY Hamiltonian
-
-One can also perform Analog Quantum Computing with the [XY Hamiltonian](./programming.md#xy-hamiltonian). The `Channel` associated with this is the `Microwave.Global` Channel:
-
-$$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle\langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - \delta(t) |r\rangle\langle r|_k(t) + \sum_{j<k}\left[\frac{C_3}{\hbar R_{kj}^3} (|1\rangle\langle 0|_k |0\rangle\langle 1|_j + |0\rangle\langle 1|_j |1\rangle\langle 0|_k) + \frac{C_6}{R_{kj}^6} |0\rangle\langle 0|_k |0\rangle\langle 0|_j\right] \right)
-$$
-
-- An in-depth presentation of Analog quantum computing with XY Hamiltonian can be found [in this notebook](tutorials/xy_spin_chain.nblink).
-- An [SLM mask](./tutorials/slm_mask.nblink) can also be used to prepare the initial state in a combination of XY basis states, $\left|0\right>$ and $\left|1\right>$.
-
 ## Weighted Analog with the XY Hamiltonian
 
-A `DMM` channel can also address the `XY` basis. Combined with the `Microwave.Global` channel, it gives local control over the detuning of the XY Hamiltonian:
+One can also perform Analog Quantum Computing with the weighted [XY Hamiltonian](./programming.md#xy-hamiltonian), whose associated `Channel` is the `Microwave.Global` Channel:
 
 $$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |0\rangle\langle 1|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |1\rangle\langle 0|_k - \left[\delta(t)\mathbf{+\epsilon_k\delta_{DMM}(t)}\right] |1\rangle\langle 1|_k + \sum_{j<k}\left[\frac{C_3}{\hbar R_{kj}^3} (|1\rangle\langle 0|_k |0\rangle\langle 1|_j + |0\rangle\langle 1|_j |1\rangle\langle 0|_k) + \frac{C_6}{R_{kj}^6} |0\rangle\langle 0|_k |0\rangle\langle 0|_j\right] \right)
 $$
 
-Contrary to the `ground-rydberg` basis, the detuning $\delta_{DMM}$ applied by such a `DMM` has to be **positive**. Configuring it puts the `Sequence` in XY mode, in the same way as declaring a `Microwave` channel does.
+Contrary to the `ground-rydberg` basis, the detuning $\delta_{DMM}$ has to be **positive**. Configuring it puts the `Sequence` in XY mode, in the same way as declaring a `Microwave` channel does.
+
+- An in-depth presentation of Analog quantum computing with XY Hamiltonian can be found [in this notebook](tutorials/xy_spin_chain.nblink).
+- An [SLM mask](./tutorials/slm_mask.nblink) can also be used to prepare the initial state in a combination of XY basis states, $\left|0\right>$ and $\left|1\right>$.
+
 
 ## Digital Quantum Computing
 
