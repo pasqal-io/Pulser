@@ -22,7 +22,9 @@ from typing import ClassVar, Type, cast
 import pulser
 from pulser.backend._classproperty import classproperty
 from pulser.backend.config import EmulationConfig
+from pulser.backend.observable import Callback
 from pulser.backend.results import Results
+from pulser.backend.state import State
 from pulser.channels.dmm import DMM
 from pulser.devices import Device
 
@@ -161,12 +163,27 @@ class EmulatorBackend(Backend):
         # Use all the parameters in config and then fill the rest with the
         # ones of default_config
         # See the BackendConfig definition to see why this works
-        return cast(
-            EmulationConfig,
-            cls.config_type(
-                **{
-                    **cls.default_config._backend_options,
-                    **config._backend_options,
-                }
-            ),
-        )
+        options = {
+            **cls.default_config._backend_options,
+            **config._backend_options,
+        }
+        # Cast the states and operators to the types preferred by this
+        # backend before the config is created, so that any check done in
+        # the config_type's __init__ already sees the cast objects
+        state_type = cls.config_type.state_type
+        operator_type = cls.config_type.operator_type
+        if isinstance(options.get("initial_state"), State):
+            options["initial_state"] = state_type.from_state(
+                options["initial_state"]
+            )
+        for key in ("observables", "callbacks"):
+            if key in options:
+                options[key] = tuple(
+                    (
+                        cast(Callback, cb)._try_cast_state_ops(
+                            state_type, operator_type
+                        )
+                    )
+                    for cb in options[key]
+                )
+        return cast(EmulationConfig, cls.config_type(**options))
