@@ -17,10 +17,10 @@ from __future__ import annotations
 import math
 from collections import Counter, defaultdict
 from collections.abc import Collection, Mapping, Sequence
+from typing import Any, Type, TypeVar
 
 import numpy as np
 import qutip
-from typing_extensions import Any, Type, TypeVar, override
 
 from pulser.backend.state import Eigenstate, State
 from pulser.math.multinomial import multinomial
@@ -216,35 +216,37 @@ class QutipState(State[complex, float]):
             {"".join(map(str, k)): v for k, v in new_counts.items()}
         )
 
-    @override
     def entanglement_entropy(
         self,
         *,
         excluded_indices: Sequence[int] | None = None,
     ) -> float:
-        """Compute the entanglement entropy between two subparts of the system.
+        """Compute the entropy between two parts of the system.
 
-        The indices specified in `indices` must contain the indices of the
-        qubits which are NOT part of the subpartition to compute the entropy
-        for.
+        The entropy between the two parts of the system. The returned value
+        will be the von Neuman entropy of the system excluding
+        'excluded_indices'.
 
-        Must use qubit indices as they are sorted internally. Qubits are sorted
-        from the bottom-right to the upper left of their register space.
+        Must use qubit indices as they are sorted in `Register.qubit_ids`.
 
         Args:
             excluded_indices: The indices of the qubits to remove from the
-                subpartition. Defauts to the first half of the qubits in the
+                subpartition. Defauts to the last half of the qubits in the
                 system.
 
         Returns:
-            The entropy between the two subparts of the system. The
-            returned value will refer to the subpartition made of the indices
-            which aren't part of `indices`.
+            The entropy between the two parts of the system. The returned value
+            will refer to the subpartition made of the qubit indices which
+            aren't part of `excluded_indices`.
         """
         if excluded_indices is None:
-            excluded_indices = list(range(self.n_qudits // 2, self.n_qudits))
+            excluded_indices = range(self.n_qudits // 2, self.n_qudits)
 
-        return qutip.entropy_vn(self.to_qobj().ptrace(excluded_indices))
+        excluded_indices = list(excluded_indices)
+
+        entropy = qutip.entropy_vn(self.to_qobj().ptrace(excluded_indices))
+
+        return float(entropy)
 
     @classmethod
     def _from_state_amplitudes(

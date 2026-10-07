@@ -1641,10 +1641,10 @@ class TestObservables:
         assert np.isclose(fid_ghz.apply(state=ghz_state), 1.0)
 
     def test_entropy(self, ghz_state: QutipState):
-        entropy_01 = EntanglementEntropy(excluded_indices=[0, 1])
+        entropy_01 = EntanglementEntropy(included_indices=[0, 1])
         assert np.isclose(entropy_01.apply(state=ghz_state), 0.693147)
 
-        entropy_0 = EntanglementEntropy(excluded_indices=[0])
+        entropy_0 = EntanglementEntropy(included_indices=[0])
         ghz_2_state = QutipState.from_state_amplitudes(
             eigenstates=("r", "g"),
             amplitudes={"rr": np.sqrt(0.5), "gg": np.sqrt(0.5)},

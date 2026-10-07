@@ -581,17 +581,19 @@ class EnergySecondMoment(Observable):
 
 
 class EntanglementEntropy(Observable):
-    """Stores the entanglement entropy between two subpartitions of the system.
+    """Stores the entanglement entropy of the system.
 
-    The indices specified in `indices` must contain the indices of the qubits
-    which are part of the subpartition to compute the entropy for.
+    For a quantum system split into two parts, the entanglement entropy is the
+    von Neumann entropy of either part's reduced density matrix. The indices
+    specified in `included_ndices` define the part for which the entropy is
+    computed.
 
     When defining an entanglement entropy observable using qubit indices, one
     must use qubit indices as they are sorted internally. Qubits are sorted
     from the bottom-right to the upper left of their register space.
 
     Args:
-        excluded_indices: The indices of the qubits to include in the
+        included_indices: The indices of the qubits to include in the
             subpartition. Defauts to the first half of the qubits in the
             system.
         evaluation_times: The relative times at which to compute the moment.
@@ -606,7 +608,7 @@ class EntanglementEntropy(Observable):
 
     def __init__(
         self,
-        excluded_indices: Sequence[int] | None = None,
+        included_indices: Sequence[int] | None = None,
         *,
         evaluation_times: Sequence[float] | None = None,
         tag_suffix: str | None = None,
@@ -618,20 +620,21 @@ class EntanglementEntropy(Observable):
             evaluation_times=evaluation_times,
             tag_suffix=tag_suffix,
         )
-        self.excluded_indices: Sequence[int] = excluded_indices
+        self.included_indices: Sequence[int] | None = included_indices
 
+    @property
     def _base_tag(self) -> str:
         return "entanglement_entropy"
 
     def apply(self, *, state: State, **kwargs: Any) -> float:
         """Calculate the observable to store in the Results."""
-        excluded_indices = self.excluded_indices or list(
+        included_indices = self.included_indices or list(
             range(state.n_qudits // 2)
         )
 
         other_subpartition = [
             indice
             for indice in range(state.n_qudits)
-            if indice not in excluded_indices
+            if indice not in included_indices
         ]
         return state.entanglement_entropy(excluded_indices=other_subpartition)

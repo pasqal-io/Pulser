@@ -137,23 +137,23 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         *,
         excluded_indices: Sequence[int] | None = None,
     ) -> float:
-        """Compute the entanglement entropy between two subparts of the system.
+        """Compute the entropy between two parts of the system.
 
-        The indices specified in `indices` must contain the indices of the
-        qubits which are NOT part of the subpartition to compute the entropy
-        for.
+        The entropy between the two parts of the system. The returned value
+        will be the von Neuman entropy of the system excluding
+        `excluded_indices`.
 
         Must use qubit indices as they are sorted in `Register.qubit_ids`.
 
         Args:
             excluded_indices: The indices of the qubits to remove from the
-                subpartition. Defauts to the first half of the qubits in the
+                subpartition. Defauts to the last half of the qubits in the
                 system.
 
         Returns:
-            The entropy between the two subparts of the system. The
-            returned value will refer to the subpartition made of the indices
-            which aren't part of `indices`.
+            The entropy between the two parts of the system. The returned value
+            will refer to the subpartition made of the qubit indices which
+            aren't part of `excluded_indices`.
         """
         raise NotImplementedError(
             "The entanglement entropy computation is not implemented for a "
