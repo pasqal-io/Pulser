@@ -65,8 +65,8 @@ def device():
     return dataclasses.replace(
         DigitalAnalogDevice,
         dmm_objects=(
-            DMM(bottom_detuning=-70, total_bottom_detuning=-700),
-            DMM(bottom_detuning=-100, total_bottom_detuning=-1000),
+            DMM(top_abs_detuning=70, total_top_abs_detuning=700),
+            DMM(top_abs_detuning=100, total_top_abs_detuning=1000),
         ),
     )
 
@@ -520,8 +520,8 @@ def devices():
                 min_duration=16,
                 max_duration=2**26,
                 # Better than DMM of DigitalAnalogDevice
-                bottom_detuning=-2 * np.pi * 40,
-                total_bottom_detuning=-2 * np.pi * 4000,
+                top_abs_detuning=2 * np.pi * 40,
+                total_top_abs_detuning=2 * np.pi * 4000,
             ),
         ),
     )
@@ -557,8 +557,8 @@ def devices():
                 clock_period=4,
                 min_duration=16,
                 max_duration=2**26,
-                bottom_detuning=-2 * np.pi * 20,
-                total_bottom_detuning=-2 * np.pi * 2000,
+                top_abs_detuning=2 * np.pi * 20,
+                total_top_abs_detuning=2 * np.pi * 2000,
             ),
         ),
     )
@@ -613,8 +613,8 @@ def devices():
                 clock_period=4,
                 min_duration=16,
                 max_duration=2**26,
-                bottom_detuning=-2 * np.pi * 20,
-                total_bottom_detuning=-2 * np.pi * 2000,
+                top_abs_detuning=2 * np.pi * 20,
+                total_top_abs_detuning=2 * np.pi * 2000,
             ),
         ),
     )
@@ -824,7 +824,7 @@ def test_switch_device_down(
         DigitalAnalogDevice,
         dmm_objects=(
             dataclasses.replace(
-                DigitalAnalogDevice.dmm_objects[0], total_bottom_detuning=-2000
+                DigitalAnalogDevice.dmm_objects[0], total_top_abs_detuning=2000
             ),
         ),
     )
@@ -942,9 +942,9 @@ def test_switch_device_down(
     ):
         # Can't find a match for the 2nd dmm_0
         seq.with_new_device(phys_Chadoq2)
-    # There is no need to have same bottom detuning to have a strict switch
+    # No need for the same maximum absolute detuning to strictly switch
     dmm_down = dataclasses.replace(
-        phys_Chadoq2.dmm_channels["dmm_0"], bottom_detuning=-10
+        phys_Chadoq2.dmm_channels["dmm_0"], top_abs_detuning=10
     )
     new_seq = seq.with_new_device(
         dataclasses.replace(phys_Chadoq2, dmm_objects=(dmm_down, dmm_down)),
@@ -962,7 +962,7 @@ def test_switch_device_down(
         dataclasses.replace(
             phys_Chadoq2.to_virtual(),
             reusable_channels=True,
-            dmm_objects=(dataclasses.replace(dmm_down, bottom_detuning=-20),),
+            dmm_objects=(dataclasses.replace(dmm_down, top_abs_detuning=20),),
         ),
         strict=True,
     )
@@ -1003,8 +1003,8 @@ def test_switch_device_down(
         )
     dmm_down = dataclasses.replace(
         phys_Chadoq2.dmm_channels["dmm_0"],
-        bottom_detuning=-10,
-        total_bottom_detuning=-10,
+        top_abs_detuning=10,
+        total_top_abs_detuning=10,
     )
     seq.with_new_device(
         dataclasses.replace(
@@ -2654,9 +2654,9 @@ def test_draw_qubit_contents_in_xy(reg, det_map, patch_plt_show):
 
 
 @pytest.mark.parametrize(
-    "bottom_detunings", [(None, None), (-20, None), (None, -20), (-20, -20)]
+    "top_abs_detunings", [(None, None), (20, None), (None, 20), (20, 20)]
 )
-def test_slm_mask_in_ising(patch_plt_show, bottom_detunings):
+def test_slm_mask_in_ising(patch_plt_show, top_abs_detunings):
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     det_map = reg.define_detuning_map({"q0": 0.2, "q1": 0.8, "q2": 0.0})
     targets = ["q0", "q2"]
@@ -2669,8 +2669,8 @@ def test_slm_mask_in_ising(patch_plt_show, bottom_detunings):
             MockDevice,
             dmm_objects=(
                 DMM(
-                    bottom_detuning=bottom_detunings[0],
-                    total_bottom_detuning=bottom_detunings[1],
+                    top_abs_detuning=top_abs_detunings[0],
+                    total_top_abs_detuning=top_abs_detunings[1],
                 ),
             ),
         ),
@@ -2702,15 +2702,15 @@ def test_slm_mask_in_ising(patch_plt_show, bottom_detunings):
     seq2.add(pulse, "ryd_glob")  # slm pulse between 0 and 500
     assert seq2._slm_mask_time == [0, 500]
     slm_det: float
-    if bottom_detunings == (None, None):
+    if top_abs_detunings == (None, None):
         slm_det = -10 * amp
-    elif bottom_detunings[0] is None:
-        slm_det = max(-10 * amp, bottom_detunings[1] / len(targets))
-    elif bottom_detunings[1] is None:
-        slm_det = max(-10 * amp, bottom_detunings[0])
+    elif top_abs_detunings[0] is None:
+        slm_det = max(-10 * amp, -top_abs_detunings[1] / len(targets))
+    elif top_abs_detunings[1] is None:
+        slm_det = max(-10 * amp, -top_abs_detunings[0])
     else:
-        assert bottom_detunings[1] / len(targets) > bottom_detunings[0]
-        slm_det = max(-10 * amp, bottom_detunings[1] / len(targets))
+        assert top_abs_detunings[1] / len(targets) < top_abs_detunings[0]
+        slm_det = max(-10 * amp, -top_abs_detunings[1] / len(targets))
     assert seq2._schedule["dmm_0"].slots[1].type == Pulse.ConstantPulse(
         500, 0, slm_det, 0
     )

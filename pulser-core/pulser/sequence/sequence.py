@@ -2207,21 +2207,18 @@ class Sequence(Generic[DeviceType]):
 
     def _modulate_slm_mask_dmm(self, duration: int, max_amp: float) -> None:
         if self._slm_mask_dmm is not None:
-            bottom_detuning = cast(
-                DMM, self.declared_channels[self._slm_mask_dmm]
-            ).bottom_detuning
-            total_bottom_detuning = cast(
-                DMM, self.declared_channels[self._slm_mask_dmm]
-            ).total_bottom_detuning
+            dmm = cast(DMM, self.declared_channels[self._slm_mask_dmm])
+            top_abs_detuning = dmm.top_abs_detuning
+            total_top_abs_detuning = dmm.total_top_abs_detuning
             min_det = -10 * max_amp
-            if bottom_detuning and min_det < bottom_detuning:
-                min_det = bottom_detuning
+            if top_abs_detuning and min_det < -top_abs_detuning:
+                min_det = -top_abs_detuning
             if (
-                total_bottom_detuning
+                total_top_abs_detuning
                 and min_det * len(set(self._slm_mask_targets))
-                < total_bottom_detuning
+                < -total_top_abs_detuning
             ):
-                min_det = total_bottom_detuning / len(
+                min_det = -total_top_abs_detuning / len(
                     set(self._slm_mask_targets)
                 )
             cast(

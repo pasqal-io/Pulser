@@ -24,7 +24,7 @@
           "type": "string"
         },
         "bottom_detuning": {
-          "description": "Minimum possible detuning per trap (in rad/µs), must be below zero in the 'ground-rydberg' basis and above zero in the 'XY' basis.",
+          "description": "Minimum possible detuning per trap (in rad/µs), must be below zero.",
           "type": [
             "number",
             "null"
@@ -113,7 +113,7 @@
           "description": "The propagation direction of the beam leaving the channel."
         },
         "total_bottom_detuning": {
-          "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero in the 'ground-rydberg' basis and above zero in the 'XY' basis.",
+          "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
           "type": [
             "number",
             "null"
@@ -2013,7 +2013,7 @@
           "type": "string"
         },
         "bottom_detuning": {
-          "description": "Minimum possible detuning per trap (in rad/µs), must be below zero in the 'ground-rydberg' basis and above zero in the 'XY' basis.",
+          "description": "Minimum possible detuning per trap (in rad/µs), must be below zero.",
           "type": "number"
         },
         "clock_period": {
@@ -2096,7 +2096,7 @@
           "description": "The propagation direction of the beam leaving the channel."
         },
         "total_bottom_detuning": {
-          "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero in the 'ground-rydberg' basis and above zero in the 'XY' basis.",
+          "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
           "type": [
             "number",
             "null"

@@ -96,7 +96,7 @@ phys_Chadoq2 = replace(
     name="phys_Chadoq2",
     dmm_objects=(
         replace(
-            DigitalAnalogDevice.dmm_objects[0], total_bottom_detuning=-2000
+            DigitalAnalogDevice.dmm_objects[0], total_top_abs_detuning=2000
         ),
     ),
     noise_model=NoiseModel(
@@ -852,10 +852,10 @@ class TestDevice:
     @pytest.mark.parametrize(
         "dmm_ch_obj",
         [
-            DMM(total_bottom_detuning=-10),
+            DMM(total_top_abs_detuning=10),
             DMM(min_avg_abs_detuning=0.1),
             DMM(basis="XY"),
-            DMM(bottom_detuning=10, total_bottom_detuning=20, basis="XY"),
+            DMM(top_abs_detuning=10, total_top_abs_detuning=20, basis="XY"),
         ],
     )
     def test_optional_DMM_fields(self, dmm_ch_obj):
