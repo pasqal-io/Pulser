@@ -14,6 +14,7 @@
 """Defines the abstract base class for a quantum state."""
 from __future__ import annotations
 
+import copy
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Mapping, Sequence
@@ -188,6 +189,49 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         """
         pass
 
+    @classmethod
+    def from_state(cls: Type[StateType], state: State) -> StateType:
+        """Creates a new state of this type from another state.
+
+        By default, the state is converted through its abstract
+        representation, which is only possible if it was created via
+        ``from_state_amplitudes()`` and not modified afterwards. If the
+        state is already an instance of this type, a shallow copy of it is
+        returned instead, so it does not need to be serializable.
+
+        Subclasses can override this method to support other
+        conversions (e.g. directly from a state type they know).
+
+        Args:
+            state: The state to convert.
+
+        Returns:
+            A new state of this type, equivalent to the given one.
+
+        Raises:
+            TypeError: If the state can't be converted to this type.
+        """
+        if isinstance(state, cls):
+            return copy.copy(state)
+        try:
+            state_repr = state._to_abstract_repr()
+            return cls.from_state_amplitudes(
+                eigenstates=state_repr["eigenstates"],
+                amplitudes=state_repr["amplitudes"],
+            )
+        except (AbstractReprError, TypeError, ValueError) as e:
+            reason = ""
+            if isinstance(e, AbstractReprError):
+                reason = (
+                    " Conversion is only possible for states "
+                    "created via 'from_state_amplitudes()' and not modified "
+                    "afterwards."
+                )
+            raise TypeError(
+                f"Failed to convert a state of type {type(state).__name__!r} "
+                f"to {cls.__name__!r}.{reason}"
+            ) from e
+
     def infer_one_state(self) -> Eigenstate:
         """Infers the state measured as 1 from the eigenstates.
 
@@ -317,7 +361,7 @@ class StateRepr(State):
         in serialization.
         """
         state = cls(eigenstates=eigenstates)
-        cls._n_qudits = n_qudits
+        state._n_qudits = n_qudits
         return state, amplitudes
 
     def _to_abstract_repr(self) -> dict[str, Any]:

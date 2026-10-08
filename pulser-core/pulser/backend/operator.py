@@ -14,6 +14,7 @@
 """Defines the abstract base class for a quantum operator."""
 from __future__ import annotations
 
+import copy
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Sequence
 from typing import Any, Generic, Type, TypeVar
@@ -223,6 +224,51 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         use in serialization.
         """
         pass
+
+    @classmethod
+    def from_operator(
+        cls: Type[OperatorType], operator: Operator
+    ) -> OperatorType:
+        """Creates a new operator of this type from another operator.
+
+        By default, the operator is converted through its abstract
+        representation, which is only possible if it was created via
+        ``from_operator_repr()``. If the operator is already an instance of
+        this type, a shallow copy of it is returned instead, so it does not
+        need to be serializable.
+
+        Subclasses can override this method to support other
+        conversions (e.g. directly from an operator type they know).
+
+        Args:
+            operator: The operator to convert.
+
+        Returns:
+            A new operator of this type, equivalent to the given one.
+
+        Raises:
+            TypeError: If the operator can't be converted to this type.
+        """
+        if isinstance(operator, cls):
+            return copy.copy(operator)
+        try:
+            op_repr = operator._to_abstract_repr()
+            return cls.from_operator_repr(
+                eigenstates=op_repr["eigenstates"],
+                n_qudits=op_repr["n_qudits"],
+                operations=op_repr["operations"],
+            )
+        except (AbstractReprError, TypeError, ValueError) as e:
+            reason = ""
+            if isinstance(e, AbstractReprError):
+                reason = (
+                    " Conversion is only possible for operators "
+                    "created via 'from_operator_repr()'."
+                )
+            raise TypeError(
+                "Failed to convert an operator of type "
+                f"{type(operator).__name__!r} to {cls.__name__!r}.{reason}"
+            ) from e
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         if (
