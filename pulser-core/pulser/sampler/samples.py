@@ -164,7 +164,10 @@ class ChannelSamples:
         """
         extension = new_duration - self.duration
         if extension < 0:
-            raise ValueError("Can't extend samples to a lower duration.")
+            raise ValueError(
+                "Can't extend samples to a lower duration; got "
+                f"{new_duration} vs. the current {self.duration}."
+            )
 
         new_amp = pm.pad(self.amp, (0, extension))
         # When in EOM mode, we need to keep the detuning at detuning_off

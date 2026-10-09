@@ -296,11 +296,23 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
             == qutip.basis(dim, 3) * qutip.basis(dim, 0).dag()
         )
     # Check local operator building method:
-    with pytest.raises(ValueError, match="Duplicate atom"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Duplicate atom ids in argument list; got ['target'] in "
+            "['target', 'target']."
+        ),
+    ):
         sim.build_operator([("sigma_gg", ["target", "target"])])
     with pytest.raises(ValueError, match="not a valid operator"):
         sim.build_operator([("wrong", ["target"])])
-    with pytest.raises(ValueError, match="Invalid qubit names: {'wrong'}"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Invalid qubit names; ['wrong'] not in ['control1', 'target', "
+            "'control2']."
+        ),
+    ):
         sim.build_operator([("sigma_gg", ["wrong"])])
 
     # Check building operator with one operator
