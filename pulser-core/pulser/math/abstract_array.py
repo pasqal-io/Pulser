@@ -31,6 +31,15 @@ except ImportError:  # pragma: no cover
     pass
 
 
+def _resolve_lazy_bits(tensor: torch.Tensor) -> torch.Tensor:
+    """Materializes torch's lazy conjugate and negative views.
+
+    Tensor.numpy() refuses tensors with these bits set, e.g. the output of
+    torch.fft.ifft() on a real tensor or of Tensor.conj() on a complex one.
+    """
+    return tensor.resolve_conj().resolve_neg()
+
+
 class AbstractArray:
     """An abstract array containing an array or tensor.
 
@@ -107,8 +116,11 @@ class AbstractArray:
         Args:
             detach: Whether to detach before converting.
         """
-        if detach and self.is_tensor:
-            return cast(torch.Tensor, self._array).detach().numpy()
+        if self.is_tensor:
+            tensor = _resolve_lazy_bits(cast(torch.Tensor, self._array))
+            if detach:
+                return tensor.detach().numpy()
+            return np.asarray(tensor)
         return np.asarray(self._array)
 
     def tolist(self) -> list:
@@ -165,7 +177,12 @@ class AbstractArray:
         if (
             self.is_tensor or np.lib.NumpyVersion(np.__version__) < "2.0.0"
         ):  # pragma: no cover
-            array: np.ndarray = self._array.__array__(dtype)
+            arr = (
+                _resolve_lazy_bits(cast(torch.Tensor, self._array))
+                if self.is_tensor
+                else self._array
+            )
+            array: np.ndarray = arr.__array__(dtype)
             if copy:
                 return np.copy(array)
             else:
