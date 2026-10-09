@@ -27,6 +27,7 @@ from pulser.backend.default_observables import (
     BitStrings,
     Energy,
     EnergyVariance,
+    Expectation,
     Fidelity,
     Occupation,
     StateResult,
@@ -658,3 +659,42 @@ def test_run_from_sequence_samples(modulation):
     s2 = results2.final_state._state.full()
 
     assert np.allclose(s1, s2, atol=0, rtol=1e-16)  # really the same
+
+
+def test_pauli_string_expectation():
+    reg = pulser.Register.from_coordinates(
+        [(0, 0), (6, 0), (0, 8)], prefix="q"
+    )
+    seq = pulser.Sequence(reg, pulser.MockDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(
+        pulser.Pulse.ConstantDetuning(
+            pulser.BlackmanWaveform(500, np.pi), -1.0, 0.3
+        ),
+        "ryd",
+    )
+    eval_times = [0.0, 0.3, 0.6, 1.0]
+    # The qudit indices follow the order of the register's qubit IDs
+    zxy = QutipConfig.operator_type.from_pauli_string(
+        eigenstates=("r", "g"),
+        n_qudits=len(seq.register.qubit_ids),
+        paulis={0: "Z", 1: "X", 2: "Y"},
+    )
+    expectation = Expectation(
+        zxy, evaluation_times=eval_times, tag_suffix="zxy"
+    )
+    state_res = StateResult(evaluation_times=eval_times)
+    results = QutipBackendV2(
+        seq, config=QutipConfig(observables=(expectation, state_res))
+    ).run()
+
+    result_times = results.get_result_times(expectation)
+    assert len(result_times) == len(eval_times)
+    qutip_op = qutip.tensor(qutip.sigmaz(), qutip.sigmax(), qutip.sigmay())
+    for t in result_times:
+        assert np.isclose(
+            results.get_result(expectation, t),
+            qutip.expect(qutip_op, results.get_result(state_res, t).to_qobj()),
+        )
+    # Not trivially zero at the end of the sequence
+    assert not np.isclose(results.get_result(expectation, 1.0), 0.0)

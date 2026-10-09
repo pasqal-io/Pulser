@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import copy
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from collections.abc import Collection, Mapping, Sequence
 from typing import Any, Generic, Type, TypeVar
 
@@ -208,6 +209,122 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         obj._n_qudits = n_qudits
         obj._operations = _operations
         return obj
+
+    @classmethod
+    def from_pauli_string(
+        cls: Type[OperatorType],
+        *,
+        eigenstates: Sequence[Eigenstate],
+        n_qudits: int,
+        paulis: Mapping[int, str],
+    ) -> OperatorType:
+        r"""Create the operator for a Pauli string.
+
+        A Pauli string is a product of Pauli matrices acting on different
+        qudits, e.g. ``σ^z_1 σ^x_3 σ^z_10``. Qudits without an associated
+        Pauli matrix are applied the identity. The resulting operator is
+        built with ``from_operator_repr()``, so it is supported by every
+        backend (including remote ones) and can be given to the
+        ``Expectation`` observable to compute its expectation value.
+
+        The Pauli matrices are defined following the order of the
+        eigenstates. For eigenstates ``(e0, e1)``, they are
+
+        - ``σ^x = |e0><e1| + |e1><e0|``
+        - ``σ^y = -i|e0><e1| + i|e1><e0|``
+        - ``σ^z = |e0><e0| - |e1><e1|``
+
+        which matches the conventions of ``pulser-simulation`` for both the
+        ``ground-rydberg`` (``("r", "g")``) and ``XY`` (``("0", "1")``)
+        bases.
+
+        The leakage state ``"x"`` (added to the eigenstates when the noise
+        model includes leakage) is not one of the two states the Pauli
+        matrices act on, so all Pauli matrices act as zero on it. As such,
+        population in the leakage state does not contribute to the
+        expectation value of a Pauli string. Bases with more than two
+        eigenstates besides ``"x"`` are not supported.
+
+        Args:
+            eigenstates: The eigenstates to use. Must contain exactly two
+                eigenstates, besides the optional leakage state ``"x"``.
+            n_qudits: How many qudits there are in the system.
+            paulis: A mapping between the index of a qudit and the Pauli
+                matrix applied to it, given as one of ``"X"``, ``"Y"`` or
+                ``"Z"`` (case-insensitive). The qudit indices follow the
+                order of the qubit IDs in the Sequence's register (i.e.
+                ``seq.register.qubit_ids``).
+
+        Returns:
+            The operator for the Pauli string.
+
+        Example:
+            >>> # σ^z_1 σ^x_3 σ^z_10 in a system of 12 qubits
+            >>> operator_class = your_pulser_backend.config_type.operator_type
+            >>> op = operator_class.from_pauli_string(
+            >>>     eigenstates=("r", "g"),
+            >>>     n_qudits=12,
+            >>>     paulis={1: "Z", 3: "X", 10: "Z"},
+            >>> )
+            >>> # To compute its expectation value during the emulation
+            >>> Expectation(op, tag_suffix="zxz")
+        """
+        State._validate_eigenstates(eigenstates)
+
+        basis = [s for s in eigenstates if s != "x"]
+
+        if len(basis) != 2:
+            raise ValueError(
+                "Pauli strings are only defined for qubits, i.e. with "
+                "exactly two eigenstates (besides the leakage state 'x'); "
+                f"got eigenstates {tuple(eigenstates)}."
+            )
+
+        if not isinstance(paulis, Mapping):
+            raise TypeError(
+                "'paulis' must be a mapping between qudit indices and Pauli "
+                f"matrices; got {type(paulis)} instead. Got {paulis!r}."
+            )
+
+        if not paulis:
+            raise ValueError("'paulis' must contain at least one entry.")
+
+        e0, e1 = basis
+
+        pauli_reprs: dict[str, QuditOp[complex]] = {
+            "X": {e0 + e1: 1.0, e1 + e0: 1.0},
+            "Y": {e0 + e1: -1.0j, e1 + e0: 1.0j},
+            "Z": {e0 + e0: 1.0, e1 + e1: -1.0},
+        }
+
+        qudits_per_pauli = defaultdict(set)
+
+        for index, pauli in paulis.items():
+            if not isinstance(index, int):
+                raise TypeError(
+                    "The qudit indices in 'paulis' must be integers; got "
+                    f"{index!r} of type {type(index)}."
+                )
+            if not isinstance(pauli, str) or pauli.upper() not in pauli_reprs:
+                raise ValueError(
+                    "The Pauli matrices in 'paulis' must be one of "
+                    f"{tuple(pauli_reprs)}; got {pauli!r} for qudit {index}."
+                )
+            qudits_per_pauli[pauli.upper()].add(index)
+
+        return cls.from_operator_repr(
+            eigenstates=eigenstates,
+            n_qudits=n_qudits,
+            operations=[
+                (
+                    1.0,
+                    [
+                        (pauli_reprs[pauli], qudits)
+                        for pauli, qudits in qudits_per_pauli.items()
+                    ],
+                )
+            ],
+        )
 
     @classmethod
     @abstractmethod

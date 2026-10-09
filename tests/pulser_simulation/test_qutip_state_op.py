@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import itertools
 import json
 import re
 
@@ -609,3 +610,60 @@ class TestQutipOperator:
                 QutipOperator(op.to_qobj(), eigenstates=op.eigenstates),
                 cls=AbstractReprEncoder,
             )
+
+    def test_from_pauli_string_matches_qutip(self):
+        rng = np.random.default_rng(1234)
+        amps = rng.normal(size=8) + 1j * rng.normal(size=8)
+        qobj = qutip.Qobj(amps / np.linalg.norm(amps), dims=[[2] * 3, [1]])
+        state = QutipState(qobj, eigenstates=("r", "g"))
+        # In the ("r", "g") basis, |r> = (1, 0)^T, so the Pauli matrices
+        # match qutip's
+        qutip_paulis = {
+            "I": qutip.qeye(2),
+            "X": qutip.sigmax(),
+            "Y": qutip.sigmay(),
+            "Z": qutip.sigmaz(),
+        }
+        for labels in itertools.product("IXYZ", repeat=3):
+            if set(labels) == {"I"}:
+                continue
+            op = QutipOperator.from_pauli_string(
+                eigenstates=("r", "g"),
+                n_qudits=3,
+                paulis={i: p for i, p in enumerate(labels) if p != "I"},
+            )
+            expected = qutip.tensor(*(qutip_paulis[p] for p in labels))
+            assert op.to_qobj() == expected
+            assert np.isclose(op.expect(state), qutip.expect(expected, qobj))
+
+    @pytest.mark.parametrize(
+        "eigenstates, amplitudes, pauli, expected",
+        [
+            # Descending energy order: Z = |r><r| - |g><g|
+            (("r", "g"), {"r": 1.0}, "Z", 1.0),
+            # Ascending energy order: Z = |0><0| - |1><1|
+            (("0", "1"), {"1": 1.0}, "Z", -1.0),
+            (("0", "1"), {"0": 1.0}, "Z", 1.0),
+            # Y = -i|e0><e1| + i|e1><e0| in both cases
+            (("r", "g"), {"r": 1.0, "g": 1.0j}, "Y", 1.0),
+            (("0", "1"), {"0": 1.0, "1": 1.0j}, "Y", 1.0),
+            (("r", "g"), {"r": 1.0, "g": 1.0}, "X", 1.0),
+            # The Pauli matrices act as zero on the leakage state
+            (("r", "g", "x"), {"r": 1.0, "g": 1.0}, "X", 1.0),
+            (("r", "g", "x"), {"x": 1.0}, "Z", 0.0),
+            (("r", "g", "x"), {"r": 1.0, "x": 1.0}, "Z", 0.5),
+        ],
+    )
+    def test_from_pauli_string_conventions(
+        self, eigenstates, amplitudes, pauli, expected
+    ):
+        state = QutipState.from_state_amplitudes(
+            eigenstates=eigenstates,
+            amplitudes={
+                k: v / np.sqrt(len(amplitudes)) for k, v in amplitudes.items()
+            },
+        )
+        op = QutipOperator.from_pauli_string(
+            eigenstates=eigenstates, n_qudits=1, paulis={0: pauli}
+        )
+        assert np.isclose(op.expect(state), expected)
