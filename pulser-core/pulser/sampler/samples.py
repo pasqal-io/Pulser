@@ -591,7 +591,12 @@ class SequenceSamples:
                 for s in cs.slots:
                     for t in s.targets:
                         ti = s.ti
-                        if in_xy and t in self._slm_mask.targets:
+                        # The SLM mask does not delay the DMM detuning
+                        if (
+                            in_xy
+                            and not is_dmm
+                            and t in self._slm_mask.targets
+                        ):
                             ti = max(ti, self._slm_mask.end)
                         times = slice(ti, s.tf)
                         d[_LOCAL][basis][t][_AMP][times] += cs.amp[times]

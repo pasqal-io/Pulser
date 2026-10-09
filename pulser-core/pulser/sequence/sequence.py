@@ -665,17 +665,26 @@ class Sequence(Generic[DeviceType]):
             Regular devices only allow a DMM to be declared once, but
             ``MockDevice`` DMM can be repeatedly declared if needed.
 
+        Note:
+            A DMM addressing the 'XY' basis enables the "XY Mode", in the
+            same way as declaring a ``Microwave`` channel does.
+
         Args:
             detuning_map: A DetuningMap defining the amount of detuning each
                 atom receives.
             dmm_id: How the channel is identified in the device.
                 See in ``Sequence.available_channels`` which DMM IDs are still
                 available (start by "dmm" ) and the associated description. If
-                not given, takes the first available DMM in the device.
+                not given, takes the first available DMM in the device
+                addressing the basis of the current mode.
         """
         if dmm_id is None:
             for ch_id, ch_obj in self.available_channels.items():
-                if isinstance(ch_obj, DMM):
+                if isinstance(ch_obj, DMM) and (
+                    ch_obj.basis == "XY"
+                    if self._in_xy
+                    else ch_obj.basis != "XY"
+                ):
                     dmm_id = ch_id
                     break
             else:
@@ -700,7 +709,7 @@ class Sequence(Generic[DeviceType]):
             )
 
         dmm_ch = self.device.dmm_channels[dmm_id]
-        if self._in_xy:
+        if self._in_xy and dmm_ch.basis != "XY":
             raise ValueError(
                 f"DMM '{dmm_ch}' cannot work simultaneously "
                 "with the declared 'Microwave' channel."
@@ -716,8 +725,13 @@ class Sequence(Generic[DeviceType]):
                 f"channels are {still_available}."
             )
 
-        # Configures the DMM implementing an SLM mask if configured before
-        self._in_ising = True
+        if dmm_ch.basis == "XY":
+            if not self._in_xy:
+                self.set_magnetic_field()
+                self._in_xy = True
+        else:
+            # Configures the DMM implementing an SLM mask if configured before
+            self._in_ising = True
 
         if self.is_parametrized():
             return
@@ -732,8 +746,8 @@ class Sequence(Generic[DeviceType]):
         self._schedule[dmm_name] = _DMMSchedule(
             dmm_id, dmm_ch, detuning_map=detuning_map
         )
-        if "ground-rydberg" not in self._basis_ref:
-            self._basis_ref["ground-rydberg"] = {
+        if dmm_ch.basis not in self._basis_ref:
+            self._basis_ref[dmm_ch.basis] = {
                 q: _QubitRef() for q in self._qids
             }
 
@@ -2193,21 +2207,18 @@ class Sequence(Generic[DeviceType]):
 
     def _modulate_slm_mask_dmm(self, duration: int, max_amp: float) -> None:
         if self._slm_mask_dmm is not None:
-            bottom_detuning = cast(
-                DMM, self.declared_channels[self._slm_mask_dmm]
-            ).bottom_detuning
-            total_bottom_detuning = cast(
-                DMM, self.declared_channels[self._slm_mask_dmm]
-            ).total_bottom_detuning
+            dmm = cast(DMM, self.declared_channels[self._slm_mask_dmm])
+            top_abs_detuning = dmm.top_abs_detuning
+            total_top_abs_detuning = dmm.total_top_abs_detuning
             min_det = -10 * max_amp
-            if bottom_detuning and min_det < bottom_detuning:
-                min_det = bottom_detuning
+            if top_abs_detuning and min_det < -top_abs_detuning:
+                min_det = -top_abs_detuning
             if (
-                total_bottom_detuning
+                total_top_abs_detuning
                 and min_det * len(set(self._slm_mask_targets))
-                < total_bottom_detuning
+                < -total_top_abs_detuning
             ):
-                min_det = total_bottom_detuning / len(
+                min_det = -total_top_abs_detuning / len(
                     set(self._slm_mask_targets)
                 )
             cast(

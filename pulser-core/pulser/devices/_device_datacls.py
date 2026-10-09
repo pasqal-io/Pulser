@@ -802,21 +802,23 @@ class BaseDevice(ABC):
                         f"{float(ch.max_abs_detuning):.4g} rad/µs"
                     )
 
-                bottom_detuning = "None"
-                if isinstance(ch, DMM) and ch.bottom_detuning is not None:
-                    bottom_detuning = f"{float(ch.bottom_detuning):.4g} rad/µs"
+                top_abs_detuning = "None"
+                if isinstance(ch, DMM) and ch.top_abs_detuning is not None:
+                    top_abs_detuning = (
+                        f"{float(ch.top_abs_detuning):.4g} rad/µs"
+                    )
 
                 min_avg_amp = "None"
                 if not isinstance(ch, DMM) and ch.min_avg_amp is not None:
                     min_avg_amp = f"{float(ch.min_avg_amp):.4g} rad/µs"
 
-                total_bottom_detuning = "None"
+                total_top_abs_detuning = "None"
                 if (
                     isinstance(ch, DMM)
-                    and ch.total_bottom_detuning is not None
+                    and ch.total_top_abs_detuning is not None
                 ):
-                    total_bottom_detuning = (
-                        f"{float(ch.total_bottom_detuning):.4g} rad/µs"
+                    total_top_abs_detuning = (
+                        f"{float(ch.total_top_abs_detuning):.4g} rad/µs"
                     )
 
                 min_avg_abs_detuning = "None"
@@ -849,10 +851,10 @@ class BaseDevice(ABC):
                         if not isinstance(ch, DMM)
                         else (
                             "\t"
-                            rf"- Bottom :math:`\Delta`: {bottom_detuning}"
+                            rf"- Maximum :math:`|\Delta|`: {top_abs_detuning}"
                             "\n\t"
-                            r"- Total bottom :math:`\Delta`: "
-                            f"{total_bottom_detuning}"
+                            r"- Total maximum :math:`|\Delta|`: "
+                            f"{total_top_abs_detuning}"
                             "\n\t"
                             r"- Minimum average :math:`|\Delta|`: "
                             f"{min_avg_abs_detuning}"

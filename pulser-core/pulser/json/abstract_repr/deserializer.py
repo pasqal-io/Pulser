@@ -35,6 +35,7 @@ import pulser
 import pulser.devices as devices
 from pulser.channels import DMM, Microwave, Raman, Rydberg
 from pulser.channels.base_channel import Channel
+from pulser.channels.dmm import _DEPRECATED_DETUNING_ARGS, _flip_detuning_sign
 from pulser.channels.eom import (
     OPTIONAL_ABSTR_EOM_FIELDS,
     RydbergBeam,
@@ -352,12 +353,16 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
 def _deserialize_channel(obj: dict[str, Any]) -> Channel:
     params: dict[str, Any] = {}
     channel_cls: Type[Channel]
-    if obj["basis"] == "ground-rydberg":
-        if "bottom_detuning" in obj:
-            channel_cls = DMM
-        else:
-            channel_cls = Rydberg
-            params["eom_config"] = None
+    if "bottom_detuning" in obj:
+        # Only a DMM has a bottom detuning, whichever basis it addresses
+        channel_cls = DMM
+        # JSON schema keeps the deprecated 'bottom' detuning keys
+        for old, new in _DEPRECATED_DETUNING_ARGS.items():
+            if old in obj:
+                params[new] = _flip_detuning_sign(obj[old])
+    elif obj["basis"] == "ground-rydberg":
+        channel_cls = Rydberg
+        params["eom_config"] = None
         if obj["eom_config"] is not None:
             data = obj["eom_config"]
             try:

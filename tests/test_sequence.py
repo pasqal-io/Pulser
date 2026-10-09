@@ -65,8 +65,8 @@ def device():
     return dataclasses.replace(
         DigitalAnalogDevice,
         dmm_objects=(
-            DMM(bottom_detuning=-70, total_bottom_detuning=-700),
-            DMM(bottom_detuning=-100, total_bottom_detuning=-1000),
+            DMM(top_abs_detuning=70, total_top_abs_detuning=700),
+            DMM(top_abs_detuning=100, total_top_abs_detuning=1000),
         ),
     )
 
@@ -142,7 +142,9 @@ def test_channel_declaration(reg, device):
     }
     for channel, channel_id in channel_map.items():
         seq2.declare_channel(channel, channel_id)
-    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
+    assert set(seq2.available_channels) == (
+        available_channels - {"mw_global", "dmm_1"}
+    )
     assert set(
         seq2._schedule[channel].channel_id
         for channel in seq2.declared_channels
@@ -158,7 +160,7 @@ def test_channel_declaration(reg, device):
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "mw_global")
-    assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
+    assert set(seq2.available_channels) == {"mw_global", "dmm_0", "dmm_1"}
     with pytest.raises(
         ValueError,
         match=re.escape(
@@ -226,10 +228,14 @@ def test_dmm_declaration(reg, device, det_map, first_dmm_id):
     }
     seq2.config_detuning_map(det_map, first_dmm_id)
     # If a DMM was declared but not as an SLM Mask,
-    # MW channels are not available
-    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
+    # the channels addressing the 'XY' basis are not available
+    assert set(seq2.available_channels) == (
+        available_channels - {"mw_global", "dmm_1"}
+    )
     seq2.config_detuning_map(det_map)  # Will use "dmm_0" again
-    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
+    assert set(seq2.available_channels) == (
+        available_channels - {"mw_global", "dmm_1"}
+    )
     assert channel_map.keys() == seq2.declared_channels.keys()
     assert set(
         seq2._schedule[channel].channel_id
@@ -240,14 +246,65 @@ def test_dmm_declaration(reg, device, det_map, first_dmm_id):
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "mw_global")
-    # DMM channels are still available,
-    # but can only be declared using an SLM Mask
-    assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
+    # DMM channels addressing the 'ground-rydberg' basis are still
+    # available, but can only be declared using an SLM Mask
+    assert set(seq2.available_channels) == {"mw_global", "dmm_0", "dmm_1"}
     with pytest.raises(
         ValueError,
         match="cannot work simultaneously with the declared 'Microwave'",
     ):
         seq2.config_detuning_map(det_map, "dmm_0")
+
+
+def test_dmm_declaration_xy(reg, det_map):
+    # Configuring a DMM addressing the 'XY' basis enables the XY mode
+    seq = Sequence(reg, MockDevice)
+    seq.config_detuning_map(det_map, "dmm_1")
+    assert seq._in_xy and not seq._in_ising
+    assert seq.get_addressed_bases() == ("XY",)
+    assert seq.get_addressed_states() == ["u", "d"]
+    # Like declaring a 'Microwave' channel, it sets the default magnetic field
+    assert np.all(seq.magnetic_field == np.array((0.0, 0.0, 30.0)))
+    seq.declare_channel("ch0", "mw_global")
+
+    # It can also be configured on a sequence already in XY mode, which
+    # leaves the magnetic field untouched
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.set_magnetic_field(1.0, 0.0, 0.0)
+    seq.config_detuning_map(det_map, "dmm_1")
+    assert np.all(seq.magnetic_field == np.array((1.0, 0.0, 0.0)))
+    # The detuning it applies must be positive in the 'XY' basis
+    seq.add_dmm_detuning(ConstantWaveform(100, 1), "dmm_1")
+    assert seq.get_duration() == 100
+    with pytest.raises(
+        ValueError, match="The detuning in a DMM must not be negative"
+    ):
+        seq.add_dmm_detuning(ConstantWaveform(100, -1), "dmm_1")
+
+    # In XY mode, the first available DMM addressing the 'XY' basis is
+    # the one taken by default
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.config_detuning_map(det_map)
+    assert list(seq.declared_channels) == ["ch0", "dmm_1"]
+    # And there is none to take if the device only holds Ising DMMs
+    seq = Sequence(reg, dataclasses.replace(MockDevice, dmm_objects=(DMM(),)))
+    seq.declare_channel("ch0", "mw_global")
+    with pytest.raises(ValueError, match="No DMM channel is still available"):
+        seq.config_detuning_map(det_map)
+
+    # But it is not available on a sequence in Ising mode
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "DMM dmm_1 is not available; still available DMM channels "
+            "are ['dmm_0']."
+        ),
+    ):
+        seq.config_detuning_map(det_map, "dmm_1")
 
 
 def test_slm_declaration(reg, device, det_map):
@@ -288,10 +345,12 @@ def test_slm_declaration(reg, device, det_map):
     assert set(seq2.declared_channels.keys()) == set()
     # If a DMM was declared as an SLM Mask, MW channels are still available
     assert set(seq2.available_channels) == available_channels
-    # If other DMM are configured, the MW channel is no longer available
+    # If other DMM are configured, the 'XY' channels are no longer available
     seq2.config_detuning_map(det_map, "dmm_0")
     assert seq2._slm_mask_dmm == "dmm_0"
-    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
+    assert set(seq2.available_channels) == (
+        available_channels - {"mw_global", "dmm_1"}
+    )
     assert channel_map.keys() == seq2.declared_channels.keys()
     assert set(
         seq2._schedule[channel].channel_id
@@ -310,11 +369,11 @@ def test_slm_declaration(reg, device, det_map):
     # Configuring a SLM after having declared a microwave channel
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "mw_global")
-    # DMM channels are still available, but can be configured using an SLM Mask
-    assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
+    # DMM channels are still available, dmm_0 only through an SLM Mask
+    assert set(seq2.available_channels) == {"mw_global", "dmm_0", "dmm_1"}
     assert set(seq2.declared_channels.keys()) == {"ch0"}
     seq2.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_0")
-    assert set(seq2.available_channels) == {"mw_global"}
+    assert set(seq2.available_channels) == {"mw_global", "dmm_1"}
     assert set(seq2.declared_channels.keys()) == {"ch0"}
 
     # Declaring a microwave channel after having configured an SLM
@@ -324,9 +383,9 @@ def test_slm_declaration(reg, device, det_map):
     # If a DMM was declared as an SLM Mask, all channels are still available
     assert set(seq2.available_channels) == available_channels
     assert set(seq2.declared_channels.keys()) == set()
-    # If MW channel is defined, only mw channels are available
+    # If MW channel is defined, only the 'XY' channels are available
     seq2.declare_channel("ch0", "mw_global")
-    assert set(seq2.available_channels) == {"mw_global"}
+    assert set(seq2.available_channels) == {"mw_global", "dmm_1"}
     # DMM is not shown as declared
     assert set(seq2.declared_channels.keys()) == {"ch0"}
 
@@ -393,14 +452,14 @@ def test_magnetic_field(reg):
     seq3.set_magnetic_field(1.0, 0.0, 0.0)  # sets seq to XY mode
     # dmm_0 doesn't appear because there can only be one in XY mode
     # and the SLM is already configured
-    assert set(seq3.available_channels) == {"mw_global"}
+    assert set(seq3.available_channels) == {"mw_global", "dmm_1"}
     assert list(seq3.declared_channels.keys()) == []
     seq3.declare_channel("ch0", "mw_global")
     assert list(seq3.declared_channels.keys()) == ["ch0"]
 
     seq3 = Sequence(reg, MockDevice)
     seq3.set_magnetic_field(1.0, 0.0, 0.0)  # sets seq to XY mode
-    assert set(seq3.available_channels) == {"mw_global", "dmm_0"}
+    assert set(seq3.available_channels) == {"mw_global", "dmm_0", "dmm_1"}
     seq3.declare_channel("ch0", "mw_global")
     # Does not change to default
     assert np.all(seq3.magnetic_field == np.array((1.0, 0.0, 0.0)))
@@ -461,8 +520,8 @@ def devices():
                 min_duration=16,
                 max_duration=2**26,
                 # Better than DMM of DigitalAnalogDevice
-                bottom_detuning=-2 * np.pi * 40,
-                total_bottom_detuning=-2 * np.pi * 4000,
+                top_abs_detuning=2 * np.pi * 40,
+                total_top_abs_detuning=2 * np.pi * 4000,
             ),
         ),
     )
@@ -498,8 +557,8 @@ def devices():
                 clock_period=4,
                 min_duration=16,
                 max_duration=2**26,
-                bottom_detuning=-2 * np.pi * 20,
-                total_bottom_detuning=-2 * np.pi * 2000,
+                top_abs_detuning=2 * np.pi * 20,
+                total_top_abs_detuning=2 * np.pi * 2000,
             ),
         ),
     )
@@ -554,8 +613,8 @@ def devices():
                 clock_period=4,
                 min_duration=16,
                 max_duration=2**26,
-                bottom_detuning=-2 * np.pi * 20,
-                total_bottom_detuning=-2 * np.pi * 2000,
+                top_abs_detuning=2 * np.pi * 20,
+                total_top_abs_detuning=2 * np.pi * 2000,
             ),
         ),
     )
@@ -765,7 +824,7 @@ def test_switch_device_down(
         DigitalAnalogDevice,
         dmm_objects=(
             dataclasses.replace(
-                DigitalAnalogDevice.dmm_objects[0], total_bottom_detuning=-2000
+                DigitalAnalogDevice.dmm_objects[0], total_top_abs_detuning=2000
             ),
         ),
     )
@@ -883,9 +942,9 @@ def test_switch_device_down(
     ):
         # Can't find a match for the 2nd dmm_0
         seq.with_new_device(phys_Chadoq2)
-    # There is no need to have same bottom detuning to have a strict switch
+    # No need for the same maximum absolute detuning to strictly switch
     dmm_down = dataclasses.replace(
-        phys_Chadoq2.dmm_channels["dmm_0"], bottom_detuning=-10
+        phys_Chadoq2.dmm_channels["dmm_0"], top_abs_detuning=10
     )
     new_seq = seq.with_new_device(
         dataclasses.replace(phys_Chadoq2, dmm_objects=(dmm_down, dmm_down)),
@@ -903,7 +962,7 @@ def test_switch_device_down(
         dataclasses.replace(
             phys_Chadoq2.to_virtual(),
             reusable_channels=True,
-            dmm_objects=(dataclasses.replace(dmm_down, bottom_detuning=-20),),
+            dmm_objects=(dataclasses.replace(dmm_down, top_abs_detuning=20),),
         ),
         strict=True,
     )
@@ -944,8 +1003,8 @@ def test_switch_device_down(
         )
     dmm_down = dataclasses.replace(
         phys_Chadoq2.dmm_channels["dmm_0"],
-        bottom_detuning=-10,
-        total_bottom_detuning=-10,
+        top_abs_detuning=10,
+        total_top_abs_detuning=10,
     )
     seq.with_new_device(
         dataclasses.replace(
@@ -1093,6 +1152,25 @@ def test_switch_device_down(
         else contextlib.nullcontext()
     ):
         seq.with_new_device(DigitalAnalogDevice, True)
+
+
+def test_switch_device_dmm_basis(reg, det_map):
+    # A DMM can only be matched with a DMM addressing the same basis
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.config_detuning_map(det_map, "dmm_1")
+    with pytest.raises(
+        TypeError,
+        match="No match for channel 'dmm_1' with the"
+        " right type, basis and addressing.",
+    ):
+        seq.with_new_device(
+            dataclasses.replace(MockDevice, dmm_objects=(DMM(),))
+        )
+    new_seq = seq.with_new_device(
+        dataclasses.replace(MockDevice, dmm_objects=(DMM(basis="XY"),))
+    )
+    assert list(new_seq.declared_channels) == ["ch0", "dmm_0"]
 
 
 @pytest.mark.parametrize("mappable_reg", [False, True])
@@ -2549,7 +2627,8 @@ def test_draw_slm_mask_in_ising(
             NotImplementedError,
             match=re.escape(
                 "Can only draw qubit contents for channels in the "
-                "'ground-rydberg' basis; got {'raman_glob': 'digital'}."
+                "'ground-rydberg' or 'XY' basis; got "
+                "{'raman_glob': 'digital'}."
             ),
         ):
             seq1.draw(
@@ -2559,10 +2638,25 @@ def test_draw_slm_mask_in_ising(
             )
 
 
+def test_draw_qubit_contents_in_xy(reg, det_map, patch_plt_show):
+    # The quantities per qubit can also be drawn in XY mode
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.config_detuning_map(det_map, "dmm_1")
+    seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch0")
+    seq.add_dmm_detuning(ConstantWaveform(100, 1), "dmm_1")
+    seq.draw(
+        draw_qubit_amp=True,
+        draw_qubit_det=True,
+        draw_register=True,
+        draw_detuning_maps=True,
+    )
+
+
 @pytest.mark.parametrize(
-    "bottom_detunings", [(None, None), (-20, None), (None, -20), (-20, -20)]
+    "top_abs_detunings", [(None, None), (20, None), (None, 20), (20, 20)]
 )
-def test_slm_mask_in_ising(patch_plt_show, bottom_detunings):
+def test_slm_mask_in_ising(patch_plt_show, top_abs_detunings):
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     det_map = reg.define_detuning_map({"q0": 0.2, "q1": 0.8, "q2": 0.0})
     targets = ["q0", "q2"]
@@ -2575,8 +2669,8 @@ def test_slm_mask_in_ising(patch_plt_show, bottom_detunings):
             MockDevice,
             dmm_objects=(
                 DMM(
-                    bottom_detuning=bottom_detunings[0],
-                    total_bottom_detuning=bottom_detunings[1],
+                    top_abs_detuning=top_abs_detunings[0],
+                    total_top_abs_detuning=top_abs_detunings[1],
                 ),
             ),
         ),
@@ -2608,15 +2702,15 @@ def test_slm_mask_in_ising(patch_plt_show, bottom_detunings):
     seq2.add(pulse, "ryd_glob")  # slm pulse between 0 and 500
     assert seq2._slm_mask_time == [0, 500]
     slm_det: float
-    if bottom_detunings == (None, None):
+    if top_abs_detunings == (None, None):
         slm_det = -10 * amp
-    elif bottom_detunings[0] is None:
-        slm_det = max(-10 * amp, bottom_detunings[1] / len(targets))
-    elif bottom_detunings[1] is None:
-        slm_det = max(-10 * amp, bottom_detunings[0])
+    elif top_abs_detunings[0] is None:
+        slm_det = max(-10 * amp, -top_abs_detunings[1] / len(targets))
+    elif top_abs_detunings[1] is None:
+        slm_det = max(-10 * amp, -top_abs_detunings[0])
     else:
-        assert bottom_detunings[1] / len(targets) > bottom_detunings[0]
-        slm_det = max(-10 * amp, bottom_detunings[1] / len(targets))
+        assert top_abs_detunings[1] / len(targets) < top_abs_detunings[0]
+        slm_det = max(-10 * amp, -top_abs_detunings[1] / len(targets))
     assert seq2._schedule["dmm_0"].slots[1].type == Pulse.ConstantPulse(
         500, 0, slm_det, 0
     )
