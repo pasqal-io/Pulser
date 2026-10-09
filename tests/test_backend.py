@@ -25,6 +25,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+import qutip
 
 import pulser
 from pulser.backend.abc import Backend, EmulatorBackend
@@ -42,6 +43,7 @@ from pulser.backend.default_observables import (
     Expectation,
     Fidelity,
     Occupation,
+    Purity,
     StateResult,
 )
 from pulser.backend.qpu import QPUBackend
@@ -1638,3 +1640,23 @@ class TestObservables:
         fid_ghz = Fidelity(ghz_state)
         assert fid_ghz.tag == "fidelity"
         assert np.isclose(fid_ghz.apply(state=ghz_state), 1.0)
+
+    def test_purity(self, ghz_state):
+        purity = Purity()
+        assert purity.tag == "purity"
+        # A pure state has purity 1
+        assert np.isclose(purity.apply(state=ghz_state), 1.0)
+        assert np.isclose(ghz_state.purity(), 1.0)
+
+        # A mixed state has purity Tr[rho^2] < 1
+        mixed_state = QutipState(
+            qutip.Qobj(
+                np.diag([0.6, 0.25, 0.1, 0.05]),
+                dims=[[2, 2], [2, 2]],
+            ),
+            eigenstates=("r", "g"),
+        )
+        purity_mixed = Purity(tag_suffix="mixed")
+        assert purity_mixed.tag == "purity_mixed"
+        assert np.isclose(purity_mixed.apply(state=mixed_state), 0.435)
+        assert np.isclose(mixed_state.purity(), 0.435)
