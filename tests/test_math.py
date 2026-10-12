@@ -51,6 +51,24 @@ def test_allclose_tensor():
     )
 
 
+def test_tensor_with_lazy_conj_or_neg_bit():
+    torch = pytest.importorskip("torch")
+    x = torch.tensor([1.0, 2.0, 0.5, -1.0], dtype=torch.float64)
+    z = torch.tensor([1 + 2j, 3 - 1j], dtype=torch.complex128)
+    # torch.fft.ifft of a real tensor and Tensor.conj() return conjugate views,
+    # and the imaginary part of a conjugate view is a negative view
+    cases = [
+        (pm.ifft(x), np.fft.ifft(x.numpy())),
+        (pm.AbstractArray(z.conj()), np.conj(z.numpy())),
+        (pm.AbstractArray(z.conj().imag), -z.numpy().imag),
+    ]
+    for arr, expected in cases:
+        assert arr.as_tensor().is_conj() or arr.as_tensor().is_neg()
+        np.testing.assert_allclose(arr.as_array(), expected)
+        np.testing.assert_allclose(arr.as_array(detach=True), expected)
+        np.testing.assert_allclose(np.asarray(arr), expected)
+
+
 @pytest.mark.parametrize(
     "cast_to, requires_grad",
     [(None, False), ("array", False), ("tensor", False), ("tensor", True)],

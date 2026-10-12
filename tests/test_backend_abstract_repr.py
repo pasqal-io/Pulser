@@ -427,6 +427,13 @@ class TestStateRepr:
             eigenstates=basis, amplitudes=amplitudes
         )
         assert state.n_qudits == 5
+        # n_qudits is stored per instance
+        # creating another state doesn't change it
+        other_state = StateRepr.from_state_amplitudes(
+            eigenstates=basis, amplitudes={"00": 1.0}
+        )
+        assert other_state.n_qudits == 2
+        assert state.n_qudits == 5
 
     def test_state_repr_invalid_eigenstates(self):
         basis = ("av", "b", "c")
