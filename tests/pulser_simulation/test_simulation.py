@@ -108,18 +108,9 @@ def matrices():
     return pauli
 
 
-def _any_order_set(*items: str) -> str:
-    """Regex for a set literal holding exactly these items, in any order.
-
-    Sets of strings print in a different order on each run, so a message
-    containing one can't be matched against a fixed string.
-    """
-    alt = "|".join(re.escape(repr(item)) for item in items)
-    rest = f"(?:, (?:{alt})){{{len(items) - 1}}}"
-    return rf"\{{(?:{alt}){rest}\}}"
-
-
-def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
+def test_initialization_and_construction_of_hamiltonian(
+    seq, mod_device, helpers
+):
     fake_sequence = {"pulse1": "fake", "pulse2": "fake"}
     with pytest.raises(
         TypeError,
@@ -147,7 +138,7 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
                 "The ids of qubits targeted by Local channel 'raman' must be "
                 "defined in the register; Channel targets "
             )
-            + _any_order_set("target", "control1", "control2")
+            + helpers.any_order_set("target", "control1", "control2")
             + re.escape(
                 ". Among them, {'control1'} not in ['target', 'control2']."
             )
@@ -289,7 +280,9 @@ def test_extraction_of_sequences(seq):
 
 
 @pytest.mark.parametrize("leakage", [False, True])
-def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
+def test_building_basis_and_projection_operators(
+    seq, reg, leakage, matrices, helpers
+):
     # All three levels:
     def _noise_model(dim):
         return (
@@ -439,10 +432,12 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     with pytest.raises(
         ValueError,
         match=re.escape(
-            "Bases used in samples must be supported by the device; "
-            "Samples uses {'XY'} but basis ['XY'] is not among basis "
-            "supported by the Device ['ground-rydberg', 'digital']."
-        ),
+            "Bases used in samples must be supported by the device; samples "
+            "use ['XY'], but ['XY'] are not supported by device "
+            "'DigitalAnalogDevice', which supports "
+        )
+        + helpers.any_order_list("ground-rydberg", "digital")
+        + re.escape("."),
     ):
         QutipEmulator(sampler.sample(seq2), seq2.register, DigitalAnalogDevice)
     sim2 = QutipEmulator.from_sequence(
@@ -480,7 +475,13 @@ def test_empty_sequences(reg):
     seq.declare_channel("ch0", "mw_global")
     with pytest.raises(ValueError, match="No instructions given"):
         QutipEmulator.from_sequence(seq)
-    with pytest.raises(ValueError, match="SequenceSamples is empty"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "SequenceSamples is empty; none of its channels ['ch0'] have any "
+            "samples."
+        ),
+    ):
         QutipEmulator(sampler.sample(seq), seq.register, seq.device)
 
     seq = Sequence(reg, MockDevice)
@@ -759,7 +760,9 @@ def test_run(seq, patch_plt_show):
         sim.run(progress_bar=None)
         with pytest.raises(
             ValueError,
-            match=re.escape("'progress_bar' must be a bool, not 1."),
+            match=re.escape(
+                "'progress_bar' must be a bool, not <class 'int'>. Got 1."
+            ),
         ):
             sim.run(progress_bar=1)
 
@@ -1873,7 +1876,10 @@ def test_mask_equals_remove_xy():
     # Simulation cannot be run on a device not having an SLM mask
     with pytest.raises(
         ValueError,
-        match="Samples use SLM mask but device does not have one.",
+        match=re.escape(
+            "Samples use an SLM mask but device 'AnalogDevice' does not "
+            "support one."
+        ),
     ):
         QutipEmulator(sampler.sample(seq_masked), reg_three, AnalogDevice)
     # Simulation cannot be run on a register not defining "q2"

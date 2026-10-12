@@ -148,7 +148,10 @@ class QutipEmulator:
                 f"Got {sampled_seq}."
             )
         if sampled_seq.max_duration == 0:
-            raise ValueError("SequenceSamples is empty.")
+            raise ValueError(
+                "SequenceSamples is empty; none of its channels "
+                f"{sampled_seq.channels} have any samples."
+            )
         # Check compatibility of register and device
         self._sampling_rate = sampling_rate
         device.validate_register(register)
@@ -157,25 +160,16 @@ class QutipEmulator:
         # Check compatibility of samples and device:
         if sampled_seq._slm_mask.end > 0 and not device.supports_slm_mask:
             raise ValueError(
-                "Samples use SLM mask but device does not have one."
+                "Samples use an SLM mask but device "
+                f"{device.name!r} does not support one."
             )
         if not sampled_seq.used_bases <= device.supported_bases:
-            missing_bases = sampled_seq.used_bases - device.supported_bases
-            unsupported = [
-                b
-                for b in dict.fromkeys(
-                    ch.basis for ch in sampled_seq._ch_objs.values()
-                )
-                if b in missing_bases
-            ]
-            supported = list(
-                dict.fromkeys(ch.basis for ch in device.channel_objects)
-            )
             raise ValueError(
                 "Bases used in samples must be supported by the device; "
-                f"Samples uses {sampled_seq.used_bases} but basis "
-                f"{unsupported} is not among basis supported by the "
-                f"Device {supported}."
+                f"samples use {list(sampled_seq.used_bases)}, but "
+                f"{list(sampled_seq.used_bases - device.supported_bases)} "
+                f"are not supported by device {device.name!r}, which "
+                f"supports {list(device.supported_bases)}."
             )
         # Check compatibility of masked samples and register
         if not sampled_seq._slm_mask.targets <= set(register.qubit_ids):
@@ -201,11 +195,12 @@ class QutipEmulator:
                 f"{sampling_rate}) must be greater than 0 and "
                 "less than or equal to 1."
             )
-        if (n_points := int(self._tot_duration * sampling_rate)) < 4:
+        min_points = 4
+        if (n_points := int(self._tot_duration * sampling_rate)) < min_points:
             raise ValueError(
                 f"'sampling_rate' is too small; {sampling_rate} on a "
                 f"{self._tot_duration} ns sequence gives {n_points} data "
-                "points, at least 4 are needed."
+                f"points, at least {min_points} are needed."
             )
 
         if noise_model is not None and config is not None:
@@ -727,7 +722,8 @@ class QutipEmulator:
             options["progress_bar"] = ""
         else:
             raise ValueError(
-                f"'progress_bar' must be a bool, not {progress_bar!r}."
+                f"'progress_bar' must be a bool, not {type(progress_bar)}. "
+                f"Got {progress_bar!r}."
             )
 
         solver_fn: Callable[..., Any] = qutip.sesolve

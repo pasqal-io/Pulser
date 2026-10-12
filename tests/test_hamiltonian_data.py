@@ -23,17 +23,6 @@ from pulser.sampler import sample
 from .test_sequence_sampler import seq_rydberg, seq_with_SLM
 
 
-def _any_order_set(*items: str) -> str:
-    """Regex for a set literal holding exactly these items, in any order.
-
-    Sets of strings print in a different order on each run, so a message
-    containing one can't be matched against a fixed string.
-    """
-    alt = "|".join(re.escape(repr(item)) for item in items)
-    rest = f"(?:, (?:{alt})){{{len(items) - 1}}}"
-    return rf"\{{(?:{alt}){rest}\}}"
-
-
 def test_sigma_register_xy_z():
     temperature = 15.0
     trap_waist = 1.0
@@ -193,7 +182,7 @@ def test_noisy_register_torch(register2D):
     assert g.shape == qdict["q0"]._array.shape
 
 
-def test_init_errors():
+def test_init_errors(helpers):
     seq = seq_with_SLM("rydberg_global")
     seq_samples = sample(seq)
     register = pulser.Register.square(3, spacing=6, prefix="")
@@ -216,7 +205,11 @@ def test_init_errors():
         HamiltonianData(seq_samples, None, None, None, None)
 
     with pytest.raises(
-        ValueError, match="Samples use SLM mask but device does not have one."
+        ValueError,
+        match=re.escape(
+            "Samples use an SLM mask but device 'AnalogDevice' does not "
+            "support one."
+        ),
     ):
         HamiltonianData(
             seq_samples, seq.register, pulser.AnalogDevice, None, None
@@ -241,9 +234,9 @@ def test_init_errors():
                 "The ids of qubits targeted by Local channel 'ch1' must be "
                 "defined in the register; Channel targets "
             )
-            + _any_order_set("q0", "q1")
+            + helpers.any_order_set("q0", "q1")
             + re.escape(". Among them, ")
-            + _any_order_set("q0", "q1")
+            + helpers.any_order_set("q0", "q1")
             + re.escape(
                 " not in ['0', '1', '2', '3', '4', '5', '6', '7', '8']."
             )
@@ -267,7 +260,13 @@ def test_init_errors():
 
     seq = pulser.Sequence(register, pulser.AnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
-    with pytest.raises(ValueError, match="SequenceSamples is empty."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "SequenceSamples is empty; none of its channels ['ch0'] have any "
+            "samples."
+        ),
+    ):
         HamiltonianData(sample(seq), None, None, None, None)
 
     seq = seq_with_SLM("mw_global")
@@ -275,10 +274,12 @@ def test_init_errors():
     with pytest.raises(
         ValueError,
         match=re.escape(
-            "Bases used in samples must be supported by the device; "
-            "Samples uses {'XY'} but basis ['XY'] is not among basis "
-            "supported by the Device ['ground-rydberg', 'digital']."
-        ),
+            "Bases used in samples must be supported by the device; samples "
+            "use ['XY'], but ['XY'] are not supported by device "
+            "'DigitalAnalogDevice', which supports "
+        )
+        + helpers.any_order_list("ground-rydberg", "digital")
+        + re.escape("."),
     ):
         HamiltonianData(
             seq_samples, seq.register, pulser.DigitalAnalogDevice, None, None

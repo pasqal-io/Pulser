@@ -221,7 +221,10 @@ class HamiltonianData:
                 f"'SequenceSamples', not {type(samples)}. Got {samples}."
             )
         if samples.max_duration == 0:
-            raise ValueError("SequenceSamples is empty.")
+            raise ValueError(
+                "SequenceSamples is empty; none of its channels "
+                f"{samples.channels} have any samples."
+            )
         # Check compatibility of register and device
         if not isinstance(device, BaseDevice):
             raise TypeError(
@@ -234,25 +237,16 @@ class HamiltonianData:
         # Check compatibility of samples and device:
         if samples._slm_mask.end > 0 and not self.device.supports_slm_mask:
             raise ValueError(
-                "Samples use SLM mask but device does not have one."
+                "Samples use an SLM mask but device "
+                f"{self.device.name!r} does not support one."
             )
         if not samples.used_bases <= self.device.supported_bases:
-            missing_bases = samples.used_bases - self.device.supported_bases
-            unsupported = [
-                b
-                for b in dict.fromkeys(
-                    ch.basis for ch in samples._ch_objs.values()
-                )
-                if b in missing_bases
-            ]
-            supported = list(
-                dict.fromkeys(ch.basis for ch in self.device.channel_objects)
-            )
             raise ValueError(
                 "Bases used in samples must be supported by the device; "
-                f"Samples uses {samples.used_bases} but basis "
-                f"{unsupported} is not among basis supported by the "
-                f"Device {supported}."
+                f"samples use {list(samples.used_bases)}, but "
+                f"{list(samples.used_bases - self.device.supported_bases)} "
+                f"are not supported by device {self.device.name!r}, which "
+                f"supports {list(self.device.supported_bases)}."
             )
         # Check compatibility of masked samples and register
         if not samples._slm_mask.targets <= set(self.register.qubits.keys()):

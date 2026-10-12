@@ -175,6 +175,29 @@ class Helpers:
         """
         return _RaisesAllContext(expected, match)
 
+    @staticmethod
+    def any_order_set(*items: str) -> str:
+        """Regex for a set literal holding exactly these items, in any order.
+
+        Sets of strings print in a different order on each run, so a message
+        containing one can't be matched against a fixed string.
+        """
+        return _any_order(items, "{", "}")
+
+    @staticmethod
+    def any_order_list(*items: str) -> str:
+        """Regex for a list holding exactly these items, in any order.
+
+        For a list made from a set, whose order also changes on each run.
+        """
+        return _any_order(items, "[", "]")
+
+
+def _any_order(items: tuple[str, ...], opening: str, closing: str) -> str:
+    alt = "|".join(re.escape(repr(item)) for item in items)
+    rest = f"(?:, (?:{alt})){{{len(items) - 1}}}"
+    return rf"{re.escape(opening)}(?:{alt}){rest}{re.escape(closing)}"
+
 
 @pytest.fixture
 def helpers() -> type[Helpers]:
