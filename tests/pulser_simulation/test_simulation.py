@@ -34,8 +34,12 @@ from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 from pulser_simulation import QutipEmulator, SimConfig
 from pulser_simulation.qutip_backend import QutipBackendV2
 from pulser_simulation.qutip_config import QutipConfig
-from pulser_simulation.simresults import NoisyResults
-from pulser_simulation.simulation import Solver, _has_stochastic_noise
+from pulser_simulation.simresults import CoherentResults, NoisyResults
+from pulser_simulation.simulation import (
+    Solver,
+    _has_stochastic_noise,
+    _state_prep_in_initial_state,
+)
 
 
 @pytest.fixture
@@ -1399,10 +1403,17 @@ def test_add_config(matrices):
             eff_noise_rates=[0.1],
         )
     )
-    assert sim._initial_state == qutip.basis(3, 1)
+    # With leakage, the state preparation errors (eta=0.5) are part of it
+    assert (
+        sim._initial_state
+        == 0.5 * qutip.basis(3, 1).proj() + 0.5 * qutip.basis(3, 2).proj()
+    )
     # Otherwise initial state is set to ground-state
     sim.set_config(SimConfig(noise="SPAM", eta=0.5))
     sim.set_initial_state(qutip.basis(2, 0))
+    # A custom initial state is kept when the dimension doesn't change
+    sim.set_config(SimConfig(noise="SPAM", eta=0.5))
+    assert sim._initial_state == qutip.basis(2, 0)
     with pytest.warns(
         UserWarning,
         match="Current initial state's dimension does not match new dim",
@@ -1417,7 +1428,10 @@ def test_add_config(matrices):
                     eff_noise_rates=[0.1],
                 )
             )
-    assert sim._initial_state == qutip.basis(3, 1)
+    assert (
+        sim._initial_state
+        == 0.5 * qutip.basis(3, 1).proj() + 0.5 * qutip.basis(3, 2).proj()
+    )
 
 
 @pytest.mark.filterwarnings("ignore:Setting samples_per_run different to 1 is")
@@ -1607,7 +1621,16 @@ res_deph_atom2_mcarlo = {
 
 res_deph_meq = res_deph_mcarlo
 res_eff_meq = {"0000": 851, "0001": 23, "0010": 8, "0100": 57, "1000": 61}
-res_leak_meq = res_eff_meq
+res_leak_meq = {
+    "0000": 852,
+    "0001": 33,
+    "0010": 40,
+    "0011": 1,
+    "0100": 33,
+    "0101": 2,
+    "1000": 36,
+    "1100": 3,
+}
 res_depol_meq = {
     "0000": 791,
     "0001": 39,
@@ -1709,12 +1732,14 @@ def test_noisy_xy(
         if not with_leakage
         else {"SPAM", "leakage", "eff_noise"}
     )
-    assert sim._current_hamiltonian.noise_trajectory.bad_atoms == {
-        "atom0": True,
-        "atom1": False,
-        "atom2": True,
-        "atom3": False,
-    }
+    # With leakage and mesolve, the state preparation errors are part of
+    # the initial state instead of being sampled as bad atoms
+    prep_in_initial_state = with_leakage and solver is Solver.MESOLVER
+    assert sim._current_hamiltonian.noise_trajectory.bad_atoms == (
+        dict.fromkeys(simple_reg.qubit_ids, False)
+        if prep_in_initial_state
+        else {"atom0": True, "atom1": False, "atom2": True, "atom3": False}
+    )
     assert (
         len(sim._current_hamiltonian._collapse_ops) // len(simple_reg.qubits)
         == n_collapse_ops
@@ -1724,13 +1749,19 @@ def test_noisy_xy(
         match="QutipEmulator is deprecated as of pulser 1.9",
     ):
         r = sim.run()
-    with pytest.warns(
-        UserWarning,
-        match=re.escape(
-            "'SampledResult.get_samples()' resamples a sampling distribution"
-        ),
-    ):
+    if prep_in_initial_state:
+        # A single run, whose final state is sampled directly
+        assert isinstance(r, CoherentResults)
         assert r.sample_final_state() == Counter(result)
+    else:
+        with pytest.warns(
+            UserWarning,
+            match=re.escape(
+                "'SampledResult.get_samples()' resamples a sampling "
+                "distribution"
+            ),
+        ):
+            assert r.sample_final_state() == Counter(result)
 
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
@@ -2523,7 +2554,14 @@ def test_noisy_runs(noise):
         (dict(noise_types="detuning"), True),
         (dict(noise_types="register"), True),
         (dict(noise_types="SPAM", state_prep_error=0.0), False),
-        (dict(noise_types="SPAM", state_prep_error=1.0), True),
+        (
+            dict(noise_types="SPAM", state_prep_error=1.0, with_leakage=False),
+            True,
+        ),
+        (
+            dict(noise_types="SPAM", state_prep_error=1.0, with_leakage=True),
+            False,
+        ),
         (dict(noise_types="other"), False),
         (dict(noise_types={"other", "detuning"}), True),
     ],
@@ -2533,8 +2571,9 @@ def test_noisy_runs(noise):
         "amplitude=0",
         "detuning",
         "register",
-        "SPAM, state_prep_error!=0",
         "SPAM, state_prep_error=0",
+        "SPAM, state_prep_error!=0",
+        "SPAM, state_prep_error!=0, with leakage",
         "not shot_to_shot and not SPAM noise",
         "detuning + other noise",
     ],
@@ -2542,6 +2581,178 @@ def test_noisy_runs(noise):
 def test_has_stochastic_noise(noise_data, expected):
     fake_noise_model = SimpleNamespace(**noise_data)
     assert _has_stochastic_noise(fake_noise_model) is expected
+
+
+@pytest.mark.parametrize(
+    "solver, noise_types, in_initial_state",
+    [
+        (Solver.DEFAULT, "SPAM", True),
+        (Solver.MESOLVER, "SPAM", True),
+        (Solver.MCSOLVER, "SPAM", False),
+        # With other stochastic noise, the default solver is mcsolve
+        (Solver.DEFAULT, {"SPAM", "doppler"}, False),
+        (Solver.MESOLVER, {"SPAM", "doppler"}, True),
+    ],
+)
+def test_state_prep_in_initial_state(solver, noise_types, in_initial_state):
+    # With leakage and mesolve, the state preparation errors are part of
+    # the initial state; with mcsolve, bad atoms are still sampled
+    fake_noise_model = SimpleNamespace(
+        noise_types=noise_types, state_prep_error=0.1, with_leakage=True
+    )
+    assert (
+        _state_prep_in_initial_state(fake_noise_model, solver)
+        is in_initial_state
+    )
+    assert _has_stochastic_noise(fake_noise_model, solver) is (
+        not in_initial_state or "doppler" in noise_types
+    )
+
+
+def test_state_prep_errors_in_initial_state(monkeypatch):
+    leak = np.zeros((3, 3))
+    leak[2, 0] = 1.0  # |x><r|
+    noise_model = NoiseModel(
+        state_prep_error=0.1,
+        with_leakage=True,
+        eff_noise_rates=(0.05,),
+        eff_noise_opers=(leak,),
+    )
+    reg = Register.from_coordinates([(0, 0), (8, 0), (0, 8)], prefix="q")
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(Pulse.ConstantDetuning(BlackmanWaveform(500, np.pi), 0, 0), "ryd")
+
+    # Each atom starts in 'x' with probability 'state_prep_error', so no
+    # bad atoms are sampled and 'n_trajectories' isn't needed
+    sim = QutipEmulator.from_sequence(seq, noise_model=noise_model)
+    one_atom = 0.9 * qutip.basis(3, 1).proj() + 0.1 * qutip.basis(3, 2).proj()
+    assert sim.initial_state == qutip.tensor([one_atom] * 3)
+    trajectories = sim._hamiltonian_data.noise_trajectories
+    assert len(trajectories) == 1
+    assert not any(trajectories[0].trajectory.bad_atoms.values())
+    with pytest.warns(DeprecationWarning, match="QutipEmulator is deprecated"):
+        res = sim.run()
+    assert isinstance(res, CoherentResults)
+    mixed_dist = res[-1].sampling_dist
+
+    # It matches sampling bad atoms, which is still done with mcsolve
+    seed = 1234
+    np.random.seed(seed)
+    real = sim_module.qutip.mcsolve
+    monkeypatch.setattr(
+        sim_module.qutip,
+        "mcsolve",
+        lambda *args, **kwargs: real(*args, **({"seeds": seed} | kwargs)),
+    )
+    sampled_sim = QutipEmulator.from_sequence(
+        seq,
+        noise_model=noise_model,
+        solver=Solver.MCSOLVER,
+        n_trajectories=2000,
+    )
+    with pytest.warns(DeprecationWarning, match="QutipEmulator is deprecated"):
+        sampled_dist = sampled_sim.run()[-1].sampling_dist
+    for bitstring in mixed_dist.keys() | sampled_dist.keys():
+        assert np.isclose(
+            mixed_dist.get(bitstring, 0),
+            sampled_dist.get(bitstring, 0),
+            atol=0.02,
+        )
+
+    # With mcsolve, 'n_trajectories' is still needed
+    with pytest.raises(ValueError, match="'n_trajectories' must be defined"):
+        QutipEmulator.from_sequence(
+            seq, noise_model=noise_model, solver=Solver.MCSOLVER
+        )
+
+    # The errors also apply when the ground state is given explicitly
+    sim.set_initial_state(qutip.tensor([qutip.basis(3, 1)] * 3))
+    assert sim.initial_state == qutip.tensor([one_atom] * 3)
+
+    # Another initial state still can't be combined with the errors
+    sim.set_initial_state(qutip.tensor([qutip.basis(3, 0)] * 3))
+    with pytest.raises(
+        NotImplementedError,
+        match="Can't combine state preparation errors with an initial state",
+    ):
+        with pytest.warns(
+            DeprecationWarning, match="QutipEmulator is deprecated"
+        ):
+            sim.run()
+
+    # With other stochastic noise, the default solver is mcsolve, so bad
+    # atoms are still sampled
+    np.random.seed(seed)
+    doppler_sim = QutipEmulator.from_sequence(
+        seq,
+        noise_model=NoiseModel(
+            state_prep_error=0.5,
+            with_leakage=True,
+            eff_noise_rates=(0.05,),
+            eff_noise_opers=(leak,),
+            temperature=50.0,
+        ),
+        n_trajectories=10,
+    )
+    assert doppler_sim.initial_state.isket
+    assert any(
+        any(traj.trajectory.bad_atoms.values())
+        for traj in doppler_sim._hamiltonian_data.noise_trajectories
+    )
+    with pytest.warns(DeprecationWarning, match="QutipEmulator is deprecated"):
+        assert isinstance(doppler_sim.run(), NoisyResults)
+
+    # With mesolve, each trajectory starts with the errors in the initial
+    # state instead
+    doppler_sim = QutipEmulator.from_sequence(
+        seq,
+        noise_model=NoiseModel(
+            state_prep_error=0.5,
+            with_leakage=True,
+            eff_noise_rates=(0.05,),
+            eff_noise_opers=(leak,),
+            temperature=50.0,
+        ),
+        solver=Solver.MESOLVER,
+        n_trajectories=10,
+    )
+    assert doppler_sim.initial_state.isoper
+    trajectories = doppler_sim._hamiltonian_data.noise_trajectories
+    assert len(trajectories) == 10
+    assert not any(
+        any(traj.trajectory.bad_atoms.values()) for traj in trajectories
+    )
+    with pytest.warns(DeprecationWarning, match="QutipEmulator is deprecated"):
+        assert isinstance(doppler_sim.run(), NoisyResults)
+
+
+def test_density_matrix_initial_state():
+    reg = Register.from_coordinates([(0, 0), (8, 0)], prefix="q")
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(Pulse.ConstantDetuning(BlackmanWaveform(500, np.pi), 0, 0), "ryd")
+    sim = QutipEmulator.from_sequence(seq)
+    ket = qutip.tensor(qutip.basis(2, 0), qutip.basis(2, 1))
+    sim.set_initial_state(ket)
+    with pytest.warns(DeprecationWarning, match="QutipEmulator is deprecated"):
+        ket_dist = sim.run()[-1].sampling_dist
+
+    # Without noise, a density matrix is evolved with mesolve instead of
+    # sesolve, and gives the same result as the state vector
+    for density_matrix in (ket.proj(), ket.proj().full()):
+        sim.set_initial_state(density_matrix)
+        assert sim.initial_state == ket.proj()
+        with pytest.warns(
+            DeprecationWarning, match="QutipEmulator is deprecated"
+        ):
+            res = sim.run()
+        assert res.states[-1].isoper
+        dm_dist = res[-1].sampling_dist
+        for bitstring in ket_dist.keys() | dm_dist.keys():
+            assert np.isclose(
+                ket_dist.get(bitstring, 0), dm_dist.get(bitstring, 0)
+            )
 
 
 def test_qutip_default_solver_call(seq):

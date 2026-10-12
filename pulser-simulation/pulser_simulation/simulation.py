@@ -43,6 +43,7 @@ from pulser.sampler.samples import ChannelSamples, SequenceSamples
 from pulser.sequence._seq_drawer import draw_samples
 from pulser_simulation.hamiltonian import Hamiltonian
 from pulser_simulation.qutip_result import QutipResult
+from pulser_simulation.qutip_state import QutipState
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import (
     CoherentResults,
@@ -56,12 +57,6 @@ class HamiltonianWithReps(NamedTuple):
 
     hamiltonian: Hamiltonian
     reps: int
-
-
-def _has_stochastic_noise(noise_model: NoiseModel) -> bool:
-    return has_shot_to_shot_except_spam(noise_model) or (
-        "SPAM" in noise_model.noise_types and noise_model.state_prep_error != 0
-    )
 
 
 class Solver(str, Enum):
@@ -79,6 +74,39 @@ class Solver(str, Enum):
     DEFAULT = "default"
     MESOLVER = "MasterEquation"
     MCSOLVER = "MonteCarlo"
+
+
+def _state_prep_in_initial_state(
+    noise_model: NoiseModel, solver: Solver = Solver.DEFAULT
+) -> bool:
+    """Whether state preparation errors are part of the initial state.
+
+    With leakage, a badly prepared atom can start in the error state 'x'
+    instead of being sampled as a bad atom in each noise trajectory. This
+    is only done when ``qutip.mesolve`` is used: ``qutip.mcsolve`` would
+    need at least one trajectory per combination of badly prepared atoms.
+    """
+    uses_mesolve = solver == Solver.MESOLVER or (
+        # Without other stochastic noise, the default solver is mesolve
+        solver == Solver.DEFAULT
+        and not has_shot_to_shot_except_spam(noise_model)
+    )
+    return (
+        "SPAM" in noise_model.noise_types
+        and noise_model.state_prep_error != 0
+        and noise_model.with_leakage
+        and uses_mesolve
+    )
+
+
+def _has_stochastic_noise(
+    noise_model: NoiseModel, solver: Solver = Solver.DEFAULT
+) -> bool:
+    return has_shot_to_shot_except_spam(noise_model) or (
+        "SPAM" in noise_model.noise_types
+        and noise_model.state_prep_error != 0
+        and not _state_prep_in_initial_state(noise_model, solver)
+    )
 
 
 class QutipEmulator:
@@ -211,6 +239,9 @@ class QutipEmulator:
             device,
             noise_model,
             self._get_n_trajectories(noise_model, check_value=True),
+            sample_bad_atoms=not _state_prep_in_initial_state(
+                noise_model, self.solver
+            ),
         )
         # I don't like this, since the iterator is lost, but I don't
         # want to write logic to store and invalidate the iterator either
@@ -239,7 +270,7 @@ class QutipEmulator:
         )
         if (
             check_value
-            and _has_stochastic_noise(noise_model)
+            and _has_stochastic_noise(noise_model, self.solver)
             and n_trajectories is None
         ):
             raise ValueError(
@@ -378,7 +409,7 @@ class QutipEmulator:
                 f"{', '.join(not_supported)}."
             )
         former_dim = self.dim
-        former_basis = self.basis
+        was_all_ground = self._initial_state == self._all_ground_state()
         noise_model = cfg.to_noise_model()
         self._noise_trajectories_used = False
         self._hamiltonian_data = HamiltonianData(
@@ -387,24 +418,15 @@ class QutipEmulator:
             self.device,
             noise_model,
             self._get_n_trajectories(noise_model, check_value=True),
+            sample_bad_atoms=not _state_prep_in_initial_state(
+                noise_model, self.solver
+            ),
         )
         self._current_hamiltonian = next(self._hamiltonians).hamiltonian
-        if self.dim == former_dim:
+        if self.dim == former_dim and not was_all_ground:
             self.set_initial_state(self._initial_state)
             return
-        if self._initial_state != qutip.tensor(
-            [
-                former_basis[
-                    (
-                        "u"
-                        if self._hamiltonian_data.basis_data.interaction_type
-                        == "XY"
-                        else "g"
-                    )
-                ]
-                for _ in range(self._hamiltonian_data.n_qudits)
-            ]
-        ):
+        if not was_all_ground:
             warnings.warn(
                 "Current initial state's dimension does not match new"
                 " dimensions. Setting it to 'all-ground'."
@@ -481,6 +503,30 @@ class QutipEmulator:
         """The initial state of the simulation."""
         return self._initial_state
 
+    def _all_ground_state(
+        self, with_state_prep_errors: bool = True
+    ) -> qutip.Qobj:
+        """The state with all atoms prepared in the ground state.
+
+        When state preparation errors are part of the initial state, each
+        atom is in the ground state with probability 1 - state_prep_error
+        and in the error state 'x' otherwise.
+        """
+        v = self._hamiltonian_data.basis_data.interaction_type
+        ground = self.basis["u" if v == "XY" else "g"]
+        if with_state_prep_errors and _state_prep_in_initial_state(
+            self.noise_model, self.solver
+        ):
+            eigenstates = self._hamiltonian_data.basis_data.eigenbasis
+            eta = self.noise_model.state_prep_error
+            ground = (
+                (1 - eta) * QutipState(ground, eigenstates=eigenstates)
+                + eta * QutipState(self.basis["x"], eigenstates=eigenstates)
+            ).to_qobj()
+        return qutip.tensor(
+            [ground for _ in range(self._hamiltonian_data.n_qudits)]
+        )
+
     def set_initial_state(
         self, state: Union[str, np.ndarray, qutip.Qobj]
     ) -> None:
@@ -490,19 +536,18 @@ class QutipEmulator:
             state: The initial state.
                 Choose between:
 
-                - "all-ground" for all atoms in ground state
-                - An ArrayLike with a shape compatible with the system
-                - A Qobj object
+                - "all-ground" for all atoms in ground state (when the
+                  noise model has state preparation errors and leakage,
+                  and qutip.mesolve is used, each atom is instead in the
+                  error state 'x' with probability 'state_prep_error',
+                  also when this state is given explicitly)
+                - An ArrayLike with a shape compatible with the system,
+                  either a state vector or a density matrix
+                - A Qobj object, either a state vector or a density matrix
         """
         self._initial_state: qutip.Qobj
         if isinstance(state, str) and state == "all-ground":
-            v = self._hamiltonian_data.basis_data.interaction_type
-            self._initial_state = qutip.tensor(
-                [
-                    self.basis[("u" if v == "XY" else "g")]
-                    for _ in range(self._hamiltonian_data.n_qudits)
-                ]
-            )
+            self._initial_state = self._all_ground_state()
         else:
             state = cast(Union[np.ndarray, qutip.Qobj], state)
             shape = state.shape[0]
@@ -510,10 +555,21 @@ class QutipEmulator:
                 self._hamiltonian_data.basis_data.dim
                 ** self._hamiltonian_data.n_qudits
             )
+            # A square 2D array is a density matrix, else a state vector
+            is_density_matrix = (
+                len(state.shape) == 2 and state.shape[0] == state.shape[1]
+            )
             legal_dims = [
                 [self._hamiltonian_data.basis_data.dim]
                 * self._hamiltonian_data.n_qudits,
-                [1] * self._hamiltonian_data.n_qudits,
+                [
+                    (
+                        self._hamiltonian_data.basis_data.dim
+                        if is_density_matrix
+                        else 1
+                    )
+                ]
+                * self._hamiltonian_data.n_qudits,
             ]
             if shape != legal_shape:
                 raise ValueError(
@@ -523,6 +579,11 @@ class QutipEmulator:
             self._initial_state = (
                 qutip.Qobj(state, dims=legal_dims).unit().to("CSR")
             )
+            if self._initial_state == self._all_ground_state(
+                with_state_prep_errors=False
+            ):
+                # The state preparation errors still apply to it
+                self._initial_state = self._all_ground_state()
 
     @property
     def evaluation_times(self) -> np.ndarray:
@@ -708,7 +769,7 @@ class QutipEmulator:
             if self.solver == Solver.DEFAULT:
                 solver_fn = (
                     qutip.mcsolve
-                    if _has_stochastic_noise(self.noise_model)
+                    if _has_stochastic_noise(self.noise_model, self.solver)
                     else qutip.mesolve
                 )
             else:
@@ -716,6 +777,9 @@ class QutipEmulator:
                     Solver.MCSOLVER: qutip.mcsolve,
                     Solver.MESOLVER: qutip.mesolve,
                 }[self.solver]
+        if solver_fn is qutip.sesolve and self.initial_state.isoper:
+            # sesolve can't evolve a density matrix, mesolve can
+            solver_fn = qutip.mesolve
 
         if solver_fn in (qutip.mesolve, qutip.sesolve):
             options["normalize_output"] = False
@@ -780,16 +844,9 @@ class QutipEmulator:
         )
 
         if "SPAM" in self.noise_model.noise_types:
-            v = self._hamiltonian_data.basis_data.interaction_type
             if (
                 self.noise_model.state_prep_error > 0
-                and self.initial_state
-                != qutip.tensor(
-                    [
-                        self.basis[("u" if v == "XY" else "g")]
-                        for _ in range(self._hamiltonian_data.n_qudits)
-                    ]
-                )
+                and self.initial_state != self._all_ground_state()
             ):
                 raise NotImplementedError(
                     "Can't combine state preparation errors with an initial "
@@ -833,7 +890,7 @@ class QutipEmulator:
         )
         self._validate_options(options)
 
-        if not _has_stochastic_noise(self.noise_model):
+        if not _has_stochastic_noise(self.noise_model, self.solver):
             if print_progress:
                 print("Emulating Trajectory 1/1")
             # A single run is needed, regardless of self.config.runs
@@ -897,6 +954,9 @@ class QutipEmulator:
                 self.device,
                 noise_model,
                 self._get_n_trajectories(noise_model, check_value=True),
+                sample_bad_atoms=not _state_prep_in_initial_state(
+                    noise_model, self.solver
+                ),
             )
         # Ensure the noise trajectories are refreshed next time run is called
         self._noise_trajectories_used = True

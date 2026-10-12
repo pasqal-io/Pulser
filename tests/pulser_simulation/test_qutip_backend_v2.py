@@ -365,6 +365,51 @@ def test_leakage(amp_sigma):
     )
 
 
+@pytest.mark.parametrize(
+    "solver, temperature, n_trajectories",
+    [
+        (Solver.MESOLVER, 0.0, None),
+        # mcsolve still samples bad atoms in each trajectory
+        (Solver.MCSOLVER, 0.0, 1000),
+        # The doppler noise needs trajectories, each one starting with the
+        # state preparation errors in the initial state
+        (Solver.MESOLVER, 50.0, 50),
+    ],
+)
+def test_state_prep_errors_with_leakage(solver, temperature, n_trajectories):
+    # Far apart atoms that are fully excited, unless badly prepared
+    reg = pulser.Register.rectangle(1, 2, spacing=1000.0, prefix="q")
+    seq = pulser.Sequence(reg, pulser.MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.add(pulser.Pulse.ConstantPulse(500, 2 * np.pi, 0.0, 0.0), "ch0")
+    leak = np.zeros((3, 3))
+    leak[2, 0] = 1.0  # |x><r|, with a zero rate
+    state_prep_error = 0.2
+    qutip_config = QutipConfig(
+        observables=[StateResult(evaluation_times=[1.0])],
+        noise_model=pulser.NoiseModel(
+            state_prep_error=state_prep_error,
+            with_leakage=True,
+            eff_noise_rates=[0.0],
+            eff_noise_opers=[leak],
+            temperature=temperature,
+        ),
+        solver=solver,
+        n_trajectories=n_trajectories,
+    )
+    np.random.seed(123)
+    final_state = QutipBackendV2(seq, config=qutip_config).run().final_state
+
+    r_proj = np.zeros((3, 3))
+    r_proj[0, 0] = 1.0
+    q0_in_r = QutipOperator(
+        qutip.tensor(qutip.Qobj(r_proj), qutip.qeye(3)), ("r", "g", "x")
+    )
+    assert q0_in_r.expect(final_state) == pytest.approx(
+        1 - state_prep_error, abs=0.03
+    )
+
+
 def test_register_detuning_detection():
     natoms = 2
     reg = pulser.Register.rectangle(1, natoms, spacing=1000.0, prefix="q")
