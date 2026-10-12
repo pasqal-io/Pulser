@@ -54,7 +54,7 @@ Here, the _weights_ $\{\epsilon_k\}_{1\lt k\lt N}$ are defined by a `DetuningMap
 
 ## Weighted Analog with the XY Hamiltonian
 
-One can also perform Analog Quantum Computing with the weighted [XY Hamiltonian](./programming.md#xy-hamiltonian), whose associated `Channel` is the `Microwave.Global` Channel:
+One can also perform Analog Quantum Computing with the weighted [XY Hamiltonian](./programming.md#xy-hamiltonian). The `Channel` associated with this is the `Microwave.Global` Channel, which can be combined with a `DMM` channel addressing the `XY` basis to get local control over the detuning:
 
 $$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |0\rangle\langle 1|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |1\rangle\langle 0|_k - \left[\delta(t)\mathbf{+\epsilon_k\delta_{DMM}(t)}\right] |1\rangle\langle 1|_k + \sum_{j<k}\left[\frac{C_3}{\hbar R_{kj}^3} (|1\rangle\langle 0|_k |0\rangle\langle 1|_j + |0\rangle\langle 1|_j |1\rangle\langle 0|_k) + \frac{C_6}{R_{kj}^6} |0\rangle\langle 0|_k |0\rangle\langle 0|_j\right] \right)
 $$
