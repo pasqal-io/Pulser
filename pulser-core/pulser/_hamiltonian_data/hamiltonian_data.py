@@ -172,7 +172,7 @@ def _distances(register: BaseRegister) -> pm.AbstractArray:
     r"""Distances between each qubits (in :math:`\mu m`)."""
     positions = list(register.qubits.values())
     distances = pm.cdist(positions, positions)
-    if positions[0].is_tensor:
+    if distances.is_tensor:
         return distances
     return pm.round(distances, COORD_PRECISION)
 

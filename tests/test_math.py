@@ -111,6 +111,42 @@ def test_cdist(use_tensor):
         )
 
 
+@pytest.mark.parametrize("tensor_first", [False, True])
+@pytest.mark.parametrize("other_backend", ["numpy", "torch"])
+@pytest.mark.parametrize("tensor_precision", [32, 64])
+def test_cdist_mixed_dtypes(tensor_first, other_backend, tensor_precision):
+    torch = pytest.importorskip("torch")
+    tensor_dtype = getattr(torch, f"float{tensor_precision}")
+    other_precision = 96 - tensor_precision
+    tensor_points = torch.tensor(
+        [[0.0, 0.0], [3.0, 4.0]],
+        dtype=tensor_dtype,
+        requires_grad=True,
+    )
+    other_points = np.array(
+        [[0.0, 4.0], [3.0, 0.0]], dtype=f"float{other_precision}"
+    )
+    if other_backend == "torch":
+        other_points = torch.tensor(other_points, requires_grad=True)
+    points = [tensor_points, other_points]
+    if not tensor_first:
+        points.reverse()
+
+    distances = pm.cdist(*points)
+
+    assert distances.as_tensor().dtype == torch.float64
+    np.testing.assert_allclose(
+        distances.as_array(detach=True), [[4.0, 3.0], [3.0, 4.0]]
+    )
+    distances.as_tensor().sum().backward()
+    assert tensor_points.grad.dtype == tensor_dtype
+    np.testing.assert_allclose(tensor_points.grad.numpy(), [[-1, -1], [1, 1]])
+    if other_backend == "torch":
+        np.testing.assert_allclose(
+            other_points.grad.numpy(), [[-1, 1], [1, -1]]
+        )
+
+
 class TestAbstractArray:
 
     def test_non_castable_type(self, monkeypatch):

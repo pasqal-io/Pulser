@@ -247,11 +247,11 @@ def cdist(
     abst_a = tuple(map(AbstractArray, a))
     abst_b = tuple(map(AbstractArray, b))
     if any(arr.is_tensor for arr in (*abst_a, *abst_b)):
+        tensor_a = torch.stack([arr.as_tensor() for arr in abst_a])
+        tensor_b = torch.stack([arr.as_tensor() for arr in abst_b])
+        dtype = torch.promote_types(tensor_a.dtype, tensor_b.dtype)
         return AbstractArray(
-            torch.cdist(
-                torch.stack([arr.as_tensor() for arr in abst_a]),
-                torch.stack([arr.as_tensor() for arr in abst_b]),
-            )
+            torch.cdist(tensor_a.to(dtype), tensor_b.to(dtype))
         )
     return AbstractArray(
         scipy.spatial.distance.cdist(
