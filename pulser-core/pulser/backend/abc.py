@@ -22,7 +22,9 @@ from typing import ClassVar, Type, cast
 import pulser
 from pulser.backend._classproperty import classproperty
 from pulser.backend.config import EmulationConfig
+from pulser.backend.observable import Callback
 from pulser.backend.results import Results
+from pulser.backend.state import State
 from pulser.channels.dmm import DMM
 from pulser.devices import Device
 
@@ -51,7 +53,7 @@ class Backend(ABC):
         if not isinstance(sequence, pulser.Sequence):
             raise TypeError(
                 "'sequence' should be a `Sequence` instance"
-                f", not {type(sequence)}."
+                f", not {type(sequence)}. Got {sequence!r}."
             )
         if not mimic_qpu:
             return
@@ -59,13 +61,14 @@ class Backend(ABC):
         if sequence.is_empty():
             raise ValueError(
                 "'sequence' should not be empty, please add an instruction "
-                "to a declared channel."
+                "to one of the declared channels: "
+                f"{list(sequence.declared_channels)}."
             )
 
         if not isinstance(device := sequence.device, Device):
             raise TypeError(
-                "To be sent to a QPU, the device of the sequence "
-                "must be a real device, instance of 'Device'."
+                "To be sent to a QPU, the device of the sequence must be an "
+                f"instance of 'Device', not {type(device)}. Got {device!r}."
             )
         reg = sequence.get_register(include_mappable=True)
         if device.requires_layout and (layout := reg.layout) is None:
@@ -104,20 +107,22 @@ class EmulatorBackend(Backend):
         noise_model = self._config.noise_model
 
         if noise_model is not None:
-            is_dmm_channel = any(
-                isinstance(ch, DMM)
-                for ch in self._sequence.declared_channels.values()
-            )
+            dmm_channels = [
+                name
+                for name, ch in self._sequence.declared_channels.items()
+                if isinstance(ch, DMM)
+            ]
 
             if (
-                is_dmm_channel
+                dmm_channels
                 and "register" in noise_model.noise_types
                 and noise_model.detuning_map_spot_waist is None
             ):
                 raise ValueError(
-                    "Combining register noise with a DMM requires"
-                    "`detuning_map_spot_waist` to be defined. If not defined,"
-                    "atom thermal motion can lead to non-physical effects."
+                    "Combining register noise with a DMM requires "
+                    "`detuning_map_spot_waist` to be defined. If not "
+                    "defined, atom thermal motion can lead to non-physical "
+                    f"effects; sequence uses DMM channels {dmm_channels}."
                 )
 
         if (
@@ -153,17 +158,32 @@ class EmulatorBackend(Backend):
         if not isinstance(config, EmulationConfig):
             raise TypeError(
                 "'config' must be an instance of 'EmulationConfig', "
-                f"not {type(config)}."
+                f"not {type(config)}. Got {config!r}."
             )
         # Use all the parameters in config and then fill the rest with the
         # ones of default_config
         # See the BackendConfig definition to see why this works
-        return cast(
-            EmulationConfig,
-            cls.config_type(
-                **{
-                    **cls.default_config._backend_options,
-                    **config._backend_options,
-                }
-            ),
-        )
+        options = {
+            **cls.default_config._backend_options,
+            **config._backend_options,
+        }
+        # Cast the states and operators to the types preferred by this
+        # backend before the config is created, so that any check done in
+        # the config_type's __init__ already sees the cast objects
+        state_type = cls.config_type.state_type
+        operator_type = cls.config_type.operator_type
+        if isinstance(options.get("initial_state"), State):
+            options["initial_state"] = state_type.from_state(
+                options["initial_state"]
+            )
+        for key in ("observables", "callbacks"):
+            if key in options:
+                options[key] = tuple(
+                    (
+                        cast(Callback, cb)._try_cast_state_ops(
+                            state_type, operator_type
+                        )
+                    )
+                    for cb in options[key]
+                )
+        return cast(EmulationConfig, cls.config_type(**options))

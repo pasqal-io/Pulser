@@ -197,7 +197,7 @@ class NoiseModel:
     - **eff_noise**: General effective noise channel defined by the
       set of collapse operators ``eff_noise_opers`` and their
       corresponding rates ``eff_noise_rates``.
-    - **doppler**: Local atom detuning due to termal motion of the
+    - **doppler**: Local atom detuning due to thermal motion of the
       atoms and Doppler effect with respect to laser frequency.
       Parametrized by the ``temperature`` field. Can be disabled with
       the ``disable_doppler`` field.

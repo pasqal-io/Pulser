@@ -1,3 +1,4 @@
+import re
 from collections import Counter
 from unittest.mock import patch
 
@@ -65,22 +66,36 @@ def test__mean_aggregator_errors():
         _mean_aggregator([[], []])
 
     with pytest.raises(
-        ValueError, match="Need to supply a list of values to process."
+        ValueError,
+        match=re.escape(
+            "Need to supply a list of values to process, not <class 'str'>. "
+            "Got 'abcd'."
+        ),
     ):
         _mean_aggregator("abcd")
 
     with pytest.raises(
-        ValueError, match="Mean aggregator cannot process data"
+        ValueError,
+        match=re.escape(
+            "Mean aggregator cannot process data of type <class 'dict'>. "
+            "Got {}."
+        ),
     ):
         _mean_aggregator([{}, {}])
 
     with pytest.raises(
-        ValueError, match=f"Cannot process list of lists of {type({})}."
+        ValueError,
+        match=re.escape(
+            "Cannot process list of lists of <class 'dict'>. Got {}."
+        ),
     ):
         _mean_aggregator([[{}], [{}]])
 
     with pytest.raises(
-        ValueError, match=f"Cannot process list of matrices of {type('a')}."
+        ValueError,
+        match=re.escape(
+            "Cannot process list of matrices of <class 'str'>. Got 'abcd'."
+        ),
     ):
         _mean_aggregator([[["abcd"]], [["efgh"]]])
 
@@ -135,20 +150,36 @@ def test__std_aggregator_errors():
         _std_aggregator([[], []])
 
     with pytest.raises(
-        ValueError, match="Need to supply a list of values to process."
+        ValueError,
+        match=re.escape(
+            "Need to supply a list of values to process, not <class 'str'>. "
+            "Got 'abcd'."
+        ),
     ):
         _std_aggregator("abcd")
 
-    with pytest.raises(ValueError, match="Std aggregator cannot process data"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Std aggregator cannot process data of type <class 'dict'>. "
+            "Got {}."
+        ),
+    ):
         _std_aggregator([{}, {}])
 
     with pytest.raises(
-        ValueError, match=f"Cannot process list of lists of {type({})}."
+        ValueError,
+        match=re.escape(
+            "Cannot process list of lists of <class 'dict'>. Got {}."
+        ),
     ):
         _std_aggregator([[{}], [{}]])
 
     with pytest.raises(
-        ValueError, match=f"Cannot process list of matrices of {type('a')}."
+        ValueError,
+        match=re.escape(
+            "Cannot process list of matrices of <class 'str'>. Got 'abcd'."
+        ),
     ):
         _std_aggregator([[["abcd"]], [["efgh"]]])
 
