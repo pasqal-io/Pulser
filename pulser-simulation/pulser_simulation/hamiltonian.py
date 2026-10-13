@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import itertools
-from collections import defaultdict
+from collections import Counter, defaultdict
 from typing import Union, cast
 
 import numpy as np
@@ -180,11 +180,21 @@ class Hamiltonian:
             else:
                 qubits_set = set(qubits)
                 if len(qubits_set) < len(qubits):
-                    raise ValueError("Duplicate atom ids in argument list.")
+                    duplicates = [
+                        q for q, freq in Counter(qubits).items() if freq > 1
+                    ]
+                    raise ValueError(
+                        "Duplicate atom ids in argument list; got "
+                        f"{duplicates} in {list(qubits)}."
+                    )
                 if not qubits_set.issubset(self._register.qubits.keys()):
-                    v = qubits_set
-                    v -= self._register.qubits.keys()
-                    raise ValueError("Invalid qubit names: " f"{v}")
+                    unknown = [
+                        q for q in qubits if q not in self._register.qubits
+                    ]
+                    raise ValueError(
+                        f"Invalid qubit names; {unknown} not in "
+                        f"{list(self._register.qubit_ids)}."
+                    )
                 if isinstance(operator, str):
                     try:
                         operator = self.op_matrix[operator]

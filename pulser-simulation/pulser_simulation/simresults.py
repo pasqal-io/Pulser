@@ -63,7 +63,9 @@ class SimulationResults(ABC, ResultsSequence[ResultType]):
         bases = ["ground-rydberg", "digital", "all", "XY"]
         bases += [basis + "_with_error" for basis in bases]
         if basis_name not in bases:
-            raise ValueError(f"`basis_name` must be in {bases}")
+            raise ValueError(
+                f"`basis_name` must be in {bases}, not {basis_name!r}."
+            )
         self._basis_name = basis_name
         self._dim = 3 if self._basis_name == "all" else 2
         if "_with_error" in self._basis_name:
@@ -99,7 +101,10 @@ class SimulationResults(ABC, ResultsSequence[ResultType]):
             Expectation values of obs_list.
         """
         if not isinstance(obs_list, (list, np.ndarray)):
-            raise TypeError("`obs_list` must be a list of operators.")
+            raise TypeError(
+                "`obs_list` must be a list of operators, not "
+                f"{type(obs_list)}. Got {obs_list!r}."
+            )
 
         qobj_list = []
         dim = self._dim if not self._use_pseudo_dens else 2
@@ -112,11 +117,11 @@ class SimulationResults(ABC, ResultsSequence[ResultType]):
                 raise TypeError(
                     f"Incompatible type {type(obs)} of "
                     + "observable. Type must be ArrayLike or "
-                    + "qutip.Qobj."
+                    + f"qutip.Qobj. Got {obs!r}."
                 )
             if obs.shape != legal_shape:
                 raise ValueError(
-                    "Incompatible shape of observable."
+                    "Incompatible shape of observable. "
                     + f"Expected {legal_shape}, got {obs.shape}."
                 )
             qobj_list.append(qutip.Qobj(obs, dims=legal_dims))
@@ -398,14 +403,16 @@ class CoherentResults(SimulationResults[QutipResult]):
         if "all" in self._basis_name:
             if meas_basis not in {"ground-rydberg", "digital"}:
                 raise ValueError(
-                    "`meas_basis` must be 'ground-rydberg' or 'digital'."
+                    "`meas_basis` must be 'ground-rydberg' or 'digital'; got "
+                    f"{meas_basis!r}."
                 )
         else:
             expected_meas_basis = self._basis_name.replace("_with_error", "")
             if meas_basis != expected_meas_basis:
                 raise ValueError(
                     f"`meas_basis` associated to basis_name '"
-                    f"{self._basis_name}' must be '{expected_meas_basis}'."
+                    f"{self._basis_name}' must be '{expected_meas_basis}'; "
+                    f"got {meas_basis!r}."
                 )
         self._meas_basis = meas_basis
         self._results_seq = tuple(run_output)
@@ -413,7 +420,8 @@ class CoherentResults(SimulationResults[QutipResult]):
             if set(meas_errors) != {"epsilon", "epsilon_prime"}:
                 raise ValueError(
                     "When defining measurement errors, only values of "
-                    "'epsilon' and 'epsilon_prime' must be given."
+                    "'epsilon' and 'epsilon_prime' must be given; got "
+                    f"{meas_errors!r}."
                 )
             self._use_pseudo_dens = True
         self._meas_errors = meas_errors

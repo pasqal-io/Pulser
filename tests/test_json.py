@@ -232,7 +232,13 @@ def test_support(helpers):
 
     obj_dict = BlackmanWaveform.from_max_val(1, var)._to_dict()
     del obj_dict["__module__"]
-    with pytest.raises(TypeError, match="Invalid 'obj_dict'."):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "Invalid 'obj_dict'; it has no '__module__' key. Got keys "
+            "['_build', '__name__', '__args__', '__kwargs__']."
+        ),
+    ):
         validate_serialization(obj_dict)
 
     obj_dict["__module__"] = "pulser.fake"

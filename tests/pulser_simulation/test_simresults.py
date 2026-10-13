@@ -107,22 +107,39 @@ def results(sim):
 )
 def test_initialization(results, basis, exp_basis):
     rr_state = qutip.tensor([qutip.basis(2, 0), qutip.basis(2, 0)])
-    with pytest.raises(ValueError, match="`basis_name` must be"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "`basis_name` must be in ['ground-rydberg', 'digital', 'all', "
+            "'XY', 'ground-rydberg_with_error', 'digital_with_error', "
+            "'all_with_error', 'XY_with_error'], not 'bad_basis'."
+        ),
+    ):
         CoherentResults(rr_state, 2, "bad_basis", None, [0])
     if "all" in basis:
         with pytest.raises(
             ValueError,
-            match="`meas_basis` must be 'ground-rydberg' or 'digital'.",
+            match=re.escape(
+                "`meas_basis` must be 'ground-rydberg' or 'digital'; got 'XY'."
+            ),
         ):
             CoherentResults(rr_state, 1, basis, None, "XY")
     else:
         with pytest.raises(
             ValueError,
-            match=f"`meas_basis` associated to basis_name '{basis}' must be",
+            match=re.escape(
+                f"`meas_basis` associated to basis_name '{basis}' must be "
+                f"'{basis.replace('_with_error', '')}'; got "
+                "'wrong_measurement_basis'."
+            ),
         ):
             CoherentResults(rr_state, 1, basis, [0], "wrong_measurement_basis")
     with pytest.raises(
-        ValueError, match="only values of 'epsilon' and 'epsilon_prime'"
+        ValueError,
+        match=re.escape(
+            "only values of 'epsilon' and 'epsilon_prime' must be given; got "
+            "{'eta': 0.1, 'epsilon': 0.0, 'epsilon_prime': 0.4}."
+        ),
     ):
         CoherentResults(
             rr_state,
@@ -154,7 +171,14 @@ def test_initialization(results, basis, exp_basis):
 )
 def test_init_noisy(basis, exp_basis):
     state = qutip.tensor([qutip.basis(2, 0), qutip.basis(2, 0)])
-    with pytest.raises(ValueError, match="`basis_name` must be"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "`basis_name` must be in ['ground-rydberg', 'digital', 'all', "
+            "'XY', 'ground-rydberg_with_error', 'digital_with_error', "
+            "'all_with_error', 'XY_with_error'], not 'bad_basis'."
+        ),
+    ):
         NoisyResults(state, 2, "bad_basis", [0], 123)
     assert NoisyResults(state, 2, basis, [0], 100)._basis_name == exp_basis
 
@@ -220,7 +244,16 @@ def test_get_final_state(
     with pytest.raises(ValueError, match="'reduce_to_basis' must be"):
         results_.get_final_state(reduce_to_basis="all")
 
-    with pytest.raises(TypeError, match="Can't reduce to chosen basis"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "Can't reduce to chosen basis 'digital' because the population of "
+            "a state to eliminate is above the allowed tolerance; got a "
+            "population of "
+        )
+        + r"[\d.e+-]+"
+        + re.escape(" for a tolerance of 1e-06."),
+    ):
         results_.get_final_state(reduce_to_basis="digital")
     h_states = results_.get_final_state(
         reduce_to_basis="digital", tol=1, normalize=False
@@ -287,11 +320,28 @@ def test_get_state_float_time(results):
 
 
 def test_expect(results, pi_pulse, reg):
-    with pytest.raises(TypeError, match="must be a list"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "`obs_list` must be a list of operators, not <class 'str'>. Got "
+            "'bad_observable'."
+        ),
+    ):
         results.expect("bad_observable")
-    with pytest.raises(TypeError, match="Incompatible type"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "Incompatible type <class 'str'> of observable. Type must be "
+            "ArrayLike or qutip.Qobj. Got 'bad_observable'."
+        ),
+    ):
         results.expect(["bad_observable"])
-    with pytest.raises(ValueError, match="Incompatible shape"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Incompatible shape of observable. Expected (4, 4), got ()."
+        ),
+    ):
         results.expect([np.array(3)])
     reg_single = Register.from_coordinates([(0, 0)], prefix="q")
     seq_single = Sequence(reg_single, DigitalAnalogDevice)
