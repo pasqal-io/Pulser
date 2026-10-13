@@ -1,3 +1,4 @@
+import re
 import unittest
 from dataclasses import replace
 from types import SimpleNamespace
@@ -181,26 +182,34 @@ def test_noisy_register_torch(register2D):
     assert g.shape == qdict["q0"]._array.shape
 
 
-def test_init_errors():
+def test_init_errors(helpers):
     seq = seq_with_SLM("rydberg_global")
     seq_samples = sample(seq)
     register = pulser.Register.square(3, spacing=6, prefix="")
     with pytest.raises(
         TypeError,
-        match=(
-            "The provided sequence has to be a "
-            "valid SequenceSamples instance."
+        match=re.escape(
+            "The provided samples must be an instance of "
+            "'SequenceSamples', not <class 'NoneType'>. Got None."
         ),
     ):
         HamiltonianData(None, None, None, None, None)
 
     with pytest.raises(
-        TypeError, match="The device must be a Device or BaseDevice."
+        TypeError,
+        match=re.escape(
+            "'device' must be an instance of 'BaseDevice', not "
+            "<class 'NoneType'>. Got None."
+        ),
     ):
         HamiltonianData(seq_samples, None, None, None, None)
 
     with pytest.raises(
-        ValueError, match="Samples use SLM mask but device does not have one."
+        ValueError,
+        match=re.escape(
+            "Samples use an SLM mask but device 'AnalogDevice' does not "
+            "support one."
+        ),
     ):
         HamiltonianData(
             seq_samples, seq.register, pulser.AnalogDevice, None, None
@@ -208,9 +217,10 @@ def test_init_errors():
 
     with pytest.raises(
         ValueError,
-        match=(
-            "The ids of qubits targeted in SLM "
-            "mask should be defined in register."
+        match=re.escape(
+            "The ids of qubits targeted in the SLM mask must be defined in "
+            "the register; SLM mask targets {'batman'}. Among them, "
+            "{'batman'} not in ['0', '1', '2', '3', '4', '5', '6', '7', '8']."
         ),
     ):
         HamiltonianData(
@@ -220,8 +230,16 @@ def test_init_errors():
     with pytest.raises(
         ValueError,
         match=(
-            "The ids of qubits targeted in Local "
-            "channels should be defined in register."
+            re.escape(
+                "The ids of qubits targeted by Local channel 'ch1' must be "
+                "defined in the register; Channel targets "
+            )
+            + helpers.any_order_set("q0", "q1")
+            + re.escape(". Among them, ")
+            + helpers.any_order_set("q0", "q1")
+            + re.escape(
+                " not in ['0', '1', '2', '3', '4', '5', '6', '7', '8']."
+            )
         ),
     ):
         HamiltonianData(
@@ -242,14 +260,26 @@ def test_init_errors():
 
     seq = pulser.Sequence(register, pulser.AnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
-    with pytest.raises(ValueError, match="SequenceSamples is empty."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "SequenceSamples is empty; none of its channels ['ch0'] have any "
+            "samples."
+        ),
+    ):
         HamiltonianData(sample(seq), None, None, None, None)
 
     seq = seq_with_SLM("mw_global")
     seq_samples = sample(seq)
     with pytest.raises(
         ValueError,
-        match="Bases used in samples should be supported by device.",
+        match=re.escape(
+            "Bases used in samples must be supported by the device; samples "
+            "use ['XY'], but ['XY'] are not supported by device "
+            "'DigitalAnalogDevice', which supports "
+        )
+        + helpers.any_order_list("ground-rydberg", "digital")
+        + re.escape("."),
     ):
         HamiltonianData(
             seq_samples, seq.register, pulser.DigitalAnalogDevice, None, None
@@ -278,9 +308,9 @@ def test_from_sequence():
 
     with pytest.raises(
         TypeError,
-        match=(
-            "The provided sequence has to be "
-            "a valid pulser.Sequence instance."
+        match=re.escape(
+            "'sequence' must be an instance of 'Sequence', not "
+            "<class 'NoneType'>. Got None."
         ),
     ):
         HamiltonianData.from_sequence(None)
