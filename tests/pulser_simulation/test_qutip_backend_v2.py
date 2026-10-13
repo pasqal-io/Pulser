@@ -658,3 +658,40 @@ def test_run_from_sequence_samples(modulation):
     s2 = results2.final_state._state.full()
 
     assert np.allclose(s1, s2, atol=0, rtol=1e-16)  # really the same
+
+
+@pytest.mark.parametrize("spacing", [10.0, 15.0])
+def test_two_atom_xy_exchange(spacing):
+    """Free XY evolution transfers an excitation as sin²(C3 t / r³)."""
+    assert pulser.devices.MockDevice.rydberg_level == 70
+    # C3_coeffs.json, level 70, in rad/µs · µm³. Keep the expected dynamics
+    # independent of the coefficient the backend reads from the device.
+    c3 = 36288.3559282823
+    duration_ns = 1000
+    times = [0.0, 0.125, 0.25, 0.5, 0.75, 1.0]
+    register = pulser.Register({"q0": (0.0, 0.0), "q1": (spacing, 0.0)})
+    seq = pulser.Sequence(register, pulser.devices.MockDevice)
+    seq.declare_channel("mw", "mw_global")
+    seq.set_magnetic_field(0.0, 0.0, 1.0)
+    seq.add(pulser.Pulse.ConstantPulse(duration_ns, 0.0, 0.0, 0.0), "mw")
+    initial = QutipState.from_state_amplitudes(
+        eigenstates=("u", "d"), amplitudes={"ud": 1.0}
+    )
+    transferred = QutipState.from_state_amplitudes(
+        eigenstates=("u", "d"), amplitudes={"du": 1.0}
+    )
+    backend = QutipBackendV2(
+        seq,
+        config=QutipConfig(
+            initial_state=initial,
+            observables=[StateResult(evaluation_times=times)],
+        ),
+    )
+
+    results = backend.run()
+
+    for time in times:
+        state = results.get_result("state", time)
+        expected = np.sin(c3 * (duration_ns / 1000) * time / spacing**3) ** 2
+        assert transferred.overlap(state) == pytest.approx(expected, abs=1e-4)
+        assert initial.overlap(state) == pytest.approx(1 - expected, abs=1e-4)
