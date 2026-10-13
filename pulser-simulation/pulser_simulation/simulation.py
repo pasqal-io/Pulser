@@ -143,11 +143,15 @@ class QutipEmulator:
         # Initializing the samples obj
         if not isinstance(sampled_seq, SequenceSamples):
             raise TypeError(
-                "The provided sequence has to be a valid "
-                "SequenceSamples instance."
+                "The provided samples must be an instance of "
+                f"'SequenceSamples', not {type(sampled_seq)}. "
+                f"Got {sampled_seq}."
             )
         if sampled_seq.max_duration == 0:
-            raise ValueError("SequenceSamples is empty.")
+            raise ValueError(
+                "SequenceSamples is empty; none of its channels "
+                f"{sampled_seq.channels} have any samples."
+            )
         # Check compatibility of register and device
         self._sampling_rate = sampling_rate
         device.validate_register(register)
@@ -156,17 +160,28 @@ class QutipEmulator:
         # Check compatibility of samples and device:
         if sampled_seq._slm_mask.end > 0 and not device.supports_slm_mask:
             raise ValueError(
-                "Samples use SLM mask but device does not have one."
+                "Samples use an SLM mask but device "
+                f"{device.name!r} does not support one."
             )
         if not sampled_seq.used_bases <= device.supported_bases:
             raise ValueError(
-                "Bases used in samples should be supported by device."
+                "Bases used in samples must be supported by the device; "
+                f"samples use {list(sampled_seq.used_bases)}, but "
+                f"{list(sampled_seq.used_bases - device.supported_bases)} "
+                f"are not supported by device {device.name!r}, which "
+                f"supports {list(device.supported_bases)}."
             )
         # Check compatibility of masked samples and register
         if not sampled_seq._slm_mask.targets <= set(register.qubit_ids):
+            # The mask targets are a set, so there is no caller order to keep
+            unknown_targets = sampled_seq._slm_mask.targets - set(
+                register.qubit_ids
+            )
             raise ValueError(
-                "The ids of qubits targeted in SLM mask"
-                " should be defined in register."
+                "The ids of qubits targeted in the SLM mask must be defined "
+                "in the register; SLM mask targets "
+                f"{sampled_seq._slm_mask.targets}. Among them, "
+                f"{unknown_targets} not in {list(register.qubit_ids)}."
             )
 
         self._tot_duration = sampled_seq.max_duration
@@ -180,9 +195,12 @@ class QutipEmulator:
                 f"{sampling_rate}) must be greater than 0 and "
                 "less than or equal to 1."
             )
-        if int(self._tot_duration * sampling_rate) < 4:
+        min_points = 4
+        if (n_points := int(self._tot_duration * sampling_rate)) < min_points:
             raise ValueError(
-                "`sampling_rate` is too small, less than 4 data points."
+                f"'sampling_rate' is too small; {sampling_rate} on a "
+                f"{self._tot_duration} ns sequence gives {n_points} data "
+                f"points, at least {min_points} are needed."
             )
 
         if noise_model is not None and config is not None:
@@ -557,14 +575,15 @@ class QutipEmulator:
                 eval_times = np.array([])
             else:
                 raise ValueError(
-                    "Wrong evaluation time label. It should "
-                    "be `Full`, `Minimal`, an array of times or"
-                    + " a float between 0 and 1."
+                    f"Wrong evaluation time label; got {value!r}. It should "
+                    "be `Full`, `Minimal`, an array of times or a float "
+                    "between 0 and 1."
                 )
         elif isinstance(value, float):
             if value > 1 or value <= 0:
                 raise ValueError(
-                    "evaluation_times float must be between 0 and 1."
+                    "'evaluation_times' float must be between 0 and 1; got "
+                    f"{value}."
                 )
             indices = np.linspace(
                 0,
@@ -577,20 +596,22 @@ class QutipEmulator:
         elif isinstance(value, (list, tuple, np.ndarray)):
             if np.max(value, initial=0) > self._tot_duration * 1e-3:
                 raise ValueError(
-                    "Provided evaluation-time list extends "
-                    "further than sequence duration."
+                    "Provided evaluation-time list extends further than the "
+                    f"sequence duration; got a maximum of {np.max(value)} µs "
+                    f"for a {self._tot_duration / 1000} µs sequence."
                 )
             if np.min(value, initial=0) < 0:
+                arr = np.asarray(value)
                 raise ValueError(
-                    "Provided evaluation-time list contains "
-                    "negative values."
+                    "Provided evaluation-time list contains negative values; "
+                    f"got {arr[arr < 0].tolist()}."
                 )
             eval_times = np.array(value)
         else:
             raise ValueError(
-                "Wrong evaluation time label. It should "
-                "be `Full`, `Minimal`, an array of times or a "
-                + "float between 0 and 1."
+                f"Wrong evaluation time label; got {value!r}. It should "
+                "be `Full`, `Minimal`, an array of times or a float "
+                "between 0 and 1."
             )
         # Ensure 0 and final time are included:
         self._eval_times_array = np.union1d(
@@ -700,7 +721,10 @@ class QutipEmulator:
         elif (progress_bar is False) or (progress_bar is None):
             options["progress_bar"] = ""
         else:
-            raise ValueError("`progress_bar` must be a bool.")
+            raise ValueError(
+                f"'progress_bar' must be a bool, not {type(progress_bar)}. "
+                f"Got {progress_bar!r}."
+            )
 
         solver_fn: Callable[..., Any] = qutip.sesolve
 
@@ -1010,8 +1034,8 @@ class QutipEmulator:
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
-                "The provided sequence has to be a valid "
-                "pulser.Sequence instance."
+                "'sequence' must be an instance of 'Sequence', not "
+                f"{type(sequence)}. Got {sequence}."
             )
         if sequence.is_parametrized() or sequence.is_register_mappable():
             raise ValueError(

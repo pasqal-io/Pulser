@@ -205,31 +205,48 @@ class HamiltonianData:
         # Initializing the samples obj
         if not isinstance(samples, SequenceSamples):
             raise TypeError(
-                "The provided sequence has to be a valid "
-                "SequenceSamples instance."
+                "The provided samples must be an instance of "
+                f"'SequenceSamples', not {type(samples)}. Got {samples}."
             )
         if samples.max_duration == 0:
-            raise ValueError("SequenceSamples is empty.")
+            raise ValueError(
+                "SequenceSamples is empty; none of its channels "
+                f"{samples.channels} have any samples."
+            )
         # Check compatibility of register and device
         if not isinstance(device, BaseDevice):
-            raise TypeError("The device must be a Device or BaseDevice.")
+            raise TypeError(
+                "'device' must be an instance of 'BaseDevice', not "
+                f"{type(device)}. Got {device}."
+            )
         self._device = device
         self.device.validate_register(register)
         self._register = register
         # Check compatibility of samples and device:
         if samples._slm_mask.end > 0 and not self.device.supports_slm_mask:
             raise ValueError(
-                "Samples use SLM mask but device does not have one."
+                "Samples use an SLM mask but device "
+                f"{self.device.name!r} does not support one."
             )
         if not samples.used_bases <= self.device.supported_bases:
             raise ValueError(
-                "Bases used in samples should be supported by device."
+                "Bases used in samples must be supported by the device; "
+                f"samples use {list(samples.used_bases)}, but "
+                f"{list(samples.used_bases - self.device.supported_bases)} "
+                f"are not supported by device {self.device.name!r}, which "
+                f"supports {list(self.device.supported_bases)}."
             )
         # Check compatibility of masked samples and register
         if not samples._slm_mask.targets <= set(self.register.qubits.keys()):
+            # The mask targets are a set, so there is no caller order to keep
+            unknown_targets = samples._slm_mask.targets - set(
+                self.register.qubits.keys()
+            )
             raise ValueError(
-                "The ids of qubits targeted in SLM mask"
-                " should be defined in register."
+                "The ids of qubits targeted in the SLM mask must be defined "
+                "in the register; SLM mask targets "
+                f"{samples._slm_mask.targets}. Among them, {unknown_targets} "
+                f"not in {list(self.register.qubit_ids)}."
             )
 
         self._samples = self._delocalize_samples(samples)
@@ -269,12 +286,20 @@ class HamiltonianData:
             if samples._ch_objs[ch].addressing == "Local":
                 # Check that targets of Local Channels are defined
                 # in register
-                if not set().union(
+                targets = set().union(
                     *(slot.targets for slot in ch_samples.slots)
-                ) <= set(self.register.qubits.keys()):
+                )
+                if not targets <= set(self.register.qubits.keys()):
+                    # Slot targets are sets: there is no caller order to keep
+                    unknown_targets = targets - set(
+                        self.register.qubits.keys()
+                    )
                     raise ValueError(
-                        "The ids of qubits targeted in Local channels"
-                        " should be defined in register."
+                        "The ids of qubits targeted by Local channel "
+                        f"{ch!r} must be defined in the register; "
+                        f"Channel targets {targets}. Among them, "
+                        f"{unknown_targets} "
+                        f"not in {list(self.register.qubit_ids)}."
                     )
                 samples_list.append(ch_samples)
             else:
@@ -347,8 +372,8 @@ class HamiltonianData:
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
-                "The provided sequence has to be a valid "
-                "pulser.Sequence instance."
+                "'sequence' must be an instance of 'Sequence', not "
+                f"{type(sequence)}. Got {sequence}."
             )
         if sequence.is_parametrized() or sequence.is_register_mappable():
             raise ValueError(

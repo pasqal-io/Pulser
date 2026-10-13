@@ -1,11 +1,26 @@
+import copy
 import json
 import re
 
 import numpy as np
 import pytest
+import qutip
 
 from pulser import NoiseModel
-from pulser.backend.default_observables import BitStrings, StateResult
+from pulser.backend import (
+    Callback,
+    EmulationConfig,
+    OperatorRepr,
+    StateRepr,
+)
+from pulser.backend.abc import EmulatorBackend
+from pulser.backend.default_observables import (
+    BitStrings,
+    Expectation,
+    Fidelity,
+    StateResult,
+)
+from pulser_simulation import QutipBackendV2
 from pulser_simulation.qutip_config import (
     QutipConfig,
     QutipOperator,
@@ -79,6 +94,252 @@ def test_initial_state():
             ],
             initial_state="all-ground",
         )
+
+
+@pytest.fixture
+def repr_state():
+    return StateRepr.from_state_amplitudes(
+        eigenstates=("r", "g"), amplitudes={"rr": 1.0}
+    )
+
+
+@pytest.fixture
+def repr_op():
+    return OperatorRepr.from_operator_repr(
+        eigenstates=("r", "g"),
+        n_qudits=2,
+        operations=[(1.0, [({"rr": 1.0}, [0])])],
+    )
+
+
+class _StateCallback(Callback):
+    """A custom callback holding a state, as a dependent package might."""
+
+    def __init__(self, state):
+        super().__init__()
+        self.state = state
+
+    def __call__(self, config, t, state, hamiltonian, result):
+        pass
+
+    def _try_cast_state_ops(self, state_type, operator_type):
+        new_cb = copy.copy(self)
+        new_cb.state = state_type.from_state(self.state)
+        return new_cb
+
+
+def test_implicit_cast_in_validate_config(repr_state, repr_op):
+    fid = Fidelity(repr_state)
+    exp = Expectation(repr_op)
+    cb = _StateCallback(repr_state)
+    base_config = EmulationConfig(
+        initial_state=repr_state, observables=[fid, exp], callbacks=[cb]
+    )
+    # The config itself keeps the types it was given
+    assert type(base_config.initial_state) is StateRepr
+    assert type(base_config.observables[0].state) is StateRepr
+    assert type(base_config.observables[1].operator) is OperatorRepr
+
+    # The cast happens when the config is given to the backend, before
+    # QutipConfig's own 'initial_state' check runs
+    config = QutipBackendV2.validate_config(base_config)
+    assert isinstance(config, QutipConfig)
+    assert isinstance(config.initial_state, QutipState)
+    assert config.initial_state._amplitudes == {"rr": 1.0}
+    new_fid, new_exp = config.observables
+    assert isinstance(new_fid.state, QutipState)
+    assert isinstance(new_exp.operator, QutipOperator)
+    assert isinstance(config.callbacks[0].state, QutipState)
+    # UUIDs and tags are kept, so results can be retrieved with the originals
+    assert new_fid.uuid == fid.uuid and new_exp.uuid == exp.uuid
+    assert config.callbacks[0].uuid == cb.uuid
+    assert new_fid.tag == fid.tag and new_exp.tag == exp.tag
+    # The user's objects are not modified
+    assert (
+        fid.state is repr_state
+        and exp.operator is repr_op
+        and cb.state is repr_state
+    )
+    assert type(base_config.initial_state) is StateRepr
+
+
+def test_no_cast_needed():
+    qutip_state = QutipState(qutip.basis(4, 0), eigenstates=("r", "g"))
+    fid = Fidelity(qutip_state)
+    # Non-serializable states are fine when they already have the right type,
+    # since a shallow copy is returned without going through serialization
+    new_state = QutipState.from_state(qutip_state)
+    assert new_state is not qutip_state
+    assert type(new_state) is QutipState
+    assert new_state._state is qutip_state._state
+    # The observable is always copied, but keeps its UUID
+    new_fid = fid._try_cast_state_ops(QutipState, QutipOperator)
+    assert new_fid is not fid
+    assert new_fid.uuid == fid.uuid
+    assert new_fid.state is not qutip_state
+    assert new_fid.state._state is qutip_state._state
+    # Same for operators
+    qutip_op = QutipOperator(qutip.qeye([2, 2]), eigenstates=("r", "g"))
+    new_op = QutipOperator.from_operator(qutip_op)
+    assert new_op is not qutip_op
+    assert type(new_op) is QutipOperator
+    assert new_op._operator is qutip_op._operator
+    exp = Expectation(qutip_op)
+    new_exp = exp._try_cast_state_ops(QutipState, QutipOperator)
+    assert new_exp is not exp
+    assert new_exp.uuid == exp.uuid
+    assert new_exp.operator is not qutip_op
+    assert new_exp.operator._operator is qutip_op._operator
+    # Callbacks and observables without states are returned as they are
+    obs = StateResult()
+    assert obs._try_cast_state_ops(QutipState, QutipOperator) is obs
+
+    config = QutipBackendV2.validate_config(
+        EmulationConfig(initial_state=qutip_state, observables=[fid])
+    )
+    assert config.initial_state._amplitudes is None
+    assert config.initial_state.overlap(qutip_state) == pytest.approx(1.0)
+    assert config.observables[0].state._amplitudes is None
+    assert config.observables[0].uuid == fid.uuid
+
+
+class _OtherState(StateRepr):
+    pass
+
+
+class _OtherOperator(OperatorRepr):
+    pass
+
+
+class _OtherConfig(EmulationConfig):
+    _state_type = _OtherState
+    _operator_type = _OtherOperator
+
+
+class _OtherBackend(EmulatorBackend):
+    default_config = _OtherConfig(observables=[StateResult()])
+
+    def run(self):
+        pass
+
+
+def test_failed_cast(repr_state, repr_op):
+    qutip_state = QutipState(qutip.basis(4, 0), eigenstates=("r", "g"))
+    qutip_op = QutipOperator(qutip.qeye([2, 2]), eigenstates=("r", "g"))
+
+    # Serializable objects of another type are cast
+    config = _OtherBackend.validate_config(
+        EmulationConfig(
+            initial_state=repr_state,
+            observables=[Fidelity(repr_state), Expectation(repr_op)],
+        )
+    )
+    assert type(config.initial_state) is _OtherState
+    assert type(config.observables[0].state) is _OtherState
+    assert type(config.observables[1].operator) is _OtherOperator
+
+    # Non-serializable objects of another type can't be cast
+    with pytest.raises(
+        TypeError,
+        match="Failed to convert a state of type "
+        "'QutipState' to '_OtherState'. Conversion is only "
+        "possible for states created via 'from_state_amplitudes\\(\\)'",
+    ):
+        _OtherBackend.validate_config(
+            EmulationConfig(
+                initial_state=qutip_state, observables=[Fidelity(repr_state)]
+            )
+        )
+    with pytest.raises(
+        TypeError,
+        match="Failed to convert a state of type "
+        "'QutipState' to '_OtherState'",
+    ):
+        _OtherBackend.validate_config(
+            EmulationConfig(observables=[Fidelity(qutip_state)])
+        )
+    with pytest.raises(
+        TypeError,
+        match="Failed to convert an operator "
+        "of type 'QutipOperator' to '_OtherOperator'. Conversion "
+        "is only possible for operators created via "
+        "'from_operator_repr\\(\\)'",
+    ):
+        _OtherBackend.validate_config(
+            EmulationConfig(observables=[Expectation(qutip_op)])
+        )
+
+
+class _TwoLevelState(StateRepr):
+    """A state type that only supports ('r', 'g'), like some emulators."""
+
+    @classmethod
+    def _from_state_amplitudes(cls, *, eigenstates, n_qudits, amplitudes):
+        if tuple(eigenstates) != ("r", "g"):
+            raise ValueError("Only ('r', 'g') eigenstates are supported.")
+        return super()._from_state_amplitudes(
+            eigenstates=eigenstates, n_qudits=n_qudits, amplitudes=amplitudes
+        )
+
+
+class _TwoLevelOperator(OperatorRepr):
+    """An operator type that only supports ('r', 'g')."""
+
+    @classmethod
+    def _from_operator_repr(cls, *, eigenstates, n_qudits, operations):
+        if tuple(eigenstates) != ("r", "g"):
+            raise ValueError("Only ('r', 'g') eigenstates are supported.")
+        return super()._from_operator_repr(
+            eigenstates=eigenstates, n_qudits=n_qudits, operations=operations
+        )
+
+
+class _TwoLevelConfig(EmulationConfig):
+    _state_type = _TwoLevelState
+    _operator_type = _TwoLevelOperator
+
+
+class _TwoLevelBackend(EmulatorBackend):
+    default_config = _TwoLevelConfig(observables=[StateResult()])
+
+    def run(self):
+        pass
+
+
+def test_failed_cast_unsupported_eigenstates():
+    state = StateRepr.from_state_amplitudes(
+        eigenstates=("0", "1"), amplitudes={"11": 1.0}
+    )
+    with pytest.raises(
+        TypeError,
+        match="Failed to convert a state of type "
+        "'StateRepr' to '_TwoLevelState'.$",
+    ) as exc_info:
+        _TwoLevelBackend.validate_config(
+            EmulationConfig(initial_state=state, observables=[StateResult()])
+        )
+    # The original error is kept as the cause
+    assert isinstance(exc_info.value.__cause__, ValueError)
+    assert "Only ('r', 'g')" in str(exc_info.value.__cause__)
+    # The 'from_state_amplitudes()' hint would be misleading here
+    assert "from_state_amplitudes" not in str(exc_info.value)
+
+    op = OperatorRepr.from_operator_repr(
+        eigenstates=("0", "1"),
+        n_qudits=2,
+        operations=[(1.0, [({"11": 1.0}, [0])])],
+    )
+    with pytest.raises(
+        TypeError,
+        match="Failed to convert an operator "
+        "of type 'OperatorRepr' to '_TwoLevelOperator'.$",
+    ) as exc_info:
+        _TwoLevelBackend.validate_config(
+            EmulationConfig(observables=[Expectation(op)])
+        )
+    assert isinstance(exc_info.value.__cause__, ValueError)
+    assert "Only ('r', 'g')" in str(exc_info.value.__cause__)
+    assert "from_operator_repr" not in str(exc_info.value)
 
 
 def test_preferred_types():

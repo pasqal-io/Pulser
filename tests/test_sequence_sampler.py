@@ -375,6 +375,24 @@ def test_seq_with_DMM_and_map_reg():
         sample(seq)
 
 
+def test_dmm_samples_need_qubits():
+    reg = pulser.Register.square(2, 6, prefix="q")
+    seq = pulser.Sequence(reg, MockDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.config_detuning_map(
+        reg.define_detuning_map({f"q{i}": 1.0 for i in range(4)}), "dmm_0"
+    )
+    seq.add(pulser.Pulse.ConstantPulse(100, 1, 0, 0), "ryd")
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "'qubits' must be defined when extracting the samples of a DMM"
+            " channel; got None for channel 'dmm_0'."
+        ),
+    ):
+        seq._schedule["dmm_0"].get_samples()
+
+
 def seq_with_SLM(
     ch_name: Literal["mw_global", "rydberg_global"],
 ) -> pulser.Sequence:
