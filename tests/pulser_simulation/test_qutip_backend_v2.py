@@ -259,6 +259,33 @@ def test_qutip_backend_v2_stochastic_noise():
     assert np.max(np.abs(occupation - occupation_old_api)) < 0.03
 
 
+def test_qutip_backend_v2_purity_noise():
+    np.random.seed(123)
+    config = QutipConfig(
+        default_evaluation_times=(1.0,),
+        observables=[StateResult(evaluation_times=[1.0])],
+        noise_model=pulser.NoiseModel(temperature=50.0, amp_sigma=1e-3),
+        n_trajectories=30,
+    )
+    backend = QutipBackendV2(sequence(), config=config)
+    results = backend.run()
+
+    # The aggregated state over noisy trajectories is mixed
+    state = results.get_result("state", 1.0)
+    assert 0.0 < state.purity() < 1.0
+
+    # Without noise, the state is pure
+    config_noiseless = QutipConfig(
+        default_evaluation_times=(1.0,),
+        observables=[StateResult(evaluation_times=[1.0])],
+    )
+    results_noiseless = QutipBackendV2(
+        sequence(), config=config_noiseless
+    ).run()
+    state_noiseless = results_noiseless.get_result("state", 1.0)
+    assert np.isclose(state_noiseless.purity(), 1.0)
+
+
 def test_qutip_backend_v2_eval_times_rounding():
 
     # This was originally used to reproduce a bug where the legacy evaluation

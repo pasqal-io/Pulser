@@ -39,6 +39,7 @@ from pulser.backend.default_observables import (
     Expectation,
     Fidelity,
     Occupation,
+    Purity,
     StateResult,
 )
 
@@ -64,5 +65,6 @@ __all__ = [
     "Expectation",
     "Fidelity",
     "Occupation",
+    "Purity",
     "StateResult",
 ]

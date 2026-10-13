@@ -77,8 +77,14 @@ class SimulationResults(ABC, ResultsSequence[ResultType]):
         pass
 
     @abstractmethod
-    def get_state(self, t: float) -> qutip.Qobj:
-        """Returns the state of the system at time t."""
+    def get_state(self, t: float, *, t_tol: float = 1.0e-3) -> qutip.Qobj:
+        """Returns the state of the system at time t.
+
+        Args:
+            t: Time (in µs) at which to return the state.
+            t_tol: Tolerance for the difference between t and the
+                closest time.
+        """
         pass
 
     @abstractmethod
@@ -130,6 +136,32 @@ class SimulationResults(ABC, ResultsSequence[ResultType]):
                 states = self.states
 
         return cast(list, qutip.expect(qobj_list, states))
+
+    def get_purity(self, t: float, t_tol: float = 1.0e-3) -> float:
+        """Returns the purity of the state at time t.
+
+        The purity of a state ``ρ`` is given by ``Tr[ρ^2]``. It is 1 for a
+        pure state, with lower values indicating that the state is mixed.
+
+        Note:
+            In ``NoisyResults``, the purity is computed from the
+            pseudo-density matrix of the measured state distribution,
+            which is not the density matrix of the system.
+
+        Args:
+            t: Time (in µs) at which to return the purity.
+            t_tol: Tolerance for the difference between t and the
+                closest time.
+
+        Returns:
+            The purity of the state at time t.
+        """
+        state = self.get_state(t, t_tol=t_tol)
+        if state.isoper:
+            purity = (state.dag() * state).tr()
+        else:
+            purity = state.dag() * state
+        return float(np.real(purity))
 
     def sample_state(
         self, t: float, n_samples: int = 1000, t_tol: float = 1.0e-3

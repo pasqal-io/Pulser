@@ -109,6 +109,18 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         """
         pass
 
+    def purity(self) -> ReturnScalarType:
+        r"""Compute the purity of the state.
+
+        The purity of a state ``ρ`` is given by ``Tr[ρ^2]``. It is 1 for a
+        pure state and ``1/d`` for the maximally mixed state of a
+        ``d``-dimensional Hilbert space.
+
+        Returns:
+            The purity of the state.
+        """
+        return self.overlap(self)
+
     @abstractmethod
     def sample(
         self,

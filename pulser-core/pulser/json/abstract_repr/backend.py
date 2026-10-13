@@ -14,6 +14,7 @@ from pulser.backend.default_observables import (
     Expectation,
     Fidelity,
     Occupation,
+    Purity,
 )
 from pulser.backend.observable import AggregationMethod
 from pulser.exceptions.serialization import AbstractReprError
@@ -101,6 +102,8 @@ def _deserialize_observable(
             )
         case "occupation":
             obs = Occupation(**obs_params)
+        case "purity":
+            obs = Purity(**obs_params)
         case "correlation_matrix":
             obs = CorrelationMatrix(**obs_params)
         case "energy":
