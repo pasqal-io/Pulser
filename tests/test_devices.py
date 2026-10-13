@@ -112,7 +112,7 @@ def test_params():
         ),
         (
             "dmm_objects",
-            ("DMM(bottom_detuning=-1)",),
+            ("DMM(top_abs_detuning=1)",),
             "All DMM channels must be of type 'DMM', not 'str'",
         ),
         ("max_sequence_duration", 1.02, None),
@@ -917,12 +917,12 @@ def test_dmm_channels():
     with pytest.raises(
         ValueError,
         match="A 'Device' instance cannot contain virtual channels."
-        " For channel 'dmm_0', please define: 'bottom_detuning'",
+        " For channel 'dmm_0', please define: 'top_abs_detuning'",
     ):
         replace(DigitalAnalogDevice, dmm_objects=(DMM(),))
     dmm = DMM(
-        bottom_detuning=-1,
-        total_bottom_detuning=-100,
+        top_abs_detuning=1,
+        total_top_abs_detuning=100,
         clock_period=1,
         min_duration=1,
         max_duration=1e6,

@@ -622,6 +622,39 @@ def test_dmm_temperature_without_spot_waist():
         QutipBackendV2(seq, config=config)
 
 
+@pytest.mark.parametrize("basis", ["ground-rydberg", "XY"])
+def test_dmm_detuning_matches_global_detuning(basis):
+    # On qubits of weight 1, a DMM reproduces a global detuning of the same
+    # sign as the one it imposes
+    in_xy = basis == "XY"
+    channel = "mw_global" if in_xy else "rydberg_global"
+    dmm_id = "dmm_1" if in_xy else "dmm_0"
+    detuning = 6.0 if in_xy else -6.0
+
+    reg = pulser.Register.from_coordinates(
+        [(0.0, 0.0), (0.0, 8.0)], prefix="q"
+    )
+    det_map = reg.define_detuning_map({"q0": 1.0, "q1": 1.0})
+
+    seq_dmm = pulser.Sequence(reg, pulser.MockDevice)
+    seq_dmm.declare_channel("ch0", channel)
+    seq_dmm.add(pulser.Pulse.ConstantPulse(400, 10, 0, 0), "ch0")
+    seq_dmm.config_detuning_map(det_map, dmm_id)
+    seq_dmm.add_dmm_detuning(pulser.ConstantWaveform(400, detuning), dmm_id)
+
+    seq_global = pulser.Sequence(reg, pulser.MockDevice)
+    seq_global.declare_channel("ch0", channel)
+    seq_global.add(pulser.Pulse.ConstantPulse(400, 10, detuning, 0), "ch0")
+
+    config = QutipConfig(
+        noise_model=pulser.NoiseModel(),
+        observables=[StateResult(evaluation_times=[1.0])],
+    )
+    state_dmm = QutipBackendV2(seq_dmm, config=config).run().state[-1]
+    state_global = QutipBackendV2(seq_global, config=config).run().state[-1]
+    assert state_dmm.overlap(state_global) == pytest.approx(1.0)
+
+
 @pytest.mark.parametrize("modulation", [True, False])
 def test_run_from_sequence_samples(modulation):
     seq = pulser.Sequence(

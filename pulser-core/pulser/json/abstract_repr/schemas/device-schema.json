@@ -16,8 +16,11 @@
           "type": "string"
         },
         "basis": {
-          "const": "ground-rydberg",
           "description": "The addressed basis name.",
+          "enum": [
+            "ground-rydberg",
+            "XY"
+          ],
           "type": "string"
         },
         "bottom_detuning": {
@@ -2002,8 +2005,11 @@
           "type": "string"
         },
         "basis": {
-          "const": "ground-rydberg",
           "description": "The addressed basis name.",
+          "enum": [
+            "ground-rydberg",
+            "XY"
+          ],
           "type": "string"
         },
         "bottom_detuning": {

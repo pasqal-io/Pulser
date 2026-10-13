@@ -83,6 +83,8 @@ SUPPORTED_NOISES: dict = {
         "SPAM",
         "leakage",
         "register",
+        "dmm_sigma",
+        "dmm_crosstalk",
     },
 }
 

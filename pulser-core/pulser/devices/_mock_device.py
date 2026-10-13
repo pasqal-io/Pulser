@@ -30,6 +30,6 @@ MockDevice = VirtualDevice(
         Raman.Local(None, None, max_duration=None),
         Microwave.Global(None, None, max_duration=None),
     ),
-    dmm_objects=(DMM(),),
+    dmm_objects=(DMM(), DMM(basis="XY")),
     short_description="A virtual device for unconstrained prototyping.",
 )
