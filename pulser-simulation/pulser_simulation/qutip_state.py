@@ -216,6 +216,43 @@ class QutipState(State[complex, float]):
             {"".join(map(str, k)): v for k, v in new_counts.items()}
         )
 
+    def entanglement_entropy(
+        self,
+        *,
+        included_indices: Sequence[int] | None = None,
+    ) -> float:
+        """Compute the entropy between two parts of the system.
+
+        The entropy between the two parts of the system. The returned value
+        will be the von Neuman entropy of the system for the qubits specified
+        by `included_indices`.
+
+        Must use qubit indices as they are sorted in `Register.qubit_ids`.
+
+        Args:
+            included_indices: The indices of the qubits to include in the
+                subpartition. Defauts to the first half of the qubits in the
+                system. If the state has an odd number of qubits, the first
+                half set by default will be the smaller one.
+
+        Returns:
+            The entropy between the two parts of the system. The returned value
+            will refer to the subpartition made of the qubit indices which
+            aren't part of `excluded_indices`.
+        """
+        if included_indices is None:
+            included_indices = range(self.n_qudits // 2, self.n_qudits)
+
+        indices = set(included_indices)
+
+        excluded_indices = [
+            indice for indice in range(self.n_qudits) if indice not in indices
+        ]
+
+        entropy = qutip.entropy_vn(self.to_qobj().ptrace(excluded_indices))
+
+        return float(entropy)
+
     @classmethod
     def _from_state_amplitudes(
         cls: Type[QutipStateType],
