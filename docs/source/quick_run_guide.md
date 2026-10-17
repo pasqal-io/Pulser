@@ -87,7 +87,7 @@ results.get_result_tags()   # ['bitstrings', 'state']
 results.final_bitstrings    # Counter({'101': 810, '010': 61, '001': 57, ...})
 ```
 
-`'101'` dominates: the middle atom blocks both of its neighbours, so the system ends with only the two end atoms excited (`1` is the Rydberg state, `0` the ground state). The exact counts vary between runs because the bitstrings are sampled.
+`'101'` dominates because the middle atom blocks both of its neighbours, so the system ends with only the two end atoms excited. The exact counts vary between runs because the bitstrings are sampled.
 
 ## Remote Execution
 
