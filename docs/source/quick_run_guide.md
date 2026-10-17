@@ -59,9 +59,15 @@ seq.declare_channel("rydberg_global", "rydberg_global")
 seq.add(pulse, "rydberg_global")
 ```
 
-### 2. Run on the local emulator
+### 2. Run on a local emulator
 
-`QutipBackendV2` runs the sequence on your machine. `run()` returns the `Results` directly.
+Pulser supports several local [Pasqal emulators](https://docs.pasqal.com/qpu-emulators/emulators/):
+
+- `QutipBackendV2`: based on QuTiP, best for up to ~15 qubits. Installed by default with `pulser`.
+- `SVBackend`: PyTorch-based state-vector emulator, best for up to ~25 qubits. Requires the [`emu-sv`](https://docs.pasqal.com/qpu-emulators/emusv/) package.
+- `MPSBackend`: PyTorch-based Matrix Product State emulator, best for 25 to ~80 qubits. Requires the [`emu-mps`](https://docs.pasqal.com/qpu-emulators/emumps/) package.
+
+Since `QutipBackendV2` comes with `pulser`, we use it here. `run()` executes the sequence on your machine and returns the `Results` directly:
 
 ```python
 from pulser.backends import QutipBackendV2
@@ -70,24 +76,9 @@ backend = QutipBackendV2(seq)
 results = backend.run()
 ```
 
-### 3. Choose a backend
+To use another emulator, install it (`pip install emu-sv emu-mps`) and swap the class, for example `SVBackend(seq)`.
 
-Pulser supports several local [Pasqal emulators](https://docs.pasqal.com/qpu-emulators/emulators/), all accessible from `pulser.backends`:
-
-- `QutipBackendV2` (default): based on QuTiP, best for up to ~15 qubits.
-- `SVBackend`: PyTorch-based state-vector emulator, best for up to ~25 qubits. Requires the [`emu-sv`](https://docs.pasqal.com/qpu-emulators/emusv/) package.
-- `MPSBackend`: PyTorch-based Matrix Product State emulator, best for 25 to ~80 qubits. Requires the [`emu-mps`](https://docs.pasqal.com/qpu-emulators/emumps/) package.
-
-Install `emu-sv` and `emu-mps` with `pip install emu-sv emu-mps`, then pick a backend by swapping the class:
-
-```python
-from pulser.backends import SVBackend
-
-backend = SVBackend(seq)
-results = backend.run()
-```
-
-### 4. Inspect results
+### 3. Inspect results
 
 `backend.run()` returns a `Results` object. `get_result_tags()` lists what it contains, and `final_bitstrings` gives the sampled bitstrings:
 
