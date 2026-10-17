@@ -16,6 +16,14 @@ for the latest docs): `<https://github.com/pasqal-io/Pulser>`_
 **License**: Apache 2.0 -- see `LICENSE <https://github.com/pasqal-io/Pulser/blob/master/LICENSE>`_
 for details
 
+Where to start
+---------------
+
+- :doc:`Quick Run Guide <quick_run_guide>` — install Pulser and run your first job, locally or remotely.
+- :doc:`installation` — all installation options, including the development version.
+- :doc:`programming` — learn what you are programming with Pulser and how.
+- :doc:`tutorials/creating` — examples of quantum programs written with Pulser.
+
 Overview
 ---------------
 
@@ -48,6 +56,7 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    :maxdepth: 2
    :caption: Getting Started
 
+   quick_run_guide
    installation
    programming
    tutorials/creating
