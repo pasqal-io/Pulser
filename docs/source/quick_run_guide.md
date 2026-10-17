@@ -24,7 +24,10 @@ Run your first experiment on a local emulator. No account or credentials are nee
 
 Create a register and a sequence on a device, then add a pulse to a channel. `MockDevice` is a virtual device for local runs.
 
+This example places three atoms in a line, 7 µm apart, and slowly sweeps the detuning from negative to positive. Neighbouring atoms are inside each other's Rydberg blockade radius (about 10 µm here), so they cannot both be excited. The two end atoms are far enough apart to be excited together.
+
 ```python
+import numpy as np
 from pulser import (
     ConstantWaveform,
     MockDevice,
@@ -34,12 +37,12 @@ from pulser import (
     Sequence,
 )
 
-# Create the register (coordinates in µm)
-register = Register.from_coordinates([(0, 6), (0, -6), (10, 0)], prefix="q")
+# Create the register: 3 atoms in a line, 7 µm apart
+register = Register.from_coordinates([(-7, 0), (0, 0), (7, 0)], prefix="q")
 
 # Define the pulse parameters
-omega = 2.0  # rad/µs
-delta_i = -2.0 * omega  # rad/µs
+omega = 2 * np.pi  # rad/µs
+delta_i = -3.0 * omega  # rad/µs
 delta_f = -delta_i  # rad/µs
 T = 3000  # ns
 
@@ -90,8 +93,10 @@ results = backend.run()
 
 ```python
 results.get_result_tags()   # ['bitstrings', 'state']
-results.final_bitstrings    # Counter({'111': 566, '110': 155, '011': 111, ...})
+results.final_bitstrings    # Counter({'101': 810, '010': 61, '001': 57, ...})
 ```
+
+`'101'` dominates: the middle atom blocks both of its neighbours, so the system ends with only the two end atoms excited (`1` is the Rydberg state, `0` the ground state). The exact counts vary between runs because the bitstrings are sampled.
 
 ## Remote Execution
 
