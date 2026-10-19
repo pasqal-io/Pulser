@@ -24,7 +24,7 @@ Run your first experiment on a local emulator. No account or credentials are nee
 
 Create a register and a sequence on a device, then add a pulse to a channel. `MockDevice` is a virtual device for local runs.
 
-This example contains three atoms placed in a line, with distance 7 µm between adjacent atoms. It slowly sweeps the detuning from negative to positive. Adjacent atoms are inside each other's Rydberg blockade radius (here, about 10 µm), so they cannot both be excited. The two end atoms are far enough apart to be excited together.
+This example contains three atoms in a straight line 7 µm apart, and slowly sweeps the detuning from negative to positive. Adjacent atoms are inside each other's Rydberg blockade radius (here, about 10 µm), so they cannot both be excited. The two end atoms are far enough apart (14 µm) to be excited together.
 
 ```python
 import numpy as np
