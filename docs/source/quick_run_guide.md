@@ -67,7 +67,7 @@ Pulser supports several [Pasqal emulators](https://docs.pasqal.com/qpu-emulators
 - `SVBackend`: PyTorch-based state-vector emulator, best for up to ~25 qubits. Requires the [`emu-sv`](https://docs.pasqal.com/qpu-emulators/emusv/) package.
 - `MPSBackend`: PyTorch-based Matrix Product State emulator, best for 25 to ~80 qubits. Requires the [`emu-mps`](https://docs.pasqal.com/qpu-emulators/emumps/) package.
 
-We use `QutipBackendV2` here since it comes packaged with `pulser` by default. `run()` executes the sequence on your machine and returns the `Results` directly:
+We use `QutipBackendV2` here since it comes with `pulser`:
 
 ```python
 from pulser.backends import QutipBackendV2
@@ -110,9 +110,11 @@ Remote execution, whether it's on emulators or QPUs, requires a connection to su
 
 This example uses Pasqal Cloud: install the [`pasqal-cloud`](https://pypi.org/project/pasqal-cloud/) package with `pip install pasqal-cloud`, then create a `PasqalCloudConnection` with your username, password and project ID from the portal.
 
-!!! tip "Using a third-party provider?"
+:::{tip}
+**Using a third-party provider?**
 
-    If you chose a third-party cloud provider, create your connection by following that provider's instructions instead (for example, [Scaleway](https://docs.pasqal.com/third-party-cloud-providers/scaleway/#step-4-create-your-connection)), then continue from step 2, using it as `connection`.
+If you chose a third-party cloud provider, create your connection by following that provider's instructions instead (for example, [Scaleway](https://docs.pasqal.com/third-party-cloud-providers/scaleway/#step-4-create-your-connection)), then continue from step 2, using it as `connection`.
+:::
 
 ```python
 from pasqal_cloud import PasqalCloudConnection
@@ -131,20 +133,20 @@ Replace `USERNAME`, `PASSWORD` and `PROJECT_ID` with your own values. Avoid hard
 `RemoteEmuFreeBackend` is free for all Pasqal Cloud accounts and needs no credits. `run()` submits the sequence and returns a `RemoteResults` object without waiting for the results.
 
 ```python
-from pulser.backend import EmulationConfig
+from pulser.backend import BitStrings, EmulationConfig
 from pulser.backends import RemoteEmuFreeBackend
 
 remote_backend = RemoteEmuFreeBackend(
     seq,
     connection=connection,
-    config=EmulationConfig(),
+    config=EmulationConfig(observables=[BitStrings()]),
 )
 remote_results = remote_backend.run()
 ```
 
 Remote emulator backends work as follows:
 
-- Backend class: `RemoteEmuFreeBackend`(default), `RemoteSVBackend` or `RemoteMPSBackend`. Availability depends on your provider.
+- Backend class: `RemoteEmuFreeBackend`, `RemoteSVBackend` or `RemoteMPSBackend`. Availability depends on your provider.
 - `config`: an `EmulationConfig`, as for local emulators. See <a href="tutorials/backends.html#4.-Configuring-the-Emulation">Configuring the Emulation</a>.
 
 #### 3. Check status and retrieve results
@@ -174,7 +176,7 @@ The same connection lets you run the sequence on a QPU.
 
 #### 1. List available devices and adapt the sequence to the QPU
 
-List the devices available through your connection, then adapt the sequence to the target QPU.
+List the devices available through your connection, then adapt the sequence to the target QPU. QPUs require the register to come from a layout, so we generate one automatically.
 
 ```python
 # list available devices
