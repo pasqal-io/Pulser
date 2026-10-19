@@ -61,13 +61,13 @@ seq.add(pulse, "rydberg_global")
 
 ### 2. Run on a local emulator
 
-Pulser supports several local [Pasqal emulators](https://docs.pasqal.com/qpu-emulators/emulators/):
+Pulser supports several [Pasqal emulators](https://docs.pasqal.com/qpu-emulators/emulators/):
 
 - `QutipBackendV2`: based on QuTiP, best for up to ~15 qubits. Installed by default with `pulser`.
 - `SVBackend`: PyTorch-based state-vector emulator, best for up to ~25 qubits. Requires the [`emu-sv`](https://docs.pasqal.com/qpu-emulators/emusv/) package.
 - `MPSBackend`: PyTorch-based Matrix Product State emulator, best for 25 to ~80 qubits. Requires the [`emu-mps`](https://docs.pasqal.com/qpu-emulators/emumps/) package.
 
-Since `QutipBackendV2` comes with `pulser`, we use it here. `run()` executes the sequence on your machine and returns the `Results` directly:
+We use `QutipBackendV2` here since it comes packaged with `pulser` by default. `run()` executes the sequence on your machine and returns the `Results` directly:
 
 ```python
 from pulser.backends import QutipBackendV2
@@ -87,7 +87,7 @@ results.get_result_tags()   # ['bitstrings', 'state']
 results.final_bitstrings    # Counter({'101': 810, '010': 61, '001': 57, ...})
 ```
 
-`'101'` dominates because the middle atom blocks both of its neighbours, so the system ends with only the two end atoms excited. The exact counts vary between runs because the bitstrings are sampled.
+`'101'` dominates because the middle atom blocks both of its neighbours, so the system has only the two end atoms excited. The exact counts vary between runs because the bitstrings are sampled.
 
 ## Remote Execution
 
@@ -110,11 +110,9 @@ Remote execution, whether it's on emulators or QPUs, requires a connection to su
 
 This example uses Pasqal Cloud: install the [`pasqal-cloud`](https://pypi.org/project/pasqal-cloud/) package with `pip install pasqal-cloud`, then create a `PasqalCloudConnection` with your username, password and project ID from the portal.
 
-:::{tip}
-**Using a third-party provider?**
+!!! tip "Using a third-party provider?"
 
-If you chose a third-party cloud provider, create your connection by following that provider's instructions instead (for example, [Scaleway](https://docs.pasqal.com/third-party-cloud-providers/scaleway/#step-4-create-your-connection)), then continue from step 2, using it as `connection`.
-:::
+    If you chose a third-party cloud provider, create your connection by following that provider's instructions instead (for example, [Scaleway](https://docs.pasqal.com/third-party-cloud-providers/scaleway/#step-4-create-your-connection)), then continue from step 2, using it as `connection`.
 
 ```python
 from pasqal_cloud import PasqalCloudConnection
@@ -139,16 +137,15 @@ from pulser.backends import RemoteEmuFreeBackend
 remote_backend = RemoteEmuFreeBackend(
     seq,
     connection=connection,
-    config=EmulationConfig(default_num_shots=1000),
+    config=EmulationConfig(),
 )
 remote_results = remote_backend.run()
 ```
 
 Remote emulator backends work as follows:
 
-- Backend class: `RemoteEmuFreeBackend`, `RemoteSVBackend` or `RemoteMPSBackend`. Availability depends on your provider.
+- Backend class: `RemoteEmuFreeBackend`(default), `RemoteSVBackend` or `RemoteMPSBackend`. Availability depends on your provider.
 - `config`: an `EmulationConfig`, as for local emulators. See <a href="tutorials/backends.html#4.-Configuring-the-Emulation">Configuring the Emulation</a>.
-- `default_num_shots` (set in `config`): number of bitstring samples to collect.
 
 #### 3. Check status and retrieve results
 
@@ -177,7 +174,7 @@ The same connection lets you run the sequence on a QPU.
 
 #### 1. List available devices and adapt the sequence to the QPU
 
-List the devices available through your connection, then adapt the sequence to the target QPU. QPUs require the register to be defined from a register layout, so give it one with `with_automatic_layout()` before switching to the QPU device.
+List the devices available through your connection, then adapt the sequence to the target QPU.
 
 ```python
 # list available devices
@@ -186,9 +183,8 @@ connection.fetch_available_devices()
 
 # adapt the sequence to the FRESNEL device
 device = connection.fetch_available_devices()["FRESNEL"]
-qpu_seq = seq.with_new_register(
-    seq.register.with_automatic_layout(device)
-).with_new_device(device)
+qpu_register = seq.register.with_automatic_layout(device)
+qpu_seq = seq.with_new_register(qpu_register).with_new_device(device)
 ```
 
 #### 2. Submit to the QPU
