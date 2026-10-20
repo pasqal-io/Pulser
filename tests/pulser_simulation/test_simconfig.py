@@ -110,7 +110,7 @@ def test_eff_noise_opers(matrices):
         TypeError,
         match=re.escape(
             "eff_noise_rates is a list of floats, it must not contain a "
-            "<class 'str'>. Got '0.1'."
+            "<class 'str'>. Got '0.1' among the provided values."
         ),
     ):
         SimConfig(

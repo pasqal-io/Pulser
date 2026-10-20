@@ -312,7 +312,8 @@ class TestNoiseModel:
             ValueError,
             match=re.escape(
                 "At least one effective noise operator must be defined to"
-                " simulate leakage; got noise types ['leakage']."
+                " simulate leakage; 'eff_noise' is not among noise types "
+                "['leakage']."
             ),
         ):
             NoiseModel(with_leakage=True)
@@ -321,7 +322,8 @@ class TestNoiseModel:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "The provided rates must not be negative; got [-1.0]."
+                "The effective noise rates must not be negative; got [-1.0]"
+                " among the provided values."
             ),
         ):
             NoiseModel(
@@ -336,7 +338,7 @@ class TestNoiseModel:
             TypeError,
             match=re.escape(
                 "eff_noise_rates is a list of floats, it must not contain a "
-                "<class 'str'>. Got '0.1'."
+                "<class 'str'>. Got '0.1' among the provided values."
             ),
         ):
             NoiseModel(
@@ -427,47 +429,116 @@ class TestNoiseModel:
 
         # only psd are provided
         with pytest.raises(
-            ValueError, match=("empty tuples or both be provided")
+            ValueError,
+            match=re.escape(
+                "`detuning_hf_psd` and `detuning_hf_omegas` must either both"
+                " be empty tuples or both be provided; got 3"
+                " `detuning_hf_psd` vs. 0 `detuning_hf_omegas` entries."
+            ),
         ):
             NoiseModel(detuning_hf_psd=(1, 2, 3))
 
         # only freqs are provided
         with pytest.raises(
-            ValueError, match=("empty tuples or both be provided")
+            ValueError,
+            match=re.escape(
+                "`detuning_hf_psd` and `detuning_hf_omegas` must either both"
+                " be empty tuples or both be provided; got 0"
+                " `detuning_hf_psd` vs. 3 `detuning_hf_omegas` entries."
+            ),
         ):
             NoiseModel(detuning_hf_omegas=(4, 5, 6))
 
         # psd dim != 1
-        with pytest.raises(ValueError, match=("1D tuples")):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "`detuning_hf_psd` and `detuning_hf_omegas` are expected to"
+                " be 1D tuples; got 2D `detuning_hf_psd` and 1D"
+                " `detuning_hf_omegas`."
+            ),
+        ):
             NoiseModel(
                 detuning_hf_psd=[[1, 2, 3]], detuning_hf_omegas=[3, 4, 5]
             )
 
         # freqs dim != 1
-        with pytest.raises(ValueError, match=("1D tuples")):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "`detuning_hf_psd` and `detuning_hf_omegas` are expected to"
+                " be 1D tuples; got 1D `detuning_hf_psd` and 2D"
+                " `detuning_hf_omegas`."
+            ),
+        ):
             NoiseModel(
                 detuning_hf_psd=[1, 2, 3], detuning_hf_omegas=[[3, 4, 5]]
             )
 
         # len psd != len freqs
-        with pytest.raises(ValueError, match=("same length")):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "`detuning_hf_psd` and `detuning_hf_omegas` are expected to"
+                " have the same length; got 2 `detuning_hf_psd` vs. 3"
+                " `detuning_hf_omegas` entries."
+            ),
+        ):
             NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_omegas=[3, 4, 5])
 
         # psd len <= 1
-        with pytest.raises(ValueError, match=("length > 1")):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "`detuning_hf_psd` and `detuning_hf_omegas` are expected to"
+                " have length > 1; got 1."
+            ),
+        ):
             NoiseModel(detuning_hf_psd=[1], detuning_hf_omegas=[3])
 
         # psd < 0
-        with pytest.raises(ValueError, match=("positive values")):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "`detuning_hf_psd` and `detuning_hf_omegas` are expected to"
+                " have positive values; got [-1] in `detuning_hf_psd` and []"
+                " in `detuning_hf_omegas`."
+            ),
+        ):
             NoiseModel(detuning_hf_psd=[-1, 2], detuning_hf_omegas=[3, 4])
 
         # freqs < 0
-        with pytest.raises(ValueError, match=("positive values")):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "`detuning_hf_psd` and `detuning_hf_omegas` are expected to"
+                " have positive values; got [] in `detuning_hf_psd` and [-4]"
+                " in `detuning_hf_omegas`."
+            ),
+        ):
             NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_omegas=[3, -4])
 
         # freqs should monotonously grow
-        with pytest.raises(ValueError, match=("monotonously growing")):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "`detuning_hf_omegas` are expected to be monotonously growing;"
+                " got 3 at index 1 after 4."
+            ),
+        ):
             NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_omegas=[4, 3])
+
+        # the first value that breaks the growth is reported
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "`detuning_hf_omegas` are expected to be monotonously growing;"
+                " got 4 at index 2 after 5."
+            ),
+        ):
+            NoiseModel(
+                detuning_hf_psd=[1, 2, 3, 4], detuning_hf_omegas=[3, 5, 4, 1]
+            )
 
     @pytest.mark.parametrize("param", ["dephasing_rate", "depolarizing_rate"])
     def test_leakage(self, param):
@@ -718,8 +789,12 @@ def test_check_register_noise_params_invalid_params():
 
     if trap_waist == 0.0 or trap_depth is None or temperature == 0.0.
     """
+    msg = (
+        "trap_waist, trap_depth, and temperature must be defined in order to"
+        " simulate register noise; "
+    )
     with pytest.raises(
-        ValueError, match="defined in order to simulate register noise"
+        ValueError, match=re.escape(msg + "['trap_waist'] is undefined.")
     ):
         _ = NoiseModel(
             trap_depth=150.0,
@@ -727,11 +802,20 @@ def test_check_register_noise_params_invalid_params():
             temperature=10.0,
         )
     with pytest.raises(
-        ValueError, match="defined in order to simulate register noise"
+        ValueError, match=re.escape(msg + "['temperature'] is undefined.")
     ):
         _ = NoiseModel(
             trap_waist=2.0,
             trap_depth=150,
+            temperature=0.0,
+        )
+    with pytest.raises(
+        ValueError,
+        match=re.escape(msg + "['trap_waist', 'temperature'] are undefined."),
+    ):
+        _ = NoiseModel(
+            trap_depth=150.0,
+            trap_waist=0.0,
             temperature=0.0,
         )
 

@@ -533,7 +533,8 @@ class NoiseModel:
         if "eff_noise" not in noise_types:
             raise ValueError(
                 "At least one effective noise operator must be defined to"
-                f" simulate leakage; got noise types {sorted(noise_types)}."
+                " simulate leakage; 'eff_noise' is not among noise types "
+                f"{sorted(noise_types)}."
             )
 
     @staticmethod
@@ -556,7 +557,7 @@ class NoiseModel:
                 "`detuning_hf_psd` and `detuning_hf_omegas` must either"
                 " both be empty tuples or both be provided; got "
                 f"{len(psd)} `detuning_hf_psd` vs. "
-                f"{len(freqs)} `detuning_hf_omegas`."
+                f"{len(freqs)} `detuning_hf_omegas` entries."
             )
 
         if psd == ():
@@ -578,7 +579,7 @@ class NoiseModel:
                 "`detuning_hf_psd` and `detuning_hf_omegas`"
                 f" are expected to have the same length; got {psd_a.size}"
                 f" `detuning_hf_psd` vs. {freqs_a.size}"
-                " `detuning_hf_omegas`."
+                " `detuning_hf_omegas` entries."
             )
 
         if psd_a.size <= 1:
@@ -620,7 +621,8 @@ class NoiseModel:
             if not (isinstance(rate, float) or isinstance(rate, int)):
                 raise TypeError(
                     "eff_noise_rates is a list of floats,"
-                    f" it must not contain a {type(rate)}. Got {rate!r}."
+                    f" it must not contain a {type(rate)}. Got {rate!r}"
+                    " among the provided values."
                 )
 
         if not check_contents:
@@ -643,8 +645,9 @@ class NoiseModel:
         rates_arr = np.array(eff_noise_rates)
         if np.any(rates_arr < 0):
             raise ValueError(
-                "The provided rates must not be negative; got "
-                f"{rates_arr[rates_arr < 0].tolist()}."
+                "The effective noise rates must not be negative; got "
+                f"{rates_arr[rates_arr < 0].tolist()} among the provided"
+                " values."
             )
 
         # Check the validity of operators
