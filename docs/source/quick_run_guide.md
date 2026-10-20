@@ -24,7 +24,12 @@ Run your first experiment on a local emulator. No account or credentials are nee
 
 Create a register and a sequence on a device, then add a pulse to a channel. `MockDevice` is a virtual device for local runs.
 
+<details>
+<summary>Example: Rydberg blockade</summary>
+
 This example contains three atoms in a straight line 7 µm apart, and slowly sweeps the detuning from negative to positive, thus favoring atoms in the excited state. Adjacent atoms are inside each other's Rydberg blockade radius (here, about 10 µm), so they cannot both be excited. The two end atoms are far enough apart (14 µm) to be simultaneously excited.
+
+</details>
 
 ```python
 import numpy as np
@@ -87,7 +92,14 @@ results.get_result_tags()   # ['bitstrings', 'state']
 results.final_bitstrings    # Counter({'101': 810, '010': 61, '001': 57, ...})
 ```
 
-`'101'` dominates because the middle atom is blockaded by both of its neighbours, so having only the two end atoms excited is the most favorable configuration. The exact counts vary between runs because the bitstrings are sampled.
+<details>
+<summary>Interpretation</summary>
+
+`'101'` dominates because the middle atom is blockaded by both of its neighbours, so having only the two end atoms excited is the most favorable configuration.
+
+</details>
+
+The exact counts vary between runs because the bitstrings are sampled.
 
 ## Remote Execution
 
