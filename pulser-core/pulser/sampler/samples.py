@@ -166,7 +166,7 @@ class ChannelSamples:
         if extension < 0:
             raise ValueError(
                 "Can't extend samples to a lower duration; got "
-                f"{new_duration} vs. the current {self.duration}."
+                f"{new_duration} ns vs. the current {self.duration} ns."
             )
 
         new_amp = pm.pad(self.amp, (0, extension))

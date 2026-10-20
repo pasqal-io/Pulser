@@ -170,8 +170,7 @@ class SimConfig:
         # Converts temperature from µK to K
         if not isinstance(self.temperature, (int, float)):
             raise TypeError(
-                "'temperature' must be a float, not "
-                f"{type(self.temperature)}. Got {self.temperature!r}."
+                f"'temperature' must be a float, not {type(self.temperature)}."
             )
 
         self._change_attribute("temperature", self.temperature / 1e6)
@@ -259,8 +258,7 @@ class SimConfig:
                 raise TypeError(f"{operator} is not a Qobj.")
             if operator.type != "oper":
                 raise TypeError(
-                    "Operators are supposed to be of Qutip type 'oper', not "
-                    f"{operator.type!r}. Got {operator!r}."
+                    "Operators are supposed to be of Qutip type 'oper'."
                 )
         NoiseModel._check_eff_noise(
             self.eff_noise_rates,

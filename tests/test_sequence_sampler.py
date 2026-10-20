@@ -494,8 +494,8 @@ def test_extend_duration(with_custom_centered_phase):
     with pytest.raises(
         ValueError,
         match=re.escape(
-            "Can't extend samples to a lower duration; got 220 vs. the "
-            "current 520."
+            "Can't extend samples to a lower duration; got 220 ns vs. the "
+            "current 520 ns."
         ),
     ):
         long.extend_duration(short.duration)

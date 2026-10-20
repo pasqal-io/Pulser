@@ -248,11 +248,11 @@ def test_get_final_state(
         TypeError,
         match=re.escape(
             "Can't reduce to chosen basis 'digital' because the population of "
-            "a state to eliminate is above the allowed tolerance; got a "
-            "population of "
+            "a state to eliminate is above the allowed tolerance; the "
+            "largest such population is "
         )
         + r"[\d.e+-]+"
-        + re.escape(" for a tolerance of 1e-06."),
+        + re.escape(", for a tolerance of 1e-06."),
     ):
         results_.get_final_state(reduce_to_basis="digital")
     h_states = results_.get_final_state(

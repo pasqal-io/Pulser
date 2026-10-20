@@ -13,8 +13,6 @@
 # limitations under the License.
 
 
-import re
-
 import pytest
 from qutip import Qobj, qeye, sigmax, sigmaz
 
@@ -86,12 +84,7 @@ def test_init():
         and "Effective noise operators" in str_config
     )
 
-    with pytest.raises(
-        TypeError,
-        match=re.escape(
-            "'temperature' must be a float, not <class 'str'>. Got '0.0'."
-        ),
-    ):
+    with pytest.raises(TypeError, match="'temperature' must be a float"):
         SimConfig(temperature="0.0")
     with pytest.raises(ValueError, match="SPAM parameter"):
         SimConfig(eta=-1.0)
@@ -126,13 +119,7 @@ def test_eff_noise_opers(matrices):
         SimConfig(
             noise=("eff_noise"), eff_noise_opers=[2.0], eff_noise_rates=[1.0]
         )
-    with pytest.raises(
-        TypeError,
-        match=re.escape(
-            "Operators are supposed to be of Qutip type 'oper', not 'ket'. "
-            f"Got {matrices['ket']!r}."
-        ),
-    ):
+    with pytest.raises(TypeError, match="to be of Qutip type 'oper'."):
         SimConfig(
             noise=("eff_noise"),
             eff_noise_opers=[matrices["ket"]],

@@ -152,7 +152,8 @@ class QutipResult(Result):
         else:
             raise NotImplementedError(
                 "Cannot sample system with single-atom state vectors of "
-                f"dimension > 4; got dimension {self._dim}."
+                "dimension > 4; the state vectors have dimension "
+                f"{self._dim}."
             )
         # Takes care of numerical artefacts in case sum(weights) != 1
         return cast(np.ndarray, weights / sum(weights))
@@ -233,8 +234,8 @@ class QutipResult(Result):
                 raise TypeError(
                     f"Can't reduce to chosen basis {reduce_to_basis!r} "
                     "because the population of a state to eliminate is above "
-                    "the allowed tolerance; got a population of "
-                    f"{np.max(ex_probs)} for a tolerance of {tol}."
+                    "the allowed tolerance; the largest such population is "
+                    f"{np.max(ex_probs)}, for a tolerance of {tol}."
                 )
             mask = np.ones_like(state_arr, dtype=bool)
             mask[ex_inds] = False
