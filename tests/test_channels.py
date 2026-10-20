@@ -439,3 +439,15 @@ def test_validate_pulse_success():
     amp_waveform = ConstantWaveform(100, ch_obj.min_avg_amp)
     pulse = Pulse.ConstantDetuning(amp_waveform, -ch_obj.max_abs_detuning, 0)
     ch_obj.validate_pulse(pulse)
+
+
+@pytest.mark.parametrize("max_val", [12.566370614359172, 0.7757018827163703])
+def test_validate_pulse_float_tolerance(max_val):
+    # Values off by floating point errors from the limits must pass
+    eps = 1 + 1e-15
+    ch_obj = Rydberg.Global(max_val, max_val, min_avg_amp=max_val)
+    ch_obj.validate_pulse(Pulse.ConstantPulse(100, max_val, max_val, 0))
+    ch_obj.validate_pulse(
+        Pulse.ConstantPulse(100, max_val * eps, -max_val * eps, 0)
+    )
+    ch_obj.validate_pulse(Pulse.ConstantPulse(100, max_val / eps, 0, 0))
