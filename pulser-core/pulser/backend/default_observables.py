@@ -191,8 +191,10 @@ class Fidelity(Observable):
     obtained by time evolution.
 
     Args:
-        state: The state ``|ψ>``. Note that this must be of an appropriate type
-            for the backend.
+        state: The state ``|ψ>``. If its type is not the backend's state
+            type, it is automatically converted when the config is given to
+            the backend, provided it was created via
+            ``State.from_state_amplitudes()``.
         evaluation_times: The relative times at which to compute the fidelity.
             If left as `None`, uses the ``default_evaluation_times`` of the
             backend's ``EmulationConfig``.
@@ -233,6 +235,13 @@ class Fidelity(Observable):
         repr["state"] = self.state
         return repr
 
+    def _try_cast_state_ops(
+        self, state_type: Type[State], operator_type: Type[Operator]
+    ) -> Fidelity:
+        new_obs = copy.copy(self)
+        new_obs.state = state_type.from_state(self.state)
+        return new_obs
+
     def apply(self, *, state: State, **kwargs: Any) -> Any:
         """Calculates the observable to store in the Results."""
         return self.state.overlap(state)
@@ -245,8 +254,10 @@ class Expectation(Observable):
         evaluation_times: The relative times at which to compute the
             expectation value. If left as `None`, uses the
             ``default_evaluation_times`` of the backend's ``EmulationConfig``.
-        operator: The operator to measure. Must be of the appropriate type
-            for the backend.
+        operator: The operator to measure. If its type is not the backend's
+            operator type, it is automatically converted when the config is
+            given to the backend, provided it was created via
+            ``Operator.from_operator_repr()``.
         tag_suffix: An optional suffix to append to the tag. Needed if
             multiple instances of the same observable are given to the
             same EmulationConfig.
@@ -283,6 +294,13 @@ class Expectation(Observable):
         repr = super()._to_abstract_repr()
         repr["operator"] = self.operator
         return repr
+
+    def _try_cast_state_ops(
+        self, state_type: Type[State], operator_type: Type[Operator]
+    ) -> Expectation:
+        new_obs = copy.copy(self)
+        new_obs.operator = operator_type.from_operator(self.operator)
+        return new_obs
 
     def apply(self, *, state: State, **kwargs: Any) -> Any:
         """Calculates the observable to store in the Results."""

@@ -18,7 +18,7 @@ import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Type, TypeVar
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -31,6 +31,8 @@ if TYPE_CHECKING:
     from pulser.backend.results import Results
 
 TIME_TOLERANCE = 1e-12
+
+CallbackType = TypeVar("CallbackType", bound="Callback")
 
 
 def _fuzzy_unique_sorted(sorted: np.ndarray, tolerance: float) -> bool:
@@ -48,6 +50,41 @@ class Callback(ABC):
     def uuid(self) -> uuid.UUID:
         """A universal unique identifier for this instance."""
         return self._uuid
+
+    def _try_cast_state_ops(
+        self: CallbackType,
+        state_type: Type[State],
+        operator_type: Type[Operator],
+    ) -> CallbackType:
+        """Returns this callback with its states and operators cast.
+
+        Called by ``EmulatorBackend.validate_config()`` so that the callback
+        holds states and operators of the backend's preferred types.
+
+        By default, it does nothing and returns the callback.
+
+        Subclasses with a State or Operator must override this
+        method to support automatic casting; otherwise, their states and
+        operators are left as they are, and an unexpected type will only
+        cause a failure when the callback is called during the emulation.
+
+        Overrides should return a copy (e.g. with ``copy.copy()``) holding
+        the cast objects rather than modifying the instance, to preserve
+        the UUID and the user's config. The cast objects can be obtained
+        with ``state_type.from_state()`` and
+        ``operator_type.from_operator()``, which raise a ``TypeError`` when
+        the cast fails; overrides should let it propagate instead of
+        returning the callback unchanged.
+
+        Args:
+            state_type: The state type to cast to.
+            operator_type: The operator type to cast to.
+
+        Returns:
+            A copy of the callback holding the cast states and operators, or
+            the callback itself if there is nothing to cast.
+        """
+        return self
 
     @abstractmethod
     def __call__(
