@@ -73,3 +73,18 @@ a:hover {
   border-color: #00c887;
   color: white;
 }
+
+/* Collapsible sections (e.g. in the Quick Run Guide) */
+.rst-content details {
+  margin-bottom: 24px;
+}
+
+.rst-content details summary {
+  cursor: pointer;
+  font-weight: bold;
+  color: #00ac85;
+}
+
+.rst-content details[open] summary {
+  margin-bottom: 12px;
+}
