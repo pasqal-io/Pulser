@@ -757,3 +757,109 @@ def test_dmm_detuning():
             noisy_samples["Local"]["ground-rydberg"][q_id]["det"],
             expected_noisy[q_id],
         )
+
+
+def test_detuning_noise_with_delay():
+    np.random.seed(0xDEADBEEF)
+
+    coordinates = [(0.0, 0.0), (0.0, 5.0)]
+
+    register = pulser.Register.from_coordinates(coordinates, prefix="q")
+
+    seq = pulser.Sequence(register, pulser.MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.add(
+        pulser.Pulse.ConstantPulse(
+            duration=100,
+            amplitude=0.0,
+            detuning=0.0,
+            phase=0,
+        ),
+        "ch0",
+    )
+    seq.add(
+        pulser.Pulse.ConstantPulse(
+            duration=100,
+            amplitude=1,
+            detuning=2.0,
+            phase=0,
+        ),
+        "ch0",
+    )
+
+    ham_data = HamiltonianData.from_sequence(
+        seq,
+        noise_model=pulser.NoiseModel(
+            temperature=10.0,
+            detuning_sigma=1.0,
+            detuning_hf_omegas=[100, 101],
+            detuning_hf_psd=[1.0, 1.0],
+        ),
+        n_trajectories=1,
+    )
+
+    samples = ham_data.noisy_samples.__next__()
+    q0_samples = (
+        samples.samples.channel_samples["q0_ground-rydberg"].det
+        - ham_data.samples.samples_list[0].det
+    )
+    q1_samples = (
+        samples.samples.channel_samples["q1_ground-rydberg"].det
+        - ham_data.samples.samples_list[0].det
+    )
+    # variation between qubits is due to doppler
+    assert np.allclose(
+        q0_samples - q1_samples,
+        (
+            samples.trajectory.doppler_detune["q0"]
+            - samples.trajectory.doppler_detune["q1"]
+        )
+        * np.ones_like(q0_samples),
+    )
+
+    hf_fluctuations = _generate_detuning_fluctuations(
+        ham_data._noise_model,
+        samples.trajectory.det_fluctuations["ch0"],
+        samples.trajectory.det_phases["ch0"],
+        np.arange(0, samples.samples.max_duration, 1),
+    )
+    assert np.allclose(
+        q0_samples - hf_fluctuations - samples.trajectory.doppler_detune["q0"],
+        np.zeros_like(q0_samples),
+    )
+
+    # reset seed
+    np.random.seed(0xDEADBEEF)
+    delay_seq = pulser.Sequence(register, pulser.MockDevice)
+    delay_seq.declare_channel("ch0", "rydberg_global")
+    delay_seq.delay(100, "ch0")
+    delay_seq.add(
+        pulser.Pulse.ConstantPulse(
+            duration=100,
+            amplitude=1,
+            detuning=2.0,
+            phase=0,
+        ),
+        "ch0",
+    )
+
+    delay_ham_data = HamiltonianData.from_sequence(
+        delay_seq,
+        noise_model=pulser.NoiseModel(
+            temperature=10.0,
+            detuning_sigma=1.0,
+            detuning_hf_omegas=[100, 101],
+            detuning_hf_psd=[1.0, 1.0],
+        ),
+        n_trajectories=1,
+    )
+
+    delay_samples = delay_ham_data.noisy_samples.__next__()
+    assert np.allclose(
+        samples.samples.channel_samples["q0_ground-rydberg"].det,
+        delay_samples.samples.channel_samples["q0_ground-rydberg"].det,
+    )
+    assert np.allclose(
+        samples.samples.channel_samples["q1_ground-rydberg"].det,
+        delay_samples.samples.channel_samples["q1_ground-rydberg"].det,
+    )
