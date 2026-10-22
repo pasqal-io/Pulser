@@ -420,8 +420,8 @@ class CoherentResults(SimulationResults[QutipResult]):
             if set(meas_errors) != {"epsilon", "epsilon_prime"}:
                 raise ValueError(
                     "When defining measurement errors, only values of "
-                    "'epsilon' and 'epsilon_prime' must be given; got "
-                    f"{meas_errors!r}."
+                    "'epsilon' and 'epsilon_prime' must be given; got keys "
+                    f"{list(meas_errors)}."
                 )
             self._use_pseudo_dens = True
         self._meas_errors = meas_errors

@@ -138,7 +138,7 @@ def test_initialization(results, basis, exp_basis):
         ValueError,
         match=re.escape(
             "only values of 'epsilon' and 'epsilon_prime' must be given; got "
-            "{'eta': 0.1, 'epsilon': 0.0, 'epsilon_prime': 0.4}."
+            "keys ['eta', 'epsilon', 'epsilon_prime']."
         ),
     ):
         CoherentResults(

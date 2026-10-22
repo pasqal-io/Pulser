@@ -381,7 +381,8 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
                 )
             except ValueError as e:
                 raise AbstractReprError(
-                    f"RydbergEOM deserialization failed; got {data!r}."
+                    "RydbergEOM deserialization failed for channel "
+                    f"{obj.get('id')!r}."
                 ) from e
     elif obj["basis"] == "digital":
         channel_cls = Raman

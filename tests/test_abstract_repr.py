@@ -630,13 +630,10 @@ class TestDevice:
                     assert "max_limiting_amp" in ch_dict["eom_config"]
                     ch_dict["eom_config"]["max_limiting_amp"] = 0.0
                     break
-            # The first EOM config, as the deserializer sees it after JSON
-            bad_eom = next(
-                ch["eom_config"]
-                for ch in json.loads(json.dumps(bad_eom_dev))["channels"]
-                if ch["eom_config"]
+            eom_msg = (
+                "RydbergEOM deserialization failed for channel "
+                f"{ch_dict['id']!r}."
             )
-            eom_msg = f"RydbergEOM deserialization failed; got {bad_eom!r}."
             prev_err = check_error_raised(
                 json.dumps(bad_eom_dev),
                 AbstractReprError,
