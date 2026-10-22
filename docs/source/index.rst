@@ -6,8 +6,6 @@ libraries for designing and simulating pulse sequences that act on
 programmable arrays of neutral atoms, a promising platform for quantum computation
 and simulation.
 
-**Online documentation**: `<https://pulser.readthedocs.io>`_
-
 **White paper**: `Quantum 6, 629 (2022) <https://quantum-journal.org/papers/q-2022-01-24-629/>`_
 
 **Source code repository** (go `here <https://pulser.readthedocs.io/en/latest/>`_

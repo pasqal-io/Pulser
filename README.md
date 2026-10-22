@@ -1,8 +1,10 @@
-# Pulser
+<p align="center">
+  <img src="https://raw.githubusercontent.com/pasqal-io/Pulser/develop/docs/source/_static/assets/pulser_logo.svg" alt="Pulser logo" width="300">
+</p>
 
-Pulser is a framework for composing, simulating and executing **pulse** sequences for neutral-atom quantum devices.
+**Pulser** is a framework for composing, simulating and executing **pulse** sequences for neutral-atom quantum devices.
 
-**Documentation** for the [latest release](https://pypi.org/project/pulser/) of `pulser` is available at <https://pulser.readthedocs.io> (for the docs tracking the `develop` branch of this repository, visit <https://pulser.readthedocs.io/en/latest> instead).
+**Documentation** for the [latest release](https://pypi.org/project/pulser/) of `pulser` is available at <https://docs.pasqal.com/pulser>.
 
 The source code can be found at <https://github.com/pasqal-io/Pulser>.
 
