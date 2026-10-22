@@ -454,8 +454,7 @@ class TestNoiseModel:
             ValueError,
             match=re.escape(
                 "`detuning_hf_psd` and `detuning_hf_omegas` are expected to"
-                " be 1D tuples; got 2D `detuning_hf_psd` and 1D"
-                " `detuning_hf_omegas`."
+                " be 1D tuples; got 2D `detuning_hf_psd`."
             ),
         ):
             NoiseModel(
@@ -467,12 +466,24 @@ class TestNoiseModel:
             ValueError,
             match=re.escape(
                 "`detuning_hf_psd` and `detuning_hf_omegas` are expected to"
-                " be 1D tuples; got 1D `detuning_hf_psd` and 2D"
-                " `detuning_hf_omegas`."
+                " be 1D tuples; got 2D `detuning_hf_omegas`."
             ),
         ):
             NoiseModel(
                 detuning_hf_psd=[1, 2, 3], detuning_hf_omegas=[[3, 4, 5]]
+            )
+
+        # both dims != 1
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "`detuning_hf_psd` and `detuning_hf_omegas` are expected to"
+                " be 1D tuples; got 2D `detuning_hf_psd` and 2D"
+                " `detuning_hf_omegas`."
+            ),
+        ):
+            NoiseModel(
+                detuning_hf_psd=[[1, 2, 3]], detuning_hf_omegas=[[3, 4, 5]]
             )
 
         # len psd != len freqs
@@ -501,8 +512,7 @@ class TestNoiseModel:
             ValueError,
             match=re.escape(
                 "`detuning_hf_psd` and `detuning_hf_omegas` are expected to"
-                " have positive values; got [-1] in `detuning_hf_psd` and []"
-                " in `detuning_hf_omegas`."
+                " have positive values; got [-1] in `detuning_hf_psd`."
             ),
         ):
             NoiseModel(detuning_hf_psd=[-1, 2], detuning_hf_omegas=[3, 4])
@@ -512,18 +522,28 @@ class TestNoiseModel:
             ValueError,
             match=re.escape(
                 "`detuning_hf_psd` and `detuning_hf_omegas` are expected to"
-                " have positive values; got [] in `detuning_hf_psd` and [-4]"
-                " in `detuning_hf_omegas`."
+                " have positive values; got [-4] in `detuning_hf_omegas`."
             ),
         ):
             NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_omegas=[3, -4])
+
+        # both psd and freqs < 0
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "`detuning_hf_psd` and `detuning_hf_omegas` are expected to"
+                " have positive values; got [-1] in `detuning_hf_psd` and"
+                " [-4] in `detuning_hf_omegas`."
+            ),
+        ):
+            NoiseModel(detuning_hf_psd=[-1, 2], detuning_hf_omegas=[3, -4])
 
         # freqs should monotonously grow
         with pytest.raises(
             ValueError,
             match=re.escape(
                 "`detuning_hf_omegas` are expected to be monotonously growing;"
-                " got 3 at index 1 after 4."
+                " got a '4' at index 0 followed by a '3' at index 1."
             ),
         ):
             NoiseModel(detuning_hf_psd=[1, 2], detuning_hf_omegas=[4, 3])
@@ -533,7 +553,7 @@ class TestNoiseModel:
             ValueError,
             match=re.escape(
                 "`detuning_hf_omegas` are expected to be monotonously growing;"
-                " got 4 at index 2 after 5."
+                " got a '5' at index 1 followed by a '4' at index 2."
             ),
         ):
             NoiseModel(

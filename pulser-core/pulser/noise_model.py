@@ -565,13 +565,17 @@ class NoiseModel:
 
         psd_a = np.asarray(psd)
         freqs_a = np.asarray(freqs)
+        arrays = {"detuning_hf_psd": psd_a, "detuning_hf_omegas": freqs_a}
 
         if psd_a.ndim != 1 or freqs_a.ndim != 1:
+            wrong_dims = " and ".join(
+                f"{arr.ndim}D `{name}`"
+                for name, arr in arrays.items()
+                if arr.ndim != 1
+            )
             raise ValueError(
                 "`detuning_hf_psd` and `detuning_hf_omegas`"
-                f" are expected to be 1D tuples; got {psd_a.ndim}D"
-                f" `detuning_hf_psd` and {freqs_a.ndim}D"
-                " `detuning_hf_omegas`."
+                f" are expected to be 1D tuples; got {wrong_dims}."
             )
 
         if psd_a.size != freqs_a.size:
@@ -589,19 +593,22 @@ class NoiseModel:
             )
 
         if not (np.all(psd_a > 0) and np.all(freqs_a > 0)):
+            non_positive = " and ".join(
+                f"{arr[arr <= 0].tolist()} in `{name}`"
+                for name, arr in arrays.items()
+                if np.any(arr <= 0)
+            )
             raise ValueError(
                 "`detuning_hf_psd` and `detuning_hf_omegas`"
-                " are expected to have positive values; got "
-                f"{psd_a[psd_a <= 0].tolist()} in `detuning_hf_psd` and "
-                f"{freqs_a[freqs_a <= 0].tolist()} in `detuning_hf_omegas`."
+                f" are expected to have positive values; got {non_positive}."
             )
 
         if np.any(np.diff(freqs_a) < 0):
             drop = int(np.argmax(np.diff(freqs_a) < 0))
             raise ValueError(
                 "`detuning_hf_omegas` are expected to be monotonously"
-                f" growing; got {freqs_a[drop + 1]} at index {drop + 1}"
-                f" after {freqs_a[drop]}."
+                f" growing; got a '{freqs_a[drop]}' at index {drop} followed"
+                f" by a '{freqs_a[drop + 1]}' at index {drop + 1}."
             )
 
     @staticmethod
