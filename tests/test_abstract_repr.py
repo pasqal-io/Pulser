@@ -454,7 +454,13 @@ def test_legacy_noise_model(noise_model_factory):
         dict_re_noise_model.pop("runs")
     assert dict_legacy == dict_re_noise_model
 
-    with pytest.raises(TypeError, match="must be given as a string"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "The serialized noise model must be given as a string. Instead, "
+            f"got object of type <class 'dict'>. Got {ser_noise_model_obj!r}."
+        ),
+    ):
         NoiseModel.from_abstract_repr(ser_noise_model_obj)
 
     ser_noise_model_obj["noise_types"].append("foo")
