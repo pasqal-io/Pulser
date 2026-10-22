@@ -283,7 +283,7 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         if not isinstance(paulis, Mapping):
             raise TypeError(
                 "'paulis' must be a mapping between qudit indices and Pauli "
-                f"matrices; got {type(paulis)} instead. Got {paulis!r}."
+                f"matrices; not {type(paulis)}. Got {paulis!r}."
             )
 
         if not paulis:
