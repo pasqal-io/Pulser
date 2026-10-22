@@ -1011,21 +1011,21 @@ def _draw_qubit_content(
     # Show nothing if no drawing per qubit asked
     if not draw_qubit_det and not draw_qubit_amp:
         return (None, None)
-    # Or if a channel is not in the ground-rydberg basis
-    elif not np.all(
+    # Or if a channel is in the digital basis
+    elif np.any(
         [
-            ch_obj.basis == "ground-rydberg"
+            ch_obj.basis == "digital"
             for ch, ch_obj in sampled_seq._ch_objs.items()
         ]
     ):
         wrong_basis = {
             ch: ch_obj.basis
             for ch, ch_obj in sampled_seq._ch_objs.items()
-            if ch_obj.basis != "ground-rydberg"
+            if ch_obj.basis == "digital"
         }
         raise NotImplementedError(
             "Can only draw qubit contents for channels in the "
-            f"'ground-rydberg' basis; got {wrong_basis}."
+            f"'ground-rydberg' or 'XY' basis; got {wrong_basis}."
         )
     # Gather data per targeted qubits
     total_duration = data["total_duration"]
