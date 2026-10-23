@@ -493,19 +493,20 @@ class Channel(ABC):
             )
 
         amp_samples_np = pulse.amplitude.samples.as_array(detach=True)
-        if self.max_amp is not None and np.any(amp_samples_np > self.max_amp):
-            raise ValueError(
-                "The pulse's amplitude goes over the maximum value allowed "
-                f"for the chosen channel ({self.max_amp}); exceeded at "
-                f"{_format_violation_times(amp_samples_np > self.max_amp)} "
-                f"in pulse {pulse!r}."
-            )
+        if self.max_amp is not None:
+            over_amp = amp_samples_np > self.max_amp + pm.VALIDATION_TOLERANCE
+            if np.any(over_amp):
+                raise ValueError(
+                    "The pulse's amplitude goes over the maximum value "
+                    f"allowed for the chosen channel ({self.max_amp}); "
+                    f"exceeded at {_format_violation_times(over_amp)} "
+                    f"in pulse {pulse!r}."
+                )
         if self.max_abs_detuning is not None:
-            abs_detuning = np.round(
-                np.abs(pulse.detuning.samples.as_array(detach=True)),
-                decimals=6,
+            abs_detuning = np.abs(pulse.detuning.samples.as_array(detach=True))
+            over_detuning = (
+                abs_detuning > self.max_abs_detuning + pm.VALIDATION_TOLERANCE
             )
-            over_detuning = abs_detuning > self.max_abs_detuning
             if np.any(over_detuning):
                 raise ValueError(
                     "The pulse's detuning values go out of the range allowed "
@@ -514,7 +515,7 @@ class Channel(ABC):
                     f"in pulse {pulse!r}."
                 )
         avg_amp = np.average(amp_samples_np)
-        if 0 < avg_amp < self.min_avg_amp:
+        if 0 < avg_amp < self.min_avg_amp - pm.VALIDATION_TOLERANCE:
             raise ValueError(
                 "The pulse's average amplitude is below the chosen "
                 f"channel's limit ({self.min_avg_amp}); got average "
