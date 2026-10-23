@@ -299,8 +299,8 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     with pytest.raises(
         ValueError,
         match=re.escape(
-            "Duplicate atom ids in argument list; got ['target'] in "
-            "['target', 'target']."
+            "Duplicate atom ids in argument list; ['target'] appear more than "
+            "once in ['target', 'target']."
         ),
     ):
         sim.build_operator([("sigma_gg", ["target", "target"])])

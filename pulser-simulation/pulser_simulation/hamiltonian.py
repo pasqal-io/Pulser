@@ -184,8 +184,9 @@ class Hamiltonian:
                         q for q, freq in Counter(qubits).items() if freq > 1
                     ]
                     raise ValueError(
-                        "Duplicate atom ids in argument list; got "
-                        f"{duplicates} in {list(qubits)}."
+                        "Duplicate atom ids in argument list; "
+                        f"{duplicates} appear more than once in "
+                        f"{list(qubits)}."
                     )
                 if not qubits_set.issubset(self._register.qubits.keys()):
                     unknown = [

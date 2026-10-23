@@ -659,7 +659,7 @@ class TestDevice:
         bad_ch_dev1 = deepcopy(abstract_device)
         bad_ch_dev1["channels"][0]["min_duration"] = -1
         ch_msg = (
-            "Channel deserialization failed; got channel "
+            "Channel deserialization failed for channel "
             f"{abstract_device['channels'][0]['id']!r}."
         )
         prev_err = check_error_raised(
@@ -737,12 +737,22 @@ class TestDevice:
                 layout_msg,
             )
             assert isinstance(prev_err.__cause__, ValueError)
+            # The layout's slug is reported when it has one
+            bad_layout_obj["slug"] = "bad_layout"
+            prev_err = check_error_raised(
+                json.dumps(bad_layout_dev),
+                AbstractReprError,
+                "Register layout deserialization failed; got coordinates "
+                "[[0, 0], [0.0, 0.0]] for layout 'bad_layout'.",
+                Device.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, ValueError)
 
         # AbstractReprError from ValueError in device init
         bad_dev = abstract_device.copy()
         bad_dev["min_atom_distance"] = -1
         dev_msg = (
-            "Device deserialization failed; got device "
+            "Device deserialization failed for device "
             f"{abstract_device['name']!r}."
         )
         prev_err = check_error_raised(

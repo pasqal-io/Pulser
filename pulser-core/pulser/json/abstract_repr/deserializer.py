@@ -400,8 +400,7 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
         return channel_cls(**params)
     except (ValueError, NotImplementedError) as e:
         raise AbstractReprError(
-            "Channel deserialization failed; got channel "
-            f"{obj.get('id')!r}."
+            f"Channel deserialization failed for channel {obj.get('id')!r}."
         ) from e
 
 
@@ -411,9 +410,11 @@ def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
             layout_obj["coordinates"], slug=layout_obj.get("slug")
         )
     except ValueError as e:
+        slug = layout_obj.get("slug")
+        for_layout = f" for layout {slug!r}" if slug else ""
         raise AbstractReprError(
             "Register layout deserialization failed; got coordinates "
-            f"{layout_obj['coordinates']}."
+            f"{layout_obj['coordinates']}{for_layout}."
         ) from e
 
     special_layout = (
@@ -584,7 +585,7 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
         return device_cls(**params)
     except (ValueError, TypeError) as e:
         raise AbstractReprError(
-            f"Device deserialization failed; got device {obj.get('name')!r}."
+            f"Device deserialization failed for device {obj.get('name')!r}."
         ) from e
 
 
