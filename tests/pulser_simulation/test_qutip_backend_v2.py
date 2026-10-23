@@ -21,6 +21,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 import qutip
+from tests.constants import C3_LEVEL_70
 
 import pulser
 from pulser.backend.default_observables import (
@@ -680,3 +681,55 @@ def test_run_from_sequence_samples(modulation):
     s2 = results2.final_state._state.full()
 
     assert np.allclose(s1, s2, atol=0, rtol=1e-16)  # really the same
+
+
+@pytest.mark.parametrize("spacing", [10.0, 15.0])
+@pytest.mark.parametrize(
+    "magnetic_field, angular_factor",
+    [
+        pytest.param((0.0, 0.0, 1.0), 1.0, id="perpendicular"),
+        pytest.param((1.0, 0.0, 0.0), -2.0, id="parallel"),
+    ],
+)
+def test_two_atom_xy_exchange(
+    spacing: float,
+    magnetic_field: tuple[float, float, float],
+    angular_factor: float,
+) -> None:
+    """Free XY evolution matches cos(Jt)|ud> - i sin(Jt)|du>."""
+    assert pulser.devices.MockDevice.rydberg_level == 70
+    duration_ns = 1000
+    times = [0.0, 0.125, 0.25, 0.5, 0.75, 1.0]
+    register = pulser.Register({"q0": (0.0, 0.0), "q1": (spacing, 0.0)})
+    seq = pulser.Sequence(register, pulser.devices.MockDevice)
+    seq.declare_channel("mw", "mw_global")
+    seq.set_magnetic_field(*magnetic_field)
+    seq.add(pulser.Pulse.ConstantPulse(duration_ns, 0.0, 0.0, 0.0), "mw")
+    initial = QutipState.from_state_amplitudes(
+        eigenstates=("u", "d"), amplitudes={"ud": 1.0}
+    )
+    backend = QutipBackendV2(
+        seq,
+        config=QutipConfig(
+            initial_state=initial,
+            observables=[StateResult(evaluation_times=times)],
+        ),
+    )
+
+    results = backend.run()
+
+    for time in times:
+        state = results.get_result("state", time)
+        phase = (
+            C3_LEVEL_70
+            * angular_factor
+            * (duration_ns / 1000)
+            * time
+            / spacing**3
+        )
+        expected = QutipState.from_state_amplitudes(
+            eigenstates=("u", "d"),
+            amplitudes={"ud": np.cos(phase), "du": -1j * np.sin(phase)},
+        )
+        # The relative phase distinguishes J from -J; populations alone do not.
+        assert expected.overlap(state) == pytest.approx(1.0, abs=1e-6)
