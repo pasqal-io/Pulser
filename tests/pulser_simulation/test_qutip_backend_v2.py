@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import dataclasses
 import math
+import re
 from unittest.mock import patch
 
 import numpy as np
@@ -111,7 +112,11 @@ def test_callback():
 def test_qutip_backend_v2_energy(capfd):
     seq = sequence()
     with pytest.raises(
-        TypeError, match="'config' must be an instance of 'EmulationConfig'"
+        TypeError,
+        match=re.escape(
+            "'config' must be an instance of 'EmulationConfig', not "
+            "<class 'str'>. Got 'tralala'."
+        ),
     ):
         QutipBackendV2(seq, config="tralala")
 
@@ -252,6 +257,28 @@ def test_qutip_backend_v2_stochastic_noise():
     )[0][indices]
 
     assert np.max(np.abs(occupation - occupation_old_api)) < 0.03
+
+
+def test_mcsolve_runs_all_trajectories():
+    # State preparation errors are the only random noise here, so identical
+    # noise trajectories are grouped, but each one must still get its own
+    # Monte Carlo trajectory
+    np.random.seed(123)
+    config = QutipConfig(
+        noise_model=pulser.NoiseModel(
+            state_prep_error=0.2, relaxation_rate=1.0
+        ),
+        n_trajectories=50,
+        observables=[Occupation(evaluation_times=[1.0])],
+    )
+    with patch("qutip.mcsolve", wraps=qutip.mcsolve) as mcsolve:
+        QutipBackendV2(sequence(), config=config).run()
+    # Fewer solver calls than trajectories, because of the grouping
+    assert mcsolve.call_count < config.n_trajectories
+    assert (
+        sum(call.kwargs["ntraj"] for call in mcsolve.call_args_list)
+        == config.n_trajectories
+    )
 
 
 def test_qutip_backend_v2_eval_times_rounding():
@@ -607,7 +634,12 @@ def test_dmm_temperature_without_spot_waist():
 
     with pytest.raises(
         ValueError,
-        match="Combining register noise with a DMM requires",
+        match=re.escape(
+            "Combining register noise with a DMM requires"
+            " `detuning_map_spot_waist` to be defined. If not defined, atom"
+            " thermal motion can lead to non-physical effects; sequence uses"
+            " DMM channels ['dmm_0']."
+        ),
     ):
         QutipBackendV2(seq, config=config)
 

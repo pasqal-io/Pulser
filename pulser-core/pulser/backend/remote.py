@@ -152,7 +152,7 @@ class RemoteResults(ResultsSequence):
                 raise RemoteResultsError(
                     "Results are not available for all jobs. Use the "
                     "`get_available_results` method to retrieve partial "
-                    "results."
+                    f"results; got jobs {self._job_ids}."
                 ) from e
         raise AttributeError(
             f"'RemoteResults' object has no attribute '{name}'."
@@ -202,20 +202,20 @@ class RemoteConnection(ABC):
     def _get_job_ids(self, batch_id: str) -> list[str]:
         """Gets all the job IDs within a batch."""
         raise NotImplementedError(
-            "Unable to find job IDs through this remote connection."
+            "Unable to find job IDs through " f"{type(self).__name__!r}."
         )
 
     def fetch_available_devices(self) -> dict[str, Device]:
         """Fetches the devices available through this connection."""
         raise NotImplementedError(
-            "Unable to fetch the available devices through this "
-            "remote connection."
+            "Unable to fetch the available devices through "
+            f"{type(self).__name__!r}."
         )
 
     def _close_batch(self, batch_id: str) -> None:
         """Closes a batch using its ID."""
         raise NotImplementedError(  # pragma: no cover
-            "Unable to close batch through this remote connection"
+            f"Unable to close batch through {type(self).__name__!r}."
         )
 
     @abstractmethod
@@ -243,7 +243,8 @@ class RemoteConnection(ABC):
         if len(bases) != 1:
             raise ValueError(
                 "The measurement basis can't be implicitly determined "
-                "for a sequence not addressing a single basis."
+                "for a sequence not addressing a single basis; this "
+                f"sequence addresses {bases}."
             )
         # This is equivalent to performing a deepcopy
         # All tensors are converted to arrays but that's ok, it would
@@ -328,14 +329,16 @@ class RemoteBackend(Backend):
         super().__init__(sequence, mimic_qpu=mimic_qpu)
         if not isinstance(connection, RemoteConnection):
             raise TypeError(
-                "'connection' must be a valid RemoteConnection instance."
+                "'connection' must be an instance of 'RemoteConnection', "
+                f"not {type(connection)}. Got {connection!r}."
             )
         self._connection = connection
         config = config if config is not None else BackendConfig()
         if not isinstance(config, BackendConfig):
             raise TypeError(
                 "When given, a 'config' must be an instance of "
-                f"'BackendConfig'; got {type(config).__name__!r} instead."
+                f"'BackendConfig'; got {type(config).__name__!r} instead. Got "
+                f"{config!r}."
             )
         self._config = config
         self._batch_id: str | None = None
@@ -380,20 +383,22 @@ class RemoteBackend(Backend):
     def _type_check_job_params(job_params: list[JobParams] | None) -> None:
         if not isinstance(job_params, list):
             raise TypeError(
-                f"'job_params' must be a list; got {type(job_params)} instead."
+                "'job_params' must be a list; got "
+                f"{type(job_params)} instead. Got {job_params!r}."
             )
         for d in job_params:
             if not isinstance(d, dict):
                 raise TypeError(
                     "All elements of 'job_params' must be dictionaries; "
-                    f"got {type(d)} instead."
+                    f"got {type(d)} instead. Got {d!r}."
                 )
 
     def open_batch(self) -> _OpenBatchContextManager:
         """Creates an open batch within a context manager object."""
         if not self._connection.supports_open_batch():
             raise NotImplementedError(
-                "Unable to execute open_batch using this remote connection"
+                "Unable to execute open_batch using "
+                f"{type(self._connection).__name__!r}."
             )
         return _OpenBatchContextManager(self)
 

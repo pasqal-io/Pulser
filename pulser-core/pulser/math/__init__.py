@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Custom implementation of math and array functions."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -44,6 +45,50 @@ class TensorLike(Protocol[T]):
 
 
 # Custom function definitions
+
+
+def allclose(
+    a: AbstractArrayLike,
+    b: AbstractArrayLike,
+    rtol: float = 1e-5,
+    atol: float = 1e-8,
+    equal_nan: bool = False,
+) -> bool:
+    """Return whether two arrays are elementwise equal within a tolerance.
+
+    Args:
+        a: The first array.
+        b: The second array.
+        rtol: The relative tolerance.
+        atol: The absolute tolerance.
+        equal_nan: Whether NaN values at the same positions compare equal.
+    """
+    a, b = map(AbstractArray, (a, b))
+    if a.is_tensor or b.is_tensor:
+        a_tensor, b_tensor = a.as_tensor(), b.as_tensor()
+        if a.is_tensor and not b.is_tensor:
+            b_tensor = b_tensor.to(device=a_tensor.device)
+        elif b.is_tensor and not a.is_tensor:
+            a_tensor = a_tensor.to(device=b_tensor.device)
+        dtype = torch.promote_types(a_tensor.dtype, b_tensor.dtype)
+        return bool(
+            torch.allclose(
+                a_tensor.to(dtype=dtype),
+                b_tensor.to(dtype=dtype),
+                rtol=rtol,
+                atol=atol,
+                equal_nan=equal_nan,
+            )
+        )
+    return bool(
+        np.allclose(
+            a.as_array(),
+            b.as_array(),
+            rtol=rtol,
+            atol=atol,
+            equal_nan=equal_nan,
+        )
+    )
 
 
 def norm(a: AbstractArrayLike) -> AbstractArray:
@@ -235,6 +280,30 @@ def pdist(a: AbstractArrayLike) -> AbstractArray:
     if a.is_tensor:
         return AbstractArray(torch.nn.functional.pdist(a.as_tensor()))
     return AbstractArray(scipy.spatial.distance.pdist(a.as_array()))
+
+
+def cdist(
+    a: Sequence[AbstractArrayLike], b: Sequence[AbstractArrayLike]
+) -> AbstractArray:
+    """Calculate distances between each pair of points in two collections.
+
+    Uses ``torch.cdist`` when either collection contains a torch tensor.
+    """
+    abst_a = tuple(map(AbstractArray, a))
+    abst_b = tuple(map(AbstractArray, b))
+    if any(arr.is_tensor for arr in (*abst_a, *abst_b)):
+        tensor_a = torch.stack([arr.as_tensor() for arr in abst_a])
+        tensor_b = torch.stack([arr.as_tensor() for arr in abst_b])
+        dtype = torch.promote_types(tensor_a.dtype, tensor_b.dtype)
+        return AbstractArray(
+            torch.cdist(tensor_a.to(dtype), tensor_b.to(dtype))
+        )
+    return AbstractArray(
+        scipy.spatial.distance.cdist(
+            [arr.as_array() for arr in abst_a],
+            [arr.as_array() for arr in abst_b],
+        )
+    )
 
 
 def concatenate(arrs: Sequence[AbstractArrayLike]) -> AbstractArray:

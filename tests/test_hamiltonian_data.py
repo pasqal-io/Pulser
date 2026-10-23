@@ -1,3 +1,4 @@
+import re
 import unittest
 from dataclasses import replace
 from types import SimpleNamespace
@@ -181,26 +182,34 @@ def test_noisy_register_torch(register2D):
     assert g.shape == qdict["q0"]._array.shape
 
 
-def test_init_errors():
+def test_init_errors(helpers):
     seq = seq_with_SLM("rydberg_global")
     seq_samples = sample(seq)
     register = pulser.Register.square(3, spacing=6, prefix="")
     with pytest.raises(
         TypeError,
-        match=(
-            "The provided sequence has to be a "
-            "valid SequenceSamples instance."
+        match=re.escape(
+            "The provided samples must be an instance of "
+            "'SequenceSamples', not <class 'NoneType'>. Got None."
         ),
     ):
         HamiltonianData(None, None, None, None, None)
 
     with pytest.raises(
-        TypeError, match="The device must be a Device or BaseDevice."
+        TypeError,
+        match=re.escape(
+            "'device' must be an instance of 'BaseDevice', not "
+            "<class 'NoneType'>. Got None."
+        ),
     ):
         HamiltonianData(seq_samples, None, None, None, None)
 
     with pytest.raises(
-        ValueError, match="Samples use SLM mask but device does not have one."
+        ValueError,
+        match=re.escape(
+            "Samples use an SLM mask but device 'AnalogDevice' does not "
+            "support one."
+        ),
     ):
         HamiltonianData(
             seq_samples, seq.register, pulser.AnalogDevice, None, None
@@ -208,9 +217,10 @@ def test_init_errors():
 
     with pytest.raises(
         ValueError,
-        match=(
-            "The ids of qubits targeted in SLM "
-            "mask should be defined in register."
+        match=re.escape(
+            "The ids of qubits targeted in the SLM mask must be defined in "
+            "the register; SLM mask targets {'batman'}. Among them, "
+            "{'batman'} not in ['0', '1', '2', '3', '4', '5', '6', '7', '8']."
         ),
     ):
         HamiltonianData(
@@ -220,8 +230,16 @@ def test_init_errors():
     with pytest.raises(
         ValueError,
         match=(
-            "The ids of qubits targeted in Local "
-            "channels should be defined in register."
+            re.escape(
+                "The ids of qubits targeted by Local channel 'ch1' must be "
+                "defined in the register; Channel targets "
+            )
+            + helpers.any_order_set("q0", "q1")
+            + re.escape(". Among them, ")
+            + helpers.any_order_set("q0", "q1")
+            + re.escape(
+                " not in ['0', '1', '2', '3', '4', '5', '6', '7', '8']."
+            )
         ),
     ):
         HamiltonianData(
@@ -242,14 +260,26 @@ def test_init_errors():
 
     seq = pulser.Sequence(register, pulser.AnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
-    with pytest.raises(ValueError, match="SequenceSamples is empty."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "SequenceSamples is empty; none of its channels ['ch0'] have any "
+            "samples."
+        ),
+    ):
         HamiltonianData(sample(seq), None, None, None, None)
 
     seq = seq_with_SLM("mw_global")
     seq_samples = sample(seq)
     with pytest.raises(
         ValueError,
-        match="Bases used in samples should be supported by device.",
+        match=re.escape(
+            "Bases used in samples must be supported by the device; samples "
+            "use ['XY'], but ['XY'] are not supported by device "
+            "'DigitalAnalogDevice', which supports "
+        )
+        + helpers.any_order_list("ground-rydberg", "digital")
+        + re.escape("."),
     ):
         HamiltonianData(
             seq_samples, seq.register, pulser.DigitalAnalogDevice, None, None
@@ -278,9 +308,9 @@ def test_from_sequence():
 
     with pytest.raises(
         TypeError,
-        match=(
-            "The provided sequence has to be "
-            "a valid pulser.Sequence instance."
+        match=re.escape(
+            "'sequence' must be an instance of 'Sequence', not "
+            "<class 'NoneType'>. Got None."
         ),
     ):
         HamiltonianData.from_sequence(None)
@@ -757,3 +787,42 @@ def test_dmm_detuning():
             noisy_samples["Local"]["ground-rydberg"][q_id]["det"],
             expected_noisy[q_id],
         )
+
+
+def test_dmm_noise_is_sampled_per_trajectory() -> None:
+    """Each trajectory must retain its own DMM draw in the noisy detuning."""
+    register = pulser.Register({"q0": (0, 0), "q1": (10, 0)})
+    device = replace(
+        AnalogDevice.to_virtual(),
+        dmm_objects=(DMM(),),
+        reusable_channels=True,
+    )
+    seq = pulser.Sequence(register, device)
+    seq.declare_channel("rydberg", "rydberg_global")
+    seq.add(pulser.Pulse.ConstantPulse(100, 1, 0, 0), "rydberg")
+    seq.config_detuning_map(
+        register.define_detuning_map({"q0": 1.0, "q1": 0.5}), "dmm_0"
+    )
+    seq.add_dmm_detuning(pulser.ConstantWaveform(100, -5), "dmm_0")
+
+    factors = [0.8, 1.1, 1.4]
+    draws = iter(factors)
+
+    def normal(loc: float, scale: float) -> float:
+        return next(draws) if scale == 0.2 else loc
+
+    with patch("numpy.random.normal", side_effect=normal):
+        ham = HamiltonianData.from_sequence(
+            seq,
+            noise_model=pulser.NoiseModel(dmm_sigma=0.2),
+            n_trajectories=len(factors),
+        )
+
+    samples = list(ham.noisy_samples)
+    assert len(samples) == len(factors)
+    for noisy_sample, factor in zip(samples, factors):
+        local = noisy_sample.samples.to_nested_dict(all_local=True)["Local"][
+            "ground-rydberg"
+        ]
+        np.testing.assert_allclose(local["q0"]["det"], -5 * factor)
+        np.testing.assert_allclose(local["q1"]["det"], -2.5 * factor)
