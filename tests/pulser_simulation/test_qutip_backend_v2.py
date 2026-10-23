@@ -260,6 +260,28 @@ def test_qutip_backend_v2_stochastic_noise():
     assert np.max(np.abs(occupation - occupation_old_api)) < 0.03
 
 
+def test_mcsolve_runs_all_trajectories():
+    # State preparation errors are the only random noise here, so identical
+    # noise trajectories are grouped, but each one must still get its own
+    # Monte Carlo trajectory
+    np.random.seed(123)
+    config = QutipConfig(
+        noise_model=pulser.NoiseModel(
+            state_prep_error=0.2, relaxation_rate=1.0
+        ),
+        n_trajectories=50,
+        observables=[Occupation(evaluation_times=[1.0])],
+    )
+    with patch("qutip.mcsolve", wraps=qutip.mcsolve) as mcsolve:
+        QutipBackendV2(sequence(), config=config).run()
+    # Fewer solver calls than trajectories, because of the grouping
+    assert mcsolve.call_count < config.n_trajectories
+    assert (
+        sum(call.kwargs["ntraj"] for call in mcsolve.call_args_list)
+        == config.n_trajectories
+    )
+
+
 def test_qutip_backend_v2_eval_times_rounding():
 
     # This was originally used to reproduce a bug where the legacy evaluation

@@ -787,3 +787,42 @@ def test_dmm_detuning():
             noisy_samples["Local"]["ground-rydberg"][q_id]["det"],
             expected_noisy[q_id],
         )
+
+
+def test_dmm_noise_is_sampled_per_trajectory() -> None:
+    """Each trajectory must retain its own DMM draw in the noisy detuning."""
+    register = pulser.Register({"q0": (0, 0), "q1": (10, 0)})
+    device = replace(
+        AnalogDevice.to_virtual(),
+        dmm_objects=(DMM(),),
+        reusable_channels=True,
+    )
+    seq = pulser.Sequence(register, device)
+    seq.declare_channel("rydberg", "rydberg_global")
+    seq.add(pulser.Pulse.ConstantPulse(100, 1, 0, 0), "rydberg")
+    seq.config_detuning_map(
+        register.define_detuning_map({"q0": 1.0, "q1": 0.5}), "dmm_0"
+    )
+    seq.add_dmm_detuning(pulser.ConstantWaveform(100, -5), "dmm_0")
+
+    factors = [0.8, 1.1, 1.4]
+    draws = iter(factors)
+
+    def normal(loc: float, scale: float) -> float:
+        return next(draws) if scale == 0.2 else loc
+
+    with patch("numpy.random.normal", side_effect=normal):
+        ham = HamiltonianData.from_sequence(
+            seq,
+            noise_model=pulser.NoiseModel(dmm_sigma=0.2),
+            n_trajectories=len(factors),
+        )
+
+    samples = list(ham.noisy_samples)
+    assert len(samples) == len(factors)
+    for noisy_sample, factor in zip(samples, factors):
+        local = noisy_sample.samples.to_nested_dict(all_local=True)["Local"][
+            "ground-rydberg"
+        ]
+        np.testing.assert_allclose(local["q0"]["det"], -5 * factor)
+        np.testing.assert_allclose(local["q1"]["det"], -2.5 * factor)
