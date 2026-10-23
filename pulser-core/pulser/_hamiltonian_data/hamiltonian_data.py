@@ -851,6 +851,7 @@ class HamiltonianData:
                 amp_fluctuations = {}
                 det_fluctuations = {}
                 det_phases = {}
+                dmm_det_fluctuation = {}
                 register: BaseRegister = self._register
                 if (
                     "SPAM" in self.noise_model.noise_types
