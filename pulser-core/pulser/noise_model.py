@@ -249,6 +249,9 @@ class NoiseModel:
       and :math:`w` is the gaussian waist (`detuning_map_spot_waist`) of each
       detuning spot, which are assumed to be the same.
 
+    DMM channels do not receive Doppler, laser amplitude or laser detuning
+    noise. Their intensity fluctuations are controlled by ``dmm_sigma``.
+
     Args:
         runs: When reconstructing the Hamiltonian from random noise is
             necessary, this determines how many times that happens. Not
