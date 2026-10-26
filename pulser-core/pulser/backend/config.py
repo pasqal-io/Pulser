@@ -25,6 +25,7 @@ from typing import (
     ClassVar,
     Generic,
     Literal,
+    Self,
     Sequence,
     SupportsFloat,
     Type,
@@ -50,9 +51,6 @@ DEFAULT_N_TRAJECTORIES = 40
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 
 StateType = TypeVar("StateType", bound=State)
-
-# TODO: Replace with built-in Self when python >= 3.11
-Self = TypeVar("Self", bound="BackendConfig")
 
 
 class BackendConfig:

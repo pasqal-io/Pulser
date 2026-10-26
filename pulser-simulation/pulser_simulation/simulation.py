@@ -935,8 +935,12 @@ class QutipEmulator:
                     )
             self._current_hamiltonian = ham
             traj_nb += reps
-            # Yield CoherentResults instance from sequence with added noise:
-            yield self._run_solver(ham, progress_bar, **options), reps
+            # Yield CoherentResults instance from sequence with added noise,
+            # with one Monte Carlo trajectory per repetition
+            res = self._run_solver(
+                ham, progress_bar, mcsolve_ntraj=reps, **options
+            )
+            yield res, reps
 
     def draw(
         self,
