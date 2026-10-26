@@ -454,7 +454,13 @@ def test_legacy_noise_model(noise_model_factory):
         dict_re_noise_model.pop("runs")
     assert dict_legacy == dict_re_noise_model
 
-    with pytest.raises(TypeError, match="must be given as a string"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "The serialized noise model must be given as a string. Instead, "
+            f"got object of type <class 'dict'>. Got {ser_noise_model_obj!r}."
+        ),
+    ):
         NoiseModel.from_abstract_repr(ser_noise_model_obj)
 
     ser_noise_model_obj["noise_types"].append("foo")
@@ -630,48 +636,56 @@ class TestDevice:
                     assert "max_limiting_amp" in ch_dict["eom_config"]
                     ch_dict["eom_config"]["max_limiting_amp"] = 0.0
                     break
+            eom_msg = (
+                "RydbergEOM deserialization failed for channel "
+                f"{ch_dict['id']!r}."
+            )
             prev_err = check_error_raised(
                 json.dumps(bad_eom_dev),
                 AbstractReprError,
-                "RydbergEOM deserialization failed.",
+                eom_msg,
                 Device.from_abstract_repr,
             )
             assert isinstance(prev_err.__cause__, ValueError)
             prev_err = check_error_raised(
                 json.dumps(bad_eom_dev),
                 AbstractReprError,
-                "RydbergEOM deserialization failed.",
+                eom_msg,
                 VirtualDevice.from_abstract_repr,
             )
             assert isinstance(prev_err.__cause__, ValueError)
             prev_err = check_error_raised(
                 json.dumps(bad_eom_dev),
                 AbstractReprError,
-                "RydbergEOM deserialization failed.",
+                eom_msg,
             )
             assert isinstance(prev_err.__cause__, ValueError)
 
         # AbstractReprError from ValueError in channel creation
         bad_ch_dev1 = deepcopy(abstract_device)
         bad_ch_dev1["channels"][0]["min_duration"] = -1
+        ch_msg = (
+            "Channel deserialization failed for channel "
+            f"{abstract_device['channels'][0]['id']!r}."
+        )
         prev_err = check_error_raised(
             json.dumps(bad_ch_dev1),
             AbstractReprError,
-            "Channel deserialization failed.",
+            ch_msg,
             Device.from_abstract_repr,
         )
         assert isinstance(prev_err.__cause__, ValueError)
         prev_err = check_error_raised(
             json.dumps(bad_ch_dev1),
             AbstractReprError,
-            "Channel deserialization failed.",
+            ch_msg,
             VirtualDevice.from_abstract_repr,
         )
         assert isinstance(prev_err.__cause__, ValueError)
         prev_err = check_error_raised(
             json.dumps(bad_ch_dev1),
             AbstractReprError,
-            "Channel deserialization failed.",
+            ch_msg,
         )
         assert isinstance(prev_err.__cause__, ValueError)
 
@@ -681,21 +695,21 @@ class TestDevice:
         prev_err = check_error_raised(
             json.dumps(bad_ch_dev2),
             AbstractReprError,
-            "Channel deserialization failed.",
+            ch_msg,
             Device.from_abstract_repr,
         )
         assert isinstance(prev_err.__cause__, NotImplementedError)
         prev_err = check_error_raised(
             json.dumps(bad_ch_dev2),
             AbstractReprError,
-            "Channel deserialization failed.",
+            ch_msg,
             VirtualDevice.from_abstract_repr,
         )
         assert isinstance(prev_err.__cause__, NotImplementedError)
         prev_err = check_error_raised(
             json.dumps(bad_ch_dev2),
             AbstractReprError,
-            "Channel deserialization failed.",
+            ch_msg,
         )
         assert isinstance(prev_err.__cause__, NotImplementedError)
 
@@ -705,48 +719,66 @@ class TestDevice:
             # Identical coords fail
             bad_layout_obj = {"coordinates": [[0, 0], [0.0, 0.0]]}
             bad_layout_dev["pre_calibrated_layouts"] = [bad_layout_obj]
+            layout_msg = (
+                "Register layout deserialization failed; got coordinates "
+                "[[0, 0], [0.0, 0.0]]."
+            )
             prev_err = check_error_raised(
                 json.dumps(bad_layout_dev),
                 AbstractReprError,
-                "Register layout deserialization failed.",
+                layout_msg,
                 Device.from_abstract_repr,
             )
             assert isinstance(prev_err.__cause__, ValueError)
             prev_err = check_error_raised(
                 json.dumps(bad_layout_dev),
                 AbstractReprError,
-                "Register layout deserialization failed.",
+                layout_msg,
                 VirtualDevice.from_abstract_repr,
             )
             assert isinstance(prev_err.__cause__, ValueError)
             prev_err = check_error_raised(
                 json.dumps(bad_layout_dev),
                 AbstractReprError,
-                "Register layout deserialization failed.",
+                layout_msg,
+            )
+            assert isinstance(prev_err.__cause__, ValueError)
+            # The layout's slug is reported when it has one
+            bad_layout_obj["slug"] = "bad_layout"
+            prev_err = check_error_raised(
+                json.dumps(bad_layout_dev),
+                AbstractReprError,
+                "Register layout deserialization failed; got coordinates "
+                "[[0, 0], [0.0, 0.0]] for layout 'bad_layout'.",
+                Device.from_abstract_repr,
             )
             assert isinstance(prev_err.__cause__, ValueError)
 
         # AbstractReprError from ValueError in device init
         bad_dev = abstract_device.copy()
         bad_dev["min_atom_distance"] = -1
+        dev_msg = (
+            "Device deserialization failed for device "
+            f"{abstract_device['name']!r}."
+        )
         prev_err = check_error_raised(
             json.dumps(bad_dev),
             AbstractReprError,
-            "Device deserialization failed.",
+            dev_msg,
             Device.from_abstract_repr,
         )
         assert isinstance(prev_err.__cause__, ValueError)
         prev_err = check_error_raised(
             json.dumps(bad_dev),
             AbstractReprError,
-            "Device deserialization failed.",
+            dev_msg,
             VirtualDevice.from_abstract_repr,
         )
         assert isinstance(prev_err.__cause__, ValueError)
         prev_err = check_error_raised(
             json.dumps(bad_dev),
             AbstractReprError,
-            "Device deserialization failed.",
+            dev_msg,
         )
         assert isinstance(prev_err.__cause__, ValueError)
 
@@ -1106,10 +1138,22 @@ class TestSerialization:
         ):
             abstract_repr("FakeWaveform", 100, 1)
 
-        with pytest.raises(ValueError, match="Not enough arguments"):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Not enough arguments given for 'ConstantWaveform' (expected "
+                "2, got 1). Got arguments (1000,)."
+            ),
+        ):
             abstract_repr("ConstantWaveform", 1000)
 
-        with pytest.raises(ValueError, match="Too many positional arguments"):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Too many positional arguments given for 'ConstantWaveform' "
+                "(expected 2, got 3). Got arguments (1000, 1, 4)."
+            ),
+        ):
             abstract_repr("ConstantWaveform", 1000, 1, 4)
 
         with pytest.raises(ValueError, match="'foo' is not in the signature"):
@@ -1145,15 +1189,17 @@ class TestSerialization:
                 1000, [0, 1, 0], extrapolate=False
             )._to_abstract_repr()
 
+        bad_defaults = dict(
+            target_atom=1, amps=[-np.pi, 2 * np.pi], duration=200
+        )
         with pytest.raises(
             ValueError,
-            match="The given 'defaults' produce an invalid sequence.",
+            match=re.escape(
+                "The given 'defaults' produce an invalid sequence; got "
+                f"{bad_defaults!r}."
+            ),
         ):
-            sequence.to_abstract_repr(
-                target_atom=1,
-                amps=[-np.pi, 2 * np.pi],
-                duration=200,
-            )
+            sequence.to_abstract_repr(**bad_defaults)
 
     @pytest.mark.parametrize(
         "call",
@@ -1378,13 +1424,19 @@ class TestSerialization:
 
         with pytest.raises(
             ValueError,
-            match="The given 'defaults' produce an invalid sequence.",
+            match=re.escape(
+                "The given 'defaults' produce an invalid sequence; got "
+                "{'var': 0}."
+            ),
         ):
             seq.to_abstract_repr(var=0)
 
         with pytest.raises(
             ValueError,
-            match="The given 'defaults' produce an invalid sequence.",
+            match=re.escape(
+                "The given 'defaults' produce an invalid sequence; got "
+                "{'var': 0, 'qubits': {'q1': 0}}."
+            ),
         ):
             seq.to_abstract_repr(var=0, qubits={"q1": 0})
 
@@ -3067,7 +3119,10 @@ class TestDeserialization:
 
         with pytest.raises(
             AbstractReprError,
-            match="The object does not encode a known waveform.",
+            match=re.escape(
+                "The object does not encode a known waveform; got kind "
+                "'gaussian'."
+            ),
         ):
             with patch(
                 "pulser.json.abstract_repr.deserializer.validate_abstract_repr"

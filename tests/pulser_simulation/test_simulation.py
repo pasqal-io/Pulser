@@ -21,6 +21,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 import qutip
+from tests.constants import C3_LEVEL_70
 
 import pulser_simulation.simulation as sim_module
 from pulser import Pulse, Register, Sequence
@@ -327,11 +328,23 @@ def test_building_basis_and_projection_operators(
             == qutip.basis(dim, 3) * qutip.basis(dim, 0).dag()
         )
     # Check local operator building method:
-    with pytest.raises(ValueError, match="Duplicate atom"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Duplicate atom ids in argument list; ['target'] appear more than "
+            "once in ['target', 'target']."
+        ),
+    ):
         sim.build_operator([("sigma_gg", ["target", "target"])])
     with pytest.raises(ValueError, match="not a valid operator"):
         sim.build_operator([("wrong", ["target"])])
-    with pytest.raises(ValueError, match="Invalid qubit names: {'wrong'}"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Invalid qubit names; ['wrong'] not in ['control1', 'target', "
+            "'control2']."
+        ),
+    ):
         sim.build_operator([("sigma_gg", ["wrong"])])
 
     # Check building operator with one operator
@@ -1586,7 +1599,6 @@ def test_get_xy_hamiltonian_c3_value():
     MockDevice's Rydberg level (70).
     """
     assert MockDevice.rydberg_level == 70
-    c3_level_70 = 36288.3559282823
 
     simple_reg = Register.from_coordinates([[10, 0], [0, 0]], prefix="atom")
     detun = 1.0
@@ -1599,7 +1611,7 @@ def test_get_xy_hamiltonian_c3_value():
     simple_sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.03)
     simple_ham = simple_sim.get_hamiltonian(143)
     # |ud><du| term is C_3/r^3 - 2*detuning for any time, with r = 10 µm
-    assert np.isclose(simple_ham[1, 2], c3_level_70 / 10**3)
+    assert np.isclose(simple_ham[1, 2], C3_LEVEL_70 / 10**3)
 
 
 def test_run_xy():
