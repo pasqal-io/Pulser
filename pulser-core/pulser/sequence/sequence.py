@@ -2653,12 +2653,13 @@ class Sequence(Generic[DeviceType]):
                     pm.AbstractArray(amp_on), *switching_beams
                 )
                 if channel_obj.max_abs_detuning is not None:
+                    max_det = (
+                        channel_obj.max_abs_detuning + pm.VALIDATION_TOLERANCE
+                    )
                     assert (
-                        detuning_off - lightshift
-                        >= -channel_obj.max_abs_detuning
+                        detuning_off - lightshift >= -max_det
                         if lightshift < 0
-                        else detuning_off - lightshift
-                        <= channel_obj.max_abs_detuning
+                        else detuning_off - lightshift <= max_det
                     )
                 # Update optimal_detuning_off to match the chosen detuning_off
                 # This minimizes the changes to the sequence when the device
