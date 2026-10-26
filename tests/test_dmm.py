@@ -531,4 +531,5 @@ def test_dmm_bottom_detuning_float_tolerance(n_traps, monkeypatch):
 
 
 def test_detuning_map_weights_float_tolerance():
-    DetuningMap([(0, 0), (10, 0)], [1 + 1e-15, -1e-17])
+    det_map = DetuningMap([(0, 0), (10, 0)], [1 + 1e-15, -1e-17])
+    assert det_map.weights == (1.0, 0.0)

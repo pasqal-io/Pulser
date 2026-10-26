@@ -85,7 +85,10 @@ class WeightMap(Traps, RegDrawer):
                 "A WeightMap should have at least one non-zero weight.",
                 stacklevel=3,
             )
-        object.__setattr__(self, "weights", tuple(weights))
+        # Clip the weights that are within tolerance of the limits
+        object.__setattr__(
+            self, "weights", tuple(np.clip(weights_arr, 0, 1).tolist())
+        )
 
     @property
     def trap_coordinates(self) -> np.ndarray:
