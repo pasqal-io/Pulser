@@ -17,7 +17,6 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass, fields
 from enum import Flag
-from itertools import chain
 from typing import Any, Literal, cast, overload
 
 import numpy as np
@@ -74,8 +73,8 @@ class BaseEOM(_BaseEOMDefaults, _BaseEOM):
 
     Args:
         mod_bandwidth: The EOM modulation bandwidth (in MHz), following
-            Pulser's non-standard definition (2x the -3dB bandwidth, or the
-            frequency at 75% amplitude attenuation).
+            Pulser's non-standard definition (the frequency at 75% amplitude
+            attenuation).
         custom_buffer_time: A custom wait time to enforce during EOM buffers.
     """
 
@@ -148,8 +147,8 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         intermediate_detuning: The detuning between the two beams, in rad/µs.
         controlled_beams: The beams that can be switched on/off with an EOM.
         mod_bandwidth: The EOM modulation bandwidth (in MHz), following
-            Pulser's non-standard definition (2x the -3dB bandwidth, or the
-            frequency at 75% amplitude attenuation).
+            Pulser's non-standard definition (the frequency at 75% amplitude
+            attenuation).
         custom_buffer_time: A custom wait time to enforce during EOM buffers.
         multiple_beam_control: Whether both EOMs can be used simultaneously.
             Ignored when only one beam can be controlled.
@@ -175,8 +174,8 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         if not isinstance(self.controlled_beams, tuple):
             if not isinstance(self.controlled_beams, list):
                 raise TypeError(
-                    "The 'controlled_beams' must be provided as a tuple "
-                    "or list."
+                    "The 'controlled_beams' must be provided as a tuple or "
+                    f"list, not {type(self.controlled_beams)}."
                 )
             # Convert list to tuple to keep RydbergEOM hashable
             object.__setattr__(
@@ -186,14 +185,21 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
             raise ValueError(
                 "There must be at least one beam in 'controlled_beams'."
             )
-        for beam in chain((self.limiting_beam,), self.controlled_beams):
-            if not (
-                isinstance(beam, RydbergBeam) and beam in tuple(RydbergBeam)
-            ):
-                raise TypeError(
-                    "Every beam must be one of options of the `RydbergBeam`"
-                    f" enumeration, not {self.limiting_beam}."
-                )
+        beams_by_attr: dict[str, tuple[RydbergBeam, ...]] = {
+            "limiting_beam": (self.limiting_beam,),
+            "controlled_beams": self.controlled_beams,
+        }
+        for attr, beams in beams_by_attr.items():
+            for beam in beams:
+                if not (
+                    isinstance(beam, RydbergBeam)
+                    and beam in tuple(RydbergBeam)
+                ):
+                    raise TypeError(
+                        "Every beam must be one of options of the"
+                        f" `RydbergBeam` enumeration. Got {beam} for"
+                        f" attribute {attr}."
+                    )
 
     @property
     def _switching_beams_combos(self) -> list[tuple[RydbergBeam, ...]]:

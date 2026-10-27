@@ -17,7 +17,16 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from typing import TYPE_CHECKING, Any, Literal, Type, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 import jsonschema
 import jsonschema.exceptions
@@ -69,6 +78,7 @@ if TYPE_CHECKING:
 VARIABLE_TYPE_MAP = {"int": int, "float": float}
 
 ExpReturnType = Union[int, float, list, ParamObj]
+T = TypeVar("T", bound=RegisterLayout)
 
 
 @overload
@@ -205,7 +215,10 @@ def _deserialize_waveform(obj: dict, vars: dict) -> Waveform:
             samples=_deserialize_parameter(obj["samples"], vars)
         )
 
-    raise AbstractReprError("The object does not encode a known waveform.")
+    raise AbstractReprError(
+        "The object does not encode a known waveform; got kind "
+        f"{obj['kind']!r}."
+    )
 
 
 def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
@@ -368,7 +381,8 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
                 )
             except ValueError as e:
                 raise AbstractReprError(
-                    "RydbergEOM deserialization failed."
+                    "RydbergEOM deserialization failed for channel "
+                    f"{obj.get('id')!r}."
                 ) from e
     elif obj["basis"] == "digital":
         channel_cls = Raman
@@ -385,7 +399,9 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
     try:
         return channel_cls(**params)
     except (ValueError, NotImplementedError) as e:
-        raise AbstractReprError("Channel deserialization failed.") from e
+        raise AbstractReprError(
+            f"Channel deserialization failed for channel {obj.get('id')!r}."
+        ) from e
 
 
 def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
@@ -394,8 +410,11 @@ def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
             layout_obj["coordinates"], slug=layout_obj.get("slug")
         )
     except ValueError as e:
+        slug = layout_obj.get("slug")
+        for_layout = f" for layout {slug!r}" if slug else ""
         raise AbstractReprError(
-            "Register layout deserialization failed."
+            "Register layout deserialization failed; got coordinates "
+            f"{layout_obj['coordinates']}{for_layout}."
         ) from e
 
     special_layout = (
@@ -565,7 +584,9 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     try:
         return device_cls(**params)
     except (ValueError, TypeError) as e:
-        raise AbstractReprError("Device deserialization failed.") from e
+        raise AbstractReprError(
+            f"Device deserialization failed for device {obj.get('name')!r}."
+        ) from e
 
 
 def _deserialize_det_map(ser_det_map: dict) -> DetuningMap:
@@ -702,18 +723,42 @@ def deserialize_device(obj_str: str) -> Device | VirtualDevice:
         raise DeserializeDeviceError from e
 
 
-def deserialize_abstract_layout(obj_str: str) -> RegisterLayout:
+@overload
+def deserialize_abstract_layout(
+    obj_str: str, matching_type: None = None
+) -> RegisterLayout:
+    pass
+
+
+@overload
+def deserialize_abstract_layout(obj_str: str, matching_type: Type[T]) -> T:
+    pass
+
+
+def deserialize_abstract_layout(
+    obj_str: str, matching_type: Type[RegisterLayout] | None = None
+) -> RegisterLayout:
     """Deserialize a layout from an abstract JSON object.
 
     Args:
         obj_str: the JSON string representing the layout encoded
             in the abstract JSON format.
+        matching_type: An optional specific RegisterLayout type that the
+            deserialized layout must match. When omitted, no type check is
+            performed.
 
     Returns:
         The RegisterLayout instance.
     """
     validate_abstract_repr(obj_str, "layout")
-    return _deserialize_layout(json.loads(obj_str))
+    layout = _deserialize_layout(json.loads(obj_str))
+    if matching_type is not None and not isinstance(layout, matching_type):
+        raise ValueError(
+            f"The deserialized layout has type '{type(layout).__name__}', "
+            f"which does not match the requested type "
+            f"'{matching_type.__name__}'. Got serialized layout {obj_str}."
+        )
+    return layout
 
 
 @overload

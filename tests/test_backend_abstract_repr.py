@@ -1,4 +1,5 @@
 import json
+import re
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -289,7 +290,10 @@ class TestConfigRepr:
     def test_config_not_from_str(self):
         with pytest.raises(
             TypeError,
-            match="The serialized EmulationConfig must be given as a string. ",
+            match=re.escape(
+                "The serialized EmulationConfig must be given as a string. "
+                "Instead, got object of type <class 'float'>. Got 1.0."
+            ),
         ):
             EmulationConfig.from_abstract_repr(1.0)
 
@@ -422,6 +426,13 @@ class TestStateRepr:
         state = StateRepr.from_state_amplitudes(
             eigenstates=basis, amplitudes=amplitudes
         )
+        assert state.n_qudits == 5
+        # n_qudits is stored per instance
+        # creating another state doesn't change it
+        other_state = StateRepr.from_state_amplitudes(
+            eigenstates=basis, amplitudes={"00": 1.0}
+        )
+        assert other_state.n_qudits == 2
         assert state.n_qudits == 5
 
     def test_state_repr_invalid_eigenstates(self):

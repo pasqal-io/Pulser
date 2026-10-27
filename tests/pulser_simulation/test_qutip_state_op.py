@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import itertools
 import json
 import re
 
@@ -55,11 +56,17 @@ class TestQutipState:
             QutipState(qutip.basis(2, 0), eigenstates=["ground", "rydberg"])
         with pytest.raises(ValueError, match="can't contain repeated entries"):
             QutipState(qutip.basis(2, 0), eigenstates=["r", "g", "r"])
+        # A set, so its printed order varies; build the text from the same
+        # object
+        bad_eigenstates = {"r", "g"}
         with pytest.raises(
             TypeError,
-            match="must be a 'collections.Sequence'",
+            match=re.escape(
+                "'eigenstates' must be a 'collections.Sequence' (list or "
+                f"tuple), not set. Got {bad_eigenstates!r}."
+            ),
         ):
-            QutipState(qutip.basis(2, 0), eigenstates={"r", "g"})
+            QutipState(qutip.basis(2, 0), eigenstates=bad_eigenstates)
         with pytest.raises(TypeError, match="must be a qutip.Qobj"):
             QutipState(np.arange(16), eigenstates=["r", "g"])
         with pytest.raises(
@@ -140,8 +147,15 @@ class TestQutipState:
         assert dm_g.overlap(ket_plus) == ket_plus.overlap(dm_g)
         assert np.isclose(dm_g.overlap(ket_plus), 0.5)
 
-        with pytest.raises(TypeError, match="expects another 'QutipState'"):
-            dm_g.overlap(ket_r.to_qobj())
+        ket_r_qobj = ket_r.to_qobj()
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                "'QutipState.overlap()' expects another 'QutipState', not "
+                f"{type(ket_r_qobj)}. Got {ket_r_qobj!r}."
+            ),
+        ):
+            dm_g.overlap(ket_r_qobj)
 
         with pytest.raises(
             ValueError,
@@ -351,13 +365,15 @@ class TestQutipOperator:
     @pytest.mark.parametrize("op_name", ["apply_to", "expect"])
     def test_errors_on_qutip_state(self, pauli_x, op_name):
         op = getattr(pauli_x, op_name)
+        qobj = qutip.basis(2, 0)
         with pytest.raises(
             TypeError,
             match=re.escape(
-                f"'QutipOperator.{op_name}()' expects a 'QutipState' instance"
+                f"'QutipOperator.{op_name}()' expects a 'QutipState' "
+                f"instance, not {type(qobj)}. Got {qobj!r}."
             ),
         ):
-            op(qutip.basis(2, 0))
+            op(qobj)
         err_msg = (
             f"Can't apply QutipOperator.{op_name}() between a QutipOperator "
             "with eigenstates ('r', 'g') and a QutipState with {}"
@@ -372,11 +388,14 @@ class TestQutipOperator:
             op(QutipState(qutip.basis(2, 0), eigenstates=("g", "r")))
 
     @pytest.mark.parametrize("op_name", ["__add__", "__matmul__"])
-    def test_errors_on_qutip_operator(self, pauli_x, op_name):
+    def test_errors_on_qutip_operator(self, pauli_x, op_name, ket_r):
         op = getattr(pauli_x, op_name)
         with pytest.raises(
             TypeError,
-            match=re.escape(f"'{op_name}' expects a 'QutipOperator' instance"),
+            match=re.escape(
+                f"'{op_name}' expects a 'QutipOperator' instance, not "
+                f"{type(ket_r)}. Got {ket_r!r}."
+            ),
         ):
             op(ket_r)
         err_msg = (
@@ -603,3 +622,60 @@ class TestQutipOperator:
                 QutipOperator(op.to_qobj(), eigenstates=op.eigenstates),
                 cls=AbstractReprEncoder,
             )
+
+    def test_from_pauli_string_matches_qutip(self):
+        rng = np.random.default_rng(1234)
+        amps = rng.normal(size=8) + 1j * rng.normal(size=8)
+        qobj = qutip.Qobj(amps / np.linalg.norm(amps), dims=[[2] * 3, [1]])
+        state = QutipState(qobj, eigenstates=("r", "g"))
+        # In the ("r", "g") basis, |r> = (1, 0)^T, so the Pauli matrices
+        # match qutip's
+        qutip_paulis = {
+            "I": qutip.qeye(2),
+            "X": qutip.sigmax(),
+            "Y": qutip.sigmay(),
+            "Z": qutip.sigmaz(),
+        }
+        for labels in itertools.product("IXYZ", repeat=3):
+            if set(labels) == {"I"}:
+                continue
+            op = QutipOperator.from_pauli_string(
+                eigenstates=("r", "g"),
+                n_qudits=3,
+                paulis={i: p for i, p in enumerate(labels) if p != "I"},
+            )
+            expected = qutip.tensor(*(qutip_paulis[p] for p in labels))
+            assert op.to_qobj() == expected
+            assert np.isclose(op.expect(state), qutip.expect(expected, qobj))
+
+    @pytest.mark.parametrize(
+        "eigenstates, amplitudes, pauli, expected",
+        [
+            # Descending energy order: Z = |r><r| - |g><g|
+            (("r", "g"), {"r": 1.0}, "Z", 1.0),
+            # Ascending energy order: Z = |0><0| - |1><1|
+            (("0", "1"), {"1": 1.0}, "Z", -1.0),
+            (("0", "1"), {"0": 1.0}, "Z", 1.0),
+            # Y = -i|e0><e1| + i|e1><e0| in both cases
+            (("r", "g"), {"r": 1.0, "g": 1.0j}, "Y", 1.0),
+            (("0", "1"), {"0": 1.0, "1": 1.0j}, "Y", 1.0),
+            (("r", "g"), {"r": 1.0, "g": 1.0}, "X", 1.0),
+            # The Pauli matrices act as zero on the leakage state
+            (("r", "g", "x"), {"r": 1.0, "g": 1.0}, "X", 1.0),
+            (("r", "g", "x"), {"x": 1.0}, "Z", 0.0),
+            (("r", "g", "x"), {"r": 1.0, "x": 1.0}, "Z", 0.5),
+        ],
+    )
+    def test_from_pauli_string_conventions(
+        self, eigenstates, amplitudes, pauli, expected
+    ):
+        state = QutipState.from_state_amplitudes(
+            eigenstates=eigenstates,
+            amplitudes={
+                k: v / np.sqrt(len(amplitudes)) for k, v in amplitudes.items()
+            },
+        )
+        op = QutipOperator.from_pauli_string(
+            eigenstates=eigenstates, n_qudits=1, paulis={0: pauli}
+        )
+        assert np.isclose(op.expect(state), expected)

@@ -81,18 +81,29 @@ def test_params():
         ("reusable_channels", "true", None),
         ("max_atom_num", 1e9, None),
         ("max_radial_distance", 100.4, None),
-        ("rydberg_level", 70.0, "Rydberg level has to be an int."),
+        (
+            "rydberg_level",
+            70.0,
+            re.escape(
+                "'rydberg_level' must be an instance of 'int', not "
+                "<class 'float'>. Got 70.0."
+            ),
+        ),
         (
             "channel_ids",
             {"fake_channel"},
-            "When defined, 'channel_ids' must be a tuple or a list "
-            "of strings.",
+            re.escape(
+                "When defined, 'channel_ids' must be a tuple or a list "
+                "of strings, not <class 'set'>. Got: {'fake_channel'}."
+            ),
         ),
         (
             "channel_ids",
             ("ch1", 2),
-            "When defined, 'channel_ids' must be a tuple or a list "
-            "of strings.",
+            re.escape(
+                "When defined, 'channel_ids' must be a tuple or a list "
+                "of strings, not <class 'tuple'>. Got: ('ch1', 2)."
+            ),
         ),
         (
             "channel_objects",
@@ -110,7 +121,10 @@ def test_params():
 )
 def test_post_init_type_checks(test_params, param, value, msg):
     test_params[param] = value
-    error_msg = msg or f"{param} must be of type"
+    error_msg = msg or (
+        rf"{param} must be of type '\w+', not '\w+'\. "
+        rf"Got {re.escape(repr(value))}\."
+    )
     with pytest.raises(TypeError, match=error_msg):
         VirtualDevice(**test_params)
 
@@ -123,8 +137,16 @@ def test_post_init_type_checks(test_params, param, value, msg):
             1,
             re.escape("'dimensions' must be one of (2, 3), not 1."),
         ),
-        ("rydberg_level", 49, "Rydberg level should be between 50 and 100."),
-        ("rydberg_level", 101, "Rydberg level should be between 50 and 100."),
+        (
+            "rydberg_level",
+            49,
+            re.escape("Rydberg level should be between 50 and 100, not 49."),
+        ),
+        (
+            "rydberg_level",
+            101,
+            re.escape("Rydberg level should be between 50 and 100, not 101."),
+        ),
         (
             "min_atom_distance",
             -0.001,
@@ -183,13 +205,21 @@ def test_post_init_type_checks(test_params, param, value, msg):
         (
             "channel_ids",
             ("rydberg_global", "rydberg_global"),
-            "When defined, 'channel_ids' can't have repeated elements.",
+            re.escape(
+                "When defined, 'channel_ids' can't have repeated elements; "
+                "got repeated ids ['rydberg_global'] in "
+                "('rydberg_global', 'rydberg_global')."
+            ),
         ),
         (
             "channel_ids",
             ("rydberg_global",),
-            "When defined, the number of channel IDs must"
-            " match the number of channel objects.",
+            re.escape(
+                "When defined, the number of channel IDs must"
+                " match the number of channel objects; got "
+                "1 'channel_ids' vs. 0 'channel_objects'. channel_ids: "
+                "('rydberg_global',). channel_objects: ()."
+            ),
         ),
         ("max_sequence_duration", 0, None),
         ("max_runs", 0, None),
@@ -329,15 +359,27 @@ def test_device_specs(device):
                 dev, "max_layout_traps", "Maximal number of traps: {}"
             )
             + f" - Minimum layout filling fraction: {dev.min_layout_filling}\n"
+            + check_none_fn(
+                dev,
+                "optimal_layout_filling",
+                "Optimal layout filling fraction: {}",
+            )
             + f" - Maximum layout filling fraction: {dev.max_layout_filling}\n"
         )
 
         device_str = (
             "\nDevice parameters:\n"
             + f" - Rydberg level: {dev.rydberg_level}\n"
-            + f" - Ising interaction coefficient: {dev.interaction_coeff}\n"
+            + (
+                r" - Ising interaction coefficient :math:`(C_6/\hbar)`: "
+                + f"{dev.interaction_coeff:.4g}"
+                + " (rad/µs) :math:`\\cdot` µm^6\n"
+            )
             + check_none_fn(
-                dev, "interaction_coeff_xy", "XY interaction coefficient: {}"
+                dev,
+                "interaction_coeff_xy",
+                r"XY interaction coefficient :math:`(C_3/\hbar)`: {:.4g}"
+                + " (rad/µs) :math:`\\cdot` µm^3",
             )
             + yes_no_fn(dev, "reusable_channels", "Channels can be reused")
             + f" - Supported bases: {', '.join(dev.supported_bases)}\n"
@@ -396,7 +438,13 @@ def test_change_rydberg_level(helpers):
     # Both interaction coefficients follow the new Rydberg level
     assert dev.interaction_coeff == c6_dict[60]
     assert dev.interaction_coeff_xy == c3_dict[60]
-    with pytest.raises(TypeError, match="Rydberg level has to be an int."):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "'rydberg_level' must be an instance of 'int', not "
+            "<class 'float'>. Got 70.5."
+        ),
+    ):
         dev.change_rydberg_level(70.5)
     with helpers.raises_all(
         [
@@ -405,7 +453,9 @@ def test_change_rydberg_level(helpers):
             RydbergLevelError,
             InvalidSequenceError,
         ],
-        match="Rydberg level should be between 50 and 100.",
+        match=re.escape(
+            "Rydberg level should be between 50 and 100, not 110."
+        ),
     ):
         dev.change_rydberg_level(110)
     dev.change_rydberg_level(70)
@@ -502,7 +552,14 @@ def test_validate_register(helpers, with_diff):
     ):
         DigitalAnalogDevice.validate_register(Register.square(50, prefix="q"))
 
-    with pytest.raises(TypeError):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "'register' must be an instance of 'Register' or "
+            f"'Register3D', not {type(bad_coords1)}. Got register "
+            f"{bad_coords1!r}."
+        ),
+    ):
         DigitalAnalogDevice.validate_register(bad_coords1)
     with helpers.raises_all(
         [ValueError, PulserValueError, InvalidSequenceError, RadiusError],
@@ -520,7 +577,9 @@ def test_validate_register(helpers, with_diff):
             DimensionError,
             DimensionPositionsTooHighError,
         ],
-        match="at most 2D vectors",
+        match=re.escape(
+            "All qubit positions must be at most 2D vectors, not 3D."
+        ),
     ):
         DigitalAnalogDevice.validate_register(
             Register3D.from_coordinates(bad_coords2, prefix="q")
@@ -552,10 +611,15 @@ def test_validate_register(helpers, with_diff):
 
 def test_validate_layout(helpers):
     coords = [(100, 0), (-100, 0)]
-    with pytest.raises(TypeError):
-        DigitalAnalogDevice.validate_layout(
-            Register.from_coordinates(coords, prefix="q")
-        )
+    not_a_layout = Register.from_coordinates(coords, prefix="q")
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "'layout' must be an instance of 'RegisterLayout', not "
+            f"{type(not_a_layout)}. Got {not_a_layout!r}."
+        ),
+    ):
+        DigitalAnalogDevice.validate_layout(not_a_layout)
     with helpers.raises_all(
         [ValueError, PulserValueError, InvalidSequenceError, RadiusError],
         match="at most 50 μm away from the center",
@@ -570,7 +634,10 @@ def test_validate_layout(helpers):
             DimensionError,
             DimensionTooHighError,
         ],
-        match="at most 2 dimensions",
+        match=re.escape(
+            "The device supports register layouts of at most 2 dimensions, "
+            "not 3."
+        ),
     ):
         coords = [(-10, 4, 0), (0, 0, 0)]
         DigitalAnalogDevice.validate_layout(RegisterLayout(coords))
@@ -691,14 +758,15 @@ def test_layout_filling_min_traps():
 
 
 def test_layout_filling_fail():
+    register = Register.square(5, prefix="q")
     with pytest.raises(
         TypeError,
-        match="'validate_layout_filling' can only be called for"
-        " registers with a register layout.",
+        match=re.escape(
+            "'validate_layout_filling' can only be called for"
+            " registers with a register layout."
+        ),
     ):
-        DigitalAnalogDevice.validate_layout_filling(
-            Register.square(5, prefix="q")
-        )
+        DigitalAnalogDevice.validate_layout_filling(register)
 
 
 def test_calibrated_layouts(helpers):
@@ -735,7 +803,11 @@ def test_calibrated_layouts(helpers):
     }
     with pytest.raises(
         TypeError,
-        match="The register to check must be of type ",
+        match=re.escape(
+            "'register' must be an instance of 'BaseRegister' or "
+            f"'MappableRegister', not {type(layout100)}. Got register "
+            f"{layout100!r}."
+        ),
     ):
         TestDevice.register_is_from_calibrated_layout(layout100)
     assert TestDevice.is_calibrated_layout(layout100)
@@ -861,9 +933,10 @@ def test_dmm_channels():
     assert device.dmm_channels["dmm_0"] == dmm
     with pytest.raises(
         ValueError,
-        match=(
+        match=re.escape(
             "When defined, the names of channel IDs must be different"
-            " than the names of DMM channels 'dmm_0', 'dmm_1', ... ."
+            " than the names of DMM channels ['dmm_0']; ['dmm_0'] is a "
+            "wrong ID, among ('dmm_0',)."
         ),
     ):
         device = replace(
@@ -894,3 +967,14 @@ def test_noise_model_and_default_noise_model_mutually_exclusive():
         match="Cannot specify both 'noise_model' and 'default_noise_model'",
     ):
         replace(MockDevice, noise_model=nm, default_noise_model=nm)
+
+
+def test_validate_register_radial_float_tolerance():
+    # Atoms placed exactly on the maximal radial distance must pass
+    r = AnalogDevice.max_radial_distance
+    angle = 0.047147463535614706  # Has norm > r without tolerance
+    reg = Register(
+        {"q0": [r * np.cos(angle), r * np.sin(angle)], "q1": [0, 0]}
+    )
+    assert np.linalg.norm(reg.qubits["q0"].as_array()) > r
+    AnalogDevice.validate_register(reg)

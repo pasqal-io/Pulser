@@ -23,7 +23,6 @@ from typing import Iterator, List, Literal, NamedTuple, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
-from scipy.spatial.distance import cdist
 
 import pulser.math as pm
 from pulser._hamiltonian_data.basis_data import BasisData
@@ -172,21 +171,10 @@ def _generate_detuning_fluctuations(
 def _distances(register: BaseRegister) -> pm.AbstractArray:
     r"""Distances between each qubits (in :math:`\mu m`)."""
     positions = list(register.qubits.values())
-    if not positions[0].is_tensor:
-        return pm.AbstractArray(
-            np.round(
-                cast(
-                    np.ndarray,
-                    cdist(positions, positions, metric="euclidean"),
-                ),
-                COORD_PRECISION,
-            ),
-        )
-    else:
-        ten = pm.torch.stack(
-            [cast(pm.torch.Tensor, x._array) for x in positions]
-        )
-        return pm.AbstractArray(pm.torch.cdist(ten, ten))
+    distances = pm.cdist(positions, positions)
+    if distances.is_tensor:
+        return distances
+    return pm.round(distances, COORD_PRECISION)
 
 
 class HamiltonianData:
@@ -217,31 +205,48 @@ class HamiltonianData:
         # Initializing the samples obj
         if not isinstance(samples, SequenceSamples):
             raise TypeError(
-                "The provided sequence has to be a valid "
-                "SequenceSamples instance."
+                "The provided samples must be an instance of "
+                f"'SequenceSamples', not {type(samples)}. Got {samples}."
             )
         if samples.max_duration == 0:
-            raise ValueError("SequenceSamples is empty.")
+            raise ValueError(
+                "SequenceSamples is empty; none of its channels "
+                f"{samples.channels} have any samples."
+            )
         # Check compatibility of register and device
         if not isinstance(device, BaseDevice):
-            raise TypeError("The device must be a Device or BaseDevice.")
+            raise TypeError(
+                "'device' must be an instance of 'BaseDevice', not "
+                f"{type(device)}. Got {device}."
+            )
         self._device = device
         self.device.validate_register(register)
         self._register = register
         # Check compatibility of samples and device:
         if samples._slm_mask.end > 0 and not self.device.supports_slm_mask:
             raise ValueError(
-                "Samples use SLM mask but device does not have one."
+                "Samples use an SLM mask but device "
+                f"{self.device.name!r} does not support one."
             )
         if not samples.used_bases <= self.device.supported_bases:
             raise ValueError(
-                "Bases used in samples should be supported by device."
+                "Bases used in samples must be supported by the device; "
+                f"samples use {list(samples.used_bases)}, but "
+                f"{list(samples.used_bases - self.device.supported_bases)} "
+                f"are not supported by device {self.device.name!r}, which "
+                f"supports {list(self.device.supported_bases)}."
             )
         # Check compatibility of masked samples and register
         if not samples._slm_mask.targets <= set(self.register.qubits.keys()):
+            # The mask targets are a set, so there is no caller order to keep
+            unknown_targets = samples._slm_mask.targets - set(
+                self.register.qubits.keys()
+            )
             raise ValueError(
-                "The ids of qubits targeted in SLM mask"
-                " should be defined in register."
+                "The ids of qubits targeted in the SLM mask must be defined "
+                "in the register; SLM mask targets "
+                f"{samples._slm_mask.targets}. Among them, {unknown_targets} "
+                f"not in {list(self.register.qubit_ids)}."
             )
 
         self._samples = self._delocalize_samples(samples)
@@ -281,12 +286,20 @@ class HamiltonianData:
             if samples._ch_objs[ch].addressing == "Local":
                 # Check that targets of Local Channels are defined
                 # in register
-                if not set().union(
+                targets = set().union(
                     *(slot.targets for slot in ch_samples.slots)
-                ) <= set(self.register.qubits.keys()):
+                )
+                if not targets <= set(self.register.qubits.keys()):
+                    # Slot targets are sets: there is no caller order to keep
+                    unknown_targets = targets - set(
+                        self.register.qubits.keys()
+                    )
                     raise ValueError(
-                        "The ids of qubits targeted in Local channels"
-                        " should be defined in register."
+                        "The ids of qubits targeted by Local channel "
+                        f"{ch!r} must be defined in the register; "
+                        f"Channel targets {targets}. Among them, "
+                        f"{unknown_targets} "
+                        f"not in {list(self.register.qubit_ids)}."
                     )
                 samples_list.append(ch_samples)
             else:
@@ -359,8 +372,8 @@ class HamiltonianData:
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
-                "The provided sequence has to be a valid "
-                "pulser.Sequence instance."
+                "'sequence' must be an instance of 'Sequence', not "
+                f"{type(sequence)}. Got {sequence}."
             )
         if sequence.is_parametrized() or sequence.is_register_mappable():
             raise ValueError(
@@ -470,6 +483,8 @@ class HamiltonianData:
         if self.local_noises:
             for ch, ch_samples in self._samples.channel_samples.items():
                 _ch_obj = self._samples._ch_objs[ch]
+                if isinstance(_ch_obj, DMM):
+                    continue
                 samples_dict = samples["Local"][_ch_obj.basis]
                 for slot in ch_samples.slots:
                     det_fluctuation = _generate_detuning_fluctuations(
@@ -838,6 +853,7 @@ class HamiltonianData:
                 amp_fluctuations = {}
                 det_fluctuations = {}
                 det_phases = {}
+                dmm_det_fluctuation = {}
                 register: BaseRegister = self._register
                 if (
                     "SPAM" in self.noise_model.noise_types
@@ -860,6 +876,21 @@ class HamiltonianData:
                     doppler_detune = {qid: 0.0 for qid in self._qid_index}
 
                 for ch in self._samples.channel_samples:
+                    if isinstance(self._samples._ch_objs[ch], DMM):
+                        amp_fluctuations[ch] = 1.0
+                        det_fluctuations[ch] = 0.0
+                        det_phases[ch] = np.array(0.0)
+                        dmm_det_fluctuation[ch] = (
+                            max(
+                                0,
+                                np.random.normal(
+                                    1.0, self.noise_model.dmm_sigma
+                                ),
+                            )
+                            if self.noise_model.dmm_sigma
+                            else 1.0
+                        )
+                        continue
                     amp_fluctuations[ch] = max(
                         0, np.random.normal(1.0, self.noise_model.amp_sigma)
                     )
@@ -877,15 +908,7 @@ class HamiltonianData:
                     else:
                         det_phases[ch] = np.array(0.0)
 
-                    if self.noise_model.dmm_sigma and isinstance(
-                        self._samples._ch_objs[ch], DMM
-                    ):
-                        dmm_det_fluctuation[ch] = max(
-                            0,
-                            np.random.normal(1.0, self.noise_model.dmm_sigma),
-                        )
-                    else:
-                        dmm_det_fluctuation[ch] = 1.0
+                    dmm_det_fluctuation[ch] = 1.0
 
                 if "register" in self._noise_model.noise_types:
                     register = _noisy_register(

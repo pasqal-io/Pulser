@@ -104,7 +104,9 @@ class BaseDevice(ABC):
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
         optimal_layout_filling: An optional value for the fraction of a layout
-            that should be filled with atoms.
+            that should be filled with atoms, used as a target when Pulser
+            autogenerates a layout. Picking a value close to the true
+            optimum improves register preparation reliability on QPU.
         rydberg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
@@ -176,7 +178,7 @@ class BaseDevice(ABC):
             if not isinstance(value, type_):
                 raise TypeError(
                     f"{param} must be of type '{type_.__name__}', "
-                    f"not '{type(value).__name__}'."
+                    f"not '{type(value).__name__}'. Got {value!r}."
                 )
 
         type_check("name", str)
@@ -292,22 +294,40 @@ class BaseDevice(ABC):
             ):
                 raise TypeError(
                     "When defined, 'channel_ids' must be a tuple or a list "
-                    "of strings."
+                    "of strings, not "
+                    f"{type(self.channel_ids)}. Got: {self.channel_ids}."
                 )
             if len(self.channel_ids) != len(set(self.channel_ids)):
+                repeated_ids = [
+                    ch_id
+                    for ch_id, freq in Counter(self.channel_ids).items()
+                    if freq > 1
+                ]
                 raise PulserValueError(
                     "When defined, 'channel_ids' can't have "
-                    "repeated elements."
+                    "repeated elements; "
+                    f"got repeated ids {repeated_ids} in {self.channel_ids}."
                 )
             if len(self.channel_ids) != len(self.channel_objects):
                 raise PulserValueError(
                     "When defined, the number of channel IDs must"
-                    " match the number of channel objects."
+                    " match the number of channel objects; got "
+                    f"{len(self.channel_ids)} 'channel_ids' vs. "
+                    f"{len(self.channel_objects)} 'channel_objects'. "
+                    f"channel_ids: {self.channel_ids}. "
+                    f"channel_objects: {self.channel_objects}."
                 )
-            if set(self.channel_ids) & set(self.dmm_channels.keys()):
+            conflicting_ids = [
+                ch_id
+                for ch_id in self.channel_ids
+                if ch_id in self.dmm_channels
+            ]
+            if conflicting_ids:
                 raise PulserValueError(
                     "When defined, the names of channel IDs must be different"
-                    " than the names of DMM channels 'dmm_0', 'dmm_1', ... ."
+                    " than the names of DMM channels "
+                    f"{list(self.dmm_channels)}; {conflicting_ids} is a wrong "
+                    f"ID, among {self.channel_ids}."
                 )
 
         else:
@@ -436,8 +456,9 @@ class BaseDevice(ABC):
         """
         if not isinstance(register, BaseRegister):
             raise TypeError(
-                "'register' must be a pulser.Register or "
-                "a pulser.Register3D instance."
+                "'register' must be an instance of 'Register' or "
+                f"'Register3D', not {type(register)}. Got register "
+                f"{register!r}."
             )
 
         if register.dimensionality > self.dimensions:
@@ -466,7 +487,10 @@ class BaseDevice(ABC):
             layout: The RegisterLayout to validate.
         """
         if not isinstance(layout, RegisterLayout):
-            raise TypeError("'layout' must be a RegisterLayout instance.")
+            raise TypeError(
+                "'layout' must be an instance of 'RegisterLayout', not "
+                f"{type(layout)}. Got {layout!r}."
+            )
 
         if layout.dimensionality > self.dimensions:
             raise DimensionTooHighError(self, invalid=layout.dimensionality)
@@ -567,14 +591,16 @@ class BaseDevice(ABC):
     def _validate_radial_distance(
         self, ids: list[QubitId], coords: list[pm.AbstractArray], kind: str
     ) -> None:
+        # At this stage, `self.max_radial_distance`` is not `None`
+        # but mypy cannot see it.
+        assert self.max_radial_distance is not None
+        radial_dists = np.linalg.norm(
+            pm.vstack(coords).as_array(detach=True), axis=1
+        )
         too_far = (
-            np.linalg.norm(pm.vstack(coords).as_array(detach=True), axis=1)
-            > self.max_radial_distance
+            radial_dists > self.max_radial_distance + pm.VALIDATION_TOLERANCE
         )
         if np.any(too_far):
-            # At this stage, `self.max_radial_distance`` is not `None`
-            # but mypy cannot see it.
-            assert self.max_radial_distance is not None
             raise RadiusError(
                 device=self,
                 kind=kind,
@@ -583,7 +609,10 @@ class BaseDevice(ABC):
 
     def _validate_rydberg_level(self, ryd_lvl: int) -> None:
         if not isinstance(ryd_lvl, int):
-            raise TypeError("Rydberg level has to be an int.")
+            raise TypeError(
+                "'rydberg_level' must be an instance of 'int', not "
+                f"{type(ryd_lvl)}. Got {ryd_lvl}."
+            )
         if not 49 < ryd_lvl < 101:
             raise RydbergLevelError(
                 device=self, min=50, max=100, invalid=ryd_lvl
@@ -721,6 +750,9 @@ class BaseDevice(ABC):
                 " - Maximal number of traps: {}"
             ),
             f" - Minimum layout filling fraction: {self.min_layout_filling}",
+            self._param_check_none(self.optimal_layout_filling)(
+                " - Optimal layout filling fraction: {}"
+            ),
             f" - Maximum layout filling fraction: {self.max_layout_filling}",
         ]
 
@@ -732,10 +764,12 @@ class BaseDevice(ABC):
             "\nDevice parameters:",
             f" - Rydberg level: {self.rydberg_level}",
             self._param_check_none(self.interaction_coeff)(
-                " - Ising interaction coefficient: {}",
+                r" - Ising interaction coefficient :math:`(C_6/\hbar)`: {:.4g}"
+                " (rad/µs) :math:`\\cdot` µm^6",
             ),
             self._param_check_none(self.interaction_coeff_xy)(
-                " - XY interaction coefficient: {}",
+                r" - XY interaction coefficient :math:`(C_3/\hbar)`: {:.4g}"
+                " (rad/µs) :math:`\\cdot` µm^3",
             ),
             " - Channels can be reused: "
             + self._param_yes_no(self.reusable_channels),
@@ -774,26 +808,73 @@ class BaseDevice(ABC):
                 if isinstance(ch, DMM) and ch.bottom_detuning is not None:
                     bottom_detuning = f"{float(ch.bottom_detuning):.4g} rad/µs"
 
+                min_avg_amp = "None"
+                if not isinstance(ch, DMM) and ch.min_avg_amp is not None:
+                    min_avg_amp = f"{float(ch.min_avg_amp):.4g} rad/µs"
+
+                total_bottom_detuning = "None"
+                if (
+                    isinstance(ch, DMM)
+                    and ch.total_bottom_detuning is not None
+                ):
+                    total_bottom_detuning = (
+                        f"{float(ch.total_bottom_detuning):.4g} rad/µs"
+                    )
+
+                min_avg_abs_detuning = "None"
+                if isinstance(ch, DMM) and ch.min_avg_abs_detuning is not None:
+                    min_avg_abs_detuning = (
+                        f"{float(ch.min_avg_abs_detuning):.4g} rad/µs"
+                    )
+
+                rise_time = "None"
+                if ch.rise_time is not None:
+                    rise_time = f"{float(ch.rise_time):.4g} ns"
+
                 ch_lines += [
                     f" - ID: '{name}'",
                     f"\t- Type: {ch.name} (*{ch.basis}* basis)",
-                    f"\t- Addressing: {ch.addressing}",
-                    ("\t" + r"- Maximum :math:`\Omega`: " + max_amp),
                     (
                         (
                             "\t"
-                            + r"- Maximum :math:`|\delta|`: "
-                            + max_abs_detuning
+                            rf"- Addressing: {ch.addressing}"
+                            "\n\t"
+                            rf"- Maximum :math:`\Omega`: {max_amp}"
+                            "\n\t"
+                            rf"- Minimum average :math:`\Omega`: {min_avg_amp}"
+                            "\n\t"
+                            rf"- Maximum :math:`|\delta|`: {max_abs_detuning}"
+                            "\n\t"
+                            rf"- Rise time: {rise_time}"
+                            "\n"
                         )
                         if not isinstance(ch, DMM)
                         else (
                             "\t"
-                            + r"- Bottom :math:`|\delta|`: "
-                            + bottom_detuning
+                            rf"- Bottom :math:`\Delta`: {bottom_detuning}"
+                            "\n\t"
+                            r"- Total bottom :math:`\Delta`: "
+                            f"{total_bottom_detuning}"
+                            "\n\t"
+                            r"- Minimum average :math:`|\Delta|`: "
+                            f"{min_avg_abs_detuning}"
+                            "\n"
                         )
                     ),
-                    f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
                 ]
+                if ch.eom_config is not None:
+                    eom_rise_time = "None"
+                    if ch.eom_config.rise_time is not None:
+                        eom_rise_time = (
+                            f"{float(ch.eom_config.rise_time):.4g} ns"
+                        )
+                    ch_lines += [
+                        "\t- Supports EOM mode: Yes",
+                        f"\t- EOM Rise time: {eom_rise_time}",
+                    ]
+                elif not isinstance(ch, DMM):
+                    ch_lines += ["\t- Supports EOM mode: No"]
+
                 if ch.addressing == "Local":
                     ch_lines += [
                         "\t- Minimum time between retargets: "
@@ -915,7 +996,9 @@ class Device(BaseDevice):
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
         optimal_layout_filling: An optional value for the fraction of a layout
-            that should be filled with atoms.
+            that should be filled with atoms, used as a target when Pulser
+            autogenerates a layout. Picking a value close to the true
+            optimum improves register preparation reliability on QPU.
         min_layout_traps: The minimum number of traps a layout can have.
         max_layout_traps: An optional value for the maximum number of traps a
             layout can have.
@@ -1007,8 +1090,9 @@ class Device(BaseDevice):
         """
         if not isinstance(register, (BaseRegister, MappableRegister)):
             raise TypeError(
-                "The register to check must be of type "
-                "BaseRegister or MappableRegister."
+                "'register' must be an instance of 'BaseRegister' or "
+                f"'MappableRegister', not {type(register)}. Got register "
+                f"{register!r}."
             )
         if isinstance(register, BaseRegister) and register.layout is None:
             return False
@@ -1098,7 +1182,9 @@ class VirtualDevice(BaseDevice):
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
         optimal_layout_filling: An optional value for the fraction of a layout
-            that should be filled with atoms.
+            that should be filled with atoms, used as a target when Pulser
+            autogenerates a layout. Picking a value close to the true
+            optimum improves register preparation reliability on QPU.
         min_layout_traps: The minimum number of traps a layout can have.
         max_layout_traps: An optional value for the maximum number of traps a
             layout can have.

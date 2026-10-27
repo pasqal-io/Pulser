@@ -437,7 +437,11 @@ class TestDMM:
         # Detuning applied to DMM must be negative
         pos_det_pulse = Pulse.ConstantPulse(100, 0, 1e-3, 0)
         with pytest.raises(
-            ValueError, match="The detuning in a DMM must not be positive."
+            ValueError,
+            match=re.escape(
+                "The detuning in a DMM must not be positive; it is positive"
+                f" at 0-99 ns in detuning {pos_det_pulse.detuning!r}."
+            ),
         ):
             physical_dmm.validate_pulse(pos_det_pulse)
 
@@ -509,3 +513,23 @@ class TestDMM:
                 {0: 0.0}
             )
         physical_dmm.validate_pulse(too_low_pulse, det_map)
+
+
+@pytest.mark.parametrize("n_traps", [29, 58])
+def test_dmm_bottom_detuning_float_tolerance(n_traps, monkeypatch):
+    # A detuning of total_bottom_detuning / n_traps must pass
+    dmm = DMM(bottom_detuning=-10.0, total_bottom_detuning=-30.0)
+    det_map = DetuningMap(
+        [(10 * i, 0) for i in range(n_traps)], [1.0] * n_traps
+    )
+    pulse = Pulse.ConstantPulse(100, 0, -30.0 / n_traps, 0)
+    dmm.validate_pulse(pulse, det_map)
+    # It would fail without the tolerance
+    monkeypatch.setattr(pulser.math, "VALIDATION_TOLERANCE", 0.0)
+    with pytest.raises(ValueError, match="goes below the total bottom"):
+        dmm.validate_pulse(pulse, det_map)
+
+
+def test_detuning_map_weights_float_tolerance():
+    det_map = DetuningMap([(0, 0), (10, 0)], [1 + 1e-15, -1e-17])
+    assert det_map.weights == (1.0, 0.0)

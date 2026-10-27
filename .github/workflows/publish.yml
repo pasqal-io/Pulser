@@ -4,6 +4,9 @@ on:
   release:
     types: [published]
 
+env:
+  PIP_CONSTRAINT: ${{ github.workspace }}/.github/constraints.txt
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -19,10 +22,18 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.11"
+      - name: Upgrade ca-certificates
+        # apt doesn't rely on the TLS trust store: packages are checked against
+        # checksums in GPG-signed repository indexes.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --only-upgrade ca-certificates
       - name: Install Python dependencies
         run: |
-          python -m pip install --upgrade pip
+          # Pinned pip >= 26.2.2 for the eMudhra/emSign CA incident, see https://discuss.python.org/t/information-for-python-users-regarding-emudhra-emsign-ca-certificate-security-incident/109576
+          python -m pip install "pip @ https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl#sha256=fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70"
+          python -m pip install --upgrade pip certifi
           pip install -U setuptools build
       - name: Build packages
         shell: bash
@@ -72,7 +83,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v4
@@ -82,11 +93,29 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Upgrade ca-certificates
+        if: ${{ runner.os == 'Linux' }}
+        # apt doesn't rely on the TLS trust store: packages are checked against
+        # checksums in GPG-signed repository indexes.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --only-upgrade ca-certificates
+      - name: Remove compromised roots from /etc/ssl/cert.pem
+        if: ${{ runner.os == 'macOS' }}
+        # Built-in curl, git and openssl read this file without checking revocation,
+        # see https://emudhra.we-have-a-problem.com/ (macOS workaround).
+        run: |
+          sudo cp -p /etc/ssl/cert.pem /etc/ssl/cert.pem.bak &&
+          sudo awk '/^(###|===) /{skip=0}
+            /^=== .*\/CN=(AAA Certificate Services|emSign ECC Root CA - G3)$/{skip=1}
+            !skip' /etc/ssl/cert.pem.bak | sudo tee /etc/ssl/cert.pem > /dev/null
       - name: Install Pulser from PyPI
         timeout-minutes: 5
         shell: bash
         run: |
-          python -m pip install --upgrade pip
+          # Pinned pip >= 26.2.2 for the eMudhra/emSign CA incident, see https://discuss.python.org/t/information-for-python-users-regarding-emudhra-emsign-ca-certificate-security-incident/109576
+          python -m pip install "pip @ https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl#sha256=fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70"
+          python -m pip install --upgrade pip certifi
           version="$(head -1 VERSION.txt)"
           until pip install pulser==$version
           do

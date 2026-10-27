@@ -52,9 +52,6 @@ def calculate_mod_bandwidth_from_intensity_rise_time(
         follows an unorthodox definition: it corresponds to the
         frequency component that experiences a 75% attenuation in
         amplitude.
-        It corresponds to 2x the standard modulation bandwidth (defined
-        as the frequency at which there is a 50% attenuation in power,
-        i.e. 3dB attenuation).
 
     Args:
         intensity_rise_time: The time taken to go from 10% to 90% output
@@ -77,9 +74,6 @@ def calculate_mod_bandwidth_from_amplitude_rise_time(
         follows an unorthodox definition: it corresponds to the
         frequency component that experiences a 75% attenuation in
         amplitude.
-        It corresponds to 2x the standard modulation bandwidth (defined
-        as the frequency at which there is a 50% attenuation in power,
-        i.e. 3dB attenuation).
 
     Args:
         amplitude_rise_time: The time taken to go from 10% to 90% output
@@ -136,5 +130,6 @@ def validate_mod_bandwidth(mod_bandwidth: float) -> None:
         max_bw := calculate_mod_bandwidth_from_amplitude_rise_time(1)
     ):
         raise NotImplementedError(
-            f"'mod_bandwidth' must be lower than {max_bw:.0f} MHz"
+            f"'mod_bandwidth' must be lower than {max_bw:.0f} MHz, not "
+            f"{mod_bandwidth}."
         )

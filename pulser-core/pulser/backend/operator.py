@@ -14,7 +14,9 @@
 """Defines the abstract base class for a quantum operator."""
 from __future__ import annotations
 
+import copy
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from collections.abc import Collection, Mapping, Sequence
 from typing import Any, Generic, Type, TypeVar
 
@@ -173,20 +175,20 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
             >>>             (Y, [1]),
             >>>             (Z, [3]),
             >>>         ],
-            >>>     )
+            >>>     ),
             >>>     (
             >>>         -0.2j,
             >>>         [
             >>>             (Z, [1]),
             >>>             (Y, [3]),
             >>>         ],
-            >>>     )
+            >>>     ),
             >>>     (
             >>>         -0.1 + 4.0j,
             >>>         [
             >>>             (X, [2]),
             >>>         ],
-            >>>     )
+            >>>     ),
             >>> ]
             >>> config_class = your_pulser_backend.config_type
             >>> operator_class = config_class.operator_type
@@ -209,6 +211,122 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         return obj
 
     @classmethod
+    def from_pauli_string(
+        cls: Type[OperatorType],
+        *,
+        eigenstates: Sequence[Eigenstate],
+        n_qudits: int,
+        paulis: Mapping[int, str],
+    ) -> OperatorType:
+        r"""Create the operator for a Pauli string.
+
+        A Pauli string is a product of Pauli matrices acting on different
+        qudits, e.g. ``σ^z_1 σ^x_3 σ^z_10``. Qudits without an associated
+        Pauli matrix are applied the identity. The resulting operator is
+        built with ``from_operator_repr()``, so it is supported by every
+        backend (including remote ones) and can be given to the
+        ``Expectation`` observable to compute its expectation value.
+
+        The Pauli matrices are defined following the order of the
+        eigenstates. For eigenstates ``(e0, e1)``, they are
+
+        - ``σ^x = |e0><e1| + |e1><e0|``
+        - ``σ^y = -i|e0><e1| + i|e1><e0|``
+        - ``σ^z = |e0><e0| - |e1><e1|``
+
+        which matches the conventions of ``pulser-simulation`` for both the
+        ``ground-rydberg`` (``("r", "g")``) and ``XY`` (``("0", "1")``)
+        bases.
+
+        The leakage state ``"x"`` (added to the eigenstates when the noise
+        model includes leakage) is not one of the two states the Pauli
+        matrices act on, so all Pauli matrices act as zero on it. As such,
+        population in the leakage state does not contribute to the
+        expectation value of a Pauli string. Bases with more than two
+        eigenstates besides ``"x"`` are not supported.
+
+        Args:
+            eigenstates: The eigenstates to use. Must contain exactly two
+                eigenstates, besides the optional leakage state ``"x"``.
+            n_qudits: How many qudits there are in the system.
+            paulis: A mapping between the index of a qudit and the Pauli
+                matrix applied to it, given as one of ``"X"``, ``"Y"`` or
+                ``"Z"`` (case-insensitive). The qudit indices follow the
+                order of the qubit IDs in the Sequence's register (i.e.
+                ``seq.register.qubit_ids``).
+
+        Returns:
+            The operator for the Pauli string.
+
+        Example:
+            >>> # σ^z_1 σ^x_3 σ^z_10 in a system of 12 qubits
+            >>> operator_class = your_pulser_backend.config_type.operator_type
+            >>> op = operator_class.from_pauli_string(
+            >>>     eigenstates=("r", "g"),
+            >>>     n_qudits=12,
+            >>>     paulis={1: "Z", 3: "X", 10: "Z"},
+            >>> )
+            >>> # To compute its expectation value during the emulation
+            >>> Expectation(op, tag_suffix="zxz")
+        """
+        State._validate_eigenstates(eigenstates)
+
+        basis = [s for s in eigenstates if s != "x"]
+
+        if len(basis) != 2:
+            raise ValueError(
+                "Pauli strings are only defined for qubits, i.e. with "
+                "exactly two eigenstates (besides the leakage state 'x'); "
+                f"got eigenstates {tuple(eigenstates)}."
+            )
+
+        if not isinstance(paulis, Mapping):
+            raise TypeError(
+                "'paulis' must be a mapping between qudit indices and Pauli "
+                f"matrices; not {type(paulis)}. Got {paulis!r}."
+            )
+
+        if not paulis:
+            raise ValueError("'paulis' must contain at least one entry.")
+
+        e0, e1 = basis
+
+        pauli_reprs: dict[str, QuditOp[complex]] = {
+            "X": {e0 + e1: 1.0, e1 + e0: 1.0},
+            "Y": {e0 + e1: -1.0j, e1 + e0: 1.0j},
+            "Z": {e0 + e0: 1.0, e1 + e1: -1.0},
+        }
+
+        qudits_per_pauli = defaultdict(set)
+
+        for index, pauli in paulis.items():
+            if not isinstance(index, int):
+                raise TypeError(
+                    "The qudit indices in 'paulis' must be integers; got "
+                    f"{index!r} of type {type(index)}."
+                )
+            if not isinstance(pauli, str) or pauli.upper() not in pauli_reprs:
+                raise ValueError(
+                    "The Pauli matrices in 'paulis' must be one of "
+                    f"{tuple(pauli_reprs)}; got {pauli!r} for qudit {index}."
+                )
+            qudits_per_pauli[pauli.upper()].add(index)
+
+        return cls.from_operator_repr(
+            eigenstates=eigenstates,
+            n_qudits=n_qudits,
+            operations=[
+                (
+                    1.0,
+                    [
+                        (pauli_reprs[pauli], qudits)
+                        for pauli, qudits in qudits_per_pauli.items()
+                    ],
+                )
+            ],
+        )
+
+    @classmethod
     @abstractmethod
     def _from_operator_repr(
         cls: Type[OperatorType],
@@ -223,6 +341,51 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         use in serialization.
         """
         pass
+
+    @classmethod
+    def from_operator(
+        cls: Type[OperatorType], operator: Operator
+    ) -> OperatorType:
+        """Creates a new operator of this type from another operator.
+
+        By default, the operator is converted through its abstract
+        representation, which is only possible if it was created via
+        ``from_operator_repr()``. If the operator is already an instance of
+        this type, a shallow copy of it is returned instead, so it does not
+        need to be serializable.
+
+        Subclasses can override this method to support other
+        conversions (e.g. directly from an operator type they know).
+
+        Args:
+            operator: The operator to convert.
+
+        Returns:
+            A new operator of this type, equivalent to the given one.
+
+        Raises:
+            TypeError: If the operator can't be converted to this type.
+        """
+        if isinstance(operator, cls):
+            return copy.copy(operator)
+        try:
+            op_repr = operator._to_abstract_repr()
+            return cls.from_operator_repr(
+                eigenstates=op_repr["eigenstates"],
+                n_qudits=op_repr["n_qudits"],
+                operations=op_repr["operations"],
+            )
+        except (AbstractReprError, TypeError, ValueError) as e:
+            reason = ""
+            if isinstance(e, AbstractReprError):
+                reason = (
+                    " Conversion is only possible for operators "
+                    "created via 'from_operator_repr()'."
+                )
+            raise TypeError(
+                "Failed to convert an operator of type "
+                f"{type(operator).__name__!r} to {cls.__name__!r}.{reason}"
+            ) from e
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         if (

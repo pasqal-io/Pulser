@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Defines the AbstractArray class."""
+
 from __future__ import annotations
 
 import functools
@@ -28,6 +29,15 @@ try:
     import torch
 except ImportError:  # pragma: no cover
     pass
+
+
+def _resolve_lazy_bits(tensor: torch.Tensor) -> torch.Tensor:
+    """Materializes torch's lazy conjugate and negative views.
+
+    Tensor.numpy() refuses tensors with these bits set, e.g. the output of
+    torch.fft.ifft() on a real tensor or of Tensor.conj() on a complex one.
+    """
+    return tensor.resolve_conj().resolve_neg()
 
 
 class AbstractArray:
@@ -106,8 +116,11 @@ class AbstractArray:
         Args:
             detach: Whether to detach before converting.
         """
-        if detach and self.is_tensor:
-            return cast(torch.Tensor, self._array).detach().numpy()
+        if self.is_tensor:
+            tensor = _resolve_lazy_bits(cast(torch.Tensor, self._array))
+            if detach:
+                return tensor.detach().numpy()
+            return np.asarray(tensor)
         return np.asarray(self._array)
 
     def tolist(self) -> list:
@@ -164,7 +177,12 @@ class AbstractArray:
         if (
             self.is_tensor or np.lib.NumpyVersion(np.__version__) < "2.0.0"
         ):  # pragma: no cover
-            array: np.ndarray = self._array.__array__(dtype)
+            arr = (
+                _resolve_lazy_bits(cast(torch.Tensor, self._array))
+                if self.is_tensor
+                else self._array
+            )
+            array: np.ndarray = arr.__array__(dtype)
             if copy:
                 return np.copy(array)
             else:
@@ -341,6 +359,17 @@ class AbstractArray:
                 Must be compatible with the current shape.
         """
         return AbstractArray(self._array.reshape(shape))
+
+    def transpose(self, dim0: int = 0, dim1: int = 1) -> AbstractArray:
+        """Return a new array with two axes exchanged.
+
+        Args:
+            dim0: The first axis, defaults to 0.
+            dim1: The second axis, defaults to 1.
+        """
+        if self.is_tensor:
+            return AbstractArray(self.as_tensor().transpose(dim0, dim1))
+        return AbstractArray(np.swapaxes(self.as_array(), dim0, dim1))
 
 
 AbstractArrayLike = Union[AbstractArray, ArrayLike]

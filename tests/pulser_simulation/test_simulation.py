@@ -21,6 +21,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 import qutip
+from tests.constants import C3_LEVEL_70
 
 import pulser_simulation.simulation as sim_module
 from pulser import Pulse, Register, Sequence
@@ -108,18 +109,41 @@ def matrices():
     return pauli
 
 
-def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
+def test_initialization_and_construction_of_hamiltonian(
+    seq, mod_device, helpers
+):
     fake_sequence = {"pulse1": "fake", "pulse2": "fake"}
-    with pytest.raises(TypeError, match="sequence has to be a valid"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "'sequence' must be an instance of 'Sequence', not <class 'dict'>."
+            " Got {'pulse1': 'fake', 'pulse2': 'fake'}."
+        ),
+    ):
         QutipEmulator.from_sequence(fake_sequence)
-    with pytest.raises(TypeError, match="sequence has to be a valid"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "The provided samples must be an instance of 'SequenceSamples', "
+            "not <class 'dict'>. Got {'pulse1': 'fake', 'pulse2': 'fake'}."
+        ),
+    ):
         QutipEmulator(
             fake_sequence, Register.square(2, prefix="q"), mod_device
         )
     # Simulation cannot be run on a register not defining "control1"
     with pytest.raises(
         ValueError,
-        match="The ids of qubits targeted in Local channels",
+        match=(
+            re.escape(
+                "The ids of qubits targeted by Local channel 'raman' must be "
+                "defined in the register; Channel targets "
+            )
+            + helpers.any_order_set("target", "control1", "control2")
+            + re.escape(
+                ". Among them, {'control1'} not in ['target', 'control2']."
+            )
+        ),
     ):
         QutipEmulator(
             sampler.sample(seq),
@@ -188,7 +212,13 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
         "control2": 2,
     }
 
-    with pytest.raises(ValueError, match="too small, less than"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "'sampling_rate' is too small; 0.0001 on a 9000 ns sequence gives "
+            "0 data points, at least 4 are needed."
+        ),
+    ):
         QutipEmulator.from_sequence(seq, sampling_rate=0.0001)
     with pytest.raises(ValueError, match="`sampling_rate`"):
         QutipEmulator.from_sequence(seq, sampling_rate=5)
@@ -251,7 +281,9 @@ def test_extraction_of_sequences(seq):
 
 
 @pytest.mark.parametrize("leakage", [False, True])
-def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
+def test_building_basis_and_projection_operators(
+    seq, reg, leakage, matrices, helpers
+):
     # All three levels:
     def _noise_model(dim):
         return (
@@ -296,11 +328,23 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
             == qutip.basis(dim, 3) * qutip.basis(dim, 0).dag()
         )
     # Check local operator building method:
-    with pytest.raises(ValueError, match="Duplicate atom"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Duplicate atom ids in argument list; ['target'] appear more than "
+            "once in ['target', 'target']."
+        ),
+    ):
         sim.build_operator([("sigma_gg", ["target", "target"])])
     with pytest.raises(ValueError, match="not a valid operator"):
         sim.build_operator([("wrong", ["target"])])
-    with pytest.raises(ValueError, match="Invalid qubit names: {'wrong'}"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Invalid qubit names; ['wrong'] not in ['control1', 'target', "
+            "'control2']."
+        ),
+    ):
         sim.build_operator([("sigma_gg", ["wrong"])])
 
     # Check building operator with one operator
@@ -400,7 +444,13 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     # seq2 cannot be run on DigitalAnalogDevice because it does not support mw
     with pytest.raises(
         ValueError,
-        match="Bases used in samples should be supported by device.",
+        match=re.escape(
+            "Bases used in samples must be supported by the device; samples "
+            "use ['XY'], but ['XY'] are not supported by device "
+            "'DigitalAnalogDevice', which supports "
+        )
+        + helpers.any_order_list("ground-rydberg", "digital")
+        + re.escape("."),
     ):
         QutipEmulator(sampler.sample(seq2), seq2.register, DigitalAnalogDevice)
     sim2 = QutipEmulator.from_sequence(
@@ -438,7 +488,13 @@ def test_empty_sequences(reg):
     seq.declare_channel("ch0", "mw_global")
     with pytest.raises(ValueError, match="No instructions given"):
         QutipEmulator.from_sequence(seq)
-    with pytest.raises(ValueError, match="SequenceSamples is empty"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "SequenceSamples is empty; none of its channels ['ch0'] have any "
+            "samples."
+        ),
+    ):
         QutipEmulator(sampler.sample(seq), seq.register, seq.device)
 
     seq = Sequence(reg, MockDevice)
@@ -588,6 +644,28 @@ def test_get_hamiltonian():
     )
 
 
+def test_get_hamiltonian_c6_value():
+    """Regression test for the C_6 value used in the Ising Hamiltonian.
+
+    The expected value here is a number from C6_coeffs.json entry for
+    MockDevice's Rydberg level (70).
+    """
+    assert MockDevice.rydberg_level == 70
+    c6_level_70 = 5420158.53
+
+    simple_reg = Register.from_coordinates([[10, 0], [0, 0]], prefix="atom")
+    detun = 1.0
+    rise = Pulse.ConstantDetuning(RampWaveform(1500, 0.0, 2.0), detun, 0.0)
+    simple_seq = Sequence(simple_reg, MockDevice)
+    simple_seq.declare_channel("ising", "rydberg_global")
+    simple_seq.add(rise, "ising")
+
+    simple_sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.01)
+    simple_ham = simple_sim.get_hamiltonian(143)
+    # |rr><rr| term is C_6/r^6 - 2*detuning, with r = 10 µm
+    assert np.isclose(simple_ham[0, 0], c6_level_70 / 10**6 - 2 * detun)
+
+
 def test_single_atom_simulation():
     one_reg = Register.from_coordinates([(0, 0)], prefix="atom")
     one_seq = Sequence(one_reg, DigitalAnalogDevice)
@@ -695,7 +773,9 @@ def test_run(seq, patch_plt_show):
         sim.run(progress_bar=None)
         with pytest.raises(
             ValueError,
-            match="`progress_bar` must be a bool.",
+            match=re.escape(
+                "'progress_bar' must be a bool, not <class 'int'>. Got 1."
+            ),
         ):
             sim.run(progress_bar=1)
 
@@ -720,28 +800,48 @@ def test_run(seq, patch_plt_show):
 
 def test_eval_times(seq):
     with pytest.raises(
-        ValueError, match="evaluation_times float must be between 0 " "and 1."
+        ValueError,
+        match=re.escape(
+            "'evaluation_times' float must be between 0 and 1; got 3.0."
+        ),
     ):
         sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times(3.0)
-    with pytest.raises(ValueError, match="Wrong evaluation time label."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Wrong evaluation time label; got 123. It should be `Full`, "
+            "`Minimal`, an array of times or a float between 0 and 1."
+        ),
+    ):
         sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times(123)
-    with pytest.raises(ValueError, match="Wrong evaluation time label."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Wrong evaluation time label; got 'Best'. It should be `Full`, "
+            "`Minimal`, an array of times or a float between 0 and 1."
+        ),
+    ):
         sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times("Best")
 
     with pytest.raises(
         ValueError,
-        match="Provided evaluation-time list contains " "negative values.",
+        match=re.escape(
+            "Provided evaluation-time list contains negative values; got "
+            "[-1.0]."
+        ),
     ):
         sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times([-1, 0, sim.sampling_times[-2]])
 
     with pytest.raises(
         ValueError,
-        match="Provided evaluation-time list extends "
-        "further than sequence duration.",
+        match=re.escape(
+            "Provided evaluation-time list extends further than the sequence "
+            "duration; got a maximum of 19.0 µs for a 9.0 µs sequence."
+        ),
     ):
         sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times([0, sim.sampling_times[-1] + 10])
@@ -1492,6 +1592,28 @@ def test_get_xy_hamiltonian():
     )
 
 
+def test_get_xy_hamiltonian_c3_value():
+    """Regression test pinning the C_3 value used in the XY Hamiltonian.
+
+    The expected value here is a number from C3_coeffs.json for
+    MockDevice's Rydberg level (70).
+    """
+    assert MockDevice.rydberg_level == 70
+
+    simple_reg = Register.from_coordinates([[10, 0], [0, 0]], prefix="atom")
+    detun = 1.0
+    amp = 3.0
+    rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
+    simple_seq = Sequence(simple_reg, MockDevice)
+    simple_seq.declare_channel("ch0", "mw_global")
+    simple_seq.add(rise, "ch0")
+
+    simple_sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.03)
+    simple_ham = simple_sim.get_hamiltonian(143)
+    # |ud><du| term is C_3/r^3 - 2*detuning for any time, with r = 10 µm
+    assert np.isclose(simple_ham[1, 2], C3_LEVEL_70 / 10**3)
+
+
 def test_run_xy():
     simple_reg = Register.from_coordinates([[10, 0], [0, 0]], prefix="atom")
     detun = 1.0
@@ -1766,13 +1888,20 @@ def test_mask_equals_remove_xy():
     # Simulation cannot be run on a device not having an SLM mask
     with pytest.raises(
         ValueError,
-        match="Samples use SLM mask but device does not have one.",
+        match=re.escape(
+            "Samples use an SLM mask but device 'AnalogDevice' does not "
+            "support one."
+        ),
     ):
         QutipEmulator(sampler.sample(seq_masked), reg_three, AnalogDevice)
     # Simulation cannot be run on a register not defining "q2"
     with pytest.raises(
         ValueError,
-        match="The ids of qubits targeted in SLM mask",
+        match=re.escape(
+            "The ids of qubits targeted in the SLM mask must be defined in "
+            "the register; SLM mask targets {'q2'}. Among them, {'q2'} not in "
+            "['q0', 'q1']."
+        ),
     ):
         QutipEmulator(sampler.sample(seq_masked), reg_two, MockDevice)
     # Simulation on reduced register
