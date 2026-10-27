@@ -596,3 +596,58 @@ class EnergySecondMoment(Observable):
             operations=[(1.0, [])],
         )
         return identity.expect(h_state)
+
+
+class EntanglementEntropy(Observable):
+    """Stores the entanglement entropy of the system.
+
+    For a quantum system split into two parts, the entanglement entropy is the
+    von Neumann entropy of either part's reduced density matrix. The indices
+    specified in `included_ndices` define the part for which the entropy is
+    computed.
+
+    When defining an entanglement entropy observable using qubit indices, one
+    must use qubit indices as they are sorted internally. Qubits are sorted
+    from the bottom-right to the upper left of their register space.
+
+    Args:
+        included_indices: The indices of the qubits to include in the
+            subpartition. Defauts to the first half of the qubits in the
+            system.
+        evaluation_times: The relative times at which to compute the moment.
+            If left as `None`, uses the ``default_evaluation_times`` of the
+            backend's ``EmulationConfig``.
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
+        default_aggregation_method: How to combine the values of this
+            observable from multiple results.
+    """
+
+    def __init__(
+        self,
+        included_indices: Sequence[int] | None = None,
+        *,
+        evaluation_times: Sequence[float] | None = None,
+        tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+    ):
+        """Initializes the observable."""
+        super().__init__(
+            default_aggregation_method=default_aggregation_method,
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+        )
+        self.included_indices: Sequence[int] | None = included_indices
+
+    @property
+    def _base_tag(self) -> str:
+        return "entanglement_entropy"
+
+    def apply(self, *, state: State, **kwargs: Any) -> float:
+        """Calculate the observable to store in the Results."""
+        included_indices = self.included_indices or list(
+            range(state.n_qudits // 2)
+        )
+
+        return state.entanglement_entropy(included_indices=included_indices)
