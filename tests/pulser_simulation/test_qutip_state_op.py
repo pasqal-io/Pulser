@@ -317,6 +317,74 @@ class TestQutipState:
         ):
             json.dumps(state, cls=AbstractReprEncoder)
 
+    def test_to_oper(self, ket_r: QutipState, dm_g: QutipState):
+        assert ket_r.to_oper() == QutipState(
+            qutip.basis(2, 0).proj(), eigenstates=("r", "g")
+        )
+        # A density matrix is returned as is
+        assert dm_g.to_oper() is dm_g
+
+    def test_add_and_rmul(self, ket_r: QutipState, dm_g: QutipState):
+        # State vectors are turned into density matrices before mixing
+        assert (ket_r + dm_g).to_qobj() == (
+            ket_r.to_qobj().proj() + dm_g.to_qobj()
+        )
+        assert (dm_g + ket_r).to_qobj() == (
+            dm_g.to_qobj() + ket_r.to_qobj().proj()
+        )
+        assert (0.5 * ket_r).to_qobj() == 0.5 * ket_r.to_qobj().proj()
+
+        # An atom prepared in 'g' with probability 0.9 and in 'x' with 0.1
+        g = QutipState.from_state_amplitudes(
+            eigenstates=("r", "g", "x"), amplitudes={"g": 1.0}
+        )
+        x = QutipState.from_state_amplitudes(
+            eigenstates=("r", "g", "x"), amplitudes={"x": 1.0}
+        )
+        probs = (0.9 * g + 0.1 * x).probabilities()
+        assert probs.keys() == {"g", "x"}
+        assert np.isclose(probs["g"], 0.9)
+        assert np.isclose(probs["x"], 0.1)
+
+    def test_rmul_negative_weight(self, ket_r):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Can only scale a state by a non-negative weight; got -0.5."
+            ),
+        ):
+            -0.5 * ket_r
+
+    def test_add_errors(self, ket_r):
+        qobj = ket_r.to_qobj()
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                "'__add__' expects a 'QutipState' instance, not "
+                f"{type(qobj)}. Got {qobj!r}."
+            ),
+        ):
+            ket_r + qobj
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Can only add states with the same eigenstates, in the same "
+                "order; got ('r', 'g') vs. ('g', 'h')."
+            ),
+        ):
+            ket_r + QutipState(qutip.basis(2, 0), eigenstates=("g", "h"))
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Can only add states with the same number of qudits; got 1 "
+                "vs. 2."
+            ),
+        ):
+            ket_r + QutipState(
+                qutip.tensor(qutip.basis(2, 0), qutip.basis(2, 0)),
+                eigenstates=("r", "g"),
+            )
+
 
 class TestQutipOperator:
 

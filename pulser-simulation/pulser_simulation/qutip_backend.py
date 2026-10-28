@@ -240,7 +240,7 @@ class QutipBackendV2(EmulatorBackend):
         """Executes the sequence on the backend."""
         eigenstates = sim_obj._current_hamiltonian.basis_data.eigenbasis
 
-        if not _has_stochastic_noise(sim_obj.noise_model):
+        if not _has_stochastic_noise(sim_obj.noise_model, sim_obj.solver):
             # A single run is needed, regardless of self.config.runs
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", DeprecationWarning)
