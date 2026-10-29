@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import typing
 import warnings
 from dataclasses import dataclass
@@ -35,7 +36,10 @@ if TYPE_CHECKING:
 
 from scipy.spatial.distance import cdist
 
+import pulser.json.abstract_repr as pulser_abstract_repr
 import pulser.math as pm
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 
 WEIGHT_PRECISION = 6
 
@@ -62,17 +66,29 @@ class WeightMap(Traps, RegDrawer):
         """Initializes a new weight map."""
         super().__init__(trap_coordinates, slug)
         if len(cast(list, trap_coordinates)) != len(weights):
-            raise ValueError("Number of traps and weights don't match.")
-        if not (
-            np.all(np.array(weights) >= 0) and np.all(np.array(weights) <= 1)
-        ):
-            raise ValueError("All weights must be between 0 and 1.")
+            raise ValueError(
+                f"Number of traps ({len(cast(list, trap_coordinates))}) and "
+                f"weights ({len(weights)}) don't match."
+            )
+        weights_arr = np.array(weights)
+        in_range = (weights_arr >= -pm.VALIDATION_TOLERANCE) & (
+            weights_arr <= 1 + pm.VALIDATION_TOLERANCE
+        )
+        if not np.all(in_range):
+            out_of_range = weights_arr[~in_range].tolist()
+            raise ValueError(
+                "All weights must be between 0 and 1; found out-of-range "
+                f"weights {out_of_range} in {weights_arr.tolist()}."
+            )
         if np.count_nonzero(weights) == 0:
             warnings.warn(
                 "A WeightMap should have at least one non-zero weight.",
                 stacklevel=3,
             )
-        object.__setattr__(self, "weights", tuple(weights))
+        # Clip the weights that are within tolerance of the limits
+        object.__setattr__(
+            self, "weights", tuple(np.clip(weights_arr, 0, 1).tolist())
+        )
 
     @property
     def trap_coordinates(self) -> np.ndarray:
@@ -229,3 +245,26 @@ class DetuningMap(WeightMap):
         weights: A list of detuning weights (between 0 and 1) to associate
             to the traps.
     """
+
+    def to_abstract_repr(self) -> str:
+        """Serialize the detuning map into an abstract JSON object."""
+        abstr_str = json.dumps(self, cls=AbstractReprEncoder)
+        validate_abstract_repr(abstr_str, "weight-map")
+        return abstr_str
+
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> DetuningMap:
+        """Deserialize a detuning map from an abstract JSON object.
+
+        Args:
+            obj_str: The JSON string representing the detuning map encoded in
+                the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized detuning map must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+        return pulser_abstract_repr.deserializer.deserialize_detuning_map(
+            obj_str
+        )

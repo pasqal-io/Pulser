@@ -49,3 +49,42 @@ a {
 a:hover {
   color: #00c887;
 }
+
+/* Call-to-action buttons (e.g. in the Quick Run Guide) */
+.pulser-button {
+  display: inline-block;
+  margin: 0.25rem;
+  padding: 0.5em 1.5em;
+  border: 2px solid #00ac85;
+  border-radius: 0.2rem;
+  color: #00ac85;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.pulser-button:hover,
+.pulser-button--primary {
+  background-color: #00ac85;
+  color: white;
+}
+
+.pulser-button--primary:hover {
+  background-color: #00c887;
+  border-color: #00c887;
+  color: white;
+}
+
+/* Collapsible sections (e.g. in the Quick Run Guide) */
+.rst-content details {
+  margin-bottom: 24px;
+}
+
+.rst-content details summary {
+  cursor: pointer;
+  font-weight: bold;
+  color: #00ac85;
+}
+
+.rst-content details[open] summary {
+  margin-bottom: 12px;
+}

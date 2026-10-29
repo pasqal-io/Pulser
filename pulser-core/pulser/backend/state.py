@@ -14,6 +14,7 @@
 """Defines the abstract base class for a quantum state."""
 from __future__ import annotations
 
+import copy
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Mapping, Sequence
@@ -141,15 +142,28 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     ) -> StateType:
         """Construct the state from its basis states' amplitudes.
 
-        Only states constructed with this method are allowed in remote backend.
+        Only states constructed with this method are accepted by
+        the remote backends.
 
         Args:
             eigenstates: The basis states (e.g., ('r', 'g')).
             amplitudes: A mapping between basis state combinations and
-                complex amplitudes (e.g., {"rgr": 0.5, "grg": 0.5}).
+                complex amplitudes (e.g., {"rgr": 1.0 / np.sqrt(2),
+                "grg": 1.0 / np.sqrt(2)}).
 
         Returns:
             The state constructed from the amplitudes.
+
+        Examples:
+            >>> eigenstates = ("r", "g")
+            >>> norm_factor = 1.0 / np.sqrt(2)
+            >>> # build an equal superposition of "rgr" and "grg" basis states
+            >>> amplitudes = {"rgr": norm_factor, "grg": norm_factor}
+            >>> config_class = your_pulser_backend.config_type
+            >>> state_class = config_class.state_type
+            >>> state = state_class.from_state_amplitudes(
+            >>>     eigenstates=eigenstates, amplitudes=amplitudes
+            >>> )
         """
         cls._validate_eigenstates(eigenstates)
         n_qudits = cls._validate_amplitudes(amplitudes, eigenstates)
@@ -174,6 +188,49 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         in serialization.
         """
         pass
+
+    @classmethod
+    def from_state(cls: Type[StateType], state: State) -> StateType:
+        """Creates a new state of this type from another state.
+
+        By default, the state is converted through its abstract
+        representation, which is only possible if it was created via
+        ``from_state_amplitudes()`` and not modified afterwards. If the
+        state is already an instance of this type, a shallow copy of it is
+        returned instead, so it does not need to be serializable.
+
+        Subclasses can override this method to support other
+        conversions (e.g. directly from a state type they know).
+
+        Args:
+            state: The state to convert.
+
+        Returns:
+            A new state of this type, equivalent to the given one.
+
+        Raises:
+            TypeError: If the state can't be converted to this type.
+        """
+        if isinstance(state, cls):
+            return copy.copy(state)
+        try:
+            state_repr = state._to_abstract_repr()
+            return cls.from_state_amplitudes(
+                eigenstates=state_repr["eigenstates"],
+                amplitudes=state_repr["amplitudes"],
+            )
+        except (AbstractReprError, TypeError, ValueError) as e:
+            reason = ""
+            if isinstance(e, AbstractReprError):
+                reason = (
+                    " Conversion is only possible for states "
+                    "created via 'from_state_amplitudes()' and not modified "
+                    "afterwards."
+                )
+            raise TypeError(
+                f"Failed to convert a state of type {type(state).__name__!r} "
+                f"to {cls.__name__!r}.{reason}"
+            ) from e
 
     def infer_one_state(self) -> Eigenstate:
         """Infers the state measured as 1 from the eigenstates.
@@ -200,14 +257,25 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         if not isinstance(eigenstates, Sequence):
             raise TypeError(
                 "'eigenstates' must be a 'collections.Sequence' "
-                f"(list or tuple), not {type(eigenstates).__name__}."
+                f"(list or tuple), not {type(eigenstates).__name__}. Got "
+                f"{eigenstates!r}."
             )
         if any(not isinstance(s, str) or len(s) != 1 for s in eigenstates):
+            bad = [
+                s for s in eigenstates if not isinstance(s, str) or len(s) != 1
+            ]
             raise ValueError(
-                "All eigenstates must be represented by single characters."
+                "All eigenstates must be represented by single characters; "
+                f"got {bad}."
             )
         if len(eigenstates) != len(set(eigenstates)):
-            raise ValueError("'eigenstates' can't contain repeated entries.")
+            repeated = [
+                s for s, freq in Counter(eigenstates).items() if freq > 1
+            ]
+            raise ValueError(
+                "'eigenstates' can't contain repeated entries; got repeated "
+                f"{repeated}."
+            )
 
     @staticmethod
     def _validate_amplitudes(
@@ -262,14 +330,16 @@ class StateRepr(State):
 
     - eigenstates: The basis states (e.g., ('r', 'g')).
     - amplitudes: A mapping between basis state combinations and
-      complex amplitudes (e.g., {"rgr": 0.5, "grg": 0.5}).
+      complex amplitudes (e.g., {"rgr": 1.0 / np.sqrt(2),
+      "grg": 1.0 / np.sqrt(2)}).
 
     The created state, supports de/serialization methods for remote backend
     execution.
 
     Examples:
         >>> eigenstates = ("r", "g")
-        >>> amplitudes = {"rgr": 0.5, "grg": 0.5}
+        >>> norm_factor = 1.0 / np.sqrt(2)
+        >>> amplitudes = {"rgr": norm_factor, "grg": norm_factor}
         >>> state = StateRepr.from_state_amplitudes(
         >>>     eigenstates=eigenstates, amplitudes=amplitudes
         >>> )
@@ -291,7 +361,7 @@ class StateRepr(State):
         in serialization.
         """
         state = cls(eigenstates=eigenstates)
-        cls._n_qudits = n_qudits
+        state._n_qudits = n_qudits
         return state, amplitudes
 
     def _to_abstract_repr(self) -> dict[str, Any]:

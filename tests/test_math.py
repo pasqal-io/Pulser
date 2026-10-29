@@ -20,9 +20,53 @@ import sys
 import numpy as np
 import pytest
 
+import pulser
 import pulser.math as pm
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.coders import PulserDecoder, PulserEncoder
+
+
+def test_allclose_numpy():
+    a = pm.AbstractArray([1.0, np.nan])
+    b = np.array([1.0001, np.nan])
+
+    assert not pm.allclose(a, b, atol=1e-3)
+    assert pm.allclose(a, b, atol=1e-3, equal_nan=True)
+    assert not pm.allclose(a, b, atol=1e-5, rtol=0, equal_nan=True)
+
+
+def test_allclose_tensor():
+    torch = pytest.importorskip("torch")
+    a = pm.AbstractArray(torch.tensor([1.0, float("nan")], requires_grad=True))
+    b = torch.tensor([1.0001, float("nan")])
+
+    assert not pm.allclose(a, b, atol=1e-3)
+    assert pm.allclose(a, b, atol=1e-3, equal_nan=True)
+    assert not pm.allclose(a, b, atol=1e-5, rtol=0, equal_nan=True)
+    assert pm.allclose(
+        a, b.numpy().astype(np.float64), atol=1e-3, equal_nan=True
+    )
+    assert pm.allclose(
+        b.numpy().astype(np.float64), a, atol=1e-3, equal_nan=True
+    )
+
+
+def test_tensor_with_lazy_conj_or_neg_bit():
+    torch = pytest.importorskip("torch")
+    x = torch.tensor([1.0, 2.0, 0.5, -1.0], dtype=torch.float64)
+    z = torch.tensor([1 + 2j, 3 - 1j], dtype=torch.complex128)
+    # torch.fft.ifft of a real tensor and Tensor.conj() return conjugate views,
+    # and the imaginary part of a conjugate view is a negative view
+    cases = [
+        (pm.ifft(x), np.fft.ifft(x.numpy())),
+        (pm.AbstractArray(z.conj()), np.conj(z.numpy())),
+        (pm.AbstractArray(z.conj().imag), -z.numpy().imag),
+    ]
+    for arr, expected in cases:
+        assert arr.as_tensor().is_conj() or arr.as_tensor().is_neg()
+        np.testing.assert_allclose(arr.as_array(), expected)
+        np.testing.assert_allclose(arr.as_array(detach=True), expected)
+        np.testing.assert_allclose(np.asarray(arr), expected)
 
 
 @pytest.mark.parametrize(
@@ -76,7 +120,124 @@ def test_pad(cast_to, requires_grad):
     check_match(pm.pad(arr, (0, 2), mode="edge"), [1.0, 2.0, 3.0, 3.0, 3.0])
 
 
+@pytest.mark.parametrize("use_tensor", [False, True])
+def test_cdist(use_tensor):
+    positions_a = [[0.0, 0.0], [3.0, 4.0]]
+    positions_b = [[0.0, 4.0], [3.0, 0.0]]
+    if use_tensor:
+        torch = pytest.importorskip("torch")
+        positions_a = [
+            torch.tensor(position, requires_grad=True)
+            for position in positions_a
+        ]
+        positions_b = [
+            torch.tensor(position, requires_grad=True)
+            for position in positions_b
+        ]
+
+    positions = [
+        [pm.AbstractArray(position) for position in points]
+        for points in (positions_a, positions_b)
+    ]
+    distances = pm.cdist(*positions)
+
+    assert distances.is_tensor == use_tensor
+    np.testing.assert_allclose(
+        distances.as_array(detach=use_tensor), [[4.0, 3.0], [3.0, 4.0]]
+    )
+    if use_tensor:
+        distances.as_tensor().sum().backward()
+        gradients = [position.grad for position in positions_a + positions_b]
+        np.testing.assert_allclose(
+            [gradient.numpy() for gradient in gradients],
+            [[-1.0, -1.0], [1.0, 1.0], [-1.0, 1.0], [1.0, -1.0]],
+        )
+
+
+@pytest.mark.parametrize("tensor_first", [False, True])
+@pytest.mark.parametrize("other_backend", ["numpy", "torch"])
+@pytest.mark.parametrize("tensor_precision", [32, 64])
+def test_cdist_mixed_dtypes(tensor_first, other_backend, tensor_precision):
+    torch = pytest.importorskip("torch")
+    tensor_dtype = getattr(torch, f"float{tensor_precision}")
+    other_precision = 96 - tensor_precision
+    tensor_points = torch.tensor(
+        [[0.0, 0.0], [3.0, 4.0]],
+        dtype=tensor_dtype,
+        requires_grad=True,
+    )
+    other_points = np.array(
+        [[0.0, 4.0], [3.0, 0.0]], dtype=f"float{other_precision}"
+    )
+    if other_backend == "torch":
+        other_points = torch.tensor(other_points, requires_grad=True)
+    points = [tensor_points, other_points]
+    if not tensor_first:
+        points.reverse()
+
+    distances = pm.cdist(*points)
+
+    assert distances.as_tensor().dtype == torch.float64
+    np.testing.assert_allclose(
+        distances.as_array(detach=True), [[4.0, 3.0], [3.0, 4.0]]
+    )
+    distances.as_tensor().sum().backward()
+    assert tensor_points.grad.dtype == tensor_dtype
+    np.testing.assert_allclose(tensor_points.grad.numpy(), [[-1, -1], [1, 1]])
+    if other_backend == "torch":
+        np.testing.assert_allclose(
+            other_points.grad.numpy(), [[-1, 1], [1, -1]]
+        )
+
+
 class TestAbstractArray:
+
+    def test_transpose_numpy(self):
+        values = np.arange(24).reshape(2, 3, 4)
+        arr = pm.AbstractArray(values)
+
+        np.testing.assert_array_equal(arr.transpose(), values.swapaxes(0, 1))
+        np.testing.assert_array_equal(
+            arr.transpose(1, -1), values.swapaxes(1, -1)
+        )
+        assert arr.shape == values.shape
+
+    def test_transpose_tensor_preserves_gradients(self):
+        torch = pytest.importorskip("torch")
+        source = torch.arange(24.0, requires_grad=True)
+        values = source.reshape(2, 3, 4)
+        arr = pm.AbstractArray(values)
+
+        transposed = arr.transpose(1, 2)
+        assert transposed.is_tensor
+        assert transposed.requires_grad
+        torch.testing.assert_close(
+            transposed.as_tensor(), values.transpose(1, 2)
+        )
+        torch.testing.assert_close(
+            arr.transpose().as_tensor(), values.transpose(0, 1)
+        )
+        transposed.as_tensor().sum().backward()
+        torch.testing.assert_close(source.grad, torch.ones_like(source))
+
+    def test_non_castable_type(self, monkeypatch):
+        monkeypatch.setitem(sys.modules, "torch", None)
+        pm.AbstractArray.has_torch.cache_clear()
+        with pytest.raises(
+            ValueError,
+            match="The provided 'array' must be a torch tensor or "
+            "castable to an array of type float64. Got "
+            r"ConstantWaveform\(100 ns, 1\)",
+        ):
+            pm.AbstractArray(pulser.ConstantWaveform(100, 1), dtype=float)
+        # With dtype=None, works if the class can be stored in a numpy array
+        pm.AbstractArray(pulser.ConstantWaveform(100, 1))
+        with pytest.raises(
+            ValueError,
+            match="The provided 'array' must be a torch tensor or "
+            r"castable to an array. Got \[\[1.0\], \[2.0, 3.0\]\]",
+        ):
+            pm.AbstractArray([[1.0], [2.0, 3.0]])
 
     @pytest.mark.parametrize("force_array", [False, True])
     def test_no_torch(self, monkeypatch, force_array):

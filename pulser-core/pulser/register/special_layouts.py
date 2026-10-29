@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+import re
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
 import pulser
@@ -24,6 +26,39 @@ from pulser.register.register_layout import RegisterLayout
 
 if TYPE_CHECKING:
     from pulser.register import Register
+
+
+_FLOAT_PATTERN = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
+
+
+@dataclass(frozen=True)
+class _LayoutSlug:
+    template: str
+    pattern: re.Pattern[str]
+
+    def format(self, *values: int | float) -> str:
+        return self.template.format(*values)
+
+    def parse(self, slug: str) -> tuple[str, ...] | None:
+        match = self.pattern.fullmatch(slug)
+        return match.groups() if match else None
+
+
+_RECTANGULAR_LAYOUT_SLUG = _LayoutSlug(
+    "RectangularLatticeLayout({}x{}, {}x{}µm)",
+    re.compile(
+        rf"RectangularLatticeLayout\((\d+)x(\d+), "
+        rf"({_FLOAT_PATTERN})x({_FLOAT_PATTERN})µm\)"
+    ),
+)
+_SQUARE_LAYOUT_SLUG = _LayoutSlug(
+    "SquareLatticeLayout({}x{}, {}µm)",
+    re.compile(rf"SquareLatticeLayout\((\d+)x(\d+), ({_FLOAT_PATTERN})µm\)"),
+)
+_TRIANGULAR_LAYOUT_SLUG = _LayoutSlug(
+    "TriangularLatticeLayout({}, {}µm)",
+    re.compile(rf"TriangularLatticeLayout\((\d+), ({_FLOAT_PATTERN})µm\)"),
+)
 
 
 class RectangularLatticeLayout(RegisterLayout):
@@ -44,9 +79,11 @@ class RectangularLatticeLayout(RegisterLayout):
         self._columns = int(columns)
         self._col_spacing = float(col_spacing)
         self._row_spacing = float(row_spacing)
-        slug = (
-            f"RectangularLatticeLayout({self._rows}x{self._columns}, "
-            f"{self._col_spacing}x{self._row_spacing}µm)"
+        slug = _RECTANGULAR_LAYOUT_SLUG.format(
+            self._rows,
+            self._columns,
+            self._col_spacing,
+            self._row_spacing,
         )
         self._traps = patterns.square_rect(self._rows, self._columns)
         self._traps[:, 0] = self._traps[:, 0] * self._col_spacing
@@ -132,9 +169,8 @@ class SquareLatticeLayout(RectangularLatticeLayout):
         super().__init__(
             self._rows, self._columns, self._spacing, self._spacing
         )
-        slug = (
-            f"SquareLatticeLayout({self._rows}x{self._columns}, "
-            f"{self._spacing}µm)"
+        slug = _SQUARE_LAYOUT_SLUG.format(
+            self._rows, self._columns, self._spacing
         )
         object.__setattr__(self, "slug", slug)
 
@@ -153,7 +189,7 @@ class TriangularLatticeLayout(RegisterLayout):
     def __init__(self, n_traps: int, spacing: float):
         """Initializes a TriangularLatticeLayout."""
         self._spacing = float(spacing)
-        slug = f"TriangularLatticeLayout({int(n_traps)}, {self._spacing}µm)"
+        slug = _TRIANGULAR_LAYOUT_SLUG.format(int(n_traps), self._spacing)
         super().__init__(
             patterns.triangular_hex(int(n_traps)) * self._spacing, slug=slug
         )
@@ -215,3 +251,31 @@ class TriangularLatticeLayout(RegisterLayout):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self.number_of_traps, self._spacing)
+
+
+def _parse_special_layout_slug(slug: str) -> RegisterLayout | None:
+    """Create a special layout from its slug, when recognized."""
+    try:
+        values = _RECTANGULAR_LAYOUT_SLUG.parse(slug)
+        if values:
+            rows, columns, col_spacing, row_spacing = values
+            return RectangularLatticeLayout(
+                int(rows),
+                int(columns),
+                float(col_spacing),
+                float(row_spacing),
+            )
+
+        values = _SQUARE_LAYOUT_SLUG.parse(slug)
+        if values:
+            rows, columns, spacing = values
+            return SquareLatticeLayout(int(rows), int(columns), float(spacing))
+
+        values = _TRIANGULAR_LAYOUT_SLUG.parse(slug)
+        if values:
+            n_traps, spacing = values
+            return TriangularLatticeLayout(int(n_traps), float(spacing))
+    except ValueError:
+        return None
+
+    return None

@@ -1,3 +1,4 @@
+import re
 import unittest
 from dataclasses import replace
 from types import SimpleNamespace
@@ -181,26 +182,34 @@ def test_noisy_register_torch(register2D):
     assert g.shape == qdict["q0"]._array.shape
 
 
-def test_init_errors():
+def test_init_errors(helpers):
     seq = seq_with_SLM("rydberg_global")
     seq_samples = sample(seq)
     register = pulser.Register.square(3, spacing=6, prefix="")
     with pytest.raises(
         TypeError,
-        match=(
-            "The provided sequence has to be a "
-            "valid SequenceSamples instance."
+        match=re.escape(
+            "The provided samples must be an instance of "
+            "'SequenceSamples', not <class 'NoneType'>. Got None."
         ),
     ):
         HamiltonianData(None, None, None, None, None)
 
     with pytest.raises(
-        TypeError, match="The device must be a Device or BaseDevice."
+        TypeError,
+        match=re.escape(
+            "'device' must be an instance of 'BaseDevice', not "
+            "<class 'NoneType'>. Got None."
+        ),
     ):
         HamiltonianData(seq_samples, None, None, None, None)
 
     with pytest.raises(
-        ValueError, match="Samples use SLM mask but device does not have one."
+        ValueError,
+        match=re.escape(
+            "Samples use an SLM mask but device 'AnalogDevice' does not "
+            "support one."
+        ),
     ):
         HamiltonianData(
             seq_samples, seq.register, pulser.AnalogDevice, None, None
@@ -208,9 +217,10 @@ def test_init_errors():
 
     with pytest.raises(
         ValueError,
-        match=(
-            "The ids of qubits targeted in SLM "
-            "mask should be defined in register."
+        match=re.escape(
+            "The ids of qubits targeted in the SLM mask must be defined in "
+            "the register; SLM mask targets {'batman'}. Among them, "
+            "{'batman'} not in ['0', '1', '2', '3', '4', '5', '6', '7', '8']."
         ),
     ):
         HamiltonianData(
@@ -220,8 +230,16 @@ def test_init_errors():
     with pytest.raises(
         ValueError,
         match=(
-            "The ids of qubits targeted in Local "
-            "channels should be defined in register."
+            re.escape(
+                "The ids of qubits targeted by Local channel 'ch1' must be "
+                "defined in the register; Channel targets "
+            )
+            + helpers.any_order_set("q0", "q1")
+            + re.escape(". Among them, ")
+            + helpers.any_order_set("q0", "q1")
+            + re.escape(
+                " not in ['0', '1', '2', '3', '4', '5', '6', '7', '8']."
+            )
         ),
     ):
         HamiltonianData(
@@ -242,14 +260,26 @@ def test_init_errors():
 
     seq = pulser.Sequence(register, pulser.AnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
-    with pytest.raises(ValueError, match="SequenceSamples is empty."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "SequenceSamples is empty; none of its channels ['ch0'] have any "
+            "samples."
+        ),
+    ):
         HamiltonianData(sample(seq), None, None, None, None)
 
     seq = seq_with_SLM("mw_global")
     seq_samples = sample(seq)
     with pytest.raises(
         ValueError,
-        match="Bases used in samples should be supported by device.",
+        match=re.escape(
+            "Bases used in samples must be supported by the device; samples "
+            "use ['XY'], but ['XY'] are not supported by device "
+            "'DigitalAnalogDevice', which supports "
+        )
+        + helpers.any_order_list("ground-rydberg", "digital")
+        + re.escape("."),
     ):
         HamiltonianData(
             seq_samples, seq.register, pulser.DigitalAnalogDevice, None, None
@@ -278,9 +308,9 @@ def test_from_sequence():
 
     with pytest.raises(
         TypeError,
-        match=(
-            "The provided sequence has to be "
-            "a valid pulser.Sequence instance."
+        match=re.escape(
+            "'sequence' must be an instance of 'Sequence', not "
+            "<class 'NoneType'>. Got None."
         ),
     ):
         HamiltonianData.from_sequence(None)
@@ -675,6 +705,118 @@ def test_has_shot_to_shot_except_spam(noise_data, expected):
     assert has_shot_to_shot_except_spam(fake_noise_model) is expected
 
 
+@pytest.mark.parametrize(
+    "noise_params",
+    [
+        {"temperature": 20},
+        {"detuning_sigma": 0.5},
+        {"detuning_hf_psd": [0.1, 0.2], "detuning_hf_omegas": [1.0, 2.0]},
+        {"amp_sigma": 0.2},
+        {"laser_waist": 20},
+        {"temperature": 20, "detuning_sigma": 0.5, "amp_sigma": 0.2},
+    ],
+    ids=[
+        "doppler",
+        "detuning",
+        "hf-detuning",
+        "amplitude",
+        "waist",
+        "combined",
+    ],
+)
+def test_zero_dmm_does_not_change_laser_noise(noise_params) -> None:
+    """A zero DMM must not change laser noise or its random draws."""
+    register = pulser.Register({"q0": (0, 0), "q1": (10, 0)})
+    device = replace(
+        AnalogDevice.to_virtual(),
+        dmm_objects=(DMM(),),
+        reusable_channels=True,
+    )
+    seq = pulser.Sequence(register, device)
+    seq.declare_channel("rydberg", "rydberg_global")
+    seq.add(pulser.Pulse.ConstantPulse(100, 1, 0, 0), "rydberg")
+    noise_model = pulser.NoiseModel(**noise_params)
+    np.random.seed(123)
+    reference = HamiltonianData.from_sequence(
+        seq, noise_model=noise_model, n_trajectories=3
+    )
+
+    seq.config_detuning_map(
+        register.define_detuning_map({"q0": 1.0, "q1": 0.0}), "dmm_0"
+    )
+    seq.add_dmm_detuning(pulser.ConstantWaveform(100, 0), "dmm_0")
+    np.random.seed(123)
+    with_dmm = HamiltonianData.from_sequence(
+        seq, noise_model=noise_model, n_trajectories=3
+    )
+
+    for expected, actual in zip(
+        reference.noisy_samples, with_dmm.noisy_samples
+    ):
+        reference_local = expected.samples.to_nested_dict(all_local=True)[
+            "Local"
+        ]["ground-rydberg"]
+        actual_local = actual.samples.to_nested_dict(all_local=True)["Local"][
+            "ground-rydberg"
+        ]
+        for qid in register.qubit_ids:
+            for quantity in ("amp", "det", "phase"):
+                np.testing.assert_allclose(
+                    actual_local[qid][quantity], reference_local[qid][quantity]
+                )
+
+
+def test_dmm_intensity_noise_remains_separate_from_laser_noise() -> None:
+    """DMM fluctuations scale only the weighted light shift, not the drive."""
+    register = pulser.Register({"q0": (0, 0), "q1": (10, 0)})
+    device = replace(
+        AnalogDevice.to_virtual(),
+        dmm_objects=(DMM(),),
+        reusable_channels=True,
+    )
+    seq = pulser.Sequence(register, device)
+    seq.declare_channel("rydberg", "rydberg_global")
+    seq.add(pulser.Pulse.ConstantPulse(100, 1, 0, 0), "rydberg")
+    seq.config_detuning_map(
+        register.define_detuning_map({"q0": 1.0, "q1": 0.5}), "dmm_0"
+    )
+    seq.add_dmm_detuning(pulser.ConstantWaveform(100, -5), "dmm_0")
+    np.random.seed(456)
+    ham = HamiltonianData.from_sequence(
+        seq,
+        noise_model=pulser.NoiseModel(
+            temperature=20,
+            amp_sigma=0.1,
+            detuning_sigma=0.5,
+            laser_waist=20,
+            dmm_sigma=0.2,
+        ),
+        n_trajectories=1,
+    )
+    traj = ham.noise_trajectories[0].trajectory
+    assert traj.amp_fluctuations["dmm_0"] == 1.0
+    assert traj.det_fluctuations["dmm_0"] == 0.0
+    np.testing.assert_array_equal(traj.det_phases["dmm_0"], 0.0)
+
+    samples = next(ham.noisy_samples).samples.to_nested_dict(all_local=True)[
+        "Local"
+    ]["ground-rydberg"]
+    for qid, weight, waist_factor in [
+        ("q0", 1.0, 1.0),
+        ("q1", 0.5, np.exp(-0.25)),
+    ]:
+        np.testing.assert_allclose(
+            samples[qid]["det"],
+            -5 * weight * traj.dmm_det_fluctuation["dmm_0"]
+            + traj.doppler_detune[qid]
+            + traj.det_fluctuations["rydberg"],
+        )
+        np.testing.assert_allclose(
+            samples[qid]["amp"],
+            traj.amp_fluctuations["rydberg"] * waist_factor,
+        )
+
+
 def test_dmm_detuning():
     np.random.seed(0xDEADBEEF)
     coordinates = [(0.0, 0.0), (0.0, 5.0)]
@@ -757,3 +899,42 @@ def test_dmm_detuning():
             noisy_samples["Local"]["ground-rydberg"][q_id]["det"],
             expected_noisy[q_id],
         )
+
+
+def test_dmm_noise_is_sampled_per_trajectory() -> None:
+    """Each trajectory must retain its own DMM draw in the noisy detuning."""
+    register = pulser.Register({"q0": (0, 0), "q1": (10, 0)})
+    device = replace(
+        AnalogDevice.to_virtual(),
+        dmm_objects=(DMM(),),
+        reusable_channels=True,
+    )
+    seq = pulser.Sequence(register, device)
+    seq.declare_channel("rydberg", "rydberg_global")
+    seq.add(pulser.Pulse.ConstantPulse(100, 1, 0, 0), "rydberg")
+    seq.config_detuning_map(
+        register.define_detuning_map({"q0": 1.0, "q1": 0.5}), "dmm_0"
+    )
+    seq.add_dmm_detuning(pulser.ConstantWaveform(100, -5), "dmm_0")
+
+    factors = [0.8, 1.1, 1.4]
+    draws = iter(factors)
+
+    def normal(loc: float, scale: float) -> float:
+        return next(draws) if scale == 0.2 else loc
+
+    with patch("numpy.random.normal", side_effect=normal):
+        ham = HamiltonianData.from_sequence(
+            seq,
+            noise_model=pulser.NoiseModel(dmm_sigma=0.2),
+            n_trajectories=len(factors),
+        )
+
+    samples = list(ham.noisy_samples)
+    assert len(samples) == len(factors)
+    for noisy_sample, factor in zip(samples, factors):
+        local = noisy_sample.samples.to_nested_dict(all_local=True)["Local"][
+            "ground-rydberg"
+        ]
+        np.testing.assert_allclose(local["q0"]["det"], -5 * factor)
+        np.testing.assert_allclose(local["q1"]["det"], -2.5 * factor)

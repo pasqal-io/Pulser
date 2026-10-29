@@ -15,17 +15,20 @@ from __future__ import annotations
 
 import dataclasses
 import math
+import re
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 import qutip
+from tests.constants import C3_LEVEL_70
 
 import pulser
 from pulser.backend.default_observables import (
     BitStrings,
     Energy,
     EnergyVariance,
+    Expectation,
     Fidelity,
     Occupation,
     StateResult,
@@ -111,7 +114,11 @@ def test_callback():
 def test_qutip_backend_v2_energy(capfd):
     seq = sequence()
     with pytest.raises(
-        TypeError, match="'config' must be an instance of 'EmulationConfig'"
+        TypeError,
+        match=re.escape(
+            "'config' must be an instance of 'EmulationConfig', not "
+            "<class 'str'>. Got 'tralala'."
+        ),
     ):
         QutipBackendV2(seq, config="tralala")
 
@@ -252,6 +259,28 @@ def test_qutip_backend_v2_stochastic_noise():
     )[0][indices]
 
     assert np.max(np.abs(occupation - occupation_old_api)) < 0.03
+
+
+def test_mcsolve_runs_all_trajectories():
+    # State preparation errors are the only random noise here, so identical
+    # noise trajectories are grouped, but each one must still get its own
+    # Monte Carlo trajectory
+    np.random.seed(123)
+    config = QutipConfig(
+        noise_model=pulser.NoiseModel(
+            state_prep_error=0.2, relaxation_rate=1.0
+        ),
+        n_trajectories=50,
+        observables=[Occupation(evaluation_times=[1.0])],
+    )
+    with patch("qutip.mcsolve", wraps=qutip.mcsolve) as mcsolve:
+        QutipBackendV2(sequence(), config=config).run()
+    # Fewer solver calls than trajectories, because of the grouping
+    assert mcsolve.call_count < config.n_trajectories
+    assert (
+        sum(call.kwargs["ntraj"] for call in mcsolve.call_args_list)
+        == config.n_trajectories
+    )
 
 
 def test_qutip_backend_v2_eval_times_rounding():
@@ -607,7 +636,12 @@ def test_dmm_temperature_without_spot_waist():
 
     with pytest.raises(
         ValueError,
-        match="Combining register noise with a DMM requires",
+        match=re.escape(
+            "Combining register noise with a DMM requires"
+            " `detuning_map_spot_waist` to be defined. If not defined, atom"
+            " thermal motion can lead to non-physical effects; sequence uses"
+            " DMM channels ['dmm_0']."
+        ),
     ):
         QutipBackendV2(seq, config=config)
 
@@ -648,3 +682,94 @@ def test_run_from_sequence_samples(modulation):
     s2 = results2.final_state._state.full()
 
     assert np.allclose(s1, s2, atol=0, rtol=1e-16)  # really the same
+
+
+def test_pauli_string_expectation():
+    reg = pulser.Register.from_coordinates(
+        [(0, 0), (6, 0), (0, 8)], prefix="q"
+    )
+    seq = pulser.Sequence(reg, pulser.MockDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(
+        pulser.Pulse.ConstantDetuning(
+            pulser.BlackmanWaveform(500, np.pi), -1.0, 0.3
+        ),
+        "ryd",
+    )
+    eval_times = [0.0, 0.3, 0.6, 1.0]
+    # The qudit indices follow the order of the register's qubit IDs
+    zxy = QutipConfig.operator_type.from_pauli_string(
+        eigenstates=("r", "g"),
+        n_qudits=len(seq.register.qubit_ids),
+        paulis={0: "Z", 1: "X", 2: "Y"},
+    )
+    expectation = Expectation(
+        zxy, evaluation_times=eval_times, tag_suffix="zxy"
+    )
+    state_res = StateResult(evaluation_times=eval_times)
+    results = QutipBackendV2(
+        seq, config=QutipConfig(observables=(expectation, state_res))
+    ).run()
+
+    result_times = results.get_result_times(expectation)
+    assert len(result_times) == len(eval_times)
+    qutip_op = qutip.tensor(qutip.sigmaz(), qutip.sigmax(), qutip.sigmay())
+    for t in result_times:
+        assert np.isclose(
+            results.get_result(expectation, t),
+            qutip.expect(qutip_op, results.get_result(state_res, t).to_qobj()),
+        )
+    # Not trivially zero at the end of the sequence
+    assert not np.isclose(results.get_result(expectation, 1.0), 0.0)
+
+
+@pytest.mark.parametrize("spacing", [10.0, 15.0])
+@pytest.mark.parametrize(
+    "magnetic_field, angular_factor",
+    [
+        pytest.param((0.0, 0.0, 1.0), 1.0, id="perpendicular"),
+        pytest.param((1.0, 0.0, 0.0), -2.0, id="parallel"),
+    ],
+)
+def test_two_atom_xy_exchange(
+    spacing: float,
+    magnetic_field: tuple[float, float, float],
+    angular_factor: float,
+) -> None:
+    """Free XY evolution matches cos(Jt)|ud> - i sin(Jt)|du>."""
+    assert pulser.devices.MockDevice.rydberg_level == 70
+    duration_ns = 1000
+    times = [0.0, 0.125, 0.25, 0.5, 0.75, 1.0]
+    register = pulser.Register({"q0": (0.0, 0.0), "q1": (spacing, 0.0)})
+    seq = pulser.Sequence(register, pulser.devices.MockDevice)
+    seq.declare_channel("mw", "mw_global")
+    seq.set_magnetic_field(*magnetic_field)
+    seq.add(pulser.Pulse.ConstantPulse(duration_ns, 0.0, 0.0, 0.0), "mw")
+    initial = QutipState.from_state_amplitudes(
+        eigenstates=("u", "d"), amplitudes={"ud": 1.0}
+    )
+    backend = QutipBackendV2(
+        seq,
+        config=QutipConfig(
+            initial_state=initial,
+            observables=[StateResult(evaluation_times=times)],
+        ),
+    )
+
+    results = backend.run()
+
+    for time in times:
+        state = results.get_result("state", time)
+        phase = (
+            C3_LEVEL_70
+            * angular_factor
+            * (duration_ns / 1000)
+            * time
+            / spacing**3
+        )
+        expected = QutipState.from_state_amplitudes(
+            eigenstates=("u", "d"),
+            amplitudes={"ud": np.cos(phase), "du": -1j * np.sin(phase)},
+        )
+        # The relative phase distinguishes J from -J; populations alone do not.
+        assert expected.overlap(state) == pytest.approx(1.0, abs=1e-6)

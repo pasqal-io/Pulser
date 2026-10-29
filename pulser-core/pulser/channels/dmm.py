@@ -21,7 +21,7 @@ from typing import Any, Literal, Optional
 import numpy as np
 
 import pulser.math as pm
-from pulser.channels.base_channel import Channel
+from pulser.channels.base_channel import Channel, _format_violation_times
 from pulser.json.utils import get_dataclass_defaults
 from pulser.pulse import Pulse
 from pulser.register.weight_maps import DetuningMap
@@ -62,8 +62,8 @@ class DMM(Channel):
         min_duration: The shortest duration an instruction can take.
         max_duration: The longest duration an instruction can take.
         mod_bandwidth: The modulation bandwidth (in MHz), following Pulser's
-            non-standard definition (2x the -3dB bandwidth, or the frequency at
-            75% amplitude attenuation).
+            non-standard definition (the frequency at 75% amplitude
+            attenuation).
     """
 
     bottom_detuning: float | None = None
@@ -156,37 +156,44 @@ class DMM(Channel):
                 (defaults to a detuning map with weight 1.0).
         """
         super().validate_pulse(pulse)
-        round_detuning = pm.round(pulse.detuning.samples, 6).as_array(
-            detach=True
-        )
+        detuning = pulse.detuning.samples.as_array(detach=True)
         # Check that detuning is negative
-        if np.any(round_detuning > 0):
-            raise ValueError("The detuning in a DMM must not be positive.")
+        positive_detuning = detuning > pm.VALIDATION_TOLERANCE
+        if np.any(positive_detuning):
+            raise ValueError(
+                "The detuning in a DMM must not be positive; it is "
+                "positive at "
+                f"{_format_violation_times(positive_detuning)} in detuning "
+                f"{pulse.detuning!r}."
+            )
         # Check that detuning on each atom is above bottom_detuning
-        min_round_detuning = np.min(round_detuning)
+        min_detuning = np.min(detuning)
         max_weight = np.max(detuning_map.weights)
         if (
             self.bottom_detuning is not None
-            and max_weight * min_round_detuning < self.bottom_detuning
+            and max_weight * min_detuning
+            < self.bottom_detuning - pm.VALIDATION_TOLERANCE
         ):
             raise ValueError(
                 f"For a detuning map with a maximum weight of {max_weight},"
-                f" a DMM pulse with minimum detuning {min_round_detuning} "
+                f" a DMM pulse with minimum detuning {min_detuning} "
                 "rad/µs goes below the local bottom "
                 f"detuning of the DMM ({self.bottom_detuning} rad/µs). "
                 "To respect this constraint, keep the detuning above "
-                f"{self.bottom_detuning/max_weight} rad/µs."
+                f"{self.bottom_detuning/max_weight} rad/µs. Got pulse "
+                f"{pulse!r}."
             )
         # Check that distributed detuning is above total_bottom_detuning
         sum_weight = np.sum(detuning_map.weights)
         if (
             self.total_bottom_detuning is not None
-            and sum_weight * min_round_detuning < self.total_bottom_detuning
+            and sum_weight * min_detuning
+            < self.total_bottom_detuning - pm.VALIDATION_TOLERANCE
         ):
             raise ValueError(
                 "For a detuning map with a total summed weight of "
                 f"{sum_weight}, the total applied detuning from a DMM pulse "
-                f"with minimum detuning {min_round_detuning} rad/µs goes below"
+                f"with minimum detuning {min_detuning} rad/µs goes below"
                 " the total bottom detuning "
                 f"of the DMM ({self.total_bottom_detuning} rad/µs). "
                 "To respect this constraint, keep the detuning above "
@@ -200,12 +207,13 @@ class DMM(Channel):
             # All weights are zero, skip min_avg_abs_detuning validation
             return
 
-        avg_abs_detuning = np.average(np.abs(round_detuning))
+        avg_abs_detuning = np.average(np.abs(detuning))
         min_non_zero_weight = np.min(weights_arr[non_zero_weight_inds])
+        weighted_avg = min_non_zero_weight * avg_abs_detuning
         if (
-            0
-            < min_non_zero_weight * avg_abs_detuning
-            < self.min_avg_abs_detuning
+            pm.VALIDATION_TOLERANCE
+            < weighted_avg
+            < self.min_avg_abs_detuning - pm.VALIDATION_TOLERANCE
         ):
             raise ValueError(
                 "For a detuning map with a minimum non-zero weight of "
@@ -213,6 +221,7 @@ class DMM(Channel):
                 f"absolute detuning of {avg_abs_detuning:.3g} rad/µs does not"
                 " respect the minimum threshold for the average absolute "
                 f"detuning of the DMM ({self.min_avg_abs_detuning} rad/µs)."
+                f" Got pulse {pulse!r}."
             )
 
     def _to_abstract_repr(self, id: str) -> dict[str, Any]:

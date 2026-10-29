@@ -115,18 +115,30 @@ class Pulse:
             )
         if np.any(amplitude.samples.as_array(detach=True) < 0):
             raise ValueError(
-                "All samples of an amplitude waveform must be "
-                "greater than or equal to zero."
+                "All samples of an amplitude waveform must be >= 0; "
+                f"found negative values in amplitude waveform: {amplitude}."
             )
         object.__setattr__(self, "amplitude", amplitude)
         object.__setattr__(self, "detuning", detuning)
         assert not isinstance(phase, Parametrized)
-        if (phase_ := pm.AbstractArray(phase, dtype=float)).size != 1:
-            raise TypeError(f"'phase' must be a single float, not {phase!r}.")
+        try:
+            phase_ = pm.AbstractArray(phase, dtype=float)
+            assert phase_.size == 1
+        except (ValueError, AssertionError) as e:
+            raise TypeError(
+                f"'phase' must be a single float, not {phase!r}."
+            ) from e
         object.__setattr__(self, "phase", phase_ % (2 * np.pi))
-        post_phase_shift = cast(float, post_phase_shift)
+        assert not isinstance(post_phase_shift, Parametrized)
+        try:
+            post_phase_shift_ = float(post_phase_shift)
+        except TypeError as e:
+            raise TypeError(
+                "'post_phase_shift' must be castable to a float,"
+                f" not {post_phase_shift!r}."
+            ) from e
         object.__setattr__(
-            self, "post_phase_shift", float(post_phase_shift) % (2 * np.pi)
+            self, "post_phase_shift", post_phase_shift_ % (2 * np.pi)
         )
 
     @property

@@ -1,0 +1,49 @@
+{
+  "$id": "weight-map-schema.json",
+  "$ref": "#/definitions/WeightMap",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "WeightMap": {
+      "additionalProperties": false,
+      "description": "Associates weights to trap coordinates. The sum of the provided weights must be equal to 1.",
+      "properties": {
+        "slug": {
+          "type": "string"
+        },
+        "traps": {
+          "items": {
+            "$ref": "#/definitions/WeightedTrap"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "traps"
+      ],
+      "type": "object"
+    },
+    "WeightedTrap": {
+      "additionalProperties": false,
+      "properties": {
+        "weight": {
+          "description": "The weight on the site.",
+          "type": "number"
+        },
+        "x": {
+          "description": "x-position in µm",
+          "type": "number"
+        },
+        "y": {
+          "description": "y-position in µm",
+          "type": "number"
+        }
+      },
+      "required": [
+        "weight",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    }
+  }
+}

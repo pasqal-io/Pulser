@@ -61,7 +61,8 @@ class Register(BaseRegister, RegDrawer):
             or self.dimensionality != 2
         ):
             raise ValueError(
-                "All coordinates must be specified as vectors of size 2."
+                "All coordinates must be specified as vectors of size 2; "
+                f"got {self.dimensionality}D coordinates."
             )
 
     @classmethod
@@ -158,7 +159,10 @@ class Register(BaseRegister, RegDrawer):
 
         # Check spacing
         if row_spacing_ <= 0.0 or col_spacing_ <= 0.0:
-            raise ValueError("Spacing between atoms must be greater than 0.")
+            raise ValueError(
+                "Spacing between atoms must be greater than 0; got row "
+                f"spacing {row_spacing} and column spacing {col_spacing}."
+            )
 
         coords = pm.AbstractArray(patterns.square_rect(rows, columns))
         coords[:, 0] = coords[:, 0] * col_spacing_
@@ -288,7 +292,10 @@ class Register(BaseRegister, RegDrawer):
         """
         # Check device
         if not isinstance(device, pulser.devices._device_datacls.BaseDevice):
-            raise TypeError("'device' must be of type 'BaseDevice'.")
+            raise TypeError(
+                "'device' must be an instance of 'BaseDevice', not "
+                f"{type(device)}: {device}."
+            )
 
         # Check number of qubits (1 or above)
         if n_qubits < 1:
@@ -313,7 +320,7 @@ class Register(BaseRegister, RegDrawer):
             spacing_ := pm.AbstractArray(spacing)
         ) < device.min_atom_distance:
             raise ValueError(
-                f"Spacing between atoms (`spacing = `{spacing})"
+                f"Spacing between atoms (`spacing` = {spacing})"
                 " must be greater than or equal to the minimal"
                 " distance supported by this device"
                 f" ({device.min_atom_distance})."
@@ -354,7 +361,8 @@ class Register(BaseRegister, RegDrawer):
         """
         if not isinstance(device, pulser.devices.Device):
             raise TypeError(
-                f"'device' must be of type Device, not {type(device)}."
+                "'device' must be an instance of 'Device', not "
+                f"{type(device)}."
             )
         if self._coords_arr.requires_grad:
             raise NotImplementedError(

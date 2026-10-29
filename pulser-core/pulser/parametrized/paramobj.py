@@ -289,8 +289,9 @@ class ParamObj(Parametrized, OpSupport):
                 args[0] = class_to_dict(self.args[0])
             else:
                 raise NotImplementedError(
-                    "Instance or static method "
-                    "serialization is not supported."
+                    "Instance or static method serialization is not "
+                    "supported; got "
+                    f"'{type(self.args[0]).__name__}.{self.cls.__name__}'."
                 )
         else:
             cls_dict = class_to_dict(self.cls)
@@ -344,7 +345,8 @@ class ParamObj(Parametrized, OpSupport):
                 else:
                     return abstract_repr(name, **all_args)
             raise NotImplementedError(
-                "Instance or static method serialization is not supported."
+                "Instance or static method serialization is not supported; "
+                f"got '{type(self.args[0]).__name__}.{op_name}'."
             )
         elif op_name in SIGNATURES:
             signature = SIGNATURES[op_name]

@@ -17,10 +17,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import Counter
 from collections.abc import Mapping
 from collections.abc import Sequence as abcSequence
 from dataclasses import dataclass
-from typing import Any, Optional, cast
+from typing import Any, Optional, Type, TypeVar, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -35,6 +36,8 @@ from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.traps import Traps
 from pulser.register.weight_maps import DetuningMap
+
+T = TypeVar("T", bound="RegisterLayout")
 
 
 @dataclass(init=False, repr=False, eq=False, frozen=True)
@@ -80,23 +83,35 @@ class RegisterLayout(Traps, RegDrawer):
         trap_ids_set = set(trap_ids)
 
         if len(trap_ids_set) != len(trap_ids):
-            raise ValueError("Every 'trap_id' must be a unique integer.")
+            repeated = [t for t, freq in Counter(trap_ids).items() if freq > 1]
+            raise ValueError(
+                "Every 'trap_id' must be a unique integer; "
+                f"found repeated ids {repeated} in {list(trap_ids)}."
+            )
 
         if not trap_ids_set.issubset(self.traps_dict):
             # This check makes it redundant to check # qubits <= # traps
+            invalid = [t for t in trap_ids if t not in self.traps_dict]
             raise ValueError(
-                "All 'trap_ids' must correspond to the ID of a trap."
+                "All 'trap_ids' must correspond to the ID of a trap; got "
+                f"invalid ids {invalid} in {list(trap_ids)}, must be "
+                f"integers in [0, {self.number_of_traps - 1}]."
             )
 
         if qubit_ids:
             if len(set(qubit_ids)) != len(qubit_ids):
+                repeated_ids = [
+                    q for q, freq in Counter(qubit_ids).items() if freq > 1
+                ]
                 raise ValueError(
-                    "'qubit_ids' must be a sequence of unique IDs."
+                    "'qubit_ids' must be a sequence of unique IDs; found "
+                    f"repeated ids {repeated_ids} in {list(qubit_ids)}."
                 )
             if len(qubit_ids) != len(trap_ids):
                 raise ValueError(
                     "'qubit_ids' must have the same size as the number of "
-                    f"provided 'trap_ids' ({len(trap_ids)})."
+                    f"provided 'trap_ids'; got {len(trap_ids)} 'trap_ids' vs. "
+                    f"{len(qubit_ids)} 'qubit_ids'."
                 )
 
         ids = (
@@ -128,9 +143,11 @@ class RegisterLayout(Traps, RegDrawer):
             of the targeted traps.
         """
         if not set(detuning_weights.keys()) <= set(self.traps_dict):
+            invalid = [t for t in detuning_weights if t not in self.traps_dict]
             raise ValueError(
                 "The trap ids of detuning weights have to be integers"
-                f" in [0, {self.number_of_traps-1}]."
+                f" in [0, {self.number_of_traps-1}]; "
+                f"got invalid ids {invalid} in {list(detuning_weights)}."
             )
         return DetuningMap(
             [self.traps_dict[trap_id] for trap_id in detuning_weights],
@@ -278,8 +295,8 @@ class RegisterLayout(Traps, RegDrawer):
         validate_abstract_repr(abstr_layout_str, "layout")
         return abstr_layout_str
 
-    @staticmethod
-    def from_abstract_repr(obj_str: str) -> RegisterLayout:
+    @classmethod
+    def from_abstract_repr(cls: Type[T], obj_str: str) -> T:
         """Deserialize a layout from an abstract JSON object.
 
         Args:
@@ -293,5 +310,5 @@ class RegisterLayout(Traps, RegDrawer):
             )
         # Avoids circular imports
         return pulser_abstract_repr.deserializer.deserialize_abstract_layout(
-            obj_str
+            obj_str, matching_type=cls
         )

@@ -82,7 +82,7 @@ class TestDetuningMap:
                 ValueError,
                 match=re.escape(
                     "The trap ids of detuning weights have to be integers"
-                    " in [0, 3]."
+                    " in [0, 3]; got invalid ids "
                 ),
             ):
                 reg.define_detuning_map(bad_key)
@@ -204,9 +204,49 @@ class TestDetuningMap:
         map_reg: MappableRegister,
     ):
         with pytest.raises(
-            ValueError, match="Number of traps and weights don't match."
+            ValueError,
+            match=re.escape(
+                "Number of traps (2) and weights (1) don't match."
+            ),
         ):
             DetuningMap([(0, 0), (1, 0)], [0])
+
+        # NaN is out of range but is caught by neither `< 0` nor `> 1`
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "All weights must be between 0 and 1; found out-of-range "
+                "weights [nan, -0.2] in [0.5, nan, -0.2]."
+            ),
+        ):
+            DetuningMap([(0, 0), (1, 0), (2, 0)], [0.5, float("nan"), -0.2])
+
+        # array-like weights are reported as plain numbers, not as the
+        # repr of each scalar (eg "np.float64(0.5)")
+        for array_weights in (
+            np.array([0.5, 1.5]),
+            np.array([0.5, 1.5], dtype=np.float32),
+        ):
+            with pytest.raises(
+                ValueError,
+                match=re.escape(
+                    "All weights must be between 0 and 1; found out-of-range "
+                    "weights [1.5] in [0.5, 1.5]."
+                ),
+            ):
+                DetuningMap(
+                    [(0, 0), (1, 0)], array_weights  # type: ignore[arg-type]
+                )
+            with pytest.raises(
+                ValueError,
+                match=re.escape(
+                    "Number of traps (3) and weights (2) don't match."
+                ),
+            ):
+                DetuningMap(
+                    [(0, 0), (1, 0), (2, 0)],
+                    array_weights,  # type: ignore[arg-type]
+                )
 
         for reg in (layout, map_reg, register):
             bad_weights: dict[int | str, float]
@@ -218,7 +258,11 @@ class TestDetuningMap:
                 bad_weights = {0: -1.0, 1: 1.0, 2: 1.0}
                 zero_weights = {0: 0.0}
             with pytest.raises(
-                ValueError, match="All weights must be between 0 and 1."
+                ValueError,
+                match=re.escape(
+                    "All weights must be between 0 and 1; found out-of-range "
+                    "weights [-1.0] in [-1.0, 1.0, 1.0]."
+                ),
             ):
                 reg.define_detuning_map(bad_weights)  # type: ignore
             with pytest.warns(
@@ -393,7 +437,11 @@ class TestDMM:
         # Detuning applied to DMM must be negative
         pos_det_pulse = Pulse.ConstantPulse(100, 0, 1e-3, 0)
         with pytest.raises(
-            ValueError, match="The detuning in a DMM must not be positive."
+            ValueError,
+            match=re.escape(
+                "The detuning in a DMM must not be positive; it is positive"
+                f" at 0-99 ns in detuning {pos_det_pulse.detuning!r}."
+            ),
         ):
             physical_dmm.validate_pulse(pos_det_pulse)
 
@@ -465,3 +513,23 @@ class TestDMM:
                 {0: 0.0}
             )
         physical_dmm.validate_pulse(too_low_pulse, det_map)
+
+
+@pytest.mark.parametrize("n_traps", [29, 58])
+def test_dmm_bottom_detuning_float_tolerance(n_traps, monkeypatch):
+    # A detuning of total_bottom_detuning / n_traps must pass
+    dmm = DMM(bottom_detuning=-10.0, total_bottom_detuning=-30.0)
+    det_map = DetuningMap(
+        [(10 * i, 0) for i in range(n_traps)], [1.0] * n_traps
+    )
+    pulse = Pulse.ConstantPulse(100, 0, -30.0 / n_traps, 0)
+    dmm.validate_pulse(pulse, det_map)
+    # It would fail without the tolerance
+    monkeypatch.setattr(pulser.math, "VALIDATION_TOLERANCE", 0.0)
+    with pytest.raises(ValueError, match="goes below the total bottom"):
+        dmm.validate_pulse(pulse, det_map)
+
+
+def test_detuning_map_weights_float_tolerance():
+    det_map = DetuningMap([(0, 0), (10, 0)], [1 + 1e-15, -1e-17])
+    assert det_map.weights == (1.0, 0.0)

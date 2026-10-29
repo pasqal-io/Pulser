@@ -32,13 +32,16 @@ class NoiseTrajectory:
             False means it's present, True means it's bad.
         doppler_detune: The time-independent doppler detuning error per qubit.
         amp_fluctuations:
-            The time-independent amplitude fluctuation per channel.
+            The time-independent amplitude fluctuation per non-DMM channel.
+            DMM entries are 1.
         det_fluctuations:
             The time-independent detuning fluctuation per non-DMM channel.
+            DMM entries are 0.
         det_phases:
             The random phase for each frequency component in the
             time-dependent detuning noise. The amplitude for each component
-            is taken from the noise model and is non-random.
+            is taken from the noise model and is non-random. DMM entries
+            are 0.
         register: The qubit register positions including noise.
         interaction_matrix:
             Packed interaction matrix for the two body term in the
