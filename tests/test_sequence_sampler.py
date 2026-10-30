@@ -169,20 +169,23 @@ def test_inXY() -> None:
 def test_modulation(mod_seq: pulser.Sequence) -> None:
     """Test sampling for modulated channels."""
     N = mod_seq.get_duration()
+    full_duration = mod_seq.get_duration(include_fall_time=True)
     chan = mod_seq.declared_channels["ch0"]
     blackman = np.clip(np.blackman(N), 0, np.inf)
     input = (np.pi / 2) / (np.sum(blackman) / N) * blackman
 
-    want_amp = chan.modulate(input).as_array()
+    want_amp = chan.modulate(input).as_array()[:full_duration]
     mod_samples = sample(mod_seq, modulation=True)
     got_amp = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["amp"]
     np.testing.assert_allclose(got_amp, want_amp)
 
-    want_det = chan.modulate(np.ones(N), keep_ends=True).as_array()
+    want_det = chan.modulate(np.ones(N), keep_ends=True).as_array()[
+        :full_duration
+    ]
     got_det = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["det"]
     np.testing.assert_array_equal(got_det, want_det)
 
-    want_phase = np.ones(mod_seq.get_duration(include_fall_time=True))
+    want_phase = np.ones(full_duration)
     got_phase = mod_samples.to_nested_dict()["Global"]["ground-rydberg"][
         "phase"
     ]
@@ -194,7 +197,9 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
 
     for qty in ("amp", "det", "phase", "centered_phase"):
         np.testing.assert_array_equal(
-            getattr(input_ch_samples.modulate(chan), qty).as_array(),
+            getattr(
+                input_ch_samples.modulate(chan, full_duration), qty
+            ).as_array(),
             getattr(output_ch_samples, qty).as_array(),
         )
 
