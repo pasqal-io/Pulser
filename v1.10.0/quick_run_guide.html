@@ -1,0 +1,384 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quick Run Guide &mdash; Pulser 1.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=729ca094" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=1d24b1d9"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <script src="_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" />
+    <link rel="prev" title="Pulser" href="index.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.10.0" /><meta name="readthedocs-resolver-filename" content="/quick_run_guide.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Pulser
+              <img src="_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick Run Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#local-execution">Local Execution</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#define-a-pulse-sequence">1. Define a pulse sequence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-on-a-local-emulator">2. Run on a local emulator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#inspect-results">3. Inspect results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#remote-execution">Remote Execution</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#connection">Connection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#remote-execution-on-cloud-emulators">Remote Execution on Cloud Emulators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#create-a-connection">1. Create a connection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#initialize-a-remote-emulator-and-submit">2. Initialize a remote emulator and submit</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#check-status-and-retrieve-results">3. Check status and retrieve results</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#remote-execution-on-a-qpu">Remote Execution on a QPU</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#list-available-devices-and-adapt-the-sequence-to-the-qpu">1. List available devices and adapt the sequence to the QPU</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#submit-to-the-qpu">2. Submit to the QPU</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/backends.html">Execution on an Emulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/qpu.html">QPU Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results and Observables</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/dmm.html">Local Addressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/size_dep_states_ops.html">Creating Size-Dependent States and Operators</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Quick Run Guide</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/quick_run_guide.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="quick-run-guide">
+<h1>Quick Run Guide<a class="headerlink" href="#quick-run-guide" title="Link to this heading"></a></h1>
+<div class="note admonition">
+<p class="admonition-title">Onboarding</p>
+<p>This onboarding page gets you up and running with Pulser as quickly as possible: installation, running a job locally, and submitting to remote backends. It is intentionally focused and does not replace the full documentation. For an in-depth understanding, follow the full documentation in order.</p>
+</div>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<p>Pulser requires Python 3.11 or later. Install it from <a class="reference external" href="https://pypi.org/project/pulser/">PyPI</a> in a virtual environment:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+<span class="nb">source</span><span class="w"> </span>.venv/bin/activate<span class="w">  </span><span class="c1"># Windows: .venv\Scripts\activate</span>
+pip<span class="w"> </span>install<span class="w"> </span>pulser
+</pre></div>
+</div>
+</section>
+<section id="local-execution">
+<h2>Local Execution<a class="headerlink" href="#local-execution" title="Link to this heading"></a></h2>
+<p>Run your first experiment on a local emulator. No account or credentials are needed.</p>
+<section id="define-a-pulse-sequence">
+<h3>1. Define a pulse sequence<a class="headerlink" href="#define-a-pulse-sequence" title="Link to this heading"></a></h3>
+<p>Create a register and a sequence on a device, then add a pulse to a channel. <code class="docutils literal notranslate"><span class="pre">MockDevice</span></code> is a virtual device for local runs.</p>
+<details>
+<summary>Example: Rydberg blockade</summary>
+<p>This example contains three atoms in a straight line 7 µm apart, and slowly sweeps the detuning from negative to positive, thus favoring atoms in the excited state. Adjacent atoms are inside each other’s Rydberg blockade radius (here, about 10 µm), so they cannot both be excited. The two end atoms are far enough apart (14 µm) to be simultaneously excited.</p>
+</details>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ConstantWaveform</span><span class="p">,</span>
+    <span class="n">MockDevice</span><span class="p">,</span>
+    <span class="n">Pulse</span><span class="p">,</span>
+    <span class="n">RampWaveform</span><span class="p">,</span>
+    <span class="n">Register</span><span class="p">,</span>
+    <span class="n">Sequence</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Create the register: 3 atoms in a line, 7 µm apart</span>
+<span class="n">register</span> <span class="o">=</span> <span class="n">Register</span><span class="o">.</span><span class="n">from_coordinates</span><span class="p">([(</span><span class="o">-</span><span class="mi">7</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">0</span><span class="p">)],</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">"q"</span><span class="p">)</span>
+
+<span class="c1"># Define the pulse parameters</span>
+<span class="n">omega</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>  <span class="c1"># rad/µs</span>
+<span class="n">delta_i</span> <span class="o">=</span> <span class="o">-</span><span class="mf">3.0</span> <span class="o">*</span> <span class="n">omega</span>  <span class="c1"># rad/µs</span>
+<span class="n">delta_f</span> <span class="o">=</span> <span class="o">-</span><span class="n">delta_i</span>  <span class="c1"># rad/µs</span>
+<span class="n">T</span> <span class="o">=</span> <span class="mi">3000</span>  <span class="c1"># ns</span>
+
+<span class="c1"># Define the pulse</span>
+<span class="n">pulse</span> <span class="o">=</span> <span class="n">Pulse</span><span class="p">(</span>
+    <span class="n">amplitude</span><span class="o">=</span><span class="n">ConstantWaveform</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">omega</span><span class="p">),</span>
+    <span class="n">detuning</span><span class="o">=</span><span class="n">RampWaveform</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">delta_i</span><span class="p">,</span> <span class="n">delta_f</span><span class="p">),</span>
+    <span class="n">phase</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Create the sequence and add the pulse</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">(</span><span class="n">register</span><span class="p">,</span> <span class="n">MockDevice</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">declare_channel</span><span class="p">(</span><span class="s2">"rydberg_global"</span><span class="p">,</span> <span class="s2">"rydberg_global"</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pulse</span><span class="p">,</span> <span class="s2">"rydberg_global"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="run-on-a-local-emulator">
+<h3>2. Run on a local emulator<a class="headerlink" href="#run-on-a-local-emulator" title="Link to this heading"></a></h3>
+<p>Pulser supports several <a class="reference external" href="https://docs.pasqal.com/qpu-emulators/emulators/">Pasqal emulators</a>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">QutipBackendV2</span></code>: based on QuTiP, best for up to ~15 qubits. Installed by default with <code class="docutils literal notranslate"><span class="pre">pulser</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SVBackend</span></code>: PyTorch-based state-vector emulator, best for up to ~25 qubits. Requires the <a class="reference external" href="https://docs.pasqal.com/qpu-emulators/emusv/"><code class="docutils literal notranslate"><span class="pre">emu-sv</span></code></a> package.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MPSBackend</span></code>: PyTorch-based Matrix Product State emulator, best for 25 to ~80 qubits. Requires the <a class="reference external" href="https://docs.pasqal.com/qpu-emulators/emumps/"><code class="docutils literal notranslate"><span class="pre">emu-mps</span></code></a> package.</p></li>
+</ul>
+<p>We use <code class="docutils literal notranslate"><span class="pre">QutipBackendV2</span></code> here since it comes with <code class="docutils literal notranslate"><span class="pre">pulser</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">QutipBackendV2</span>
+
+<span class="n">backend</span> <span class="o">=</span> <span class="n">QutipBackendV2</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">backend</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>To use another emulator, install it (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">emu-sv</span> <span class="pre">emu-mps</span></code>) and swap the class, for example <code class="docutils literal notranslate"><span class="pre">SVBackend(seq)</span></code>.</p>
+</section>
+<section id="inspect-results">
+<h3>3. Inspect results<a class="headerlink" href="#inspect-results" title="Link to this heading"></a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">backend.run()</span></code> returns a <code class="docutils literal notranslate"><span class="pre">Results</span></code> object. <code class="docutils literal notranslate"><span class="pre">get_result_tags()</span></code> lists what it contains, and <code class="docutils literal notranslate"><span class="pre">final_bitstrings</span></code> gives the sampled bitstrings:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">results</span><span class="o">.</span><span class="n">get_result_tags</span><span class="p">()</span>   <span class="c1"># ['bitstrings', 'state']</span>
+<span class="n">results</span><span class="o">.</span><span class="n">final_bitstrings</span>    <span class="c1"># Counter({'101': 810, '010': 61, '001': 57, ...})</span>
+</pre></div>
+</div>
+<details>
+<summary>Interpretation</summary>
+<p><code class="docutils literal notranslate"><span class="pre">'101'</span></code> dominates because the middle atom is blockaded by both of its neighbours, so having only the two end atoms excited is the most favorable configuration.</p>
+</details>
+<p>The exact counts vary between runs because the bitstrings are sampled.</p>
+</section>
+</section>
+<section id="remote-execution">
+<h2>Remote Execution<a class="headerlink" href="#remote-execution" title="Link to this heading"></a></h2>
+<section id="connection">
+<h3>Connection<a class="headerlink" href="#connection" title="Link to this heading"></a></h3>
+<div class="note admonition">
+<p class="admonition-title">Create a Connection</p>
+<p>Remote execution, whether it’s on emulators or QPUs, requires a connection to submit a job. You can connect either through Pasqal Cloud or through one of our third-party cloud providers. If you haven’t set up a connection yet, do so before continuing.</p>
+<div style="text-align: center">
+  <a href="https://docs.pasqal.com/cloud/set-up" class="pulser-button pulser-button--primary">Pasqal Cloud</a>
+  <a href="https://docs.pasqal.com/third-party-cloud-providers/#create-a-connection" class="pulser-button">Third-Party Providers</a>
+</div>
+</div>
+</section>
+<section id="remote-execution-on-cloud-emulators">
+<h3>Remote Execution on Cloud Emulators<a class="headerlink" href="#remote-execution-on-cloud-emulators" title="Link to this heading"></a></h3>
+<section id="create-a-connection">
+<h4>1. Create a connection<a class="headerlink" href="#create-a-connection" title="Link to this heading"></a></h4>
+<p>This example uses Pasqal Cloud: install the <a class="reference external" href="https://pypi.org/project/pasqal-cloud/"><code class="docutils literal notranslate"><span class="pre">pasqal-cloud</span></code></a> package with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pasqal-cloud</span></code>, then create a <code class="docutils literal notranslate"><span class="pre">PasqalCloudConnection</span></code> with your username, password and project ID from the portal.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p><strong>Using a third-party provider?</strong></p>
+<p>If you chose a third-party cloud provider, create your connection by following that provider’s instructions instead (for example, <a class="reference external" href="https://docs.pasqal.com/third-party-cloud-providers/scaleway/#step-4-create-your-connection">Scaleway</a>), then continue from step 2, using it as <code class="docutils literal notranslate"><span class="pre">connection</span></code>.</p>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pasqal_cloud</span><span class="w"> </span><span class="kn">import</span> <span class="n">PasqalCloudConnection</span>
+
+<span class="n">connection</span> <span class="o">=</span> <span class="n">PasqalCloudConnection</span><span class="p">(</span>
+    <span class="n">username</span><span class="o">=</span><span class="n">USERNAME</span><span class="p">,</span>      <span class="c1"># your user/email for the Pasqal Cloud Platform</span>
+    <span class="n">password</span><span class="o">=</span><span class="n">PASSWORD</span><span class="p">,</span>      <span class="c1"># your Pasqal Cloud Platform password</span>
+    <span class="n">project_id</span><span class="o">=</span><span class="n">PROJECT_ID</span><span class="p">,</span>  <span class="c1"># the ID of the project associated with your account</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Replace <code class="docutils literal notranslate"><span class="pre">USERNAME</span></code>, <code class="docutils literal notranslate"><span class="pre">PASSWORD</span></code> and <code class="docutils literal notranslate"><span class="pre">PROJECT_ID</span></code> with your own values. Avoid hardcoding your password in code you share.</p>
+</section>
+<section id="initialize-a-remote-emulator-and-submit">
+<h4>2. Initialize a remote emulator and submit<a class="headerlink" href="#initialize-a-remote-emulator-and-submit" title="Link to this heading"></a></h4>
+<p><code class="docutils literal notranslate"><span class="pre">RemoteEmuFreeBackend</span></code> is free for all Pasqal Cloud accounts and needs no credits. <code class="docutils literal notranslate"><span class="pre">run()</span></code> submits the sequence and returns a <code class="docutils literal notranslate"><span class="pre">RemoteResults</span></code> object without waiting for the results.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser.backend</span><span class="w"> </span><span class="kn">import</span> <span class="n">BitStrings</span><span class="p">,</span> <span class="n">EmulationConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">RemoteEmuFreeBackend</span>
+
+<span class="n">remote_backend</span> <span class="o">=</span> <span class="n">RemoteEmuFreeBackend</span><span class="p">(</span>
+    <span class="n">seq</span><span class="p">,</span>
+    <span class="n">connection</span><span class="o">=</span><span class="n">connection</span><span class="p">,</span>
+    <span class="n">config</span><span class="o">=</span><span class="n">EmulationConfig</span><span class="p">(</span><span class="n">observables</span><span class="o">=</span><span class="p">[</span><span class="n">BitStrings</span><span class="p">()]),</span>
+<span class="p">)</span>
+<span class="n">remote_results</span> <span class="o">=</span> <span class="n">remote_backend</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Remote emulator backends work as follows:</p>
+<ul class="simple">
+<li><p>Backend class: <code class="docutils literal notranslate"><span class="pre">RemoteEmuFreeBackend</span></code>, <code class="docutils literal notranslate"><span class="pre">RemoteSVBackend</span></code> or <code class="docutils literal notranslate"><span class="pre">RemoteMPSBackend</span></code>. Availability depends on your provider.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">config</span></code>: an <code class="docutils literal notranslate"><span class="pre">EmulationConfig</span></code>, as for local emulators. See <a href="tutorials/backends.html#4.-Configuring-the-Emulation">Configuring the Emulation</a>.</p></li>
+</ul>
+</section>
+<section id="check-status-and-retrieve-results">
+<h4>3. Check status and retrieve results<a class="headerlink" href="#check-status-and-retrieve-results" title="Link to this heading"></a></h4>
+<p>Remote jobs run asynchronously, so you can check their status and fetch the results once they are done. Save the batch ID to retrieve the results later, for example from a new session.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser.backend</span><span class="w"> </span><span class="kn">import</span> <span class="n">RemoteResults</span>
+
+<span class="c1"># query status: PENDING, RUNNING, DONE, etc.</span>
+<span class="n">status</span> <span class="o">=</span> <span class="n">remote_results</span><span class="o">.</span><span class="n">get_batch_status</span><span class="p">()</span>
+
+<span class="c1"># fetch the results (available once the batch is done)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">remote_results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">results</span><span class="o">.</span><span class="n">final_bitstrings</span>
+
+<span class="c1"># save the identifier for later retrieval</span>
+<span class="n">batch_id</span> <span class="o">=</span> <span class="n">remote_results</span><span class="o">.</span><span class="n">batch_id</span>
+
+<span class="c1"># reconnect to the batch later</span>
+<span class="n">remote_results</span> <span class="o">=</span> <span class="n">RemoteResults</span><span class="p">(</span><span class="n">batch_id</span><span class="p">,</span> <span class="n">connection</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="remote-execution-on-a-qpu">
+<h3>Remote Execution on a QPU<a class="headerlink" href="#remote-execution-on-a-qpu" title="Link to this heading"></a></h3>
+<p>The same connection lets you run the sequence on a QPU.</p>
+<section id="list-available-devices-and-adapt-the-sequence-to-the-qpu">
+<h4>1. List available devices and adapt the sequence to the QPU<a class="headerlink" href="#list-available-devices-and-adapt-the-sequence-to-the-qpu" title="Link to this heading"></a></h4>
+<p>List the devices available through your connection, then adapt the sequence to the target QPU. QPUs require the register to come from a layout, so we generate one automatically.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># list available devices</span>
+<span class="n">connection</span><span class="o">.</span><span class="n">fetch_available_devices</span><span class="p">()</span>
+<span class="c1"># {'FRESNEL': ..., ...}</span>
+
+<span class="c1"># adapt the sequence to the FRESNEL device</span>
+<span class="n">device</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">fetch_available_devices</span><span class="p">()[</span><span class="s2">"FRESNEL"</span><span class="p">]</span>
+<span class="n">qpu_register</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">register</span><span class="o">.</span><span class="n">with_automatic_layout</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+<span class="n">qpu_seq</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">with_new_register</span><span class="p">(</span><span class="n">qpu_register</span><span class="p">)</span><span class="o">.</span><span class="n">with_new_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="submit-to-the-qpu">
+<h4>2. Submit to the QPU<a class="headerlink" href="#submit-to-the-qpu" title="Link to this heading"></a></h4>
+<p>Create a <code class="docutils literal notranslate"><span class="pre">QPUBackend</span></code> with the sequence, your connection and number of shots, then submit. Status checks and result retrieval work the same as for remote emulators.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser.backend</span><span class="w"> </span><span class="kn">import</span> <span class="n">BackendConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">QPUBackend</span>
+
+<span class="n">qpu</span> <span class="o">=</span> <span class="n">QPUBackend</span><span class="p">(</span>
+    <span class="n">qpu_seq</span><span class="p">,</span>
+    <span class="n">connection</span><span class="o">=</span><span class="n">connection</span><span class="p">,</span>
+    <span class="n">config</span><span class="o">=</span><span class="n">BackendConfig</span><span class="p">(</span><span class="n">default_num_shots</span><span class="o">=</span><span class="mi">500</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="n">remote_results</span> <span class="o">=</span> <span class="n">qpu</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="c1"># save the identifier for later retrieval</span>
+<span class="n">batch_id</span> <span class="o">=</span> <span class="n">remote_results</span><span class="o">.</span><span class="n">batch_id</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Pulser" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

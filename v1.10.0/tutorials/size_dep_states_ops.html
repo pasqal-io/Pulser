@@ -1,0 +1,391 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="readthedocs-addons-api-version" content="1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Creating Size-Dependent States and Operators &mdash; Pulser 1.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=729ca094" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=1d24b1d9"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/versions.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Optimal Control for AFM State Preparation" href="optimization.html" />
+    <link rel="prev" title="Phase Shifts and Virtual Z gates" href="phase_shifts_vz_gates.html" /> 
+<script async type="text/javascript" src="/_/static/javascript/readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pulser" /><meta name="readthedocs-version-slug" content="v1.10.0" /><meta name="readthedocs-resolver-filename" content="/tutorials/size_dep_states_ops.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Pulser
+              <img src="../_static/pulser_logo.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="switch-menus">
+                <div class="version-switch"></div>
+                <div class="language-switch"></div>
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../quick_run_guide.html">Quick Run Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../programming.html">Programming a neutral-atom QPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating.html">Tutorial: Programming with Pulser</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Fundamentals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../conventions.html">Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../register.html">Register and Rydberg-Atom Interactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pulses.html">Pulses and Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sequence.html">Sequence Creation and Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backends.html">Execution on an Emulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qpu.html">QPU Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../results.html">Results and Observables</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Extended Usage</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../extended_usage_intro.html">Introduction to Extended Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reg_layouts.html">Register Layouts &amp; Mappable Registers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output_mod_eom.html">Output Modulation &amp; EOM Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_devices.html">Devices and Virtual Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramseqs.html">Parametrized Sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="composite_wfs.html">Composite Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpolated_wfs.html">Interpolated Waveforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">JSON Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../noise_model.html">Noise Model and Noisy Simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dmm.html">Local Addressability with DMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slm_mask.html">State preparation with the SLM mask</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xy_spin_chain.html">XY Hamiltonian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="phase_shifts_vz_gates.html">Phase Shifts and Virtual Z gates</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Creating Size-Dependent States and Operators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Size-dependent-Pauli-string-operators">Size-dependent Pauli-string operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Building-reference-states">Building reference states</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Expectation-values">Expectation values</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Optimal Control for AFM State Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubo.html">QAA to solve a QUBO problem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mwis.html">QAA to solve a MWIS problem</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/core.html"><code class="docutils literal notranslate"><span class="pre">pulser</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/simulation.html"><code class="docutils literal notranslate"><span class="pre">pulser_simulation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apidoc/pasqal.html"><code class="docutils literal notranslate"><span class="pre">pulser_pasqal</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Pulser</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Creating Size-Dependent States and Operators</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/size_dep_states_ops.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Creating-Size-Dependent-States-and-Operators">
+<h1>Creating Size-Dependent States and Operators<a class="headerlink" href="#Creating-Size-Dependent-States-and-Operators" title="Link to this heading"></a></h1>
+<p>The <a class="reference internal" href="../apidoc/_autosummary/pulser.backend.State.html"><span class="doc">State</span></a> and <a class="reference internal" href="../apidoc/_autosummary/pulser.backend.Operator.html"><span class="doc">Operator</span></a> classes let you build arbitrary state and operator objects from scratch using the <code class="docutils literal notranslate"><span class="pre">from_state_amplitudes()</span></code> and <code class="docutils literal notranslate"><span class="pre">from_operator_repr()</span></code> methods (as shown in <a class="reference internal" href="backends.html"><span class="doc">Execution on an Emulator</span></a> and <a class="reference internal" href="../results.html"><span class="doc">Results and Observables</span></a>). Also, <code class="docutils literal notranslate"><span class="pre">Operator.from_pauli_string()</span></code> provides a shortcut for creating Pauli string operators. Together,
+these objects are used to create initial states, calculate observables such as <code class="docutils literal notranslate"><span class="pre">Fidelity</span></code>, and find expectation values of custom operators at any desired moment of your Pulser sequence.</p>
+<p>A common use case for these is many-body physics simulations, where you often want to:</p>
+<ul class="simple">
+<li><p>prepare reference initial states that are non-trivial,</p></li>
+<li><p>scale the number of qubits to look for trends that persist (or not).</p></li>
+</ul>
+<p>This page presents some simple recipes for defining commonly used states and operators with a variable system size, and how to calculate their expectation values.</p>
+<section id="Size-dependent-Pauli-string-operators">
+<h2>Size-dependent Pauli-string operators<a class="headerlink" href="#Size-dependent-Pauli-string-operators" title="Link to this heading"></a></h2>
+<p>Many observables of interest are Pauli-string operators, i.e. tensor products of Pauli matrices acting on different qubits, such as <span class="math notranslate nohighlight">\(Z_0 X_1 Z_3\)</span>. These can be built for any system size with <code class="docutils literal notranslate"><span class="pre">Operator.from_pauli_string()</span></code>, which takes:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">eigenstates</span></code>: the basis the Pauli matrices are defined in,</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">n_qudits</span></code>: the number of qubits in the system,</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">paulis</span></code>: a mapping between the index of a qubit in the register and the Pauli matrix (<code class="docutils literal notranslate"><span class="pre">&quot;X&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Y&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;Z&quot;</span></code>) applied to it. All the other qubits are applied the identity.</p></li>
+</ul>
+<p>With <code class="docutils literal notranslate"><span class="pre">eigenstates</span> <span class="pre">=</span> <span class="pre">(&quot;r&quot;,</span> <span class="pre">&quot;g&quot;)</span></code> (the <a class="reference internal" href="../conventions.html#pauli-matrix-form"><span class="std std-ref">ground-rydberg basis</span></a>), Pauli-string operators can be built as follows:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser_simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">QutipConfig</span>
+
+<span class="n">eigenstates</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"r"</span><span class="p">,</span> <span class="s2">"g"</span><span class="p">)</span>
+
+<span class="c1"># The operator class comes from the backend's configuration</span>
+<span class="n">operator_class</span> <span class="o">=</span> <span class="n">QutipConfig</span><span class="o">.</span><span class="n">operator_type</span>
+
+<span class="c1"># Z_0 X_1 Z_3 on a system of four qubits</span>
+<span class="n">z0x1z3</span> <span class="o">=</span> <span class="n">operator_class</span><span class="o">.</span><span class="n">from_pauli_string</span><span class="p">(</span>
+    <span class="n">eigenstates</span><span class="o">=</span><span class="n">eigenstates</span><span class="p">,</span> <span class="n">n_qudits</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">paulis</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s2">"Z"</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s2">"X"</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span> <span class="s2">"Z"</span><span class="p">}</span>
+<span class="p">)</span>
+<span class="c1"># The qutip.Qobj associated with this operator</span>
+<span class="n">z0x1z3</span><span class="o">.</span><span class="n">to_qobj</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="math notranslate nohighlight">
+Quantum object: dims=[[2, 2, 2, 2], [2, 2, 2, 2]], shape=(16, 16), type='oper', dtype=CSR, isherm=True$$\left(\begin{array}{cc}0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; \cdots &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0\\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; \cdots &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0\\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; \cdots &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0\\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; \cdots &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0\\1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; \cdots &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0\\\vdots &amp; \vdots &amp; \vdots &amp; \vdots &amp; \vdots &amp; \ddots &amp; \vdots &amp; \vdots &amp; \vdots &amp; \vdots &amp; \vdots\\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; \cdots &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1\\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; \cdots &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0\\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; \cdots &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0\\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; \cdots &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0\\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; \cdots &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0\end{array}\right)$$</div></div>
+</div>
+<div class="admonition note">
+<p>Note that the qubit indices follow the order of the qubit IDs in the sequence’s register (i.e. <code class="docutils literal notranslate"><span class="pre">seq.register.qubit_ids</span></code>).</p>
+</div>
+<p>Since <code class="docutils literal notranslate"><span class="pre">from_pauli_string()</span></code> relies on <code class="docutils literal notranslate"><span class="pre">from_operator_repr()</span></code> under the hood, the resulting operator works with any backend, including remote ones. Any other <code class="docutils literal notranslate"><span class="pre">Operator</span></code> subclass (e.g. <code class="docutils literal notranslate"><span class="pre">OperatorRepr</span></code>) can be used in place of <code class="docutils literal notranslate"><span class="pre">QutipConfig.operator_type</span></code>.</p>
+<p>It is straightforward to define families of operators whose support depends on the number of qubits. For instance, the end-to-end correlator <span class="math notranslate nohighlight">\(Z_0 Z_{n-1}\)</span> and the parity operator <span class="math notranslate nohighlight">\(X^{\otimes n}\)</span>:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pulser.backend</span><span class="w"> </span><span class="kn">import</span> <span class="n">Operator</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">end_to_end_zz</span><span class="p">(</span><span class="n">n_qubits</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Operator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Builds Z_0 Z_{n-1} on a system of n_qubits."""</span>
+    <span class="k">return</span> <span class="n">operator_class</span><span class="o">.</span><span class="n">from_pauli_string</span><span class="p">(</span>
+        <span class="n">eigenstates</span><span class="o">=</span><span class="n">eigenstates</span><span class="p">,</span>
+        <span class="n">n_qudits</span><span class="o">=</span><span class="n">n_qubits</span><span class="p">,</span>
+        <span class="n">paulis</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s2">"Z"</span><span class="p">,</span> <span class="n">n_qubits</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span> <span class="s2">"Z"</span><span class="p">},</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">x_parity</span><span class="p">(</span><span class="n">n_qubits</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Operator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Builds X_0 X_1 ... X_{n-1} on a system of n_qubits."""</span>
+    <span class="k">return</span> <span class="n">operator_class</span><span class="o">.</span><span class="n">from_pauli_string</span><span class="p">(</span>
+        <span class="n">eigenstates</span><span class="o">=</span><span class="n">eigenstates</span><span class="p">,</span>
+        <span class="n">n_qudits</span><span class="o">=</span><span class="n">n_qubits</span><span class="p">,</span>
+        <span class="n">paulis</span><span class="o">=</span><span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="s2">"X"</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_qubits</span><span class="p">)},</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Building-reference-states">
+<h2>Building reference states<a class="headerlink" href="#Building-reference-states" title="Link to this heading"></a></h2>
+<p>In the same spirit, <code class="docutils literal notranslate"><span class="pre">get_state()</span></code> builds reference states of arbitrary size via <code class="docutils literal notranslate"><span class="pre">from_state_amplitudes()</span></code>, which takes a mapping between basis state combinations and their complex amplitudes.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Type</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pulser.backend</span><span class="w"> </span><span class="kn">import</span> <span class="n">State</span><span class="p">,</span> <span class="n">StateRepr</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_state</span><span class="p">(</span>
+    <span class="n">n_qubits</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">state_class</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">State</span><span class="p">]</span> <span class="o">=</span> <span class="n">StateRepr</span><span class="p">,</span>
+    <span class="n">state_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"plus"</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">State</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Builds a reference state of size n_qubits.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        n_qubits: The number of qubits in the state.</span>
+<span class="sd">        state_class: The ``State`` subclass to instantiate, usually taken</span>
+<span class="sd">            from a backend's ``config_type.state_type``.</span>
+<span class="sd">        state_name: The reference state to build, either "plus" (the</span>
+<span class="sd">            uniform superposition of all basis states) or "ghz".</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The requested reference state, normalized to 1.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        NotImplementedError: If ``state_name`` is not a known reference</span>
+<span class="sd">            state.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; # builds (|rrrr&gt; + |gggg&gt;) / sqrt(2)</span>
+<span class="sd">        &gt;&gt;&gt; get_state(n_qubits=4, state_name="ghz")</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">state_name</span> <span class="o">==</span> <span class="s2">"plus"</span><span class="p">:</span>
+        <span class="c1"># |+&gt;^n_qubits: all 2^n_qubits basis states with equal amplitude</span>
+        <span class="n">dim</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="n">n_qubits</span>
+        <span class="n">amplitudes</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="c1"># format(i, "0{n}b") writes the integer i as a binary string</span>
+            <span class="c1"># of fixed length n_qubits, whose digits then index into</span>
+            <span class="c1"># 'eigenstates' to name the basis state combination</span>
+            <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="n">eigenstates</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">b</span><span class="p">)]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"0</span><span class="si">{</span><span class="n">n_qubits</span><span class="si">}</span><span class="s2">b"</span><span class="p">)</span>
+            <span class="p">):</span> <span class="mf">1.0</span>
+            <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+        <span class="p">}</span>
+
+    <span class="k">elif</span> <span class="n">state_name</span> <span class="o">==</span> <span class="s2">"ghz"</span><span class="p">:</span>
+        <span class="c1"># (|rr...r&gt; + |gg...g&gt;) / sqrt(2): only two basis states have a</span>
+        <span class="c1"># non-zero amplitude, so they are the only ones to list</span>
+        <span class="n">norm</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">amplitudes</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"r"</span> <span class="o">*</span> <span class="n">n_qubits</span><span class="p">:</span> <span class="n">norm</span><span class="p">,</span> <span class="s2">"g"</span> <span class="o">*</span> <span class="n">n_qubits</span><span class="p">:</span> <span class="n">norm</span><span class="p">}</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"State </span><span class="si">{</span><span class="n">state_name</span><span class="si">}</span><span class="s2"> not implemented."</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">state_class</span><span class="o">.</span><span class="n">from_state_amplitudes</span><span class="p">(</span>
+        <span class="n">eigenstates</span><span class="o">=</span><span class="n">eigenstates</span><span class="p">,</span> <span class="n">amplitudes</span><span class="o">=</span><span class="n">amplitudes</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">get_state()</span></code> depends on the system size only through its <code class="docutils literal notranslate"><span class="pre">n_qubits</span></code> argument, so the exact same code can be reused for any number of qubits. Below, the <code class="docutils literal notranslate"><span class="pre">&quot;plus&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;ghz&quot;</span></code> states are built for the same <code class="docutils literal notranslate"><span class="pre">n_qubits</span></code> and compared through their bitstring probabilities.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="n">state_class</span> <span class="o">=</span> <span class="n">QutipConfig</span><span class="o">.</span><span class="n">state_type</span>
+
+<span class="n">n_qubits</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">plus_state</span> <span class="o">=</span> <span class="n">get_state</span><span class="p">(</span>
+    <span class="n">n_qubits</span><span class="o">=</span><span class="n">n_qubits</span><span class="p">,</span> <span class="n">state_class</span><span class="o">=</span><span class="n">state_class</span><span class="p">,</span> <span class="n">state_name</span><span class="o">=</span><span class="s2">"plus"</span>
+<span class="p">)</span>
+<span class="n">ghz_state</span> <span class="o">=</span> <span class="n">get_state</span><span class="p">(</span>
+    <span class="n">n_qubits</span><span class="o">=</span><span class="n">n_qubits</span><span class="p">,</span> <span class="n">state_class</span><span class="o">=</span><span class="n">state_class</span><span class="p">,</span> <span class="n">state_name</span><span class="o">=</span><span class="s2">"ghz"</span>
+<span class="p">)</span>
+
+<span class="c1"># bitstring_probabilities() omits the bitstrings with zero probability,</span>
+<span class="c1"># so the full list is built here to share the x-axis between both plots</span>
+<span class="n">bitstrings</span> <span class="o">=</span> <span class="p">[</span><span class="nb">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"0</span><span class="si">{</span><span class="n">n_qubits</span><span class="si">}</span><span class="s2">b"</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">n_qubits</span><span class="p">)]</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">titles</span> <span class="o">=</span> <span class="p">(</span><span class="sa">r</span><span class="s2">"$|+\rangle^{\otimes n_\mathrm</span><span class="si">{qubits}</span><span class="s2">}$"</span><span class="p">,</span> <span class="s2">"GHZ"</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">ax</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">title</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="p">(</span><span class="n">plus_state</span><span class="p">,</span> <span class="n">ghz_state</span><span class="p">),</span> <span class="n">titles</span><span class="p">):</span>
+    <span class="n">probs</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">bitstring_probabilities</span><span class="p">()</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">bitstrings</span><span class="p">,</span> <span class="p">[</span><span class="n">probs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">bitstrings</span><span class="p">])</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"bitstring"</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">"x"</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span><span class="p">)</span>
+
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"probability"</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_size_dep_states_ops_10_0.png" src="../_images/tutorials_size_dep_states_ops_10_0.png" />
+</div>
+</div>
+</section>
+<section id="Expectation-values">
+<h2>Expectation values<a class="headerlink" href="#Expectation-values" title="Link to this heading"></a></h2>
+<p>Size-dependent states and operators can be combined freely to compute the expectation value of an operator on a state.</p>
+<p>For instance, the end-to-end correlator <span class="math notranslate nohighlight">\(\langle Z_0 Z_{n-1} \rangle\)</span> distinguishes the GHZ state (for which it is <span class="math notranslate nohighlight">\(1\)</span>) from <span class="math notranslate nohighlight">\(|+\rangle^{\otimes n}\)</span> (for which it is <span class="math notranslate nohighlight">\(0\)</span>), while both states are eigenstates of <span class="math notranslate nohighlight">\(X^{\otimes n}\)</span> with eigenvalue <span class="math notranslate nohighlight">\(1\)</span>, regardless of the number of qubits:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">):</span>
+    <span class="n">ghz</span> <span class="o">=</span> <span class="n">get_state</span><span class="p">(</span><span class="n">n_qubits</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">state_class</span><span class="o">=</span><span class="n">state_class</span><span class="p">,</span> <span class="n">state_name</span><span class="o">=</span><span class="s2">"ghz"</span><span class="p">)</span>
+    <span class="n">plus</span> <span class="o">=</span> <span class="n">get_state</span><span class="p">(</span><span class="n">n_qubits</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">state_class</span><span class="o">=</span><span class="n">state_class</span><span class="p">,</span> <span class="n">state_name</span><span class="o">=</span><span class="s2">"plus"</span><span class="p">)</span>
+    <span class="n">zz</span><span class="p">,</span> <span class="n">xx</span> <span class="o">=</span> <span class="n">end_to_end_zz</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="n">x_parity</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"n=</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">: "</span>
+        <span class="sa">f</span><span class="s2">"&lt;ZZ&gt;_ghz=</span><span class="si">{</span><span class="n">zz</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="n">ghz</span><span class="p">)</span><span class="o">.</span><span class="n">real</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2">, "</span>
+        <span class="sa">f</span><span class="s2">"&lt;ZZ&gt;_plus=</span><span class="si">{</span><span class="n">zz</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="n">plus</span><span class="p">)</span><span class="o">.</span><span class="n">real</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2">, "</span>
+        <span class="sa">f</span><span class="s2">"&lt;X..X&gt;_ghz=</span><span class="si">{</span><span class="n">xx</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="n">ghz</span><span class="p">)</span><span class="o">.</span><span class="n">real</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2">, "</span>
+        <span class="sa">f</span><span class="s2">"&lt;X..X&gt;_plus=</span><span class="si">{</span><span class="n">xx</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="n">plus</span><span class="p">)</span><span class="o">.</span><span class="n">real</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2">"</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+n=2: &lt;ZZ&gt;_ghz=+1.00, &lt;ZZ&gt;_plus=+0.00, &lt;X..X&gt;_ghz=+1.00, &lt;X..X&gt;_plus=+1.00
+n=3: &lt;ZZ&gt;_ghz=+1.00, &lt;ZZ&gt;_plus=+0.00, &lt;X..X&gt;_ghz=+1.00, &lt;X..X&gt;_plus=+1.00
+n=4: &lt;ZZ&gt;_ghz=+1.00, &lt;ZZ&gt;_plus=+0.00, &lt;X..X&gt;_ghz=+1.00, &lt;X..X&gt;_plus=+1.00
+</pre></div></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="phase_shifts_vz_gates.html" class="btn btn-neutral float-left" title="Phase Shifts and Virtual Z gates" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="optimization.html" class="btn btn-neutral float-right" title="Optimal Control for AFM State Preparation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Pulser Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
