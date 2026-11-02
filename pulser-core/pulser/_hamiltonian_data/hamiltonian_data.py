@@ -446,6 +446,7 @@ class HamiltonianData:
             samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
             is_global_pulse: bool,
             amp_fluctuation: float,
+            amp_samples: np.ndarray,
             det_fluctuation: np.ndarray,
             propagation_dir: tuple | None,
         ) -> None:
@@ -459,7 +460,7 @@ class HamiltonianData:
                     noise_det = traj.doppler_detune[qid]
                     samples_dict[qid]["det"][slot.ti : slot.tf] += noise_det
                 # Gaussian beam loss in amplitude for global pulses only
-                # Noise is drawn at random for each pulse
+                # Apply the channel's factor to its own contribution.
                 if "amplitude" in self.noise_model.noise_types:
                     amp_fraction = amp_fluctuation
                     if (
@@ -473,7 +474,12 @@ class HamiltonianData:
                             tuple(prop_dir),
                             self.noise_model.laser_waist,
                         )
-                    samples_dict[qid]["amp"][slot.ti : slot.tf] *= amp_fraction
+                    t_window = slice(slot.ti, slot.tf)
+                    samples_dict[qid]["amp"][t_window] += np.multiply(
+                        amp_samples[t_window],
+                        amp_fraction,
+                        dtype=samples_dict[qid]["amp"].dtype,
+                    )
                 if "detuning" in self.noise_model.noise_types:
                     t_window = slice(slot.ti, slot.tf)
                     samples_dict[qid]["det"][t_window] += det_fluctuation[
@@ -481,6 +487,11 @@ class HamiltonianData:
                     ]
 
         if self.local_noises:
+            if "amplitude" in self.noise_model.noise_types:
+                # Rebuild the drive by summing independently scaled channels.
+                for basis_samples in samples["Local"].values():
+                    for qubit_samples in basis_samples.values():
+                        qubit_samples["amp"].fill(0.0)
             for ch, ch_samples in self._samples.channel_samples.items():
                 _ch_obj = self._samples._ch_objs[ch]
                 if isinstance(_ch_obj, DMM):
@@ -498,6 +509,7 @@ class HamiltonianData:
                         samples_dict,
                         _ch_obj.addressing == "Global",
                         amp_fluctuation=traj.amp_fluctuations[ch],
+                        amp_samples=ch_samples.amp.as_array(detach=True),
                         det_fluctuation=det_fluctuation,
                         propagation_dir=_ch_obj.propagation_dir,
                     )
