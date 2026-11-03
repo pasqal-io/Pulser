@@ -2423,12 +2423,8 @@ def test_detuning_noise():
     rydberg_1 = sim_samples["Local"]["ground-rydberg"]["q1"]["det"]
     digital_0 = sim_samples["Local"]["digital"]["q0"]["det"]
     digital_1 = sim_samples["Local"]["digital"]["q1"]["det"]
-    assert np.allclose(
-        rydberg_0, np.array([-0.04902824] * (2 * duration) + [0.0])
-    )
-    assert np.allclose(
-        rydberg_1, np.array([-0.04902824] * (2 * duration) + [0.0])
-    )
+    assert np.allclose(rydberg_0, np.array([-0.04902824] * (2 * duration + 1)))
+    assert np.allclose(rydberg_1, np.array([-0.04902824] * (2 * duration + 1)))
     assert np.allclose(
         digital_0,
         np.array([-0.17550787] * (duration) + [0.0] * (duration + 1)),
@@ -2492,7 +2488,7 @@ def test_detuning_hf_noise(monkeypatch):
         -22.46120504,
         -22.52816608,
         -22.56680119,
-        0.0,
+        -22.57717994,  # Frequency noise also covers the terminal sample.
     ]
     assert np.allclose(rydberg_0, rydberg_expected)
     assert np.allclose(rydberg_1, rydberg_expected)
