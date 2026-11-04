@@ -802,4 +802,4 @@ def test_run_from_sequence_samples_validates_options():
 
     assert (
         p > 0.5
-    )  # it should be close to 1, but it's random, the bug this tests has it at 0
+    )  # it should be close to 1 but random, the bug this tests would give 0
