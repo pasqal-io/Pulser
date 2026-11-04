@@ -281,6 +281,8 @@ class QutipBackendV2(EmulatorBackend):
             return res
         else:
             results: list[Results] = []
+            # this sets solver default options based on the pulse!
+            sim_obj._validate_options(qutip_options)
             for cleanres_noisyseq, reps in sim_obj._noisy_runs(
                 **qutip_options
             ):

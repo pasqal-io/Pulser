@@ -773,3 +773,33 @@ def test_two_atom_xy_exchange(
         )
         # The relative phase distinguishes J from -J; populations alone do not.
         assert expected.overlap(state) == pytest.approx(1.0, abs=1e-6)
+
+
+def test_run_from_sequence_samples_validates_options():
+    seq = pulser.Sequence(
+        pulser.Register({"q0": (0.0, 0.0)}), pulser.MockDevice
+    )
+    seq.declare_channel("ch", "rydberg_global")
+    seq.add(
+        pulser.Pulse.ConstantPulse(340, 0.0, 0.0, 0.0), "ch"
+    )  # zero-amplitude start
+    seq.add(
+        pulser.Pulse.ConstantPulse(250, 4 * np.pi, 0.0, 0.0), "ch"
+    )  # resonant pi pulse
+    samples = pulser.sampler.sample(seq)
+
+    config = QutipConfig(
+        observables=[pulser.backend.Occupation(evaluation_times=[1.0])],
+        noise_model=pulser.NoiseModel(
+            amp_sigma=0.01
+        ),  # without noise it doesn't trigger the code path
+        n_trajectories=5,
+    )
+
+    p = QutipBackendV2.run_from_sequence_samples(
+        samples, seq.register, seq.device, config=config
+    ).occupation[-1][0]
+
+    assert (
+        p > 0.5
+    )  # it should be close to 1, but it's random, the bug this tests has it at 0
