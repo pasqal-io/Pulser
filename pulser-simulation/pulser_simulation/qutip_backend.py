@@ -172,7 +172,7 @@ class QutipBackendV2(EmulatorBackend):
             "progress_bar": self._config.progress_bar,
         }
 
-        self._sim_obj._validate_options(self._qutip_options)
+        self._sim_obj._validate_options_and_set_defaults(self._qutip_options)
 
     @staticmethod
     def _get_noise_model(
@@ -281,8 +281,8 @@ class QutipBackendV2(EmulatorBackend):
             return res
         else:
             results: list[Results] = []
-            # this sets solver default options based on the pulse!
-            sim_obj._validate_options(qutip_options)
+            # this sets solver default options based on the pulse
+            sim_obj._validate_options_and_set_defaults(qutip_options)
             for cleanres_noisyseq, reps in sim_obj._noisy_runs(
                 **qutip_options
             ):
