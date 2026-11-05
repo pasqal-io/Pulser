@@ -191,6 +191,10 @@ class HamiltonianData:
         noise_model: NoiseModel to be used to generate noise.
         n_trajectories: The number of noise trajectories to sample.
             Defaults to 1.
+        sample_bad_atoms: Whether state preparation errors are emulated by
+            randomly sampling badly prepared atoms in each noise trajectory.
+            Set it to False when they are accounted for in another way
+            (e.g. in the initial state).
     """
 
     def __init__(
@@ -200,6 +204,8 @@ class HamiltonianData:
         device: BaseDevice,
         noise_model: NoiseModel,
         n_trajectories: int | None,
+        *,
+        sample_bad_atoms: bool = True,
     ) -> None:
         """Instantiates a Hamiltonian object."""
         # Initializing the samples obj
@@ -260,6 +266,7 @@ class HamiltonianData:
         self._check_noise_model(noise_model)
         if n_trajectories is None:
             n_trajectories = 1
+        self._sample_bad_atoms = sample_bad_atoms
 
         self.local_noises = True
         if set(self.noise_model.noise_types).issubset(
@@ -275,6 +282,7 @@ class HamiltonianData:
             self.local_noises = (
                 "SPAM" in self.noise_model.noise_types
                 and self.noise_model.state_prep_error > 0
+                and self._sample_bad_atoms
             )
         self.noise_trajectories = self._create_noise_trajectories(
             n_trajectories
@@ -357,6 +365,7 @@ class HamiltonianData:
         with_modulation: bool = False,
         noise_model: NoiseModel | None = None,
         n_trajectories: int | None = None,
+        sample_bad_atoms: bool = True,
     ) -> HamiltonianData:
         r"""Simulation of a pulse sequence using QuTiP.
 
@@ -369,6 +378,10 @@ class HamiltonianData:
                 should be preferred over 'noise_model'.
             n_trajectories: The number of noise trajectories to sample.
                 Defaults to 1.
+            sample_bad_atoms: Whether state preparation errors are emulated
+                by randomly sampling badly prepared atoms in each noise
+                trajectory. Set it to False when they are accounted for in
+                another way (e.g. in the initial state).
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
@@ -406,6 +419,7 @@ class HamiltonianData:
             sequence.device,
             noise_model or NoiseModel(),
             n_trajectories,
+            sample_bad_atoms=sample_bad_atoms,
         )
 
     @functools.cached_property
@@ -799,9 +813,14 @@ class HamiltonianData:
     ) -> List[TrajectoryWithReps]:
         """Updates noise random parameters.
 
-        Used at the start of each run. If SPAM isn't in chosen noises, all
-        atoms are set to be correctly prepared.
+        Used at the start of each run. If SPAM isn't in chosen noises, or if
+        bad atoms aren't sampled, all atoms are set to be correctly prepared.
         """
+        state_prep_error = (
+            self.noise_model.state_prep_error
+            if self._sample_bad_atoms
+            else 0.0
+        )
         noise_trajectories: list[TrajectoryWithReps] = []
         amp_fluctuations: dict[str, float] = {}
         det_fluctuations: dict[str, float] = {}
@@ -812,7 +831,7 @@ class HamiltonianData:
                 "".join(
                     (
                         np.random.uniform(size=len(self._qid_index))
-                        < self.noise_model.state_prep_error
+                        < state_prep_error
                     )
                     .astype(int)
                     .astype(str)  # Turns bool->int->str
@@ -857,11 +876,11 @@ class HamiltonianData:
                 register: BaseRegister = self._register
                 if (
                     "SPAM" in self.noise_model.noise_types
-                    and self.noise_model.state_prep_error > 0
+                    and state_prep_error > 0
                 ):
                     dist = (
                         np.random.uniform(size=len(self._qid_index))
-                        < self.noise_model.state_prep_error
+                        < state_prep_error
                     )
                     bad_atoms = dict(zip(self._qid_index, dist))
                 else:
