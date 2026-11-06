@@ -137,8 +137,8 @@ def test_fall_time(eom_channel):
     assert eom_channel.rise_time == aom_rise_time
 
     pulse = Pulse.ConstantPulse(1000, 1, 0, 0)
-    assert pulse.fall_time(eom_channel, in_eom_mode=False) == 2 * aom_rise_time
-    assert pulse.fall_time(eom_channel, in_eom_mode=True) == 2 * eom_rise_time
+    assert pulse.fall_time(eom_channel, in_eom_mode=False) == 324
+    assert pulse.fall_time(eom_channel, in_eom_mode=True) == 54
 
 
 def test_full_duration(eom_channel):

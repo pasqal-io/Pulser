@@ -2205,9 +2205,11 @@ def test_simulation_with_modulation(
     seq.add(pulse1, "ch1")
     seq.add(pulse1, "ch0")
     ch1_obj = seq.declared_channels["ch1"]
-    pulse1_mod_samples = ch1_obj.modulate(pulse1.amplitude.samples).as_array()
     mod_dt = pulse1.duration + pulse1.fall_time(ch1_obj)
-    assert pulse1_mod_samples.size == mod_dt
+    # The modulated samples are cut at the end of the fall time
+    pulse1_mod_samples = ch1_obj.modulate(pulse1.amplitude.samples).as_array()[
+        :mod_dt
+    ]
 
     noise_model = NoiseModel(
         samples_per_run=1, temperature=50, laser_waist=175.0
@@ -2769,11 +2771,12 @@ def test_eom_limit_det(mod_device, reg, min_detuning_on):
     final_state = res.sample_final_state()
     if min_detuning_on:
         assert final_state == {
-            "000": 850,
-            "100": 53,
-            "001": 46,
+            "000": 849,
+            "100": 52,
+            "001": 47,
             "010": 42,
             "101": 9,
+            "011": 1,
         }
     else:
         assert final_state == {"000": 879, "010": 49, "100": 40, "001": 32}

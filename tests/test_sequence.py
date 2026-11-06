@@ -2522,7 +2522,10 @@ def test_draw_slm_mask_in_ising(
     seq1.add(pulse1, "ryd_glob")  # slm pulse between 0 and 400
     seq1.add(pulse2, "ryd_glob")
     seq1.config_slm_mask(targets)
-    mask_time = 400 + 2 * mymockdevice.channels["rydberg_global"].rise_time
+    # pulse1 waits for the DMM detuning to fall
+    mask_time = 400 + seq1._schedule["dmm_0"][-1].type.fall_time(
+        seq1.declared_channels["dmm_0"]
+    )
     assert seq1._slm_mask_time == [0, mask_time]
     assert seq1._schedule["dmm_0_1"].slots[1].type == Pulse.ConstantPulse(
         mask_time, 0, -100, 0
@@ -2710,8 +2713,8 @@ def test_hardware_constraints(reg, align_at_rest, patch_plt_show):
     seq.add(black_pls, "ch1")
     blackman_slot = seq._last("ch1")
     # The pulse accounts for the modulation buffer
-    assert (
-        blackman_slot.ti == const_pls.duration + rydberg_global.rise_time * 2
+    assert blackman_slot.ti == const_pls.duration + const_pls.fall_time(
+        rydberg_global
     )
     seq.target("q0", "ch1")
     target_slot = seq._last("ch1")

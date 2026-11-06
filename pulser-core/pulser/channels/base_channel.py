@@ -524,7 +524,7 @@ class Channel(ABC):
 
     @property
     def _modulation_padding(self) -> int:
-        """The padding added to the input signals before modulation.
+        """The padding kept around the signals after modulation.
 
         Defined in number of samples to pad before and after signal
         (i.e. the signal is extended by 2*_modulation_padding).
@@ -567,17 +567,18 @@ class Channel(ABC):
             mod_bandwidth = self.mod_bandwidth
             mod_padding = self._modulation_padding
 
-        if keep_ends:
-            samples = pm.pad(
-                input_samples, mod_padding + self.rise_time, mode="edge"
-            )
-        else:
-            samples = pm.pad(input_samples, mod_padding)
+        # The FFT in 'apply_modulation()' treats the samples as periodic, so
+        # extra padding keeps the end of the samples from wrapping around
+        # into their start
+        extra_padding = 2 * mod_padding + (self.rise_time if keep_ends else 0)
+        samples = pm.pad(
+            input_samples,
+            mod_padding + extra_padding,
+            mode="edge" if keep_ends else "constant",
+        )
         mod_samples = self.apply_modulation(samples, mod_bandwidth)
-        if keep_ends:
-            # Cut off the extra ends
-            return mod_samples[self.rise_time : -self.rise_time]
-        return mod_samples
+        # Cut off the extra ends
+        return mod_samples[extra_padding:-extra_padding]
 
     @staticmethod
     def apply_modulation(
