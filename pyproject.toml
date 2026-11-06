@@ -14,6 +14,9 @@ filterwarnings = [
     # Except these particular warnings, which are ignored
     'ignore:A duration of \d+ ns is not a multiple of:UserWarning',
     'ignore:Usage of `int`s or any non-`str`types as `QubitId`s:DeprecationWarning',
+    # Emitted by the latest version of PyTorch (v2.15) on macOS VMs
+    # refer to: https://github.com/pytorch/pytorch/issues/202529
+    "ignore:.*Apple Paravirtual device that does not support Metal.*:UserWarning",
     ]
 
 [build-system]
