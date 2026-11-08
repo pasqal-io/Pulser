@@ -652,6 +652,10 @@ class QutipEmulator:
             The whole Hamiltonian is divided by :math:`\hbar`, so its
             units are rad/µs.
 
+            ``time`` is in nanoseconds, unlike :attr:`sampling_times`, which
+            is in microseconds. Multiply a sampling time by 1000 before
+            passing it to this method.
+
         Args:
             time: The specific time at which we want to extract the
                 Hamiltonian (in ns).
