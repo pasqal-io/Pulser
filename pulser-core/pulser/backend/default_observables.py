@@ -18,13 +18,14 @@ import copy
 import functools
 import warnings
 from collections import Counter
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Type
+from collections.abc import Sequence, Iterable
+from typing import TYPE_CHECKING, Any, Type, Self
 
 from pulser.backend.observable import AggregationMethod, Observable
 from pulser.backend.operator import Operator, OperatorType
 from pulser.backend.state import Eigenstate, State, StateType
 from pulser.exceptions.serialization import AbstractReprError
+from pulser.register import Register
 
 if TYPE_CHECKING:
     from pulser.backend.config import EmulationConfig
@@ -625,6 +626,60 @@ class EntanglementEntropy(Observable):
     @property
     def _base_tag(self) -> str:
         return "entanglement_entropy"
+
+    @classmethod
+    def from_register(
+        cls,
+        register: Register,
+        keys: Iterable[str] | None = None,
+        *,
+        evaluation_times: Sequence[float] | None = None,
+        tag_suffix: str | None = None,
+        default_aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+    ) -> EntanglementEntropy:
+        """Define a EntanglementEntropy observable based on register keys.
+
+        Args:
+            register: A register to base the observable on.
+            keys: The register keys to include in the qubits set to measure for.
+                  Defaults to the first half of the qubits in the register
+                  (sorted by their keys). If the number of qubits is odd, the
+                  selected qubits will be the smaller partition.
+            evaluation_times: The relative times at which to compute the moment.
+                If left as `None`, uses the ``default_evaluation_times`` of the
+                backend's ``EmulationConfig``.
+            tag_suffix: An optional suffix to append to the tag. Needed if
+                multiple instances of the same observable are given to the
+                same EmulationConfig.
+            default_aggregation_method: How to combine the values of this
+                observable from multiple results.
+
+        Returns:
+            The new EntanglementEntropy observable instance.
+        """
+        if keys is None:
+            keys = set(register.qubit_ids[:len(register.qubits) // 2])
+        else:
+            keys = set(iter(keys))
+
+        available_keys = set(register.qubit_ids)
+
+        missing_indices = keys - available_keys
+
+        if missing_indices:
+            raise ValueError(
+                f"The following keys are not part of register: {missing_indices}"
+            )
+
+        indices = [register.qubit_ids.index(key) for key in keys]
+
+        return EntanglementEntropy(
+            included_indices=indices,
+            default_aggregation_method=default_aggregation_method,
+            evaluation_times=evaluation_times,
+            tag_suffix=tag_suffix,
+        )
+
 
     def apply(self, *, state: State, **kwargs: Any) -> float:
         """Calculate the observable to store in the Results."""

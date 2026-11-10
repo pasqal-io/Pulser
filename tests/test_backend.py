@@ -76,9 +76,7 @@ def sequence() -> pulser.Sequence:
 
 
 def test_abc_backend(sequence):
-    with pytest.raises(
-        TypeError, match="Can't instantiate abstract class Backend"
-    ):
+    with pytest.raises(TypeError, match="Can't instantiate abstract class Backend"):
         Backend(sequence)
 
     class ConcreteBackend(Backend):
@@ -201,7 +199,6 @@ class _MockConnection(RemoteConnection):
 
 @pytest.mark.parametrize("job_ids", [None, ["jobID1"]])
 def test_remote_results(job_ids):
-
     all_job_ids = ["jobID1", "abcd"]
 
     def _get_job_ids(batch_id):
@@ -274,15 +271,11 @@ def test_update_sequence_device(sequence):
 
     device = dataclasses.replace(sequence.device, max_atom_num=3)
     assert list(connection.fetch_available_devices()) == [sequence.device.name]
-    with pytest.raises(
-        ValueError, match="not compatible with the latest device specs"
-    ):
+    with pytest.raises(ValueError, match="not compatible with the latest device specs"):
         connection.update_sequence_device(sequence)
 
     # Use a Device instance to pass mimic_qpu=True validation
-    custom_device = dataclasses.replace(
-        pulser.AnalogDevice, requires_layout=False
-    )
+    custom_device = dataclasses.replace(pulser.AnalogDevice, requires_layout=False)
     with pytest.warns(UserWarning, match="different Rydberg level"):
         sequence = sequence.with_new_device(custom_device)
     device = dataclasses.replace(
@@ -306,23 +299,17 @@ def test_remote_backend(sequence):
     ):
         QPUBackend(sequence, connection)
 
-    with pytest.warns(
-        UserWarning, match="device with a different Rydberg level"
-    ):
+    with pytest.warns(UserWarning, match="device with a different Rydberg level"):
         seq = sequence.with_new_device(AnalogDevice)
 
     with pytest.raises(ValueError, match="defined from a `RegisterLayout`"):
         QPUBackend(seq, connection)
 
-    seq = seq.with_new_register(
-        SquareLatticeLayout(5, 5, 5).square_register(2)
-    )
+    seq = seq.with_new_register(SquareLatticeLayout(5, 5, 5).square_register(2))
     seq = seq.with_new_device(
         dataclasses.replace(seq.device, accepts_new_layouts=False)
     )
-    with pytest.raises(
-        ValueError, match="does not accept new register layouts"
-    ):
+    with pytest.raises(ValueError, match="does not accept new register layouts"):
         QPUBackend(seq, connection)
     seq = seq.with_new_register(
         AnalogDevice.pre_calibrated_layouts[0].define_register(1, 2, 3)
@@ -380,9 +367,7 @@ def test_remote_backend(sequence):
 
     with pytest.raises(
         ValueError,
-        match=re.escape(
-            "All 'runs' must be below the maximum allowed by the device"
-        ),
+        match=re.escape("All 'runs' must be below the maximum allowed by the device"),
     ):
         qpu_backend.run(job_params=[{"runs": 100000}])
 
@@ -432,9 +417,7 @@ def test_remote_backend(sequence):
     qpu = QPUBackend(seq, connection)
     with pytest.raises(
         NotImplementedError,
-        match=re.escape(
-            "Unable to execute open_batch using '_MockConnection'."
-        ),
+        match=re.escape("Unable to execute open_batch using '_MockConnection'."),
     ):
         qpu.open_batch()
 
@@ -467,9 +450,7 @@ def test_qpu_backend_default_num_shots(sequence):
 
 
 def test_emulator_backend(sequence):
-
     class ConcreteEmulator(EmulatorBackend):
-
         default_config = EmulationConfig(
             observables=(BitStrings(),),
             with_modulation=True,
@@ -520,9 +501,7 @@ def test_emulator_backend(sequence):
     assert (
         json.loads(emu._config.to_abstract_repr())
         == json.loads(
-            ConcreteEmulator.validate_config(
-                concrete_config
-            ).to_abstract_repr()
+            ConcreteEmulator.validate_config(concrete_config).to_abstract_repr()
         )
         == json.loads(
             EmulationConfig(
@@ -555,12 +534,9 @@ def test_backend_config():
 
     with pytest.warns(
         DeprecationWarning,
-        match="The 'backend_options' argument of 'BackendConfig' has been "
-        "deprecated",
+        match="The 'backend_options' argument of 'BackendConfig' has been deprecated",
     ):
-        config2 = BackendConfig(
-            default_num_shots=1, backend_options={"dt": 10}
-        )
+        config2 = BackendConfig(default_num_shots=1, backend_options={"dt": 10})
         assert config2.backend_options["dt"] == 10
         assert config2.dt == 10
         assert config2.default_num_shots == 1
@@ -596,9 +572,7 @@ def test_backend_config_pickles(tmp_path):
     with open(tmp_path / filename, "rb") as f:
         new_cf = pickle.load(f)
 
-    assert set(cf._backend_options.keys()) == set(
-        new_cf._backend_options.keys()
-    )
+    assert set(cf._backend_options.keys()) == set(new_cf._backend_options.keys())
     for k in cf._backend_options.keys():
         if k != "observables":
             assert cf._backend_options[k] == new_cf._backend_options[k]
@@ -626,8 +600,7 @@ def test_emulation_config():
     with pytest.raises(
         TypeError,
         match=(
-            "All entries in 'callbacks' must not be instances of Observable"
-            ".*at index 0"
+            "All entries in 'callbacks' must not be instances of Observable.*at index 0"
         ),
     ):
         EmulationConfig(
@@ -650,9 +623,7 @@ def test_emulation_config():
         ValueError,
         match="Some of the provided 'observables' share identical tags",
     ):
-        EmulationConfig(
-            observables=[BitStrings(), BitStrings(num_shots=200000)]
-        )
+        EmulationConfig(observables=[BitStrings(), BitStrings(num_shots=200000)])
     with pytest.raises(
         ValueError, match="All evaluation times must be between 0. and 1."
     ):
@@ -660,16 +631,12 @@ def test_emulation_config():
             observables=(BitStrings(),),
             default_evaluation_times=[-1e15, 0.0, 0.5, 1.0],
         )
-    with pytest.raises(
-        ValueError, match="Evaluation times must be unique up to"
-    ):
+    with pytest.raises(ValueError, match="Evaluation times must be unique up to"):
         EmulationConfig(
             observables=(BitStrings(),),
             default_evaluation_times=[0.0, 0.5, 0.5 + 1e-14, 1.0],
         )
-    with pytest.raises(
-        ValueError, match="Evaluation times must be in ascending order"
-    ):
+    with pytest.raises(ValueError, match="Evaluation times must be in ascending order"):
         EmulationConfig(
             observables=(BitStrings(),),
             default_evaluation_times=[0.0, 1.0, 0.5],
@@ -749,9 +716,7 @@ def test_emulation_config():
             "<class 'dict'>. Got {'p_false_pos': 0.1}."
         ),
     ):
-        EmulationConfig(
-            observables=(BitStrings(),), noise_model={"p_false_pos": 0.1}
-        )
+        EmulationConfig(observables=(BitStrings(),), noise_model={"p_false_pos": 0.1})
 
     # Does not complain about `dt`
     EmulationConfig(observables=(BitStrings(),), dt=1)
@@ -859,14 +824,10 @@ def test_emulation_config_tensor_interaction_matrix():
     torch = pytest.importorskip("torch")
     matrix = torch.tensor([[0.0, 1.0], [1.0, 0.0]])
 
-    config = EmulationConfig(
-        observables=(BitStrings(),), interaction_matrix=matrix
-    )
+    config = EmulationConfig(observables=(BitStrings(),), interaction_matrix=matrix)
     assert config.interaction_matrix.is_tensor
 
-    with pytest.raises(
-        ValueError, match="interaction matrix is not symmetric"
-    ):
+    with pytest.raises(ValueError, match="interaction matrix is not symmetric"):
         EmulationConfig(
             observables=(BitStrings(),),
             interaction_matrix=torch.tensor([[0.0, 1.0], [2.0, 0.0]]),
@@ -1133,9 +1094,7 @@ def test_results_aggregation_errors(caplog):
         value=3.0,
         aggregation_method=AggregationMethod.SKIP_WARN,
     )
-    with pytest.warns(
-        UserWarning, match="Skipping aggregation of `dummy_result`."
-    ):
+    with pytest.warns(UserWarning, match="Skipping aggregation of `dummy_result`."):
         Results.aggregate([results1, results2])
 
 
@@ -1154,14 +1113,11 @@ def test_results():
         ]
     )
     assert str(res) == res_str.format(stored_results=[], evaluation_times={})
-    with pytest.raises(
-        AttributeError, match="'bitstrings' is not in the results"
-    ):
+    with pytest.raises(AttributeError, match="'bitstrings' is not in the results"):
         assert res.bitstrings
     with pytest.raises(
         ValueError,
-        match="'bitstrings' is not an Observable instance nor a known "
-        "observable tag",
+        match="'bitstrings' is not an Observable instance nor a known observable tag",
     ):
         assert res.get_result_times("bitstrings")
 
@@ -1187,11 +1143,7 @@ def test_results():
     expected_val = [Counter({"111": obs.num_shots})]
     assert res.get_tagged_results() == {"bitstrings_test": expected_val}
     assert res.bitstrings_test == expected_val
-    assert (
-        res.get_result_times("bitstrings_test")
-        == res.get_result_times(obs)
-        == [1.0]
-    )
+    assert res.get_result_times("bitstrings_test") == res.get_result_times(obs) == [1.0]
     assert (
         res.get_result(obs, 1.0)
         == res.get_result("bitstrings_test", 1.0)
@@ -1304,9 +1256,7 @@ def test_results_sampled_result_attrs():
             getattr(res, attr)
 
     # Unknown attributes keep the generic error message
-    with pytest.raises(
-        AttributeError, match="'not_an_attr' is not in the results"
-    ):
+    with pytest.raises(AttributeError, match="'not_an_attr' is not in the results"):
         res.not_an_attr
 
     # Make sure the hardcoded attributes do exist in SampledResult
@@ -1387,9 +1337,7 @@ class TestObservables:
             ValueError, match="All evaluation times must be between 0. and 1."
         ):
             StateResult(evaluation_times=[1.000001])
-        with pytest.raises(
-            ValueError, match="Evaluation times must be unique"
-        ):
+        with pytest.raises(ValueError, match="Evaluation times must be unique"):
             StateResult(evaluation_times=[1.0, 1.0])
         with pytest.raises(
             ValueError, match="Evaluation times must be in ascending order"
@@ -1438,8 +1386,7 @@ class TestObservables:
         assert results.get_result(obs, t_) == ghz_state
         with pytest.raises(
             RuntimeError,
-            match="A value is already stored for observable 'state' at time "
-            f"{t_}",
+            match=f"A value is already stored for observable 'state' at time {t_}",
         ):
             obs(config, t_, ghz_state, ham, results)
 
@@ -1517,9 +1464,7 @@ class TestObservables:
         assert counts == expected_counts
 
     @pytest.mark.parametrize("one_state", [None, "r", "g"])
-    def test_correlation_matrix_and_occupation(
-        self, ghz_state, ham, one_state
-    ):
+    def test_correlation_matrix_and_occupation(self, ghz_state, ham, one_state):
         corr = CorrelationMatrix(one_state=one_state)
         assert corr.tag == "correlation_matrix"
         occ = Occupation(one_state=one_state)
@@ -1589,15 +1534,9 @@ class TestObservables:
             n_qudits=3,
             operations=[(1.0, [({"gg": -1}, {0, 1, 2})])],
         )
-        assert np.isclose(
-            energy.apply(state=ghz_state, hamiltonian=custom_op), -0.5
-        )
-        assert np.isclose(
-            energy2.apply(state=ghz_state, hamiltonian=custom_op), 0.5
-        )
-        assert np.isclose(
-            var.apply(state=ghz_state, hamiltonian=custom_op), 0.25
-        )
+        assert np.isclose(energy.apply(state=ghz_state, hamiltonian=custom_op), -0.5)
+        assert np.isclose(energy2.apply(state=ghz_state, hamiltonian=custom_op), 0.5)
+        assert np.isclose(var.apply(state=ghz_state, hamiltonian=custom_op), 0.25)
 
     def test_expectation(self, ghz_state, ham, zzz):
         ham_qobj = ham.to_qobj()
@@ -1667,3 +1606,37 @@ class TestObservables:
         assert np.isclose(default_entropy.apply(state=ghz_state), 0.693147)
         assert np.isclose(default_entropy.apply(state=ghz_2_state), 0.693147)
         assert np.isclose(default_entropy.apply(state=arbitrary_state_2), 0)
+
+    @pytest.mark.parametrize(
+        "register,selected_keys,expected",
+        [
+            (
+                pulser.Register(
+                    {"a": [1, -1], "b": [-1, 1], "c": [0, 0], "d": [-0.5, -0.5]}
+                ),
+                ["a", "b", "d"],
+                {0, 1, 3},
+            ),
+            (
+                pulser.Register.square(2, prefix="q"),
+                ["q2", "q3"],
+                {2, 3},
+            ),
+            (
+                pulser.Register.square(2, prefix="qubit"),
+                ["qubit1", "qubit2"],
+                {1, 2},
+            ),
+            (
+                pulser.Register.square(2, prefix="qubit"),
+                None,
+                {0, 1},
+            ),
+        ],
+    )
+    def test_entropy_from_register(self, register, selected_keys, expected):
+        observable = EntanglementEntropy.from_register(register, selected_keys)
+
+        actual = set(observable.included_indices)
+
+        assert expected == actual
