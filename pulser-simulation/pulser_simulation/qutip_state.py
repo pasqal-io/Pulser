@@ -68,6 +68,16 @@ class QutipState(State[complex, float]):
         """Returns a copy of the state's Qobj representation."""
         return self._state.copy()
 
+    def to_oper(self: QutipStateType) -> QutipStateType:
+        """Returns the state as a density matrix.
+
+        A state vector ``|a>`` is converted to the density matrix ``|a><a|``,
+        while a density matrix is returned as is.
+        """
+        if self._state.isoper:
+            return self
+        return type(self)(self._state.proj(), eigenstates=self.eigenstates)
+
     def overlap(self, other: QutipState) -> float:
         """Compute the overlap between this state and another of the same type.
 
@@ -269,6 +279,63 @@ class QutipState(State[complex, float]):
         return (
             self.eigenstates == other.eigenstates
             and self._state == other._state
+        )
+
+    def __rmul__(self: QutipStateType, scalar: float) -> QutipStateType:
+        """Scales the state, as a density matrix, by a scalar factor.
+
+        The state is first converted to a density matrix, so that the scalar
+        acts as a probability weight (e.g. ``0.9 * g + 0.1 * x``).
+
+        Args:
+            scalar: The scalar factor, which must be non-negative.
+
+        Returns:
+            The scaled state, as a density matrix.
+        """
+        weight = float(scalar)
+        if weight < 0:
+            raise ValueError(
+                "Can only scale a state by a non-negative weight; got "
+                f"{scalar}."
+            )
+        return type(self)(
+            weight * self.to_oper()._state,
+            eigenstates=self.eigenstates,
+        )
+
+    def __add__(
+        self: QutipStateType, other: QutipStateType, /
+    ) -> QutipStateType:
+        """Mixes two states by adding their density matrices.
+
+        Both states are first converted to density matrices, so that the sum
+        is a statistical mixture rather than a superposition.
+
+        Args:
+            other: The other state.
+
+        Returns:
+            The summed state, as a density matrix.
+        """
+        if not isinstance(other, QutipState):
+            raise TypeError(
+                "'__add__' expects a 'QutipState' instance, not "
+                f"{type(other)}. Got {other!r}."
+            )
+        if self.n_qudits != other.n_qudits:
+            raise ValueError(
+                "Can only add states with the same number of qudits; got "
+                f"{self.n_qudits} vs. {other.n_qudits}."
+            )
+        if self.eigenstates != other.eigenstates:
+            raise ValueError(
+                "Can only add states with the same eigenstates, in the same "
+                f"order; got {self.eigenstates} vs. {other.eigenstates}."
+            )
+        return type(self)(
+            self.to_oper()._state + other.to_oper()._state,
+            eigenstates=self.eigenstates,
         )
 
     @staticmethod
