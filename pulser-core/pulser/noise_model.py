@@ -276,6 +276,8 @@ class NoiseModel:
             run to run as a standard deviation of a normal distribution
             centered in 1. Assumed to be the same for all channels (though
             each channel has its own randomly sampled value in each run).
+            Scales each channel's own amplitude before their contributions
+            are summed.
         detuning_sigma: Dictates the fluctuation in detuning (in rad/µs)
             of a channel from shot to shot as a standard deviation of a normal
             distribution centered in 0. Assumed to be the same for all

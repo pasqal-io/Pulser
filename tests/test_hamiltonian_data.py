@@ -17,7 +17,7 @@ from pulser._hamiltonian_data.hamiltonian_data import (
     has_shot_to_shot_except_spam,
 )
 from pulser.channels.dmm import DMM
-from pulser.devices import AnalogDevice
+from pulser.devices import AnalogDevice, MockDevice
 from pulser.sampler import sample
 
 from .test_sequence_sampler import seq_rydberg, seq_with_SLM
@@ -815,6 +815,150 @@ def test_dmm_intensity_noise_remains_separate_from_laser_noise() -> None:
             samples[qid]["amp"],
             traj.amp_fluctuations["rydberg"] * waist_factor,
         )
+
+
+@pytest.mark.parametrize("addressing", ["Global", "Local"])
+@pytest.mark.parametrize(
+    "noise_params",
+    [
+        {"amp_sigma": 0.2},
+        {"laser_waist": 20},
+        {"amp_sigma": 0.2, "laser_waist": 20},
+    ],
+    ids=["fluctuation", "waist", "combined"],
+)
+def test_overlapping_channels_scale_their_own_amplitude(
+    addressing, noise_params
+):
+    """Noise scales each drive before adding overlapping contributions."""
+    register = pulser.Register({"q0": (0, 0), "q1": (10, 0)})
+    global_channel = replace(
+        MockDevice.channels["rydberg_global"], propagation_dir=(0.0, 1.0, 0.0)
+    )
+    other_channel = (
+        replace(global_channel, propagation_dir=(1.0, 0.0, 0.0))
+        if addressing == "Global"
+        else MockDevice.channels["rydberg_local"]
+    )
+    device = replace(
+        MockDevice,
+        channel_ids=("global", "other"),
+        channel_objects=(global_channel, other_channel),
+    )
+    seq = pulser.Sequence(register, device)
+    seq.declare_channel("first", "global")
+    seq.declare_channel(
+        "second",
+        "other",
+        initial_target="q1" if addressing == "Local" else None,
+    )
+    seq.add(pulser.Pulse.ConstantPulse(120, 1, 0, 0), "first")
+    seq.delay(40, "second")
+    seq.add(
+        pulser.Pulse.ConstantPulse(80, 2, 0, 0), "second", protocol="no-delay"
+    )
+    np.random.seed(789)
+    ham = HamiltonianData.from_sequence(
+        seq, noise_model=pulser.NoiseModel(**noise_params), n_trajectories=3
+    )
+    shots = list(ham.noisy_samples)
+    assert sum(shot.reps for shot in shots) == 3
+    for shot in shots:
+        traj = shot.trajectory
+        local = shot.samples.to_nested_dict(all_local=True)["Local"][
+            "ground-rydberg"
+        ]
+        for qid, radius in [("q0", 0.0), ("q1", 10.0)]:
+            waist = (
+                np.exp(-((radius / 20) ** 2))
+                if "laser_waist" in noise_params
+                else 1.0
+            )
+            expected = np.full(120, traj.amp_fluctuations["first"] * waist)
+            if addressing == "Global" or qid == "q1":
+                expected[40:] += 2 * traj.amp_fluctuations["second"]
+            np.testing.assert_allclose(local[qid]["amp"], expected)
+            np.testing.assert_array_equal(local[qid]["det"], 0.0)
+            np.testing.assert_array_equal(local[qid]["phase"], 0.0)
+
+
+def test_suppressed_large_drive_keeps_the_other_channel():
+    """A suppressed drive must not erase a much smaller overlapping drive."""
+    seq = pulser.Sequence(pulser.Register({"q0": (0, 0)}), MockDevice)
+    seq.declare_channel("large", "rydberg_global")
+    seq.declare_channel("small", "rydberg_global")
+    seq.add(pulser.Pulse.ConstantPulse(100, 1e16, 0, 0), "large")
+    seq.add(
+        pulser.Pulse.ConstantPulse(100, 1, 0, 0), "small", protocol="no-delay"
+    )
+    ham = HamiltonianData.from_sequence(
+        seq, noise_model=pulser.NoiseModel(amp_sigma=0.2)
+    )
+    traj = replace(
+        ham.noise_trajectories[0].trajectory,
+        amp_fluctuations={"large": 0.0, "small": 1.0},
+    )
+    local = ham._sample_with_trajectory(traj).to_nested_dict(all_local=True)[
+        "Local"
+    ]
+    np.testing.assert_array_equal(local["ground-rydberg"]["q0"]["amp"], 1.0)
+
+
+def test_amplitude_noise_preserves_aggregate_precision():
+    """Float32 input samples must still be scaled at aggregate precision."""
+    seq = pulser.Sequence(pulser.Register({"q0": (0, 0)}), MockDevice)
+    seq.declare_channel("drive", "rydberg_global")
+    seq.add(pulser.Pulse.ConstantPulse(100, 1, 0, 0), "drive")
+    samples = sample(seq)
+    amplitude = np.float32(1.234567)
+    channel = replace(
+        samples.samples_list[0],
+        amp=pm.AbstractArray(np.full(100, amplitude, dtype=np.float32)),
+    )
+    ham = HamiltonianData(
+        replace(samples, samples_list=[channel]),
+        seq.register,
+        seq.device,
+        pulser.NoiseModel(amp_sigma=0.2),
+        n_trajectories=1,
+    )
+    factor = 1.234567890123
+    traj = replace(
+        ham.noise_trajectories[0].trajectory,
+        amp_fluctuations={"drive": factor},
+    )
+    actual = ham._sample_with_trajectory(traj).to_nested_dict(all_local=True)[
+        "Local"
+    ]
+    np.testing.assert_allclose(
+        actual["ground-rydberg"]["q0"]["amp"],
+        np.float64(amplitude) * factor,
+        rtol=1e-14,
+        atol=0,
+    )
+
+
+def test_amplitude_noise_keeps_bad_atoms_dark():
+    """Rebuilding amplitudes must preserve SPAM zeroing."""
+    seq = pulser.Sequence(
+        pulser.Register({"q0": (0, 0), "q1": (10, 0)}), MockDevice
+    )
+    seq.declare_channel("drive", "rydberg_global")
+    seq.add(pulser.Pulse.ConstantPulse(100, 1, 0, 0), "drive")
+    ham = HamiltonianData.from_sequence(
+        seq, noise_model=pulser.NoiseModel(amp_sigma=0.2)
+    )
+    traj = replace(
+        ham.noise_trajectories[0].trajectory,
+        bad_atoms={"q0": True, "q1": False},
+    )
+    actual = ham._sample_with_trajectory(traj).to_nested_dict(all_local=True)[
+        "Local"
+    ]
+    np.testing.assert_array_equal(actual["ground-rydberg"]["q0"]["amp"], 0.0)
+    np.testing.assert_allclose(
+        actual["ground-rydberg"]["q1"]["amp"], traj.amp_fluctuations["drive"]
+    )
 
 
 def test_dmm_detuning():
