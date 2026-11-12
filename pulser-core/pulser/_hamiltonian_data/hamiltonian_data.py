@@ -447,6 +447,7 @@ class HamiltonianData:
             is_global_pulse: bool,
             amp_fluctuation: float,
             det_fluctuation: np.ndarray,
+            detuning_during_slots: bool,
             propagation_dir: tuple | None,
         ) -> None:
             """Builds hamiltonian coefficients.
@@ -455,7 +456,10 @@ class HamiltonianData:
             and depend on the qubit's id qid.
             """
             for qid in slot.targets:
-                if "doppler" in self.noise_model.noise_types:
+                if (
+                    detuning_during_slots
+                    and "doppler" in self.noise_model.noise_types
+                ):
                     noise_det = traj.doppler_detune[qid]
                     samples_dict[qid]["det"][slot.ti : slot.tf] += noise_det
                 # Gaussian beam loss in amplitude for global pulses only
@@ -474,7 +478,10 @@ class HamiltonianData:
                             self.noise_model.laser_waist,
                         )
                     samples_dict[qid]["amp"][slot.ti : slot.tf] *= amp_fraction
-                if "detuning" in self.noise_model.noise_types:
+                if (
+                    detuning_during_slots
+                    and "detuning" in self.noise_model.noise_types
+                ):
                     t_window = slice(slot.ti, slot.tf)
                     samples_dict[qid]["det"][t_window] += det_fluctuation[
                         t_window
@@ -486,19 +493,38 @@ class HamiltonianData:
                 if isinstance(_ch_obj, DMM):
                     continue
                 samples_dict = samples["Local"][_ch_obj.basis]
+                det_fluctuation = _generate_detuning_fluctuations(
+                    self._noise_model,
+                    traj.det_fluctuations[ch],
+                    traj.det_phases[ch],
+                    np.arange(0, self.samples.max_duration, 1),
+                )
+                detuning_during_slots = _ch_obj.basis != "ground-rydberg"
+                if not detuning_during_slots and any(
+                    noise in self.noise_model.noise_types
+                    for noise in ("doppler", "detuning")
+                ):
+                    # The laser-frequency mismatch persists while the drive is
+                    # off, including before/after pulses and modulation tails.
+                    for qid in self.register.qubit_ids:
+                        if qid not in samples_dict:
+                            samples_dict[qid] = {
+                                qty: np.zeros(self.samples.max_duration)
+                                for qty in ("amp", "det", "phase")
+                            }
+                        qubit_samples = samples_dict[qid]
+                        if "doppler" in self.noise_model.noise_types:
+                            qubit_samples["det"] += traj.doppler_detune[qid]
+                        if "detuning" in self.noise_model.noise_types:
+                            qubit_samples["det"] += det_fluctuation
                 for slot in ch_samples.slots:
-                    det_fluctuation = _generate_detuning_fluctuations(
-                        self._noise_model,
-                        traj.det_fluctuations[ch],
-                        traj.det_phases[ch],
-                        np.arange(0, self.samples.max_duration, 1),
-                    )
                     add_noise(
                         slot,
                         samples_dict,
                         _ch_obj.addressing == "Global",
                         amp_fluctuation=traj.amp_fluctuations[ch],
                         det_fluctuation=det_fluctuation,
+                        detuning_during_slots=detuning_during_slots,
                         propagation_dir=_ch_obj.propagation_dir,
                     )
 
