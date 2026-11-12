@@ -608,7 +608,7 @@ class Channel(ABC):
         self,
         input_samples: ArrayLike,
         mod_samples: ArrayLike,
-        max_allowed_diff: float = 1e-2,
+        max_allowed_diff: float = 5e-3,
         eom: bool = False,
     ) -> tuple[int, int]:
         """Calculates the minimal buffers needed around a modulated waveform.

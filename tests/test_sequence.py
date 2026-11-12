@@ -2713,8 +2713,8 @@ def test_hardware_constraints(reg, align_at_rest, patch_plt_show):
     seq.add(black_pls, "ch1")
     blackman_slot = seq._last("ch1")
     # The pulse accounts for the modulation buffer
-    assert blackman_slot.ti == const_pls.duration + const_pls.fall_time(
-        rydberg_global
+    assert (
+        blackman_slot.ti == const_pls.duration + rydberg_global.rise_time * 2
     )
     seq.target("q0", "ch1")
     target_slot = seq._last("ch1")

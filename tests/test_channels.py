@@ -306,16 +306,14 @@ _eom_rydberg = Rydberg.Global(
 
 
 @pytest.mark.parametrize(
-    "channel, tr, eom, constant_buffer_len, side_buffer_len",
+    "channel, tr, eom, side_buffer_len",
     [
-        (_raman_local, _raman_local.rise_time, False, 154, 85),
-        (_eom_rydberg, _eom_config.rise_time, True, 31, 0),
+        (_raman_local, _raman_local.rise_time, False, 103),
+        (_eom_rydberg, _eom_config.rise_time, True, 0),
     ],
 )
 @pytest.mark.parametrize("requires_grad", [False, True])
-def test_modulation(
-    channel, tr, eom, constant_buffer_len, side_buffer_len, requires_grad
-):
+def test_modulation(channel, tr, eom, side_buffer_len, requires_grad):
     wf_vals = [1, np.pi]
     if requires_grad:
         wf_vals = pytest.importorskip("torch").tensor(
@@ -325,8 +323,8 @@ def test_modulation(
     out_ = channel.modulate(wf.samples, eom=eom)
     assert len(out_) == wf.duration + 2 * tr
     assert channel.calc_modulation_buffer(wf.samples, out_, eom=eom) == (
-        constant_buffer_len,
-        constant_buffer_len,
+        tr,
+        tr,
     )
     assert out_.requires_grad == requires_grad
 
