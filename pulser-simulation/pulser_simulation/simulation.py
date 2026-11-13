@@ -652,6 +652,10 @@ class QutipEmulator:
             The whole Hamiltonian is divided by :math:`\hbar`, so its
             units are rad/µs.
 
+            ``time`` is in nanoseconds, unlike :attr:`sampling_times`, which
+            is in microseconds. Multiply a sampling time by 1000 before
+            passing it to this method.
+
         Args:
             time: The specific time at which we want to extract the
                 Hamiltonian (in ns).
@@ -789,7 +793,7 @@ class QutipEmulator:
             meas_errors,
         )
 
-    def _validate_options(self, options: Any) -> None:
+    def _validate_options_and_set_defaults(self, options: Any) -> None:
         options.setdefault(
             "max_step",
             min(
@@ -855,7 +859,7 @@ class QutipEmulator:
             DeprecationWarning,
             stacklevel=2,
         )
-        self._validate_options(options)
+        self._validate_options_and_set_defaults(options)
 
         if not _has_stochastic_noise(self.noise_model):
             if print_progress:

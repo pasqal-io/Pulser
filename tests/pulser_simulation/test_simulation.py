@@ -1911,14 +1911,20 @@ def test_mask_equals_remove_xy():
     seq_two.add(pulse, "ch_two")
     sim_two = QutipEmulator.from_sequence(seq_two)
 
-    # Check equality
-    for t in sim_two.sampling_times:
-        ham_masked = sim_masked.get_hamiltonian(t)
-        ham_two = sim_two.get_hamiltonian(t)
-        assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
+    # Check equality before mask release. At the terminal time (t = tf),
+    # the mask is released and the masked qubit participates in interaction.
+    # Note: sampling_times are in µs, but get_hamiltonian expects time in ns.
+    tf = seq_masked._slm_mask_time[1]
+    for t_us in sim_two.sampling_times:
+        t_ns = t_us * 1000
+        if t_ns < tf:
+            ham_masked = sim_masked.get_hamiltonian(t_ns)
+            ham_two = sim_two.get_hamiltonian(t_ns)
+            assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
 
 
-def test_mask_two_pulses_xy():
+@pytest.mark.parametrize("sampling_rate", [0.1, 0.5, 1.0])
+def test_mask_two_pulses_xy(sampling_rate):
     """Similar to test_mask_equals_remove, but with more pulses afterwards.
 
     Three XY global pulses act on a three qubit register, with one qubit masked
@@ -1937,7 +1943,9 @@ def test_mask_two_pulses_xy():
     seq_masked.add(pulse, "ch_masked")  # First pulse: masked
     seq_masked.add(pulse, "ch_masked")  # Second pulse: unmasked
     seq_masked.add(pulse, "ch_masked")  # Third pulse: unmasked
-    sim_masked = QutipEmulator.from_sequence(seq_masked)
+    sim_masked = QutipEmulator.from_sequence(
+        seq_masked, sampling_rate=sampling_rate
+    )
 
     # Unmasked simulation on full register
     seq_three = Sequence(reg_three, MockDevice)
@@ -1945,7 +1953,9 @@ def test_mask_two_pulses_xy():
     seq_three.add(no_pulse, "ch_three")
     seq_three.add(pulse, "ch_three")
     seq_three.add(pulse, "ch_three")
-    sim_three = QutipEmulator.from_sequence(seq_three)
+    sim_three = QutipEmulator.from_sequence(
+        seq_three, sampling_rate=sampling_rate
+    )
 
     # Unmasked simulation on reduced register
     seq_two = Sequence(reg_two, MockDevice)
@@ -1953,18 +1963,30 @@ def test_mask_two_pulses_xy():
     seq_two.add(pulse, "ch_two")
     seq_two.add(no_pulse, "ch_two")
     seq_two.add(no_pulse, "ch_two")
-    sim_two = QutipEmulator.from_sequence(seq_two)
+    sim_two = QutipEmulator.from_sequence(seq_two, sampling_rate=sampling_rate)
 
     ti = seq_masked._slm_mask_time[0]
     tf = seq_masked._slm_mask_time[1]
-    for t in sim_masked.sampling_times:
-        ham_masked = sim_masked.get_hamiltonian(t)
-        ham_three = sim_three.get_hamiltonian(t)
-        ham_two = sim_two.get_hamiltonian(t)
-        if ti <= t <= tf:
+    # Note: sampling_times are in µs, but get_hamiltonian expects time in ns.
+    # Mask is active during ti <= t < tf; at t = tf it is released.
+    for t_us in sim_masked.sampling_times:
+        t_ns = t_us * 1000
+        ham_masked = sim_masked.get_hamiltonian(t_ns)
+        ham_three = sim_three.get_hamiltonian(t_ns)
+        ham_two = sim_two.get_hamiltonian(t_ns)
+        if ti <= t_ns < tf:
             assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
         else:
             assert ham_masked == ham_three
+
+    # Exchange terms are unaffected by the drive. Probe between sampling
+    # points as well as at the boundary to exclude interpolation leakage.
+    for t_ns in (tf - 0.25, tf, tf + 0.25):
+        masked = sim_masked.get_hamiltonian(t_ns).full()
+        unmasked = sim_three.get_hamiltonian(t_ns).full()
+        assert masked[2, 4] == pytest.approx(unmasked[2, 4])
+        expected = 0 if t_ns < tf else unmasked[1, 2]
+        assert masked[1, 2] == pytest.approx(expected)
 
 
 def test_mask_local_channel():

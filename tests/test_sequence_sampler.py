@@ -25,7 +25,7 @@ import pulser
 import pulser.math as pm
 import pulser_simulation
 from pulser.channels.dmm import DMM
-from pulser.devices import Device, MockDevice
+from pulser.devices import AnalogDevice, Device, MockDevice
 from pulser.pulse import PHASE_PRECISION, Pulse
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
@@ -55,6 +55,30 @@ def assert_same_samples_as_sim(seq: pulser.Sequence) -> None:
         return samples_dict
 
     assert_nested_dict_equality(got, truncate_samples(want))
+
+
+def assert_extended_samples(seq: pulser.Sequence) -> None:
+    """Check the samples between the end of each channel and the extension.
+
+    Up to the channel's duration, the samples are unchanged; after it, the
+    amplitude is 0 and the detuning and phase keep their last value.
+    """
+    ext_duration = seq.get_duration(include_fall_time=True) + 1
+    samples = sample(seq)
+    ext_samples = sample(seq, extended_duration=ext_duration)
+    assert ext_samples.max_duration == ext_duration
+    for ch, ch_samples in samples.channel_samples.items():
+        ext_ch_samples = ext_samples.channel_samples[ch]
+        assert ext_ch_samples.duration == ext_duration
+        duration = ch_samples.duration
+        for qty in ("amp", "det", "phase", "centered_phase"):
+            arr = getattr(ch_samples, qty).as_array()
+            ext_arr = getattr(ext_ch_samples, qty).as_array()
+            np.testing.assert_array_equal(ext_arr[:duration], arr)
+            np.testing.assert_array_equal(
+                ext_arr[duration:],
+                0.0 if qty == "amp" or duration == 0 else arr[-1],
+            )
 
 
 def assert_nested_dict_equality(got: dict, want: dict) -> None:
@@ -121,33 +145,57 @@ def test_delay_only(local_only, channel_name, basis):
     )
     assert samples.used_bases == set()
     assert samples.eigenbasis == ["u", "d"] if basis == "XY" else ["r", "g"]
+    assert_extended_samples(seq_)
 
 
-def test_one_pulse_sampling():
+@pytest.mark.parametrize("extend", [False, True])
+def test_pulse_sampling(extend):
     """Test the sample function on a one-pulse sequence."""
     reg = pulser.Register.square(1, prefix="q")
-    seq = pulser.Sequence(reg, MockDevice)
+    # AnalogDevice has a non-zero fall time
+    seq = pulser.Sequence(reg, AnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
     N = 1000
     amp_wf = BlackmanWaveform(N, np.pi)
     det_wf = RampWaveform(N, -np.pi / 2, np.pi / 2)
     phase = 1.234
     seq.add(Pulse(amp_wf, det_wf, phase), "ch0")
-    seq.measure()
 
-    samples = sample(seq)
-    got = samples.to_nested_dict()["Global"]["ground-rydberg"]
+    def get_samples(seq):
+        ext_duration = (
+            seq.get_duration(include_fall_time=True) + 1 if extend else None
+        )
+        samples = sample(seq, extended_duration=ext_duration)
+        got = samples.to_nested_dict()["Global"]["ground-rydberg"]
+        for qty in ("amp", "det", "phase"):
+            assert len(got[qty]) == (ext_duration or seq.get_duration())
+        return samples, got
+
+    samples, got = get_samples(seq)
     want = (amp_wf.samples, det_wf.samples, np.ones(N) * phase)
     for i, key in enumerate(["amp", "det", "phase"]):
-        np.testing.assert_array_equal(got[key], want[i])
+        np.testing.assert_array_equal(got[key][:N], want[i])
     assert samples.used_bases == {"ground-rydberg"}
     assert samples.eigenbasis == ["r", "g"]
+    # After the pulse, the detuning and phase keep their final value
+    np.testing.assert_array_equal(got["amp"][N:], 0)
+    np.testing.assert_array_equal(got["det"][N:], det_wf.samples[-1])
+    np.testing.assert_array_equal(got["phase"][N:], phase)
+
+    # If the sequence ends with a delay, the detuning is kept at 0
+    seq.delay(100, "ch0")
+    _, got = get_samples(seq)
+    np.testing.assert_array_equal(got["amp"][N:], 0)
+    np.testing.assert_array_equal(got["det"][N:], 0)
+    np.testing.assert_array_equal(got["phase"][N:], phase)
+    assert_extended_samples(seq)
 
 
 def test_table_sequence(seqs):
     """A table-driven test designed to be extended easily."""
     for seq in seqs:
         assert_same_samples_as_sim(seq)
+        assert_extended_samples(seq)
 
 
 def test_inXY() -> None:
@@ -164,6 +212,7 @@ def test_inXY() -> None:
     seq.measure(basis="XY")
 
     assert_same_samples_as_sim(seq)
+    assert_extended_samples(seq)
 
 
 def test_modulation(mod_seq: pulser.Sequence) -> None:
@@ -201,6 +250,14 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
     # input samples don't have a custom centered phase, output samples do
     assert input_ch_samples._centered_phase is None
     assert output_ch_samples._centered_phase is not None
+
+    # Extending beyond the fall time, the detuning stays at its last value
+    ext_duration = mod_seq.get_duration(include_fall_time=True) + 1
+    ext_mod_samples = sample(
+        mod_seq, modulation=True, extended_duration=ext_duration
+    ).to_nested_dict()["Global"]["ground-rydberg"]
+    np.testing.assert_allclose(ext_mod_samples["det"], 1.0)
+    np.testing.assert_array_equal(ext_mod_samples["phase"], 1.0)
 
 
 def test_modulation_local(mod_device):
@@ -441,6 +498,7 @@ def test_SLM_samples():
     assert_nested_dict_equality(got, want)
     assert samples.used_bases == {"XY"}
     assert samples.eigenbasis == ["u", "d"]
+    assert_extended_samples(seq)
 
     seq = seq_with_SLM("rydberg_global")
     with pytest.raises(ValueError, match="'qubits' must be defined"):
@@ -466,6 +524,7 @@ def test_SLM_samples():
     assert_nested_dict_equality(got, want)
     assert samples.used_bases == {"ground-rydberg"}
     assert samples.eigenbasis == ["r", "g"]
+    assert_extended_samples(seq)
 
 
 def test_SLM_against_simulation():
@@ -510,7 +569,7 @@ def test_extend_duration(with_custom_centered_phase):
         )
         np.testing.assert_array_equal(
             new_qty_samples[short.duration :],
-            old_qty_samples[-1] if "phase" in qty else 0.0,
+            0.0 if qty == "amp" else old_qty_samples[-1],
         )
     assert extended_short.slots == short.slots
 
@@ -577,6 +636,7 @@ def test_phase_sampling(mod_device, custom_phase_jump_time):
     np.testing.assert_array_equal(
         expected_phase, ch_samples_mod.centered_phase[:full_duration]
     )
+    assert_extended_samples(seq)
 
 
 @pytest.mark.parametrize("with_diff", [False, True])
@@ -731,7 +791,7 @@ def seq_rydberg() -> pulser.Sequence:
     )
     seq.target(["q0", "q1"], "ch1")
     seq.add(
-        Pulse.ConstantDetuning(BlackmanWaveform(100, np.pi / 8), 0.0, 0.0),
+        Pulse.ConstantDetuning(BlackmanWaveform(100, np.pi / 8), 1.0, 0.0),
         "ch1",
     )
     seq.measure()
