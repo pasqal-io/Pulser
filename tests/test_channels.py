@@ -308,7 +308,7 @@ _eom_rydberg = Rydberg.Global(
 @pytest.mark.parametrize(
     "channel, tr, eom, side_buffer_len",
     [
-        (_raman_local, _raman_local.rise_time, False, 85),
+        (_raman_local, _raman_local.rise_time, False, 103),
         (_eom_rydberg, _eom_config.rise_time, True, 0),
     ],
 )
@@ -336,6 +336,30 @@ def test_modulation(channel, tr, eom, side_buffer_len, requires_grad):
         side_buffer_len,
     )
     assert out_.requires_grad == requires_grad
+
+
+@pytest.mark.parametrize("eom", [False, True])
+@pytest.mark.parametrize("keep_ends", [False, True])
+def test_modulation_does_not_wrap_around(eom, keep_ends):
+    # Off for most of the duration, then switched on at the end
+    input_samples = np.r_[np.zeros(900), np.ones(100)]
+    out_ = _eom_rydberg.modulate(input_samples, keep_ends=keep_ends, eom=eom)
+    if eom:
+        mod_bandwidth = _eom_config.mod_bandwidth
+        tr = _eom_config.rise_time
+    else:
+        mod_bandwidth = _eom_rydberg.mod_bandwidth
+        tr = _eom_rydberg.rise_time
+    # The same modulation with a much longer padding, so that the end of
+    # the samples can't reach their start
+    pad = 20 * tr
+    expected = _eom_rydberg.apply_modulation(
+        np.pad(input_samples, pad, mode="edge" if keep_ends else "constant"),
+        mod_bandwidth,
+    )[pad - tr : -(pad - tr)]
+    np.testing.assert_allclose(
+        out_.as_array(), expected.as_array(), atol=1e-12
+    )
 
 
 def test_rise_time_consistency():
