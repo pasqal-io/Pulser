@@ -356,6 +356,13 @@ def test_make_json_compatible():
     assert make_json_compatible(
         np.linspace(0, 1, num=3, dtype=np.float16)
     ) == [0.0, 0.5, 1.0]
+    assert make_json_compatible(
+        {
+            "integer": np.int64(100),
+            "floating": np.float32(1.5),
+            "boolean": np.bool_(True),
+        }
+    ) == {"integer": 100, "floating": 1.5, "boolean": True}
     assert make_json_compatible("abc") == "abc"
     with pytest.raises(TypeError, match="not JSON serializable"):
         make_json_compatible(1j)
