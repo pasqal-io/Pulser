@@ -11,13 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import inspect
 import json
 import re
 
 import numpy as np
 import pytest
 
-from pulser import Register, Register3D, Sequence
+from pulser import Pulse, Register, Register3D, Sequence
 from pulser.devices import DigitalAnalogDevice, MockDevice
 from pulser.exceptions.serialization import (
     SerializationError,
@@ -26,7 +27,11 @@ from pulser.exceptions.serialization import (
     SerializationSupportModuleMissing,
 )
 from pulser.json.coders import PulserDecoder, PulserEncoder
-from pulser.json.supported import validate_serialization
+from pulser.json.supported import (
+    SUPPORTED_SEQUENCE_CALLS,
+    SUPPORTED_SUBMODULE_METHODS,
+    validate_serialization,
+)
 from pulser.json.utils import make_json_compatible
 from pulser.parametrized.decorators import parametrize
 from pulser.register.register_layout import RegisterLayout
@@ -36,7 +41,11 @@ from pulser.register.special_layouts import (
     TriangularLatticeLayout,
 )
 from pulser.register.weight_maps import DetuningMap
-from pulser.waveforms import BlackmanWaveform
+from pulser.waveforms import BlackmanWaveform, KaiserWaveform
+
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:Direct usage of 'Pulser:DeprecationWarning"
+)
 
 
 def encode(obj):
@@ -49,6 +58,21 @@ def decode(s):
 
 def encode_decode(obj):
     return decode(encode(obj))
+
+
+@pytest.mark.filterwarnings("error")
+def test_deprecated_direct_usage():
+    with pytest.warns(
+        DeprecationWarning, match="'PulserEncoder' is deprecated"
+    ):
+        s = encode(np.arange(3))
+    with pytest.warns(
+        DeprecationWarning, match="'PulserDecoder' is deprecated"
+    ):
+        decode(s)
+    # Silenced when going through the Sequence methods
+    seq = Sequence(Register.square(2, prefix="q"), DigitalAnalogDevice)
+    Sequence._deserialize(seq._serialize())
 
 
 def test_encoder():
@@ -311,3 +335,60 @@ def test_make_json_compatible():
     assert make_json_compatible("abc") == "abc"
     with pytest.raises(TypeError, match="not JSON serializable"):
         make_json_compatible(1j)
+
+
+@pytest.mark.parametrize("calls_key", ["calls", "to_build_calls"])
+def test_sequence_call_allowlist(tmp_path, calls_key):
+    seq = Sequence(Register.square(2, prefix="q"), DigitalAnalogDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd")
+    seq_dict = json.loads(seq._serialize())
+    seq_dict[calls_key].append(
+        ["draw", [], {"fig_name": str(tmp_path / "fig.png"), "show": False}]
+    )
+    with pytest.raises(
+        SerializationSupportClassMissing,
+        match=re.escape(
+            "No serialization support for 'pulser.sequence.Sequence.draw'."
+        ),
+    ):
+        Sequence._deserialize(json.dumps(seq_dict))
+    assert not any(tmp_path.iterdir())
+
+
+def test_submodule_method_allowlist(tmp_path):
+    reg = Register.square(2, prefix="q")
+    reg_dict = reg._to_dict()
+    reg_dict["__name__"] = "draw"
+    with pytest.raises(
+        SerializationSupportClassMissing,
+        match=re.escape(
+            "No serialization support for "
+            "'pulser.register.register.Register.draw'."
+        ),
+    ):
+        validate_serialization(reg_dict)
+
+    reg_dict["__args__"] = [reg._to_dict()]
+    reg_dict["__kwargs__"] = {"fig_name": str(tmp_path / "fig.png")}
+    with pytest.raises(
+        SerializationSupportClassMissing, match="Register.draw"
+    ):
+        decode(json.dumps(reg_dict))
+    assert not any(tmp_path.iterdir())
+
+
+def test_allowlists_match_code():
+    classes = {
+        "Pulse": Pulse,
+        "BlackmanWaveform": BlackmanWaveform,
+        "KaiserWaveform": KaiserWaveform,
+        "Register": Register,
+        "Register3D": Register3D,
+    }
+    assert set(classes) == set(SUPPORTED_SUBMODULE_METHODS)
+    for cls_name, methods in SUPPORTED_SUBMODULE_METHODS.items():
+        for method in methods:
+            assert inspect.ismethod(getattr(classes[cls_name], method))
+    for name in SUPPORTED_SEQUENCE_CALLS:
+        assert callable(getattr(Sequence, name))
