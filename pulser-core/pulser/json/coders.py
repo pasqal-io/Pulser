@@ -17,18 +17,32 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import warnings
 from json import JSONDecoder, JSONEncoder
 from typing import Any, cast
 
 import numpy as np
 
-from pulser.json.supported import validate_serialization
+from pulser.exceptions.serialization import SerializationSupportClassMissing
+from pulser.json.supported import (
+    SUPPORTED_SEQUENCE_CALLS,
+    validate_serialization,
+)
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Variable
 
 
 class PulserEncoder(JSONEncoder):
     """The custom encoder for Pulser objects."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initializes the encoder."""
+        warnings.warn(
+            "Direct usage of 'PulserEncoder' is deprecated.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        super().__init__(*args, **kwargs)
 
     def default(self, o: Any) -> dict[str, Any] | int:
         """Handles JSON encoding of objects not supported by default."""
@@ -51,6 +65,11 @@ class PulserDecoder(JSONDecoder):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initializes the decoder."""
+        warnings.warn(
+            "Direct usage of 'PulserDecoder' is deprecated.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
         # TODO: Check version compatibility (stored at the Sequence level)
         self.vars: dict[str, Variable] = {}
         super().__init__(object_hook=self.object_hook, *args, **kwargs)
@@ -116,6 +135,12 @@ class PulserDecoder(JSONDecoder):
                 )
 
         if "Sequence" in obj_name:
+            # Check all calls before replaying any of them
+            for name, _, _ in (*obj["calls"], *obj["to_build_calls"]):
+                if name not in SUPPORTED_SEQUENCE_CALLS:
+                    raise SerializationSupportClassMissing(
+                        module=f"{module_str}.{obj_name}", class_name=name
+                    )
             seq = cls(*obj["__args__"], **obj["__kwargs__"])
             for name, args, kwargs in obj["calls"]:
                 getattr(seq, name)(*args, **kwargs)
