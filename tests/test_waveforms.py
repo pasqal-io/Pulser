@@ -438,6 +438,9 @@ def test_ops():
         constant / 0
 
 
+@pytest.mark.filterwarnings(
+    "ignore:Direct usage of 'Pulser:DeprecationWarning"
+)
 def test_serialization():
     for wf in [blackman, composite, constant, custom, interp, kaiser, ramp]:
         s = json.dumps(wf, cls=PulserEncoder)
