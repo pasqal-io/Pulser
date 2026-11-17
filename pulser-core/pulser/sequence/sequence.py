@@ -267,7 +267,7 @@ class Sequence(Generic[DeviceType]):
                 call.name == "config_slm_mask"
                 or call.name == "config_detuning_map"
             ):
-                (dmm_id, _) = self._get_dmm_id_detuning_map(call)
+                dmm_id, _ = self._get_dmm_id_detuning_map(call)
                 dmm_name = _get_dmm_name(
                     dmm_id, list(all_declared_channels.keys())
                 )
@@ -1845,7 +1845,13 @@ class Sequence(Generic[DeviceType]):
             ``json.dumps``: Built-in function for serialization to a JSON
             formatted string.
         """
-        return json.dumps(self, cls=PulserEncoder, **kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="Direct usage of 'PulserEncoder",
+                category=DeprecationWarning,
+            )
+            return json.dumps(self, cls=PulserEncoder, **kwargs)
 
     def to_abstract_repr(
         self,
@@ -1911,6 +1917,11 @@ class Sequence(Generic[DeviceType]):
                 the serialization of a ``Sequence`` through
                 ``Sequence.serialize()``.
 
+        Note:
+            Only the builder calls and classmethods listed in
+            ``pulser.json.supported`` are replayed; any other call raises
+            a ``SerializationError``.
+
         Other Parameters:
             kwargs: Valid keyword-arguments for ``json.loads()``, except for
                 ``cls`` and ``object_hook``.
@@ -1932,7 +1943,13 @@ class Sequence(Generic[DeviceType]):
                 "The given JSON formatted string does not encode a Sequence."
             )
 
-        return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="Direct usage of 'PulserDecoder",
+                category=DeprecationWarning,
+            )
+            return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
 
     @staticmethod
     def from_abstract_repr(obj_str: str) -> Sequence:

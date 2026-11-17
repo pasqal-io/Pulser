@@ -160,6 +160,9 @@ def test_paramobj(bwf, t, a, b):
     assert origin.build() == 0.0
 
 
+@pytest.mark.filterwarnings(
+    "ignore:Direct usage of 'Pulser:DeprecationWarning"
+)
 @pytest.mark.parametrize("with_diff_tensor", [False, True])
 def test_opsupport(a, b, with_diff_tensor):
     def check_var_grad(var):

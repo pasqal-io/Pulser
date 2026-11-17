@@ -295,6 +295,9 @@ class TestAbstractArray:
             # The resulting tensor requires grad if the assigned one did
             assert arr_np.requires_grad == requires_grad
 
+    @pytest.mark.filterwarnings(
+        "ignore:Direct usage of 'Pulser:DeprecationWarning"
+    )
     @pytest.mark.parametrize("scalar", [False, True])
     @pytest.mark.parametrize(
         "use_tensor, requires_grad",
