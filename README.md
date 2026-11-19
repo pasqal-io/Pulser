@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/pasqal-io/Pulser/develop/docs/source/_static/assets/pulser_logo_dark.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/pasqal-io/Pulser/develop/docs/source/_static/assets/pulser_logo.svg">
     <img src="https://raw.githubusercontent.com/pasqal-io/Pulser/develop/docs/source/_static/assets/pulser_logo_light.svg" alt="Pulser logo" width="300">
   </picture>
 </p>
