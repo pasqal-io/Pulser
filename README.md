@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/pasqal-io/Pulser/develop/docs/source/_static/assets/pulser_logo_dark.svg">
-    <img src="https://raw.githubusercontent.com/pasqal-io/Pulser/develop/docs/source/_static/assets/pulser_logo_light.svg" alt="Pulser logo" width="300">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/pasqal-io/Pulser/logo-light/docs/source/_static/assets/pulser_logo_dark.svg">
+    <img src="https://raw.githubusercontent.com/pasqal-io/Pulser/logo-light/docs/source/_static/assets/pulser_logo_light.svg" alt="Pulser logo" width="300">
   </picture>
 </p>
 
