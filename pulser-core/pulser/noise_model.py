@@ -249,6 +249,10 @@ class NoiseModel:
       and :math:`w` is the gaussian waist (`detuning_map_spot_waist`) of each
       detuning spot, which are assumed to be the same.
 
+    In the ground-Rydberg basis, Doppler and laser detuning noise act on
+    every atom throughout the sampled duration, including delays and
+    modulation fall time, once per non-DMM channel. Amplitude noise acts only
+    on the drive.
     DMM channels do not receive Doppler, laser amplitude or laser detuning
     noise. Their intensity fluctuations are controlled by ``dmm_sigma``.
 
