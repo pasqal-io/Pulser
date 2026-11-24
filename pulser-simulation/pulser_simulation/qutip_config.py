@@ -45,7 +45,10 @@ class QutipConfig(EmulationConfig[QutipState]):
         initial_state: The initial state from which emulation starts. If
             specified, the state type needs to be compatible with the emulator
             backend. If left undefined, defaults to starting with all qudits
-            in the ground state.
+            in the ground state. When the noise model has state preparation
+            errors and leakage, and ``qutip.mesolve`` is used, each qudit of
+            this all-ground state is instead in the error state 'x' with
+            probability ``state_prep_error``.
         with_modulation: Whether to emulate the sequence with the programmed
             input or the expected output.
         prefer_device_noise_model: If the sequence's device has a default noise

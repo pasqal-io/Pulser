@@ -303,7 +303,12 @@ def test_from_sequence():
                 seq, noise_model=noise_model, n_trajectories=1
             )
             mock_init.assert_called_once_with(
-                samples, seq.register, seq.device, noise_model, 1
+                samples,
+                seq.register,
+                seq.device,
+                noise_model,
+                1,
+                sample_bad_atoms=True,
             )
 
     with pytest.raises(
@@ -412,6 +417,20 @@ def test_bad_atoms():
     )
     for key in seq.register.qubit_ids:
         assert ham.noise_trajectories[0].trajectory.bad_atoms[key]
+
+
+@pytest.mark.parametrize("other_noise", [{}, dict(detuning_sigma=0.5)])
+def test_bad_atoms_not_sampled(other_noise):
+    seq = seq_with_SLM("rydberg_global")
+    noise = pulser.NoiseModel(state_prep_error=1.0, **other_noise)
+    ham = HamiltonianData.from_sequence(
+        seq, noise_model=noise, n_trajectories=3, sample_bad_atoms=False
+    )
+    # The state preparation errors are accounted for elsewhere
+    for traj in ham.noise_trajectories:
+        assert not any(traj.trajectory.bad_atoms.values())
+    # Without other noise, no qubit-specific samples are needed
+    assert ham.local_noises == bool(other_noise)
 
 
 @pytest.mark.parametrize("channel_type", ["rydberg_global", "mw_global"])
