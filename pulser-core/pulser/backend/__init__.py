@@ -36,6 +36,7 @@ from pulser.backend.default_observables import (
     Energy,
     EnergySecondMoment,
     EnergyVariance,
+    EntanglementEntropy,
     Expectation,
     Fidelity,
     Occupation,
