@@ -19,6 +19,7 @@ from functools import wraps
 from itertools import chain
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
+from pulser.channels.dmm import DMM
 from pulser.parametrized import Parametrized
 from pulser.sequence._call import _Call
 
@@ -93,6 +94,36 @@ def store(func: F) -> F:
         storage = self._calls if self._building else self._to_build_calls
         func(self, *args, **kwargs)
         storage.append(_Call(func.__name__, args, kwargs))
+
+    return cast(F, wrapper)
+
+
+def resolve_default_dmm_id(func: F) -> F:
+    """Picks the first available DMM if no ``dmm_id`` is given.
+
+    Must be applied before ``store``, so that the stored call holds the
+    DMM ID it used when it is replayed.
+    """
+
+    @wraps(func)
+    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
+        dmm_id = args[1] if len(args) > 1 else kwargs.get("dmm_id")
+        if dmm_id is None:
+            for ch_id, ch_obj in self.available_channels.items():
+                if isinstance(ch_obj, DMM):
+                    dmm_id = ch_id
+                    break
+            else:
+                raise ValueError(
+                    "No DMM channel is still available in device "
+                    f"{self.device.name!r}."
+                )
+            # Keeps the arguments in the form they were given
+            if len(args) > 1:
+                args = (args[0], dmm_id, *args[2:])
+            else:
+                kwargs["dmm_id"] = dmm_id
+        return func(self, *args, **kwargs)
 
     return cast(F, wrapper)
 
