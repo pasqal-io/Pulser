@@ -250,6 +250,23 @@ def test_dmm_declaration(reg, device, det_map, first_dmm_id):
         seq2.config_detuning_map(det_map, "dmm_0")
 
 
+def test_default_dmm_id_is_stored(reg, device, det_map):
+    seq = Sequence(reg, device)
+    seq.config_detuning_map(det_map)
+    seq.config_detuning_map(det_map)
+    seq.add_dmm_detuning(ConstantWaveform(100, -10), "dmm_1")
+    # The DMM IDs picked by default are stored, so the calls can be replayed
+    abstract = json.loads(seq.to_abstract_repr())
+    assert [
+        op["dmm_id"]
+        for op in abstract["operations"]
+        if op["op"] == "config_detuning_map"
+    ] == ["dmm_0", "dmm_1"]
+    new_device = dataclasses.replace(device, name="NewDevice")
+    new_seq = seq.with_new_device(new_device, strict=True)
+    assert list(new_seq.declared_channels) == ["dmm_0", "dmm_1"]
+
+
 def test_slm_declaration(reg, device, det_map):
     # Definining an SLM on a Device
     seq = Sequence(reg, device)

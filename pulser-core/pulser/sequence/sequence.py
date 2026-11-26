@@ -650,6 +650,7 @@ class Sequence(Generic[DeviceType]):
             self._set_slm_mask_dmm(dmm_id, targets)
         self._slm_mask_targets = targets
 
+    @seq_decorators.resolve_default_dmm_id
     @seq_decorators.store
     @seq_decorators.conditionally_block()
     def config_detuning_map(
@@ -673,17 +674,8 @@ class Sequence(Generic[DeviceType]):
                 available (start by "dmm" ) and the associated description. If
                 not given, takes the first available DMM in the device.
         """
-        if dmm_id is None:
-            for ch_id, ch_obj in self.available_channels.items():
-                if isinstance(ch_obj, DMM):
-                    dmm_id = ch_id
-                    break
-            else:
-                raise ValueError(
-                    "No DMM channel is still available in device "
-                    f"{self.device.name!r}."
-                )
-
+        # Set by seq_decorators.resolve_default_dmm_id if not given
+        assert dmm_id is not None
         self._config_detuning_map(detuning_map, dmm_id)
 
     def _config_detuning_map(
