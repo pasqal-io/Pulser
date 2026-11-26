@@ -187,9 +187,7 @@ class QutipState(State[complex, float]):
         Returns:
             The measured bitstrings, by count.
         """
-        bitstring_probs = self.bitstring_probabilities(
-            one_state=one_state, cutoff=1 / (1000 * num_shots)
-        )
+        bitstring_probs = self.bitstring_probabilities(one_state=one_state)
         bitstrings = np.array(list(bitstring_probs))
         probs = np.array(list(map(float, bitstring_probs.values())))
         indices = multinomial(num_shots, probs)

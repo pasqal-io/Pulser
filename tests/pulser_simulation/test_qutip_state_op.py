@@ -16,6 +16,7 @@ from __future__ import annotations
 import itertools
 import json
 import re
+from collections import Counter
 
 import numpy as np
 import pytest
@@ -231,6 +232,31 @@ class TestQutipState:
         assert dm_g.sample(num_shots=shots, one_state="g") == {"1": shots}
         assert dm_g.sample(num_shots=shots, p_false_neg=0.1) == {"0": shots}
         assert dm_g.sample(num_shots=shots, p_false_pos=0.1)["1"] > 0
+
+    def test_sample_low_probabilities(self):
+        r, g = qutip.basis(2, 0), qutip.basis(2, 1)
+        # All 1024 basis states have a probability below 1e-3
+        state = QutipState(
+            qutip.tensor([(r + g).unit()] * 10), eigenstates=("r", "g")
+        )
+        assert state.sample(num_shots=1).total() == 1
+
+        # Bitstrings with 3+ ones each have p < 1e-3, but p ~ 0.038 in total
+        ket = np.sqrt(0.1) * r + np.sqrt(0.9) * g
+        state = QutipState(qutip.tensor([ket] * 8), eigenstates=("r", "g"))
+        exact = sum(
+            p
+            for b, p in state.bitstring_probabilities().items()
+            if b.count("1") >= 3
+        )
+        np.random.seed(123)
+        shots = 2000
+        counts = sum(
+            (state.sample(num_shots=1) for _ in range(shots)), Counter()
+        )
+        frac = sum(v for b, v in counts.items() if b.count("1") >= 3) / shots
+        # 0.02 is ~4.7 binomial standard deviations (~0.0043)
+        assert frac == pytest.approx(exact, abs=0.02)
 
     @pytest.mark.parametrize(
         "amplitudes",
