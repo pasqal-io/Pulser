@@ -215,7 +215,10 @@ def _deserialize_waveform(obj: dict, vars: dict) -> Waveform:
             samples=_deserialize_parameter(obj["samples"], vars)
         )
 
-    raise AbstractReprError("The object does not encode a known waveform.")
+    raise AbstractReprError(
+        "The object does not encode a known waveform; got kind "
+        f"{obj['kind']!r}."
+    )
 
 
 def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
@@ -378,7 +381,8 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
                 )
             except ValueError as e:
                 raise AbstractReprError(
-                    "RydbergEOM deserialization failed."
+                    "RydbergEOM deserialization failed for channel "
+                    f"{obj.get('id')!r}."
                 ) from e
     elif obj["basis"] == "digital":
         channel_cls = Raman
@@ -395,7 +399,9 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
     try:
         return channel_cls(**params)
     except (ValueError, NotImplementedError) as e:
-        raise AbstractReprError("Channel deserialization failed.") from e
+        raise AbstractReprError(
+            f"Channel deserialization failed for channel {obj.get('id')!r}."
+        ) from e
 
 
 def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
@@ -404,8 +410,11 @@ def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
             layout_obj["coordinates"], slug=layout_obj.get("slug")
         )
     except ValueError as e:
+        slug = layout_obj.get("slug")
+        for_layout = f" for layout {slug!r}" if slug else ""
         raise AbstractReprError(
-            "Register layout deserialization failed."
+            "Register layout deserialization failed; got coordinates "
+            f"{layout_obj['coordinates']}{for_layout}."
         ) from e
 
     special_layout = (
@@ -575,7 +584,9 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     try:
         return device_cls(**params)
     except (ValueError, TypeError) as e:
-        raise AbstractReprError("Device deserialization failed.") from e
+        raise AbstractReprError(
+            f"Device deserialization failed for device {obj.get('name')!r}."
+        ) from e
 
 
 def _deserialize_det_map(ser_det_map: dict) -> DetuningMap:

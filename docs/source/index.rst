@@ -6,8 +6,6 @@ libraries for designing and simulating pulse sequences that act on
 programmable arrays of neutral atoms, a promising platform for quantum computation
 and simulation.
 
-**Online documentation**: `<https://pulser.readthedocs.io>`_
-
 **White paper**: `Quantum 6, 629 (2022) <https://quantum-journal.org/papers/q-2022-01-24-629/>`_
 
 **Source code repository** (go `here <https://pulser.readthedocs.io/en/latest/>`_
@@ -15,6 +13,14 @@ for the latest docs): `<https://github.com/pasqal-io/Pulser>`_
 
 **License**: Apache 2.0 -- see `LICENSE <https://github.com/pasqal-io/Pulser/blob/master/LICENSE>`_
 for details
+
+Where to start
+---------------
+
+- :doc:`Quick Run Guide <quick_run_guide>` - install Pulser and run your first job, locally or remotely.
+- :doc:`installation` - all installation options, including the development version.
+- :doc:`programming` - learn what you are programming with Pulser and how.
+- :doc:`tutorials/creating` - examples of quantum programs written with Pulser.
 
 Overview
 ---------------
@@ -48,6 +54,7 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    :maxdepth: 2
    :caption: Getting Started
 
+   quick_run_guide
    installation
    programming
    tutorials/creating

@@ -483,6 +483,8 @@ class HamiltonianData:
         if self.local_noises:
             for ch, ch_samples in self._samples.channel_samples.items():
                 _ch_obj = self._samples._ch_objs[ch]
+                if isinstance(_ch_obj, DMM):
+                    continue
                 samples_dict = samples["Local"][_ch_obj.basis]
                 for slot in ch_samples.slots:
                     det_fluctuation = _generate_detuning_fluctuations(
@@ -851,6 +853,7 @@ class HamiltonianData:
                 amp_fluctuations = {}
                 det_fluctuations = {}
                 det_phases = {}
+                dmm_det_fluctuation = {}
                 register: BaseRegister = self._register
                 if (
                     "SPAM" in self.noise_model.noise_types
@@ -873,6 +876,21 @@ class HamiltonianData:
                     doppler_detune = {qid: 0.0 for qid in self._qid_index}
 
                 for ch in self._samples.channel_samples:
+                    if isinstance(self._samples._ch_objs[ch], DMM):
+                        amp_fluctuations[ch] = 1.0
+                        det_fluctuations[ch] = 0.0
+                        det_phases[ch] = np.array(0.0)
+                        dmm_det_fluctuation[ch] = (
+                            max(
+                                0,
+                                np.random.normal(
+                                    1.0, self.noise_model.dmm_sigma
+                                ),
+                            )
+                            if self.noise_model.dmm_sigma
+                            else 1.0
+                        )
+                        continue
                     amp_fluctuations[ch] = max(
                         0, np.random.normal(1.0, self.noise_model.amp_sigma)
                     )
@@ -890,15 +908,7 @@ class HamiltonianData:
                     else:
                         det_phases[ch] = np.array(0.0)
 
-                    if self.noise_model.dmm_sigma and isinstance(
-                        self._samples._ch_objs[ch], DMM
-                    ):
-                        dmm_det_fluctuation[ch] = max(
-                            0,
-                            np.random.normal(1.0, self.noise_model.dmm_sigma),
-                        )
-                    else:
-                        dmm_det_fluctuation[ch] = 1.0
+                    dmm_det_fluctuation[ch] = 1.0
 
                 if "register" in self._noise_model.noise_types:
                     register = _noisy_register(

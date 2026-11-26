@@ -246,7 +246,7 @@ class QutipOperator(Operator[complex, complex, QutipStateType]):
         if not isinstance(other, expected_type):
             raise TypeError(
                 f"'{op_name}' expects a '{expected_type.__name__}' instance, "
-                f"not {type(other)}."
+                f"not {type(other)}. Got {other!r}."
             )
         if self.eigenstates != other.eigenstates:
             msg = (

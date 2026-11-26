@@ -53,13 +53,52 @@ SUPPORTED_NUMPY = (
     "tan",
 )
 
-SUPPORTS_SUBMODULE = (
-    "Pulse",
-    "BlackmanWaveform",
-    "KaiserWaveform",
-    "Register",
-    "Register3D",
-)
+# Classes whose classmethods can be serialized (via "__submodule__"),
+# mapped to the classmethods that are allowed
+SUPPORTED_SUBMODULE_METHODS: dict[str, tuple[str, ...]] = {
+    "Pulse": (
+        "ConstantDetuning",
+        "ConstantAmplitude",
+        "ConstantPulse",
+        "ArbitraryPhase",
+    ),
+    "BlackmanWaveform": ("from_max_val",),
+    "KaiserWaveform": ("from_max_val",),
+    "Register": (
+        "from_coordinates",
+        "square",
+        "rectangle",
+        "rectangular_lattice",
+        "triangular_lattice",
+        "hexagon",
+        "max_connectivity",
+    ),
+    "Register3D": ("from_coordinates", "cubic", "cuboid"),
+}
+
+# Sequence methods that can be replayed on deserialization. These are the
+# calls recorded in Sequence._calls and Sequence._to_build_calls.
+# Kept mutable so that extensions can add their own.
+SUPPORTED_SEQUENCE_CALLS = {
+    "declare_channel",
+    "set_magnetic_field",
+    "config_slm_mask",
+    "config_detuning_map",
+    "enable_eom_mode",
+    "modify_eom_setpoint",
+    "disable_eom_mode",
+    "add_eom_pulse",
+    "add",
+    "add_dmm_detuning",
+    "target",
+    "target_index",
+    "delay",
+    "truncate",
+    "measure",
+    "phase_shift",
+    "phase_shift_index",
+    "align",
+}
 
 SUPPORTED_MODULES = {
     "builtins": SUPPORTED_BUILTINS,
@@ -106,17 +145,24 @@ def validate_serialization(obj_dict: Mapping[str, Any]) -> None:
         obj_dict["_build"]
         obj_str = obj_dict["__name__"]
         module_str = obj_dict["__module__"]
-    except KeyError:
-        raise TypeError("Invalid 'obj_dict'.")
+    except KeyError as e:
+        raise TypeError(
+            f"Invalid 'obj_dict'; it has no {e.args[0]!r} key. Got keys "
+            f"{list(obj_dict)}."
+        )
 
     if module_str not in SUPPORTED_MODULES:
         raise SerializationSupportModuleMissing(module=module_str)
 
     if "__submodule__" in obj_dict:
         submodule_str = obj_dict["__submodule__"]
-        if submodule_str not in SUPPORTS_SUBMODULE:
+        if submodule_str not in SUPPORTED_SUBMODULE_METHODS:
             raise SerializationSupportAttributeMissing(
                 module=module_str, submodule=submodule_str
+            )
+        if obj_str not in SUPPORTED_SUBMODULE_METHODS[submodule_str]:
+            raise SerializationSupportClassMissing(
+                module=f"{module_str}.{submodule_str}", class_name=obj_str
             )
         obj_str = submodule_str
 

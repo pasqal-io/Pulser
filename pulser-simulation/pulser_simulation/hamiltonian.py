@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import itertools
-from collections import defaultdict
+from collections import Counter, defaultdict
 from typing import Union, cast
 
 import numpy as np
@@ -180,11 +180,22 @@ class Hamiltonian:
             else:
                 qubits_set = set(qubits)
                 if len(qubits_set) < len(qubits):
-                    raise ValueError("Duplicate atom ids in argument list.")
+                    duplicates = [
+                        q for q, freq in Counter(qubits).items() if freq > 1
+                    ]
+                    raise ValueError(
+                        "Duplicate atom ids in argument list; "
+                        f"{duplicates} appear more than once in "
+                        f"{list(qubits)}."
+                    )
                 if not qubits_set.issubset(self._register.qubits.keys()):
-                    v = qubits_set
-                    v -= self._register.qubits.keys()
-                    raise ValueError("Invalid qubit names: " f"{v}")
+                    unknown = [
+                        q for q in qubits if q not in self._register.qubits
+                    ]
+                    raise ValueError(
+                        f"Invalid qubit names; {unknown} not in "
+                        f"{list(self._register.qubit_ids)}."
+                    )
                 if isinstance(operator, str):
                     try:
                         operator = self.op_matrix[operator]
@@ -400,25 +411,20 @@ class Hamiltonian:
                 self.samples._slm_mask.end > 0
                 and self.basis_data.interaction_type == "XY"
             ):
-                # Build an array of binary coefficients for the interaction
-                # term of unmasked qubits
-                coeff = np.ones(self._duration - 1)
-                coeff[0 : self.samples._slm_mask.end] = 0
-                # Build the interaction term for unmasked qubits
+                # Keep unmasked pairs active and release masked pairs exactly
+                # at the mask boundary, independently of the sampling grid.
+                unmasked_interactions = make_interaction_term(masked=True)
+                mask_release = qutip.coefficient(
+                    np.array([0.0, 1.0]),
+                    tlist=np.array([0.0, self.samples._slm_mask.end / 1000]),
+                    order=0,
+                )
                 qobj_list = [
+                    unmasked_interactions,
                     [
-                        make_interaction_term(),
-                        self._adapt_to_sampling_rate(coeff),
-                    ]
-                ]
-                # Build the interaction term for masked qubits
-                qobj_list += [
-                    [
-                        make_interaction_term(masked=True),
-                        self._adapt_to_sampling_rate(
-                            np.logical_not(coeff).astype(int),
-                        ),
-                    ]
+                        make_interaction_term() - unmasked_interactions,
+                        mask_release,
+                    ],
                 ]
             else:
                 qobj_list = [make_interaction_term()]

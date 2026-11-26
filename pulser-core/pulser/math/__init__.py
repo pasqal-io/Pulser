@@ -35,6 +35,10 @@ except ImportError:  # pragma: no cover
 
 T = TypeVar("T", covariant=True)
 
+# Absolute tolerance for floating point errors when validating values
+# against their limits
+VALIDATION_TOLERANCE = 1e-6
+
 
 class TensorLike(Protocol[T]):
     """A type hint to signal that a parameter behaves like a torch Tensor."""

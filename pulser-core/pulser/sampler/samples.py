@@ -152,8 +152,8 @@ class ChannelSamples:
     def extend_duration(self, new_duration: int) -> ChannelSamples:
         """Extends the duration of the samples.
 
-        Pads the amplitude and detuning samples with zeros and the phase with
-        its last value (or zero if empty).
+        Pads the amplitude with zeros, the detuning and the phase with
+        their last value (or zero if empty).
 
         Args:
             new_duration: The new duration for the samples (in ns).
@@ -164,14 +164,17 @@ class ChannelSamples:
         """
         extension = new_duration - self.duration
         if extension < 0:
-            raise ValueError("Can't extend samples to a lower duration.")
+            raise ValueError(
+                "Can't extend samples to a lower duration; got "
+                f"{new_duration} ns vs. the current {self.duration} ns."
+            )
 
         new_amp = pm.pad(self.amp, (0, extension))
         # When in EOM mode, we need to keep the detuning at detuning_off
         if self.eom_blocks and self.eom_blocks[-1].tf is None:
             final_detuning = float(self.eom_blocks[-1].detuning_off)
         else:
-            final_detuning = 0.0
+            final_detuning = 0.0 if len(self.det) == 0 else float(self.det[-1])
         new_detuning = pm.pad(
             self.det,
             (0, extension),

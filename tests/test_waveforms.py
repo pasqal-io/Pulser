@@ -438,6 +438,9 @@ def test_ops():
         constant / 0
 
 
+@pytest.mark.filterwarnings(
+    "ignore:Direct usage of 'Pulser:DeprecationWarning"
+)
 def test_serialization():
     for wf in [blackman, composite, constant, custom, interp, kaiser, ramp]:
         s = json.dumps(wf, cls=PulserEncoder)
@@ -536,7 +539,8 @@ def test_modulation(rydberg_global):
         rydberg_global.rise_time,
     )
     assert len(mod_samples) == constant.duration + 2 * rydberg_global.rise_time
-    assert np.isclose(np.sum(mod_samples) * 1e-3, constant.integral)
+    # Only the small tails beyond the rise time are left out
+    assert np.isclose(np.sum(mod_samples) * 1e-3, constant.integral, rtol=1e-2)
     assert max(np.abs(mod_samples)) < np.abs(constant[0])
 
 

@@ -591,14 +591,16 @@ class BaseDevice(ABC):
     def _validate_radial_distance(
         self, ids: list[QubitId], coords: list[pm.AbstractArray], kind: str
     ) -> None:
+        # At this stage, `self.max_radial_distance`` is not `None`
+        # but mypy cannot see it.
+        assert self.max_radial_distance is not None
+        radial_dists = np.linalg.norm(
+            pm.vstack(coords).as_array(detach=True), axis=1
+        )
         too_far = (
-            np.linalg.norm(pm.vstack(coords).as_array(detach=True), axis=1)
-            > self.max_radial_distance
+            radial_dists > self.max_radial_distance + pm.VALIDATION_TOLERANCE
         )
         if np.any(too_far):
-            # At this stage, `self.max_radial_distance`` is not `None`
-            # but mypy cannot see it.
-            assert self.max_radial_distance is not None
             raise RadiusError(
                 device=self,
                 kind=kind,

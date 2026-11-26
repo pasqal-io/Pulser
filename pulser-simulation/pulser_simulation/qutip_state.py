@@ -84,7 +84,7 @@ class QutipState(State[complex, float]):
         if not isinstance(other, QutipState):
             raise TypeError(
                 "'QutipState.overlap()' expects another 'QutipState', not "
-                f"{type(other)}."
+                f"{type(other)}. Got {other!r}."
             )
         if (
             self.n_qudits != other.n_qudits

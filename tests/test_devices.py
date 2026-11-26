@@ -967,3 +967,14 @@ def test_noise_model_and_default_noise_model_mutually_exclusive():
         match="Cannot specify both 'noise_model' and 'default_noise_model'",
     ):
         replace(MockDevice, noise_model=nm, default_noise_model=nm)
+
+
+def test_validate_register_radial_float_tolerance():
+    # Atoms placed exactly on the maximal radial distance must pass
+    r = AnalogDevice.max_radial_distance
+    angle = 0.047147463535614706  # Has norm > r without tolerance
+    reg = Register(
+        {"q0": [r * np.cos(angle), r * np.sin(angle)], "q1": [0, 0]}
+    )
+    assert np.linalg.norm(reg.qubits["q0"].as_array()) > r
+    AnalogDevice.validate_register(reg)

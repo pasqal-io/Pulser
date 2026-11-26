@@ -85,14 +85,16 @@ def obj_to_dict(
 def make_json_compatible(obj: Any) -> Any:
     """Makes an object compatible with JSON serialization.
 
-    For now, simply converts Numpy arrays to lists, but more can be added
-    as needed.
+    Converts NumPy arrays and scalar values to their Python equivalents,
+    if they exist. Other conversion tools can be added.
     """
 
     class NumpyEncoder(json.JSONEncoder):
         def default(self, o: Any) -> Any:
             if isinstance(o, np.ndarray):
                 return o.tolist()
+            if isinstance(o, np.generic):
+                return o.item()
             return json.JSONEncoder.default(self, o)
 
     # Serializes with the custom encoder and then deserializes back
