@@ -89,6 +89,15 @@ def test_creation():
     ):
         Register.from_coordinates(coords, center=False, labels=["a", "b", "c"])
 
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "'labels' must be a sequence of unique IDs; found repeated ids "
+            "['a'] in ['a', 'a']."
+        ),
+    ):
+        Register.from_coordinates(coords, labels=["a", "a"])
+
     reg3 = Register.from_coordinates(
         np.array(coords, dtype=np.float32), prefix="foo"
     )

@@ -205,6 +205,12 @@ class BaseRegister(ABC, CoordsCollection):
                     f"match number of coordinates ({len(coords_)}); "
                     f"got coords {coords!r} and labels {list(labels)}."
                 )
+            if len(set(labels)) != len(labels):
+                repeated = [q for q, n in Counter(labels).items() if n > 1]
+                raise ValueError(
+                    "'labels' must be a sequence of unique IDs; found "
+                    f"repeated ids {repeated} in {list(labels)}."
+                )
             qubits = dict(zip(cast(Iterable, labels), coords_))
         else:
             qubits = dict(cast(Iterable, enumerate(coords_)))
