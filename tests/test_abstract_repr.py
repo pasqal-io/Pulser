@@ -2922,6 +2922,7 @@ class TestDeserialization:
             {"expression": "abs", "lhs": var1},
             {"expression": "ceil", "lhs": {"variable": "var1"}},
             {"expression": "floor", "lhs": var1},
+            {"expression": "round", "lhs": var1},
             {"expression": "sqrt", "lhs": var1},
             {"expression": "exp", "lhs": var1},
             {"expression": "log", "lhs": var1},
@@ -3012,6 +3013,8 @@ class TestDeserialization:
             assert param == np.ceil(seq_var1)
         if expression == "floor":
             assert param == np.floor(seq_var1[0])
+        if expression == "round":
+            assert param == np.round(seq_var1[0])
         if expression == "sqrt":
             assert param == np.sqrt(seq_var1[0])
         if expression == "exp":
