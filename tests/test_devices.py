@@ -757,6 +757,23 @@ def test_layout_filling_min_traps():
     device.validate_layout_filling(register)
 
 
+def test_layout_filling_exact_fraction():
+    # 90 * 0.7 and 100 * 0.55 are not exact in floating point
+    layout = SquareLatticeLayout(10, 9, 5)
+    device = replace(MockDevice, max_layout_filling=0.7)
+    device.validate_layout_filling(layout.define_register(*range(63)))
+    with pytest.raises(MaxQubitNumberError):
+        device.validate_layout_filling(layout.define_register(*range(64)))
+
+    layout = SquareLatticeLayout(10, 10, 5)
+    device = replace(
+        MockDevice, min_layout_filling=0.55, max_layout_filling=0.6
+    )
+    device.validate_layout_filling(layout.define_register(*range(55)))
+    with pytest.raises(MinQubitNumberError):
+        device.validate_layout_filling(layout.define_register(*range(54)))
+
+
 def test_layout_filling_fail():
     register = Register.square(5, prefix="q")
     with pytest.raises(
