@@ -88,7 +88,6 @@ SIGNATURES: dict[str, PulserSignature] = {
     "truediv": PulserSignature(
         pos=("lhs", "rhs"), extra=dict(expression="div")
     ),
-    "round_": PulserSignature(pos=("lhs",), extra=dict(expression="round")),
 }
 
 
@@ -111,6 +110,7 @@ UNARY_OPERATORS: dict[str, Callable] = {
     "abs": operator.abs,
     "ceil": np.ceil,
     "floor": np.floor,
+    "round": np.rint,
     "sqrt": np.sqrt,
     "exp": np.exp,
     "log2": np.log2,
