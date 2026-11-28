@@ -529,13 +529,15 @@ class BaseDevice(ABC):
                 " registers with a register layout."
             )
         n_qubits = len(register.qubit_ids)
+        n_traps = register.layout.number_of_traps
+        # The tolerance keeps exact fractions (e.g. 63/90 = 0.7) from being
+        # rounded the wrong way because of floating point errors
         min_qubits = int(
-            np.ceil(register.layout.number_of_traps * self.min_layout_filling)
+            np.ceil(
+                n_traps * self.min_layout_filling - pm.VALIDATION_TOLERANCE
+            )
         )
-        if (
-            register.layout.number_of_traps > self.min_layout_traps
-            and n_qubits < min_qubits
-        ):
+        if n_traps > self.min_layout_traps and n_qubits < min_qubits:
             raise MinQubitNumberError(
                 device=self,
                 invalid=n_qubits,
@@ -544,7 +546,7 @@ class BaseDevice(ABC):
             )
 
         max_qubits = int(
-            register.layout.number_of_traps * self.max_layout_filling
+            n_traps * self.max_layout_filling + pm.VALIDATION_TOLERANCE
         )
         if n_qubits > max_qubits:
             raise MaxQubitNumberError(
